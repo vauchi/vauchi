@@ -13,7 +13,7 @@
 /features/
 /ios/
 /website/
-
+/infra/
 # ===========================================
 # Ignore generated/cache directories
 # ===========================================

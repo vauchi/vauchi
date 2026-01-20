@@ -363,6 +363,16 @@ dev-clean-all:
 dev-status:
     ./dev-tools/scripts/dev/cleanup.sh status
 
+# === Deployment ===
+
+# Deploy vauchi-relay using Kamal
+deploy-relay:
+    kamal deploy -c infra/config/deploy.yml
+
+# Show logs from vauchi-relay
+relay-logs:
+    kamal app logs -f -c infra/config/deploy.yml
+
 # === Help ===
 
 # Show structure overview with concise descriptions
