@@ -365,6 +365,32 @@ dev-status:
 
 # === Help ===
 
+# Show structure overview with concise descriptions
+structure-overview:
+    #!/usr/bin/env bash
+    echo "Vauchi Project Structure"
+    echo "========================"
+    tree -L 4 -I "node_modules|target|build|dist|.git|gradle|intermediates|generated|outputs|tmp|cache" --noreport
+    echo ""
+    echo "Directory Concerns:"
+    echo "-------------------"
+    echo "android/          - Android application (Kotlin/Compose)"
+    echo "  app/src/        - Android source code"
+    echo "ios/              - iOS application (Swift/SwiftUI)"
+    echo "  Vauchi/         - iOS source code (ViewModels, Views, Services)"
+    echo "code/             - Core implementation and tools"
+    echo "  vauchi-core/    - Core library: crypto, X3DH, Double Ratchet, SQLite storage"
+    echo "  vauchi-relay/   - Relay server: WebSocket handler for encrypted message delivery"
+    echo "  vauchi-desktop/ - Desktop app: Tauri (Rust) + SolidJS frontend"
+    echo "  vauchi-mobile/  - Mobile shared: UniFFI bindings for Android/iOS"
+    echo "  vauchi-cli/     - CLI: Command-line tool for identity and exchange"
+    echo "  vauchi-tui/     - TUI: Terminal-based user interface"
+    echo "  scripts/        - Build and automation scripts"
+    echo "docs/             - Documentation: architecture, planning, and development guides"
+    echo "features/         - Specs: Gherkin .feature files for TDD"
+    echo "dev-tools/        - Tooling: Git hooks and development helper scripts"
+    echo "website/          - Marketing: Project landing page"
+
 # Show all available recipes
 help:
     @just --list
