@@ -1,12 +1,79 @@
 # Vauchi Development Commands
 # Usage: just <recipe>
 # Install just: cargo install just
+#
+# Quick start from meta-repo:
+#   git clone git@gitlab.com:vauchi/vauchi.git
+#   cd vauchi
+#   just setup
 
 set dotenv-load := true
 set shell := ["bash", "-cu"]
 
 # Default relay URL for local development
 default_relay := "ws://localhost:8080"
+
+# GitLab base URL
+gitlab_base := "git@gitlab.com:vauchi"
+
+# Public repositories to clone
+public_repos := "code features android ios website docs assets dev-tools"
+
+# === Workspace Setup ===
+
+# Clone all repos and set up workspace (run this first after cloning meta-repo)
+setup: clone-repos setup-dirs
+    @echo ""
+    @echo "Workspace setup complete!"
+    @echo ""
+    @echo "Next steps:"
+    @echo "  just build      # Build Rust workspace"
+    @echo "  just check      # Run all checks"
+    @echo "  just help       # Show all commands"
+
+# Clone all public repositories
+clone-repos:
+    #!/usr/bin/env bash
+    set -e
+    echo "Cloning repositories from gitlab.com/vauchi..."
+    for repo in {{public_repos}}; do
+        if [[ -d "$repo" ]]; then
+            echo "  $repo already exists, skipping"
+        else
+            echo "  Cloning $repo..."
+            git clone "{{gitlab_base}}/$repo.git" "$repo" 2>/dev/null || echo "  Failed to clone $repo (may not have access)"
+        fi
+    done
+
+# Clone a single repository
+clone repo:
+    #!/usr/bin/env bash
+    if [[ -d "{{repo}}" ]]; then
+        echo "{{repo}} already exists"
+    else
+        git clone "{{gitlab_base}}/{{repo}}.git" "{{repo}}"
+    fi
+
+# Update all repos (pull latest)
+pull-all:
+    #!/usr/bin/env bash
+    set -e
+    echo "Pulling latest changes..."
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            repo=$(basename "$dir")
+            echo "  $repo"
+            (cd "$dir" && git pull --rebase 2>/dev/null || git pull) || true
+        fi
+    done
+
+# Set up tmp and cache directories
+setup-dirs:
+    mkdir -p tmp cache
+    @echo '*' > tmp/.gitignore
+    @echo '!.gitignore' >> tmp/.gitignore
+    @echo '*' > cache/.gitignore
+    @echo '!.gitignore' >> cache/.gitignore
 
 # === Quick Start ===
 
