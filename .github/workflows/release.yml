@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run changeset:version
+          publish: npm run changeset:publish
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Git Tag
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          # Get version from package.json
+          VERSION=$(node -p "require('./code/vauchi-desktop/ui/package.json').version")
+          echo "Creating tag v$VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create annotated tag
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Build Release Artifacts
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          echo "Building release artifacts..."
+          # Rust builds are handled by separate workflow
+
+      - name: Upload Release Notes
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          echo "Release published!"
+          echo "Published packages: ${{ steps.changesets.outputs.publishedPackages }}"
+
+  # Check for changesets on PRs
+  changeset-check:
+    name: Changeset Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for changesets
+        run: |
+          # Check if there are any changesets
+          CHANGESET_COUNT=$(ls -1 .changeset/*.md 2>/dev/null | grep -v README.md | wc -l || echo "0")
+
+          if [ "$CHANGESET_COUNT" -eq "0" ]; then
+            echo "::warning::No changeset found. If this PR includes user-facing changes, please add a changeset."
+            echo ""
+            echo "To add a changeset, run:"
+            echo "  npx changeset add"
+            echo ""
+            echo "Or use the justfile command:"
+            echo "  just changeset"
+          else
+            echo "Found $CHANGESET_COUNT changeset(s)"
+            npx changeset status
+          fi

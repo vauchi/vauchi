@@ -1,0 +1,41 @@
+# Vauchi Meta Repo
+# This repo only tracks top-level workspace files.
+# All subdirectories are separate git repositories.
+
+# ===========================================
+# Ignore all subdirectories (separate repos)
+# ===========================================
+/android/
+/assets/
+/code/
+/dev-tools/
+/docs/
+/features/
+/ios/
+/website/
+
+# ===========================================
+# Ignore generated/cache directories
+# ===========================================
+/tmp/
+/cache/
+/.idea/
+/.ai/
+/.claude/
+
+# Node
+/node_modules/
+
+# ===========================================
+# Track these top-level files (implicit)
+# ===========================================
+# - justfile
+# - .gitignore
+# - .gitlab-ci.yml
+# - .github/
+# - .changeset/
+# - .pre-commit-config.yaml
+# - package.json
+# - package-lock.json
+# - CLAUDE.md (symlink)
+# - CONTRIBUTING.md (symlink)

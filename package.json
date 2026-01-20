@@ -1,0 +1,29 @@
+{
+  "name": "vauchi",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Privacy-focused updatable contact cards via in-person QR exchange",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/vauchi.git"
+  },
+  "scripts": {
+    "changeset": "changeset",
+    "changeset:add": "changeset add",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version && node ./dev-tools/scripts/sync-rust-versions.mjs",
+    "changeset:publish": "changeset publish",
+    "version": "npm run changeset:version",
+    "release": "npm run changeset:version && npm run changeset:publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@changesets/changelog-github": "^0.5.0"
+  },
+  "workspaces": [
+    "code/vauchi-desktop/ui"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

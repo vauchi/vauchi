@@ -1,0 +1,303 @@
+# Vauchi Development Commands
+# Usage: just <recipe>
+# Install just: cargo install just
+
+set dotenv-load := true
+set shell := ["bash", "-cu"]
+
+# Default relay URL for local development
+default_relay := "ws://localhost:8080"
+
+# === Quick Start ===
+
+# Run all checks (format, lint, test)
+check: fmt-check lint test
+
+# Build everything for development
+build: build-rust
+
+# === Rust ===
+
+# Run all Rust tests
+test:
+    cd code && cargo test --workspace
+
+# Run tests for a specific crate
+test-crate crate:
+    cd code && cargo test -p {{crate}}
+
+# Run core tests only
+test-core:
+    cd code && cargo test -p vauchi-core
+
+# Run clippy lints
+lint:
+    cd code && cargo clippy --workspace -- -D warnings
+
+# Format code
+fmt:
+    cd code && cargo fmt --all
+
+# Check formatting without changes
+fmt-check:
+    cd code && cargo fmt --all -- --check
+
+# Run security audit
+audit:
+    cd code && cargo audit
+    cd code && cargo deny check
+
+# Build Rust workspace (debug)
+build-rust:
+    cd code && cargo build --workspace
+
+# Build Rust workspace (release)
+build-rust-release:
+    cd code && cargo build --workspace --release
+
+# Start relay server
+relay:
+    cd code && cargo run -p vauchi-relay
+
+# Start relay server with debug logging
+relay-debug:
+    RUST_LOG=debug cd code && cargo run -p vauchi-relay
+
+# Run TUI application
+tui:
+    cd code && cargo run -p vauchi-tui
+
+# Initialize a new CLI identity
+cli-init name:
+    cd code && cargo run -p vauchi-cli -- init "{{name}}"
+
+# === Benchmarks ===
+
+# Run core crypto benchmarks
+bench-core:
+    cd code && cargo bench -p vauchi-core
+
+# Run FFI benchmarks
+bench-ffi:
+    cd code && cargo bench -p vauchi-mobile
+
+# === Android ===
+
+# Build Android native libraries (debug)
+build-android-debug:
+    ./code/scripts/build-android.sh debug
+
+# Build Android native libraries (release)
+build-android-release:
+    ./code/scripts/build-android.sh release
+
+# Build Android APK (debug)
+android-debug: build-android-debug
+    cd android && ./gradlew assembleDebug
+
+# Build Android APK (release)
+android-release: build-android-release
+    cd android && ./gradlew assembleRelease
+
+# Run Android unit tests
+test-android:
+    cd android && ./gradlew test
+
+# Clean Android build
+clean-android:
+    cd android && ./gradlew clean
+
+# === iOS (macOS only) ===
+
+# Build iOS framework (debug)
+build-ios-debug:
+    BUILD_MODE=debug ./ios/build-ios.sh
+
+# Build iOS XCFramework (release)
+build-ios-release:
+    BUILD_MODE=release ./ios/build-ios.sh xcframework
+
+# Clean iOS build artifacts
+clean-ios:
+    rm -rf ios/Frameworks ios/Vauchi/Generated
+
+# === Desktop (Tauri) ===
+
+# Run desktop in dev mode
+desktop-dev:
+    cd code/vauchi-desktop && cargo tauri dev
+
+# Build desktop release
+desktop-release:
+    cd code/vauchi-desktop && cargo tauri build
+
+# === UniFFI Bindings ===
+
+# Generate mobile bindings
+bindings:
+    ./code/scripts/build-bindings.sh
+
+# === Documentation ===
+
+# Generate and open Rust docs
+docs:
+    cd code && cargo doc --workspace --no-deps --open
+
+# === CI Simulation ===
+
+# Run full CI pipeline locally
+ci: check audit
+    @echo "CI checks passed!"
+
+# Run full CI including Android tests
+ci-full: ci test-android
+    @echo "Full CI checks passed!"
+
+# === Code Quality ===
+
+# Run all code quality checks
+quality: fmt-check lint audit
+    @echo "Code quality checks passed!"
+
+# Fix common issues automatically
+fix:
+    cd code && cargo fmt --all
+    cd code && cargo clippy --workspace --fix --allow-dirty --allow-staged
+
+# === Coverage ===
+
+# Run tests with coverage (requires cargo-llvm-cov)
+coverage:
+    cd code && cargo llvm-cov --workspace --html
+    @echo "Coverage report generated at code/target/llvm-cov/html/index.html"
+
+# === Cleanup ===
+
+# Clean all Rust build artifacts
+clean-rust:
+    cd code && cargo clean
+
+# Clean all build artifacts
+clean: clean-rust clean-android clean-ios
+    @echo "All build artifacts cleaned"
+
+# === Version Management ===
+
+# Show current versions
+versions:
+    @echo "Rust workspace versions:"
+    @cd code && cargo metadata --format-version 1 | jq -r '.packages[] | select(.source == null) | "\(.name): \(.version)"'
+
+# === Changesets ===
+
+# Add a new changeset
+changeset:
+    npx changeset add
+
+# Check changeset status
+changeset-status:
+    npx changeset status
+
+# Version packages based on changesets
+changeset-version:
+    npm run changeset:version
+
+# Publish release (usually done by CI)
+changeset-publish:
+    npm run changeset:publish
+
+# Full release workflow: version + sync + commit
+release: changeset-version
+    @echo "Review changes with: git diff"
+    @echo "Then commit with: git add -A && git commit -m 'chore: version packages'"
+
+# === Development Utilities ===
+
+# Watch for changes and run tests
+watch:
+    cd code && cargo watch -x "test --workspace"
+
+# Watch for changes and run specific crate tests
+watch-crate crate:
+    cd code && cargo watch -x "test -p {{crate}}"
+
+# === Git Hooks ===
+
+# Install git hooks
+install-hooks:
+    cp dev-tools/hooks/* .git/hooks/
+    chmod +x .git/hooks/*
+    @echo "Git hooks installed"
+
+# === Dev Tools ===
+
+# Audit test coverage against Gherkin feature files
+feature-audit:
+    ./dev-tools/scripts/feature-audit.sh
+
+# Run full test suite (Rust + Android + iOS + Desktop E2E)
+test-all:
+    ./code/scripts/test-all.sh
+
+# Test relay connectivity (health, WebSocket, TLS)
+relay-test host="relay.vauchi.app":
+    ./code/scripts/relay-test.sh {{host}}
+
+# Bump version across all components (Rust, Android, iOS)
+bump-version version:
+    ./dev-tools/scripts/bump-version.sh {{version}}
+
+# Sync all git repos in workspace
+sync-repos:
+    ./dev-tools/scripts/sync-all.sh
+
+# Show sync status of all repos
+sync-status:
+    ./dev-tools/scripts/sync-all.sh -s
+
+# Interactive commit across all repos with changes
+commit:
+    ./dev-tools/scripts/commit-interactive.sh
+
+# === Multi-Instance Testing ===
+# Run multiple app instances with isolated data for testing sync/exchange
+
+# Start local relay server (memory storage, no persistence)
+dev-relay:
+    ./dev-tools/scripts/dev/local-relay.sh
+
+# Run CLI with isolated data directory (e.g., just dev-cli alice init "Alice Smith")
+[positional-arguments]
+dev-cli *args:
+    #!/usr/bin/env bash
+    ./dev-tools/scripts/dev/multi-cli.sh "$@"
+
+# Run TUI with isolated data directory (e.g., just dev-tui alice)
+dev-tui instance:
+    ./dev-tools/scripts/dev/multi-tui.sh {{instance}}
+
+# List test instances
+dev-list:
+    ./dev-tools/scripts/dev/multi-cli.sh list
+
+# Clean test data (tmp directory)
+dev-clean-tmp:
+    ./dev-tools/scripts/dev/cleanup.sh tmp
+
+# Clean caches (AVDs, DerivedData)
+dev-clean-cache:
+    ./dev-tools/scripts/dev/cleanup.sh cache
+
+# Clean all test data and caches
+dev-clean-all:
+    ./dev-tools/scripts/dev/cleanup.sh all
+
+# Show disk usage of tmp and cache directories
+dev-status:
+    ./dev-tools/scripts/dev/cleanup.sh status
+
+# === Help ===
+
+# Show all available recipes
+help:
+    @just --list
