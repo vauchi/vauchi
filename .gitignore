@@ -22,6 +22,7 @@
 /.idea/
 /.ai/
 /.claude/
+/.kamal/
 
 # Node
 /node_modules/
