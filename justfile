@@ -415,6 +415,36 @@ dev-clean-all:
 dev-status:
     ./dev-tools/scripts/dev/cleanup.sh status
 
+# === E2E Testing ===
+
+# Run E2E tests (requires relay and CLI binaries)
+e2e-test: build-rust
+    cd code && cargo test -p vauchi-e2e-tests -- --ignored --nocapture
+
+# Run E2E tests without building first (assumes binaries exist)
+e2e-test-quick:
+    cd code && cargo test -p vauchi-e2e-tests -- --ignored --nocapture
+
+# Run a specific E2E test
+e2e-test-one test_name:
+    cd code && cargo test -p vauchi-e2e-tests {{test_name}} -- --ignored --nocapture
+
+# Run E2E tests in release mode (faster)
+e2e-test-release: build-rust-release
+    cd code && cargo test -p vauchi-e2e-tests --release -- --ignored --nocapture
+
+# Run only the five-user exchange E2E test
+e2e-five-users: build-rust
+    cd code && cargo test -p vauchi-e2e-tests five_user -- --ignored --nocapture
+
+# Run only relay failover E2E tests
+e2e-failover: build-rust
+    cd code && cargo test -p vauchi-e2e-tests relay_failover -- --ignored --nocapture
+
+# Run only multi-device sync E2E tests
+e2e-sync: build-rust
+    cd code && cargo test -p vauchi-e2e-tests multi_device -- --ignored --nocapture
+
 # === Deployment ===
 
 # Deploy vauchi-relay using Kamal

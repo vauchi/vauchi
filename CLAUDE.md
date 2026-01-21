@@ -20,6 +20,27 @@ just check    # Run all checks
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
 
+## PLANNING WORKFLOW (MANDATORY)
+
+When planning significant work (new features, infrastructure, multi-file changes):
+
+1. **Create planning doc** in `docs/planning/proposals/` with format `YYYY-MM-DD-<name>.md`
+2. **User reviews** - if accepted, move to `docs/planning/todo/` with numbered prefix
+3. **Update roadmap** - add entry to `docs/planning/roadmap.md`
+4. **Implementation done** - move doc from `todo/` to `ready-for-review/`
+5. **User approves** - move doc from `ready-for-review/` to `done/`
+
+**Alert threshold**: If `proposals/` has 5+ unreviewed docs, alert the user.
+
+```
+docs/planning/
+├── roadmap.md         # Entry point - single source of truth
+├── proposals/         # Draft plans awaiting review
+├── todo/              # Accepted plans in progress
+├── ready-for-review/  # Implementation done, awaiting approval
+└── done/              # Completed and approved (reference)
+```
+
 ## Commands
 
 ```bash
