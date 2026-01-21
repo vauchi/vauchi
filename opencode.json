@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "tools": {
+    "write": true,
+    "bash": true,
+    "just": true,
+    "find": true,
+    "rust": true
+  },
+  "instructions": ["CLAUDE.md","CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"],
+  "compaction": {
+    "auto": true,
+    "prune": true
+  }
+}

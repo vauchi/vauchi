@@ -93,6 +93,10 @@ test:
 test-crate crate:
     cd code && cargo test -p {{crate}}
 
+# Run relay integration tests
+test-relay-integration:
+    ./code/vauchi-relay/scripts/test-integration.sh
+
 # Run core tests only
 test-core:
     cd code && cargo test -p vauchi-core
@@ -244,6 +248,18 @@ coverage:
     cd code && cargo llvm-cov --workspace --html
     @echo "Coverage report generated at code/target/llvm-cov/html/index.html"
 
+# Verify coverage against threshold
+coverage-verify threshold="90":
+    ./dev-tools/scripts/coverage-verify.sh --threshold {{threshold}}
+
+# Run coverage automation setup and report
+coverage-setup:
+    ./dev-tools/scripts/coverage/setup-coverage-automation.sh
+
+# Check coverage summary (quick check)
+coverage-check threshold="80":
+    python3 dev-tools/scripts/coverage/check-coverage.py {{threshold}}
+
 # === Cleanup ===
 
 # Clean all Rust build artifacts
@@ -332,6 +348,28 @@ sync-status:
 commit:
     ./dev-tools/scripts/commit-interactive.sh
 
+# === TDD ===
+
+# Setup TDD environment for a component or with options
+tdd-setup *args:
+    ./dev-tools/scripts/tdd-setup.sh {{args}}
+
+# Create a new TDD test from template
+tdd-test type name:
+    ./dev-tools/scripts/tdd-template.sh {{type}} {{name}}
+
+# Check for inline tests in src/ directories (should be in tests/)
+check-inline-tests:
+    ./dev-tools/scripts/check_inline_tests.sh
+
+# Analyze inline tests that could be extracted
+analyze-inline-tests:
+    python3 dev-tools/scripts/refactor_tests.py analyze
+
+# Extract inline tests to tests/ directories (creates backup)
+extract-inline-tests:
+    python3 dev-tools/scripts/refactor_tests.py extract
+
 # === Multi-Instance Testing ===
 # Run multiple app instances with isolated data for testing sync/exchange
 
@@ -378,6 +416,13 @@ deploy-relay:
 # Show logs from vauchi-relay
 relay-logs:
     kamal app logs -f -c infra/config/deploy.yml
+
+# === AI/LLM Tools ===
+
+# Quick codebase exploration using local LLM (ollama + qwen2:0.5b)
+# Example: just tell-me-about "iOS tests"
+tell-me-about *topic:
+    ./dev-tools/scripts/tell-me-about.sh {{topic}}
 
 # === Help ===
 

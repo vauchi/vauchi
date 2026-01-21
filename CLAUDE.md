@@ -55,6 +55,18 @@ just help                   # Show all commands
 | docs/ | Architecture, planning, TDD rules |
 | dev-tools/ | Dev scripts, hooks, utilities |
 
+## Exploration
+
+When you need to understand a topic in this codebase, use:
+
+```bash
+just tell-me-about "iOS tests"
+just tell-me-about "recovery feature"
+just tell-me-about "crypto implementation"
+```
+
+This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summarize findings.
+
 ## Commits
 
 All tests green. Update `features/` for features, crate README for API changes.
