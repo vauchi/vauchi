@@ -27,6 +27,10 @@
 # Node
 /node_modules/
 
+.env
+.kamal/secret
+.kamal/secrets
+
 # ===========================================
 # Track these top-level files (implicit)
 # ===========================================

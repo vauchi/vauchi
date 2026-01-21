@@ -236,6 +236,14 @@ ci-full: ci test-android
 quality: fmt-check lint audit
     @echo "Code quality checks passed!"
 
+# Verify roadmap claims match actual project state
+verify-roadmap:
+    ./dev-tools/scripts/verify-roadmap.sh
+
+# Run CI with roadmap verification (catches false "done" claims)
+ci-verify: ci verify-roadmap
+    @echo "CI + roadmap verification passed!"
+
 # Fix common issues automatically
 fix:
     cd code && cargo fmt --all
