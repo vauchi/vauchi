@@ -200,7 +200,13 @@ desktop-release:
 
 # === UniFFI Bindings ===
 
-# Generate mobile bindings
+# Build, test, and generate UniFFI mobile bindings
+build-uniffi:
+    cd code && cargo build -p vauchi-mobile
+    cd code && cargo test -p vauchi-mobile
+    ./code/scripts/build-bindings.sh
+
+# Generate mobile bindings (without build/test)
 bindings:
     ./code/scripts/build-bindings.sh
 
