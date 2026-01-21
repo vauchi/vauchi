@@ -44,3 +44,8 @@
 # - package-lock.json
 # - CLAUDE.md (symlink)
 # - CONTRIBUTING.md (symlink)
+
+# IDE configs
+.cody/
+.continue/
+.cursor/
