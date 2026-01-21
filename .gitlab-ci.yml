@@ -53,6 +53,23 @@ lint:clippy:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "develop"
 
+lint:bindings:
+  stage: lint
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cd code && RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    - cd code && ./scripts/validate-bindings.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "code/vauchi-mobile/**/*"
+        - "code/vauchi-core/**/*"
+        - "android/app/src/main/kotlin/uniffi/**/*"
+        - "ios/Vauchi/Generated/**/*"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
 # ============================================================
 # Test Stage
 # ============================================================
