@@ -54,27 +54,37 @@ just commit                 # Interactive commit across repos
 just help                   # Show all commands
 ```
 
-## Crates (`code/`)
+## Repository Structure
 
-| Crate | Purpose |
-|-------|---------|
-| vauchi-core | Crypto, protocols, data models |
-| vauchi-relay | WebSocket relay server |
-| vauchi-cli | CLI for testing |
-| vauchi-tui | Terminal UI |
-| vauchi-mobile | UniFFI bindings (iOS/Android) |
-| vauchi-desktop | Tauri + SolidJS |
+| Repo | Purpose |
+|------|---------|
+| core/ | Core library (vauchi-core) + mobile bindings (vauchi-mobile) |
+| relay/ | WebSocket relay server (standalone) |
+| cli/ | Command-line interface |
+| tui/ | Terminal user interface |
+| desktop/ | Tauri + SolidJS desktop app |
+| e2e/ | End-to-end tests |
 
-## Workspace
+## Other Directories
 
 | Dir | Purpose |
 |-----|---------|
-| code/ | Rust monorepo |
 | features/ | Gherkin specs (shared across platforms) |
 | android/ | Kotlin/Compose app |
 | ios/ | SwiftUI app |
 | docs/ | Architecture, planning, TDD rules |
 | dev-tools/ | Dev scripts, hooks, utilities |
+
+## Dependencies
+
+```
+core/vauchi-core (standalone, no workspace deps)
+    ↑ (git dependency)
+relay/, cli/, tui/, desktop/, e2e/
+```
+
+All downstream repos use git dependencies with tag-based version pinning.
+Local development uses `.cargo/config.toml` path overrides.
 
 ## Exploration
 

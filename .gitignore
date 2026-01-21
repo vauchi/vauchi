@@ -7,29 +7,30 @@
 # ===========================================
 /android/
 /assets/
-/code/
+/core/
+/relay/
+/cli/
+/tui/
+/desktop/
+/e2e/
 /dev-tools/
 /docs/
 /features/
 /ios/
 /website/
 /infra/
+
+
 # ===========================================
 # Ignore generated/cache directories
 # ===========================================
 /tmp/
 /cache/
-/.idea/
-/.ai/
-/.claude/
-/.kamal/
 
 # Node
 /node_modules/
 
-.env
-.kamal/secret
-.kamal/secrets
+
 
 # ===========================================
 # Track these top-level files (implicit)
@@ -49,3 +50,12 @@
 .cody/
 .continue/
 .cursor/
+.kamal/
+.idea/
+.ai/
+.claude/
+
+
+.env
+.kamal/secret
+.kamal/secrets

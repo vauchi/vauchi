@@ -17,7 +17,7 @@ default_relay := "ws://localhost:8080"
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories to clone
-public_repos := "code features android ios website docs assets dev-tools"
+public_repos := "core relay cli tui desktop e2e features android ios website docs assets dev-tools"
 
 # === Workspace Setup ===
 
@@ -87,80 +87,80 @@ build: build-rust
 
 # Run all Rust tests
 test:
-    cd code && cargo test --workspace
+    cd core && cargo test --workspace
 
 # Run tests for a specific crate
 test-crate crate:
-    cd code && cargo test -p {{crate}}
+    cd core && cargo test -p {{crate}}
 
 # Run relay integration tests
 test-relay-integration:
-    ./code/vauchi-relay/scripts/test-integration.sh
+    cd relay && cargo test
 
 # Run core tests only
 test-core:
-    cd code && cargo test -p vauchi-core
+    cd core && cargo test -p vauchi-core
 
 # Run clippy lints
 lint:
-    cd code && cargo clippy --workspace -- -D warnings
+    cd core && cargo clippy --workspace -- -D warnings
 
 # Format code
 fmt:
-    cd code && cargo fmt --all
+    cd core && cargo fmt --all
 
 # Check formatting without changes
 fmt-check:
-    cd code && cargo fmt --all -- --check
+    cd core && cargo fmt --all -- --check
 
 # Run security audit
 audit:
-    cd code && cargo audit
-    cd code && cargo deny check
+    cd core && cargo audit
+    cd core && cargo deny check
 
 # Build Rust workspace (debug)
 build-rust:
-    cd code && cargo build --workspace
+    cd core && cargo build --workspace
 
 # Build Rust workspace (release)
 build-rust-release:
-    cd code && cargo build --workspace --release
+    cd core && cargo build --workspace --release
 
 # Start relay server
 relay:
-    cd code && cargo run -p vauchi-relay
+    cd relay && cargo run
 
 # Start relay server with debug logging
 relay-debug:
-    RUST_LOG=debug cd code && cargo run -p vauchi-relay
+    RUST_LOG=debug cd relay && cargo run
 
 # Run TUI application
 tui:
-    cd code && cargo run -p vauchi-tui
+    cd tui && cargo run
 
 # Initialize a new CLI identity
 cli-init name:
-    cd code && cargo run -p vauchi-cli -- init "{{name}}"
+    cd cli && cargo run -- init "{{name}}"
 
 # === Benchmarks ===
 
 # Run core crypto benchmarks
 bench-core:
-    cd code && cargo bench -p vauchi-core
+    cd core && cargo bench -p vauchi-core
 
 # Run FFI benchmarks
 bench-ffi:
-    cd code && cargo bench -p vauchi-mobile
+    cd core && cargo bench -p vauchi-mobile
 
 # === Android ===
 
 # Build Android native libraries (debug)
 build-android-debug:
-    ./code/scripts/build-android.sh debug
+    ./core/scripts/build-android.sh debug
 
 # Build Android native libraries (release)
 build-android-release:
-    ./code/scripts/build-android.sh release
+    ./core/scripts/build-android.sh release
 
 # Build Android APK (debug)
 android-debug: build-android-debug
@@ -196,29 +196,29 @@ clean-ios:
 
 # Run desktop in dev mode
 desktop-dev:
-    cd code/vauchi-desktop && cargo tauri dev
+    cd desktop && cargo tauri dev
 
 # Build desktop release
 desktop-release:
-    cd code/vauchi-desktop && cargo tauri build
+    cd desktop && cargo tauri build
 
 # === UniFFI Bindings ===
 
 # Build, test, and generate UniFFI mobile bindings
 build-uniffi:
-    cd code && cargo build -p vauchi-mobile
-    cd code && cargo test -p vauchi-mobile
-    ./code/scripts/build-bindings.sh
+    cd core && cargo build -p vauchi-mobile
+    cd core && cargo test -p vauchi-mobile
+    ./core/scripts/build-bindings.sh
 
 # Generate mobile bindings (without build/test)
 bindings:
-    ./code/scripts/build-bindings.sh
+    ./core/scripts/build-bindings.sh
 
 # === Documentation ===
 
 # Generate and open Rust docs
 docs:
-    cd code && cargo doc --workspace --no-deps --open
+    cd core && cargo doc --workspace --no-deps --open
 
 # === CI Simulation ===
 
@@ -246,14 +246,14 @@ ci-verify: ci verify-roadmap
 
 # Fix common issues automatically
 fix:
-    cd code && cargo fmt --all
-    cd code && cargo clippy --workspace --fix --allow-dirty --allow-staged
+    cd core && cargo fmt --all
+    cd core && cargo clippy --workspace --fix --allow-dirty --allow-staged
 
 # === Coverage ===
 
 # Run tests with coverage (requires cargo-llvm-cov)
 coverage:
-    cd code && cargo llvm-cov --workspace --html
+    cd core && cargo llvm-cov --workspace --html
     @echo "Coverage report generated at code/target/llvm-cov/html/index.html"
 
 # Verify coverage against threshold
@@ -272,7 +272,7 @@ coverage-check threshold="80":
 
 # Clean all Rust build artifacts
 clean-rust:
-    cd code && cargo clean
+    cd core && cargo clean
 
 # Clean all build artifacts
 clean: clean-rust clean-android clean-ios
@@ -283,7 +283,7 @@ clean: clean-rust clean-android clean-ios
 # Show current versions
 versions:
     @echo "Rust workspace versions:"
-    @cd code && cargo metadata --format-version 1 | jq -r '.packages[] | select(.source == null) | "\(.name): \(.version)"'
+    @cd core && cargo metadata --format-version 1 | jq -r '.packages[] | select(.source == null) | "\(.name): \(.version)"'
 
 # === Changesets ===
 
@@ -312,11 +312,11 @@ release: changeset-version
 
 # Watch for changes and run tests
 watch:
-    cd code && cargo watch -x "test --workspace"
+    cd core && cargo watch -x "test --workspace"
 
 # Watch for changes and run specific crate tests
 watch-crate crate:
-    cd code && cargo watch -x "test -p {{crate}}"
+    cd core && cargo watch -x "test -p {{crate}}"
 
 # === Git Hooks ===
 
@@ -334,11 +334,11 @@ feature-audit:
 
 # Run full test suite (Rust + Android + iOS + Desktop E2E)
 test-all:
-    ./code/scripts/test-all.sh
+    ./core/scripts/test-all.sh
 
-# Test relay connectivity (health, WebSocket, TLS)
-relay-test host="relay.vauchi.app":
-    ./code/scripts/relay-test.sh {{host}}
+# Test relay connectivity
+relay-test:
+    cd relay && cargo test
 
 # Bump version across all components (Rust, Android, iOS)
 bump-version version:
@@ -419,31 +419,31 @@ dev-status:
 
 # Run E2E tests (requires relay and CLI binaries)
 e2e-test: build-rust
-    cd code && cargo test -p vauchi-e2e-tests -- --ignored --nocapture
+    cd e2e && cargo test -- --ignored --nocapture
 
 # Run E2E tests without building first (assumes binaries exist)
 e2e-test-quick:
-    cd code && cargo test -p vauchi-e2e-tests -- --ignored --nocapture
+    cd e2e && cargo test -- --ignored --nocapture
 
 # Run a specific E2E test
 e2e-test-one test_name:
-    cd code && cargo test -p vauchi-e2e-tests {{test_name}} -- --ignored --nocapture
+    cd e2e && cargo test {{test_name}} -- --ignored --nocapture
 
 # Run E2E tests in release mode (faster)
 e2e-test-release: build-rust-release
-    cd code && cargo test -p vauchi-e2e-tests --release -- --ignored --nocapture
+    cd e2e && cargo test --release -- --ignored --nocapture
 
 # Run only the five-user exchange E2E test
 e2e-five-users: build-rust
-    cd code && cargo test -p vauchi-e2e-tests five_user -- --ignored --nocapture
+    cd e2e && cargo test five_user -- --ignored --nocapture
 
 # Run only relay failover E2E tests
 e2e-failover: build-rust
-    cd code && cargo test -p vauchi-e2e-tests relay_failover -- --ignored --nocapture
+    cd e2e && cargo test relay_failover -- --ignored --nocapture
 
 # Run only multi-device sync E2E tests
 e2e-sync: build-rust
-    cd code && cargo test -p vauchi-e2e-tests multi_device -- --ignored --nocapture
+    cd e2e && cargo test multi_device -- --ignored --nocapture
 
 # === Deployment ===
 
@@ -469,26 +469,24 @@ structure-overview:
     #!/usr/bin/env bash
     echo "Vauchi Project Structure"
     echo "========================"
-    tree -L 4 -I "node_modules|target|build|dist|.git|gradle|intermediates|generated|outputs|tmp|cache" --noreport
+    tree -L 3 -I "node_modules|target|build|dist|.git|gradle|intermediates|generated|outputs|tmp|cache" --noreport
     echo ""
     echo "Directory Concerns:"
     echo "-------------------"
+    echo "core/             - Core library and mobile bindings"
+    echo "  vauchi-core/    - Crypto, X3DH, Double Ratchet, SQLite storage"
+    echo "  vauchi-mobile/  - UniFFI bindings for Android/iOS"
+    echo "relay/            - WebSocket relay server (standalone)"
+    echo "cli/              - Command-line interface"
+    echo "tui/              - Terminal user interface"
+    echo "desktop/          - Tauri + SolidJS desktop app"
+    echo "e2e/              - End-to-end tests"
     echo "android/          - Android application (Kotlin/Compose)"
-    echo "  app/src/        - Android source code"
     echo "ios/              - iOS application (Swift/SwiftUI)"
-    echo "  Vauchi/         - iOS source code (ViewModels, Views, Services)"
-    echo "code/             - Core implementation and tools"
-    echo "  vauchi-core/    - Core library: crypto, X3DH, Double Ratchet, SQLite storage"
-    echo "  vauchi-relay/   - Relay server: WebSocket handler for encrypted message delivery"
-    echo "  vauchi-desktop/ - Desktop app: Tauri (Rust) + SolidJS frontend"
-    echo "  vauchi-mobile/  - Mobile shared: UniFFI bindings for Android/iOS"
-    echo "  vauchi-cli/     - CLI: Command-line tool for identity and exchange"
-    echo "  vauchi-tui/     - TUI: Terminal-based user interface"
-    echo "  scripts/        - Build and automation scripts"
-    echo "docs/             - Documentation: architecture, planning, and development guides"
-    echo "features/         - Specs: Gherkin .feature files for TDD"
-    echo "dev-tools/        - Tooling: Git hooks and development helper scripts"
-    echo "website/          - Marketing: Project landing page"
+    echo "docs/             - Architecture, planning, development guides"
+    echo "features/         - Gherkin .feature files for TDD"
+    echo "dev-tools/        - Git hooks and helper scripts"
+    echo "website/          - Project landing page"
 
 # Show all available recipes
 help:
