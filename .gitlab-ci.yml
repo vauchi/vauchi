@@ -5,8 +5,10 @@
 stages:
   - lint
   - test
+  - e2e-smoke
   - security
   - build
+  - e2e-release
   - release
   - deploy
 
@@ -94,6 +96,62 @@ test:all-features:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
+
+# ============================================================
+# E2E Smoke Stage (Fast feedback on every MR)
+# ============================================================
+
+e2e:smoke:
+  stage: e2e-smoke
+  image: rust:latest
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-nextest --locked || true
+  script:
+    # Build CLI and relay binaries
+    - cd cli && cargo build --target-dir ../target
+    - cd ../relay && cargo build --target-dir ../target
+    # Run smoke tests only (tests prefixed with smoke_)
+    - cd ../e2e && cargo nextest run --no-fail-fast smoke_ -- --ignored 2>&1 || true
+    - cd ../e2e && cargo nextest run smoke_ -- --ignored --message-format json > ../target/e2e-smoke-results.json 2>&1 || true
+  artifacts:
+    when: always
+    paths:
+      - target/e2e-smoke-results.json
+    reports:
+      junit: target/e2e-results.xml
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true  # Don't block MRs initially while stabilizing
+
+# ============================================================
+# E2E Release Stage (Full validation before release)
+# ============================================================
+
+e2e:release:
+  stage: e2e-release
+  image: rust:latest
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-nextest --locked || true
+  script:
+    # Build CLI and relay binaries in release mode
+    - cd cli && cargo build --release --target-dir ../target
+    - cd ../relay && cargo build --release --target-dir ../target
+    # Run all e2e tests (smoke + integration)
+    - cd ../e2e && cargo nextest run --release -- --ignored
+  artifacts:
+    when: always
+    paths:
+      - target/e2e-release-results.json
+    reports:
+      junit: target/e2e-results.xml
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  allow_failure: false  # RELEASE GATE - blocks if E2E fails
 
 # ============================================================
 # Security Stage

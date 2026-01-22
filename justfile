@@ -91,6 +91,19 @@ pull-all:
         [[ -d "${dir}.git" ]] && (cd "$dir" && git pull --rebase 2>/dev/null || git pull) || true
     done
 
+# Push all repos with commits ahead of origin
+push-all:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+            if [[ "$ahead" -gt 0 ]]; then
+                echo "Pushing $dir ($ahead commits ahead)"
+                (cd "$dir" && git push)
+            fi
+        fi
+    done
+
 # Clean all build artifacts
 clean:
     cd core && cargo clean
@@ -180,6 +193,77 @@ e2e-run name: build build-cli build-relay
         cd e2e && cargo test {{name}} -- --ignored --nocapture
     fi
 
+# Run E2E smoke tests (fast, for every push)
+e2e-smoke: build-cli build-relay
+    #!/usr/bin/env bash
+    echo "Running E2E smoke tests..."
+    cd e2e && cargo test smoke_ -- --ignored --nocapture
+    echo ""
+    echo "Smoke tests complete."
+
+# Run E2E release tests (full validation)
+e2e-release: build-cli build-relay
+    #!/usr/bin/env bash
+    echo "Running full E2E test suite for release validation..."
+    cd e2e && cargo test -- --ignored --nocapture
+    echo ""
+    echo "Release validation complete."
+
+# Run E2E integration tests only (excludes smoke)
+e2e-integration: build-cli build-relay
+    #!/usr/bin/env bash
+    echo "Running E2E integration tests..."
+    cd e2e && cargo test integration_ -- --ignored --nocapture
+    echo ""
+    echo "Integration tests complete."
+
+# Run a YAML scenario by name
+e2e-yaml name:
+    #!/usr/bin/env bash
+    cd e2e && cargo run --example yaml_runner -- "{{name}}"
+
+# List available YAML scenarios
+e2e-yaml-list:
+    #!/usr/bin/env bash
+    echo "Available YAML scenarios:"
+    find e2e/scenarios -name "*.yaml" -o -name "*.yml" 2>/dev/null | while read f; do
+        name=$(basename "$f" .yaml)
+        dir=$(dirname "$f" | xargs basename)
+        echo "  $dir/$name"
+    done
+
+# Show manual instructions for a YAML scenario
+e2e-yaml-manual name:
+    #!/usr/bin/env bash
+    cd e2e && cargo run --example yaml_runner -- "{{name}}" --manual
+
+# Show E2E test coverage against Gherkin features
+e2e-coverage:
+    #!/usr/bin/env bash
+    echo "E2E Test Coverage Report"
+    echo "========================"
+    echo ""
+    echo "Gherkin Features:"
+    feature_count=$(find features -name "*.feature" 2>/dev/null | wc -l)
+    echo "  Total feature files: $feature_count"
+    echo ""
+    echo "Rust E2E Tests:"
+    rust_tests=$(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^smoke_\|^integration_" || echo 0)
+    echo "  Smoke tests: $(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^smoke_" || echo 0)"
+    echo "  Integration tests: $(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^integration_" || echo 0)"
+    echo ""
+    echo "YAML Scenarios:"
+    yaml_smoke=$(find e2e/scenarios/smoke -name "*.yaml" 2>/dev/null | wc -l)
+    yaml_integration=$(find e2e/scenarios/integration -name "*.yaml" 2>/dev/null | wc -l)
+    yaml_edge=$(find e2e/scenarios/edge -name "*.yaml" 2>/dev/null | wc -l)
+    echo "  Smoke: $yaml_smoke"
+    echo "  Integration: $yaml_integration"
+    echo "  Edge cases: $yaml_edge"
+    echo ""
+    echo "Feature Traceability:"
+    echo "  (Scenarios referencing Gherkin features)"
+    grep -h "^feature:" e2e/scenarios/*/*.yaml 2>/dev/null | sort -u | sed 's/feature: /  - /'
+
 # Build CLI binary (into shared target dir for e2e tests)
 build-cli:
     cd cli && cargo build --target-dir ../target
@@ -252,6 +336,14 @@ e2e-scenario name="":
 # Run all automated E2E scenarios and show results report
 e2e-scenario-all:
     ./dev-tools/scripts/e2e/orchestrate.sh scenario all
+
+# Show latest E2E test report
+e2e-report:
+    ./dev-tools/scripts/e2e/orchestrate.sh report
+
+# Teardown E2E infrastructure (stop relay, clean all test data)
+e2e-teardown-and-clean-infra:
+    ./dev-tools/scripts/e2e/orchestrate.sh teardown
 
 # ─── CLI E2E ────────────────────────────────────────────────────
 
