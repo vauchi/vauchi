@@ -196,6 +196,14 @@ build-relay:
 dev-relay:
     ./dev-tools/scripts/dev/local-relay.sh
 
+# Start local relay with TLS (for iOS/Android testing)
+dev-relay-tls:
+    ./dev-tools/scripts/dev/local-relay-tls.sh
+
+# Setup local CA for mobile TLS testing
+dev-relay-tls-setup:
+    ./dev-tools/scripts/dev/local-relay-tls.sh --setup
+
 # Run CLI with isolated data (e.g., just dev-cli alice init "Alice")
 [positional-arguments]
 dev-cli *args:
