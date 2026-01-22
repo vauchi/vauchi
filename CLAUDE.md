@@ -19,6 +19,7 @@ just check    # Run all checks
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
+- **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
 
 ## PLANNING WORKFLOW (MANDATORY)
 
@@ -100,4 +101,4 @@ This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summari
 
 ## Commits
 
-All tests green. Update `features/` for features, crate README for API changes.
+All tests green. Update `docs/planning/` and other relevant documentation in `docs`. Check `features/` for features references. Use changeset.
