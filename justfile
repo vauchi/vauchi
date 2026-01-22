@@ -217,6 +217,117 @@ dev-tui instance:
 dev-clean:
     ./dev-tools/scripts/dev/cleanup.sh all
 
+# Run E2E test checklist (manual device testing)
+e2e-checklist *args:
+    ./dev-tools/scripts/dev/e2e-test-checklist.sh {{ args }}
+
+# ═══════════════════════════════════════════════════════════════
+# CROSS-PLATFORM E2E TESTING
+# ═══════════════════════════════════════════════════════════════
+
+# Check E2E testing status (all platforms)
+e2e-status:
+    ./dev-tools/scripts/e2e/orchestrate.sh status
+
+# Clean all E2E test data
+e2e-clean:
+    ./dev-tools/scripts/e2e/orchestrate.sh clean
+
+# Show E2E setup guide
+e2e-setup:
+    ./dev-tools/scripts/e2e/orchestrate.sh setup
+
+# Show E2E infrastructure as Mermaid diagram
+e2e-map:
+    ./dev-tools/scripts/e2e/orchestrate.sh map
+
+# List available E2E test scenarios
+e2e-scenarios:
+    ./dev-tools/scripts/e2e/orchestrate.sh scenarios
+
+# Run an E2E test scenario (use 'all' to run all automated scenarios)
+e2e-scenario name="":
+    ./dev-tools/scripts/e2e/orchestrate.sh scenario {{name}}
+
+# Run all automated E2E scenarios and show results report
+e2e-scenario-all:
+    ./dev-tools/scripts/e2e/orchestrate.sh scenario all
+
+# ─── CLI E2E ────────────────────────────────────────────────────
+
+# Run CLI command for instance (e.g., just e2e-cli alice init "Alice")
+[positional-arguments]
+e2e-cli *args:
+    ./dev-tools/scripts/e2e/orchestrate.sh cli "$@"
+
+# Run CLI exchange test between two instances
+e2e-cli-test alice="alice" bob="bob":
+    ./dev-tools/scripts/e2e/orchestrate.sh cli-test {{alice}} {{bob}}
+
+# ─── TUI E2E ────────────────────────────────────────────────────
+
+# Launch TUI for instance (e.g., just e2e-tui alice)
+e2e-tui instance:
+    ./dev-tools/scripts/e2e/orchestrate.sh tui {{instance}}
+
+# Launch multiple TUI instances in separate terminals
+e2e-tui-multi *instances:
+    ./dev-tools/scripts/e2e/orchestrate.sh tui-multi {{instances}}
+
+# ─── Desktop E2E ────────────────────────────────────────────────
+
+# Launch desktop app for instance
+e2e-desktop instance="default":
+    ./dev-tools/scripts/e2e/orchestrate.sh desktop {{instance}}
+
+# Launch desktop in dev mode for instance
+e2e-desktop-dev instance="default":
+    ./dev-tools/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
+
+# Build desktop release binary
+e2e-desktop-build:
+    ./dev-tools/scripts/e2e/orchestrate.sh desktop-build
+
+# ─── Mobile E2E ─────────────────────────────────────────────────
+
+# Deploy apps to all mobile devices (iOS + Android)
+e2e-deploy:
+    ./dev-tools/scripts/e2e/orchestrate.sh deploy
+
+# Deploy iOS app to macOS VM simulator
+e2e-deploy-ios:
+    ./dev-tools/scripts/e2e/orchestrate.sh deploy-ios
+
+# Deploy Android APK to local emulator
+e2e-deploy-android:
+    ./dev-tools/scripts/e2e/orchestrate.sh deploy-android
+
+# Start Android emulator manually (with xcb Qt platform for Wayland compatibility)
+e2e-android-start avd="Pixel_7":
+    QT_QPA_PLATFORM=xcb emulator -avd {{avd}} -gpu auto
+
+# Run interactive mobile E2E test session
+e2e-test-mobile:
+    ./dev-tools/scripts/e2e/orchestrate.sh test
+
+# Take screenshots from mobile devices
+e2e-screenshot:
+    ./dev-tools/scripts/e2e/orchestrate.sh screenshot
+
+# Collect logs from mobile devices
+e2e-logs:
+    ./dev-tools/scripts/e2e/orchestrate.sh logs
+
+# ─── Relay ──────────────────────────────────────────────────────
+
+# Start local TLS relay for E2E testing
+e2e-relay:
+    ./dev-tools/scripts/e2e/orchestrate.sh relay
+
+# Setup local CA for TLS relay
+e2e-relay-setup:
+    ./dev-tools/scripts/e2e/orchestrate.sh relay-setup
+
 # ═══════════════════════════════════════════════════════════════════
 # DEPLOYMENT
 # ═══════════════════════════════════════════════════════════════════
