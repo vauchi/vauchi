@@ -21,26 +21,74 @@ just check    # Run all checks
 - **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
 - **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
 
-## PLANNING WORKFLOW (MANDATORY)
+## PROBLEM WORKFLOW (MANDATORY)
 
-When planning significant work (new features, infrastructure, multi-file changes):
+**All significant work MUST follow the Problem to Solution Flow.**
+See: `docs/2026-01-23-problem-to-solution-flow.md`
 
-1. **Create planning doc** in `docs/planning/proposals/` with format `YYYY-MM-DD-<name>.md`
-2. **User reviews** - if accepted, move to `docs/planning/todo/` with numbered prefix
-3. **Update roadmap** - add entry to `docs/planning/roadmap.md`
-4. **Implementation done** - move doc from `todo/` to `ready-for-review/`
-5. **User approves** - move doc from `ready-for-review/` to `done/`
+### Core Principle
+
+Every task starts as a **Problem**. Ideas are restated as problems. A Problem flows through the system and accumulates artifacts until solved.
+
+### Problem Lifecycle
+
+```
+intake → investigating → planning → implementing → testing → done (or archived)
+```
+
+### Workflow Steps
+
+1. **Create Problem Record** in `docs/planning/problems/YYYY-MM-DD-problem-slug/`
+2. **Discussion** - Is it actually a problem? If no → archive with learnings
+3. **Investigation** - Research the problem, identify solutions
+   - External knowledge needed? → Create `docs/knowledge/YYYY-MM-DD-topic.md`
+   - Write investigation document
+4. **Validate Solutions** against:
+   - Core Principles
+   - Culture
+   - Current Implementation
+   - Existing Features
+5. **Archive rejected solutions** with reasoning (never discard without documenting why)
+6. **Implementation Planning** - How to test? Tools needed? Code or docs?
+7. **Write Gherkin Feature** → `features/*.feature`
+8. **Write E2E Tests** → `e2e/tests/`
+9. **Implement in Strict TDD** - Red → Green → Refactor
+10. **All tests green** → Write Retrospective
+11. **Spawn child problems** from retrospective learnings
+12. **Move to done** when complete
+
+### On Errors/Regressions
+
+If unforeseen errors occur during implementation:
+1. Write **Post-Mortem** analyzing root cause
+2. **Distill new Problem descriptions** from post-mortem
+3. New problems feed back into the workflow
+
+### Directory Structure
+
+```
+docs/
+├── knowledge/                    # External research (shared)
+└── planning/
+    ├── problems/                 # Problem records with all artifacts
+    │   └── YYYY-MM-DD-slug/
+    │       ├── README.md         # Status, description, links
+    │       ├── investigation.md
+    │       ├── rejected-solutions.md
+    │       ├── implementation-plan.md
+    │       ├── retrospective.md
+    │       └── post-mortem.md    # If needed
+    ├── proposals/                # Draft plans awaiting review
+    ├── todo/                     # Accepted plans in progress
+    ├── ready-for-review/         # Implementation done, awaiting approval
+    ├── done/                     # Completed (reference)
+    ├── investigations/           # Shared investigations
+    ├── retrospectives/           # Shared retrospectives
+    ├── post-mortems/             # Shared post-mortems
+    └── archived/                 # Not valid / deferred
+```
 
 **Alert threshold**: If `proposals/` has 5+ unreviewed docs, alert the user.
-
-```
-docs/planning/
-├── roadmap.md         # Entry point - single source of truth
-├── proposals/         # Draft plans awaiting review
-├── todo/              # Accepted plans in progress
-├── ready-for-review/  # Implementation done, awaiting approval
-└── done/              # Completed and approved (reference)
-```
 
 ## Commands
 
