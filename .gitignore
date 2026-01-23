@@ -33,6 +33,7 @@
 /tmp/
 /cache/
 /target/
+/.gitlab-ci-local/
 # Node
 /node_modules/
 
