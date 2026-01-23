@@ -4,7 +4,8 @@
 
 ```bash
 # Clone and setup workspace
-git clone git@gitlab.com:vauchi/vauchi.git
+git clone https://github.com/vauchi/vauchi.git
+# or: git clone git@gitlab.com:vauchi/vauchi.git
 cd vauchi
 just setup
 
@@ -24,7 +25,7 @@ All code changes must follow Test-Driven Development:
 3. Refactor
 4. Tests must trace to `features/*.feature` scenarios
 
-See [docs/TDD_RULES.md](docs/TDD_RULES.md) for details.
+See [docs/2026-01-22-TDD_RULES.md](docs/2026-01-22-TDD_RULES.md) for details.
 
 ### 2. Before Committing
 
