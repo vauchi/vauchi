@@ -66,18 +66,20 @@ run platform="" *args:
             cd tui && cargo run -- {{args}}
             ;;
         desktop|gui)
-            if [[ ! -f desktop/src-tauri/target/release/vauchi-desktop ]]; then
-                echo "Building desktop app (release)..."
-                cd desktop/src-tauri && cargo build --release
+            # Build with Tauri CLI (embeds frontend assets)
+            if [[ ! -f desktop/src-tauri/target/release/vauchi-desktop ]] || [[ ! -s desktop/ui/dist/index.html ]]; then
+                echo "Building desktop app..."
+                cd desktop/src-tauri && cargo tauri build
             fi
-            cd desktop/src-tauri && ./target/release/vauchi-desktop {{args}}
+            desktop/src-tauri/target/release/vauchi-desktop {{args}}
             ;;
         desktop-dev)
             cd desktop && cargo tauri dev
             ;;
         android)
             just build-android release
-            cd android && ./gradlew installRelease
+            cd android && ./gradlew assembleRelease
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
             adb shell am start -n com.vauchi.app/.MainActivity
             ;;
         ios)

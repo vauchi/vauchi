@@ -26,6 +26,7 @@
 /_strategy/
 /_infra/
 /_dev-tools/
+/_VMs/
 
 # ===========================================
 # Ignore generated/cache directories
