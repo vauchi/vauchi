@@ -80,4 +80,4 @@ Changesets primarily manages the npm packages, but we sync Rust crate versions a
 2. A post-version script syncs those versions to Cargo.toml files
 3. Android/iOS versions are also updated
 
-See `dev-tools/scripts/sync-rust-versions.mjs` for details.
+See `_dev-tools/scripts/sync-rust-versions.mjs` for details.

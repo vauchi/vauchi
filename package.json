@@ -11,7 +11,7 @@
     "changeset": "changeset",
     "changeset:add": "changeset add",
     "changeset:status": "changeset status",
-    "changeset:version": "changeset version && node ./dev-tools/scripts/sync-rust-versions.mjs",
+    "changeset:version": "changeset version && node ./_dev-tools/scripts/sync-rust-versions.mjs",
     "changeset:publish": "changeset publish",
     "version": "npm run changeset:version",
     "release": "npm run changeset:version && npm run changeset:publish"

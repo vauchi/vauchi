@@ -4,8 +4,8 @@
 # Install: pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
 #
-# Note: You can also use the native git hooks in dev-tools/hooks/
-# Install those with: ./dev-tools/install-hooks.sh
+# Note: You can also use the native git hooks in _dev-tools/hooks/
+# Install those with: ./_dev-tools/install-hooks.sh
 
 repos:
   # General file checks

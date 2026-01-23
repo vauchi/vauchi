@@ -24,8 +24,8 @@
 /_docs/
 /_website/
 /_strategy/
-/infra/
-/dev-tools/
+/_infra/
+/_dev-tools/
 
 # ===========================================
 # Ignore generated/cache directories

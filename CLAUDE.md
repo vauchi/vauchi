@@ -126,7 +126,7 @@ just help                   # Show all commands
 | _assets/ | Brand assets, images (private) |
 | _website/ | Landing page (private) |
 | _strategy/ | Business strategy (private) |
-| dev-tools/ | Dev scripts, hooks, utilities |
+| _dev-tools/ | Dev scripts, hooks, utilities |
 
 Private repos (prefixed with `_`) are not mirrored to GitHub and require GitLab access.
 
