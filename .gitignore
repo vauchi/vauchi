@@ -12,16 +12,20 @@
 /tui/
 /desktop/
 /e2e/
-/dev-tools/
 /features/
 /ios/
-/infra/
+
 
 # ===========================================
 # Private repos (not mirrored to GitHub)
+# Prefixed with _ to distinguish from public repos
 # ===========================================
-/private_repos/
-
+/_assets/
+/_docs/
+/_website/
+/_strategy/
+/infra/
+/dev-tools/
 
 # ===========================================
 # Ignore generated/cache directories

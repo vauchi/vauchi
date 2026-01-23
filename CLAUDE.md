@@ -19,13 +19,13 @@ just check    # Run all checks
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `private_repos/docs/planning/todo/` doc to `done/`
-- **Docs naming**: All files in `private_repos/docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
+- **Planning**: Feature done → move `_docs/planning/todo/` doc to `done/`
+- **Docs naming**: All files in `_docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
-See: `private_repos/docs/2026-01-23-problem-to-solution-flow.md`
+See: `_docs/2026-01-23-problem-to-solution-flow.md`
 
 ### Core Principle
 
@@ -39,10 +39,10 @@ intake → investigating → planning → implementing → testing → done (or 
 
 ### Workflow Steps
 
-1. **Create Problem Record** in `private_repos/docs/planning/problems/YYYY-MM-DD-problem-slug/`
+1. **Create Problem Record** in `_docs/planning/problems/YYYY-MM-DD-problem-slug/`
 2. **Discussion** - Is it actually a problem? If no → archive with learnings
 3. **Investigation** - Research the problem, identify solutions
-   - External knowledge needed? → Create `private_repos/docs/knowledge/YYYY-MM-DD-topic.md`
+   - External knowledge needed? → Create `_docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
 4. **Validate Solutions** against `PRINCIPLES.md`:
    - Core Principles (Privacy, Trust, Quality)
@@ -68,7 +68,7 @@ If unforeseen errors occur during implementation:
 ### Directory Structure
 
 ```
-private_repos/docs/
+_docs/
 ├── knowledge/                    # External research (shared)
 └── planning/
     ├── problems/                 # Problem records with all artifacts
@@ -122,8 +122,13 @@ just help                   # Show all commands
 | features/ | Gherkin specs (shared across platforms) |
 | android/ | Kotlin/Compose app |
 | ios/ | SwiftUI app |
-| private_repos/docs/ | Architecture, planning, TDD rules |
+| _docs/ | Architecture, planning, TDD rules (private) |
+| _assets/ | Brand assets, images (private) |
+| _website/ | Landing page (private) |
+| _strategy/ | Business strategy (private) |
 | dev-tools/ | Dev scripts, hooks, utilities |
+
+Private repos (prefixed with `_`) are not mirrored to GitHub and require GitLab access.
 
 ## Dependencies
 
@@ -150,4 +155,4 @@ This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summari
 
 ## Commits
 
-All tests green. Update `private_repos/docs/planning/` and other relevant documentation in `docs`. Check `features/` for features references. Use changeset.
+All tests green. Update `_docs/planning/` and other relevant documentation. Check `features/` for features references. Use changeset.

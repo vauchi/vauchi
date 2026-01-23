@@ -12,8 +12,12 @@ set shell := ["bash", "-cu"]
 # GitLab base URL
 gitlab_base := "git@gitlab.com:vauchi"
 
-# Public repositories
-public_repos := "core relay cli tui desktop e2e features android ios website docs assets dev-tools"
+# Public repositories (mirrored to GitHub)
+public_repos := "core relay cli tui desktop e2e features android ios dev-tools"
+
+# Private repositories (not mirrored, cloned with _ prefix)
+# These require GitLab access
+private_repos := "assets docs website strategy infra"
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
@@ -71,16 +75,25 @@ setup: clone-repos
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
-# Clone all public repositories
+# Clone all repositories
 clone-repos:
     #!/usr/bin/env bash
     set -e
-    echo "Cloning repositories..."
+    echo "Cloning public repositories..."
     for repo in {{public_repos}}; do
         if [[ -d "$repo" ]]; then
             echo "  $repo (exists)"
         else
             git clone "{{gitlab_base}}/$repo.git" "$repo" 2>/dev/null || echo "  $repo (skipped)"
+        fi
+    done
+    echo "Cloning private repositories (with _ prefix)..."
+    for repo in {{private_repos}}; do
+        local_name="_$repo"
+        if [[ -d "$local_name" ]]; then
+            echo "  $local_name (exists)"
+        else
+            git clone "{{gitlab_base}}/$repo.git" "$local_name" 2>/dev/null || echo "  $local_name (skipped - no access?)"
         fi
     done
 
