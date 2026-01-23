@@ -24,7 +24,7 @@ Vauchi solves this:
 2. **Trust is earned in person** — QR exchange with physical proximity, not platform-mediated
 3. **Quality through rigor** — Test-driven development, threat modeling, no shortcuts
 
-See [PRINCIPLES.md](docs/2026-01-23-PRINCIPLES.md) for the full philosophy.
+See [PRINCIPLES.md](PRINCIPLES.md) for the full philosophy.
 
 ## Architecture
 
