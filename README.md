@@ -121,7 +121,7 @@ For security issues, see [SECURITY.md](SECURITY.md).
 
 We welcome contributions. Please read:
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Development workflow
-- [docs/2026-01-22-TDD_RULES.md](docs/2026-01-22-TDD_RULES.md) — TDD requirements (mandatory)
+- [PRINCIPLES.md](PRINCIPLES.md) — Core principles (mandatory)
 
 All code must have tests. No exceptions.
 
@@ -147,4 +147,3 @@ Funds go toward:
 
 - Website: [vauchi.app](https://vauchi.app)
 - Relay: wss://relay.vauchi.app
-- Documentation: [docs/](docs/)

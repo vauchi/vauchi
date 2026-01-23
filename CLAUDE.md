@@ -19,13 +19,13 @@ just check    # Run all checks
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
-- **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
+- **Planning**: Feature done → move `private_repos/docs/planning/todo/` doc to `done/`
+- **Docs naming**: All files in `private_repos/docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
-See: `docs/2026-01-23-problem-to-solution-flow.md`
+See: `private_repos/docs/2026-01-23-problem-to-solution-flow.md`
 
 ### Core Principle
 
@@ -39,10 +39,10 @@ intake → investigating → planning → implementing → testing → done (or 
 
 ### Workflow Steps
 
-1. **Create Problem Record** in `docs/planning/problems/YYYY-MM-DD-problem-slug/`
+1. **Create Problem Record** in `private_repos/docs/planning/problems/YYYY-MM-DD-problem-slug/`
 2. **Discussion** - Is it actually a problem? If no → archive with learnings
 3. **Investigation** - Research the problem, identify solutions
-   - External knowledge needed? → Create `docs/knowledge/YYYY-MM-DD-topic.md`
+   - External knowledge needed? → Create `private_repos/docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
 4. **Validate Solutions** against `PRINCIPLES.md`:
    - Core Principles (Privacy, Trust, Quality)
@@ -68,7 +68,7 @@ If unforeseen errors occur during implementation:
 ### Directory Structure
 
 ```
-docs/
+private_repos/docs/
 ├── knowledge/                    # External research (shared)
 └── planning/
     ├── problems/                 # Problem records with all artifacts
@@ -122,7 +122,7 @@ just help                   # Show all commands
 | features/ | Gherkin specs (shared across platforms) |
 | android/ | Kotlin/Compose app |
 | ios/ | SwiftUI app |
-| docs/ | Architecture, planning, TDD rules |
+| private_repos/docs/ | Architecture, planning, TDD rules |
 | dev-tools/ | Dev scripts, hooks, utilities |
 
 ## Dependencies
@@ -150,4 +150,4 @@ This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summari
 
 ## Commits
 
-All tests green. Update `docs/planning/` and other relevant documentation in `docs`. Check `features/` for features references. Use changeset.
+All tests green. Update `private_repos/docs/planning/` and other relevant documentation in `docs`. Check `features/` for features references. Use changeset.

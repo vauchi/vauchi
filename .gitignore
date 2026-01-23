@@ -6,7 +6,6 @@
 # Ignore all subdirectories (separate repos)
 # ===========================================
 /android/
-/assets/
 /core/
 /relay/
 /cli/
@@ -14,11 +13,14 @@
 /desktop/
 /e2e/
 /dev-tools/
-/docs/
 /features/
 /ios/
-/website/
 /infra/
+
+# ===========================================
+# Private repos (not mirrored to GitHub)
+# ===========================================
+/private_repos/
 
 
 # ===========================================

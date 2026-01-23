@@ -25,7 +25,7 @@ All code changes must follow Test-Driven Development:
 3. Refactor
 4. Tests must trace to `features/*.feature` scenarios
 
-See [docs/2026-01-22-TDD_RULES.md](docs/2026-01-22-TDD_RULES.md) for details.
+See [PRINCIPLES.md](PRINCIPLES.md) for core principles.
 
 ### 2. Before Committing
 
@@ -50,12 +50,6 @@ just test                   # All tests green
 
 Use `just commit` for interactive commits across all repos with changes.
 
-### 5. Planning Docs
-
-If implementing a feature from `docs/planning/todo/`:
-- Update the planning doc as you go
-- Move to `docs/planning/done/` when complete
-
 ## Code Guidelines
 
 ### Rust
@@ -77,12 +71,14 @@ crate/
 
 | Repo | Purpose |
 |------|---------|
-| code/ | Rust monorepo |
-| features/ | Gherkin specs (shared) |
+| core/ | Core library (Rust) |
+| relay/ | WebSocket relay server |
+| cli/ | Command-line interface |
+| desktop/ | Desktop app (Tauri) |
 | android/ | Android app |
 | ios/ | iOS app |
-| docs/ | Documentation |
-| dev-tools/ | Build scripts, hooks |
+| features/ | Gherkin specs (shared) |
+| e2e/ | End-to-end tests |
 
 ## Useful Commands
 
@@ -96,9 +92,8 @@ just sync-repos        # Pull all repos
 
 ## Getting Help
 
-- Check [docs/faq.md](docs/faq.md)
 - Review existing issues
-- Ask in discussions
+- Ask in [Discussions](https://github.com/vauchi/vauchi/discussions)
 
 ## License
 

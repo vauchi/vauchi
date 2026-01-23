@@ -66,7 +66,12 @@ We will not take legal action against researchers who:
 
 ### Threat Model
 
-See [docs/2026-01-22-THREAT_ANALYSIS.md](docs/2026-01-22-THREAT_ANALYSIS.md) for the full threat model.
+Key threats we defend against:
+- **Relay compromise**: Cannot decrypt messages (zero-knowledge design)
+- **Device theft**: Local data encrypted, keys in secure enclave
+- **MITM attacks**: X3DH provides authenticated key exchange
+- **Replay attacks**: Double Ratchet with message counters
+- **Contact harvesting**: Proximity verification prevents remote attacks
 
 ## Security Audits
 
