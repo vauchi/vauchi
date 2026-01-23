@@ -14,6 +14,7 @@ just check    # Run all checks
 
 ## MANDATORY
 
+- **Principles**: All work must align with `docs/2026-01-23-PRINCIPLES.md`
 - **TDD**: Red→Green→Refactor. Test FIRST. Tests trace to `features/*.feature`
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
@@ -43,11 +44,11 @@ intake → investigating → planning → implementing → testing → done (or 
 3. **Investigation** - Research the problem, identify solutions
    - External knowledge needed? → Create `docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
-4. **Validate Solutions** against:
-   - Core Principles
-   - Culture
-   - Current Implementation
-   - Existing Features
+4. **Validate Solutions** against `docs/2026-01-23-PRINCIPLES.md`:
+   - Core Principles (Privacy, Trust, Quality)
+   - Culture (Process Principles)
+   - Current Implementation (Technical Principles)
+   - Existing Features (UX Principles)
 5. **Archive rejected solutions** with reasoning (never discard without documenting why)
 6. **Implementation Planning** - How to test? Tools needed? Code or docs?
 7. **Write Gherkin Feature** → `features/*.feature`
