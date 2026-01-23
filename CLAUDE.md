@@ -21,6 +21,7 @@ just check    # Run all checks
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `_docs/planning/todo/` doc to `done/`
 - **Docs naming**: All files in `_docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
+  - Exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`, problem artifacts
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
