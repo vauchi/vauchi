@@ -1,0 +1,38 @@
+{
+  "folders": [
+    { "path": ".", "name": "vauchi (root)" },
+    { "path": "core", "name": "core" },
+    { "path": "relay", "name": "relay" },
+    { "path": "cli", "name": "cli" },
+    { "path": "tui", "name": "tui" },
+    { "path": "desktop", "name": "desktop" },
+    { "path": "e2e", "name": "e2e" },
+    { "path": "features", "name": "features" },
+    { "path": "android", "name": "android" },
+    { "path": "ios", "name": "ios" },
+    { "path": "_dev-tools", "name": "_dev-tools" },
+    { "path": "_docs", "name": "_docs" },
+    { "path": "_infra", "name": "_infra" },
+    { "path": "_assets", "name": "_assets" },
+    { "path": "_website", "name": "_website" },
+    { "path": "_strategy", "name": "_strategy" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/target": true
+    },
+    "search.exclude": {
+      "**/target": true,
+      "**/node_modules": true
+    },
+    "rust-analyzer.linkedProjects": [
+      "core/Cargo.toml",
+      "relay/Cargo.toml",
+      "cli/Cargo.toml",
+      "tui/Cargo.toml",
+      "e2e/Cargo.toml"
+    ]
+  }
+}
