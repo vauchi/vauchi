@@ -1,3 +1,4 @@
+<!-- SSOT: This is the single source of truth for Vauchi principles and philosophy -->
 # Vauchi Principles
 
 **The single source of truth for core principles and philosophy.**
@@ -51,6 +52,8 @@ Confidence through discipline, not hope.
 | **No Sharing** | User data never shared with third parties |
 | **Selective Visibility** | Users control per-field, per-contact visibility |
 
+**Details**: [THREAT_ANALYSIS.md](_docs/2026-01-22-THREAT_ANALYSIS.md), [privacy-policy.md](_docs/legal/2026-01-22-privacy-policy.md)
+
 ### Security Principles
 
 | Principle | Statement |
@@ -60,6 +63,8 @@ Confidence through discipline, not hope.
 | **Forward Secrecy** | Double Ratchet ensures past messages safe if keys compromised |
 | **Memory Safety** | Rust enforces safety; no unsafe in crypto paths |
 | **Defense in Depth** | Multiple layers: encryption, signing, verification |
+
+**Details**: [security.md](_docs/architecture/2026-01-22-security.md), [decisions.md](_docs/architecture/2026-01-22-decisions.md), [THREAT_ANALYSIS.md](_docs/2026-01-22-THREAT_ANALYSIS.md)
 
 ### Technical Principles
 
@@ -71,6 +76,8 @@ Confidence through discipline, not hope.
 | **Clean Dependencies** | vauchi-core standalone; downstream repos use git deps |
 | **Gherkin Traceability** | Features in `features/*.feature` drive test writing |
 
+**Details**: [TDD_RULES.md](_docs/2026-01-22-TDD_RULES.md), [decisions.md](_docs/architecture/2026-01-22-decisions.md)
+
 ### UX Principles
 
 | Principle | Statement |
@@ -81,6 +88,8 @@ Confidence through discipline, not hope.
 | **Portable Identity** | No vendor lock-in; restore from backup, switch devices |
 | **Cross-Platform Consistency** | Same experience on iOS, Android, desktop |
 
+**Details**: [aha-moments.md](_docs/2026-01-22-aha-moments.md), [user-guide.md](_docs/2026-01-22-user-guide.md)
+
 ### Process Principles
 
 | Principle | Statement |
@@ -90,6 +99,8 @@ Confidence through discipline, not hope.
 | **No Wasted Rejections** | Archive rejected solutions with reasoning |
 | **Small Atomic Commits** | After each green, after each refactor |
 | **Retrospective Required** | Learn from every completed problem |
+
+**Details**: [problem-to-solution-flow.md](_docs/2026-01-23-problem-to-solution-flow.md)
 
 ---
 

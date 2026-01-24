@@ -1,3 +1,4 @@
+<!-- SSOT: This is the single source of truth for contribution guidelines -->
 # Contributing to Vauchi
 
 ## Quick Start
@@ -66,6 +67,45 @@ crate/
 ├── src/      # Production code only
 └── tests/    # Integration tests only
 ```
+
+## Mobile Bindings Workflow
+
+UniFFI generates Swift/Kotlin bindings from Rust. When modifying `vauchi-mobile` or `vauchi-core`:
+
+### When to Regenerate Bindings
+
+Regenerate bindings when you:
+- Add/remove/rename exported types or functions
+- Change function signatures
+- Add new `#[uniffi::export]` or `#[derive(uniffi::*)]` annotations
+
+### How to Regenerate
+
+```bash
+cd core
+
+# IMPORTANT: Build without symbol stripping to preserve metadata
+RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+
+# Regenerate for both platforms (macOS required for iOS)
+./scripts/build-bindings.sh
+
+# Or regenerate Android only (works on Linux)
+./scripts/build-bindings.sh --android
+
+# Validate bindings have all expected types
+./scripts/validate-bindings.sh
+```
+
+### Common Issues
+
+**Empty or incomplete bindings:**
+- Cause: Library built with symbol stripping (default in release)
+- Fix: Use `RUSTFLAGS="-Cstrip=none"` when building
+
+**Missing types in generated code:**
+- Run `validate-bindings.sh` to check expected types
+- Regenerate with the steps above
 
 ## Repository Structure
 

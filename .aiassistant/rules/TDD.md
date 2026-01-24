@@ -2,6 +2,8 @@
 apply: always
 ---
 
+<!-- CONDENSED: Quick reference for AI assistants. Full version: /_docs/2026-01-22-TDD_RULES.md -->
+
 ## MANDATORY
 
 - **TDD**: Red→Green→Commit→Refactor→Commit. Test FIRST. Tests trace to `features/*.feature`
