@@ -174,14 +174,21 @@
     "recommendations": [
       "rust-lang.rust-analyzer",
       "tamasfe.even-better-toml",
+      "serayuzgur.crates",
+      "vadimcn.vscode-lldb",
       "esbenp.prettier-vscode",
       "dbaeumer.vscode-eslint",
-      "vknabel.vscode-apple-swift-format",
+      "nicknisi.solid-vscode",
+      "tauri-apps.tauri-vscode",
       "fwcd.kotlin",
+      "sswg.swift-lang",
       "redhat.vscode-yaml",
       "alexkrechik.cucumberautocomplete",
-      "tauri-apps.tauri-vscode",
-      "bradlc.vscode-tailwindcss"
+      "usernamehw.errorlens",
+      "eamodio.gitlens",
+      "gruntfuggly.todo-tree",
+      "christian-kohler.path-intellisense",
+      "bierner.markdown-mermaid"
     ]
   }
 }
