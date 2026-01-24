@@ -31,8 +31,16 @@
 /cache/
 /target/
 /.gitlab-ci-local/
-# Node
+/builds/
 /node_modules/
+
+# ===========================================
+# Local/machine-specific directories
+# ===========================================
+/_VMs/
+/gitlab-profile/
+/vauchi-mobile-android/
+/vauchi-mobile-swift/
 
 
 
