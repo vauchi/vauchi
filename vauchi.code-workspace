@@ -1,21 +1,69 @@
 {
   "folders": [
-    { "path": ".", "name": "vauchi (root)" },
-    { "path": "core", "name": "core" },
-    { "path": "relay", "name": "relay" },
-    { "path": "cli", "name": "cli" },
-    { "path": "tui", "name": "tui" },
-    { "path": "desktop", "name": "desktop" },
-    { "path": "e2e", "name": "e2e" },
-    { "path": "features", "name": "features" },
-    { "path": "android", "name": "android" },
-    { "path": "ios", "name": "ios" },
-    { "path": "_dev-tools", "name": "_dev-tools" },
-    { "path": "_docs", "name": "_docs" },
-    { "path": "_infra", "name": "_infra" },
-    { "path": "_assets", "name": "_assets" },
-    { "path": "_website", "name": "_website" },
-    { "path": "_strategy", "name": "_strategy" }
+    {
+      "path": ".",
+      "name": "vauchi (root)"
+    },
+    {
+      "path": "core",
+      "name": "core"
+    },
+    {
+      "path": "relay",
+      "name": "relay"
+    },
+    {
+      "path": "cli",
+      "name": "cli"
+    },
+    {
+      "path": "tui",
+      "name": "tui"
+    },
+    {
+      "path": "desktop",
+      "name": "desktop"
+    },
+    {
+      "path": "e2e",
+      "name": "e2e"
+    },
+    {
+      "path": "features",
+      "name": "features"
+    },
+    {
+      "path": "android",
+      "name": "android"
+    },
+    {
+      "path": "ios",
+      "name": "ios"
+    },
+    {
+      "path": "_dev-tools",
+      "name": "_dev-tools"
+    },
+    {
+      "path": "_docs",
+      "name": "_docs"
+    },
+    {
+      "path": "_infra",
+      "name": "_infra"
+    },
+    {
+      "path": "_assets",
+      "name": "_assets"
+    },
+    {
+      "path": "_website",
+      "name": "_website"
+    },
+    {
+      "path": "_strategy",
+      "name": "_strategy"
+    }
   ],
   "settings": {
     "files.exclude": {
@@ -27,12 +75,113 @@
       "**/target": true,
       "**/node_modules": true
     },
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+
     "rust-analyzer.linkedProjects": [
       "core/Cargo.toml",
       "relay/Cargo.toml",
       "cli/Cargo.toml",
       "tui/Cargo.toml",
       "e2e/Cargo.toml"
+    ],
+    "rust-analyzer.rustfmt.enableRangeFormatting": true,
+    "rust-analyzer.check.command": "clippy",
+    "[rust]": {
+      "editor.defaultFormatter": "rust-lang.rust-analyzer",
+      "editor.formatOnSave": true
+    },
+
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[javascriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+
+    "[swift]": {
+      "editor.defaultFormatter": "vknabel.vscode-apple-swift-format",
+      "editor.formatOnSave": true
+    },
+
+    "[kotlin]": {
+      "editor.defaultFormatter": "fwcd.kotlin",
+      "editor.formatOnSave": true
+    },
+
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml",
+      "editor.formatOnSave": true
+    },
+
+    "[toml]": {
+      "editor.defaultFormatter": "tamasfe.even-better-toml",
+      "editor.formatOnSave": true
+    },
+
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+
+    "[gherkin]": {
+      "editor.defaultFormatter": "alexkrechik.cucumberautocomplete",
+      "editor.formatOnSave": true
+    },
+
+    "prettier.singleQuote": true,
+    "prettier.trailingComma": "es5",
+    "prettier.tabWidth": 2,
+
+    "eslint.validate": [
+      "javascript",
+      "javascriptreact",
+      "typescript",
+      "typescriptreact"
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "rust-lang.rust-analyzer",
+      "tamasfe.even-better-toml",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "vknabel.vscode-apple-swift-format",
+      "fwcd.kotlin",
+      "redhat.vscode-yaml",
+      "alexkrechik.cucumberautocomplete",
+      "tauri-apps.tauri-vscode",
+      "bradlc.vscode-tailwindcss"
     ]
   }
 }
