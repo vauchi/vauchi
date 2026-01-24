@@ -32,8 +32,7 @@ variables:
   # Set to "true" to enable code jobs (requires cross-project token access)
   # To enable, configure each sub-project's CI/CD settings:
   #   Settings > CI/CD > Job token permissions > Add "vauchi/vauchi"
-  # NOTE: Set to "true" once cross-project token access is configured
-  # and runner architecture is fixed to execute inside VMs
+  # Runners now execute inside VMs (architecture fixed)
   ENABLE_CODE_JOBS: "false"
 
 # Clone sub-repositories (main repo is a meta-repo)
@@ -508,3 +507,4 @@ pages:
       - public
   rules:
     - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+# trigger
