@@ -32,6 +32,8 @@ variables:
   # Set to "true" to enable code jobs (requires cross-project token access)
   # To enable, configure each sub-project's CI/CD settings:
   #   Settings > CI/CD > Job token permissions > Add "vauchi/vauchi"
+  # NOTE: Set to "true" once cross-project token access is configured
+  # and runner architecture is fixed to execute inside VMs
   ENABLE_CODE_JOBS: "false"
 
 # Clone sub-repositories (main repo is a meta-repo)
@@ -65,11 +67,10 @@ variables:
 lint:format:
   stage: lint
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   script:
     - rustup component add rustfmt
@@ -82,11 +83,10 @@ lint:format:
 lint:clippy:
   stage: lint
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   script:
     - rustup component add clippy
@@ -120,11 +120,10 @@ lint:bindings:
 test:unit:
   stage: test
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   script:
     - cd core && cargo test --workspace
@@ -136,11 +135,10 @@ test:unit:
 test:all-features:
   stage: test
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   script:
     - cd core && cargo test --workspace --all-features
@@ -155,11 +153,10 @@ test:all-features:
 e2e:smoke:
   stage: e2e-smoke
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   before_script:
     - cargo install cargo-nextest --locked || true
@@ -189,11 +186,10 @@ e2e:smoke:
 e2e:release:
   stage: e2e-release
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   before_script:
     - cargo install cargo-nextest --locked || true
@@ -258,11 +254,10 @@ security:deny:
 build:rust:
   stage: build
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - rust
-  #   - self-hosted
+  tags:
+    - linux
+    - rust
+    - self-hosted
   <<: *rust-cache
   script:
     - cd core && cargo build --workspace --release
@@ -291,11 +286,10 @@ build:docs:
 build:android:
   stage: build
   image: rust:latest
-  # Self-hosted runner tags (uncomment when runners are registered):
-  # tags:
-  #   - linux
-  #   - android
-  #   - self-hosted
+  tags:
+    - linux
+    - android
+    - self-hosted
   <<: *rust-cache
   variables:
     ANDROID_NDK_VERSION: "26.1.10909125"
@@ -346,14 +340,11 @@ build:ios:
       - ios/build/Build/Products/Release-iphonesimulator/*.app
     expire_in: 1 week
   rules:
-    # Skipped until self-hosted macOS runner is registered
-    - when: never
-    # Uncomment below when macOS runner is available:
-    # - if: $CI_COMMIT_BRANCH == "main"
-    # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    #   changes:
-    #     - "ios/**/*"
-    #     - "core/vauchi-mobile/**/*"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "ios/**/*"
+        - "core/vauchi-mobile/**/*"
   allow_failure: true
 
 # Build relay container image
@@ -378,11 +369,8 @@ build:relay-image:
         echo "No registry credentials, skipping push"
       fi
   rules:
-    # Skipped until self-hosted DinD runner is registered
-    - when: never
-    # Uncomment below when DinD runner is available:
-    # - if: $CI_COMMIT_BRANCH == "main"
-    # - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
   allow_failure: true
 
 # ============================================================
