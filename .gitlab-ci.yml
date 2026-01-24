@@ -16,8 +16,20 @@ variables:
   CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
   RUST_BACKTRACE: "1"
 
+# Clone sub-repositories (main repo is a meta-repo)
+.clone-repos: &clone-repos
+  before_script:
+    - |
+      echo "Cloning sub-repositories..."
+      for repo in core relay cli tui desktop e2e; do
+        if [ ! -d "$repo" ]; then
+          git clone --depth 1 "https://gitlab.com/vauchi/$repo.git" "$repo" || echo "Failed to clone $repo"
+        fi
+      done
+
 # Cache Cargo dependencies
 .rust-cache: &rust-cache
+  <<: *clone-repos
   cache:
     key: ${CI_COMMIT_REF_SLUG}-rust
     paths:
@@ -25,7 +37,7 @@ variables:
       - .cargo/registry/index/
       - .cargo/registry/cache/
       - .cargo/git/db/
-      - code/target/
+      - core/target/
 
 # ============================================================
 # Lint Stage
@@ -37,7 +49,7 @@ lint:format:
   <<: *rust-cache
   script:
     - rustup component add rustfmt
-    - cd code && cargo fmt --all -- --check
+    - cd core && cargo fmt --all -- --check
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -49,7 +61,7 @@ lint:clippy:
   <<: *rust-cache
   script:
     - rustup component add clippy
-    - cd code && cargo clippy --workspace -- -D warnings
+    - cd core && cargo clippy --workspace -- -D warnings
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -60,13 +72,13 @@ lint:bindings:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
-    - cd code && ./scripts/validate-bindings.sh
+    - cd core && RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    - cd core && ./scripts/validate-bindings.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "code/vauchi-mobile/**/*"
-        - "code/vauchi-core/**/*"
+        - "core/vauchi-mobile/**/*"
+        - "core/vauchi-core/**/*"
         - "android/app/src/main/kotlin/uniffi/**/*"
         - "ios/Vauchi/Generated/**/*"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -81,7 +93,7 @@ test:unit:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && cargo test --workspace
+    - cd core && cargo test --workspace
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -92,7 +104,7 @@ test:all-features:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && cargo test --workspace --all-features
+    - cd core && cargo test --workspace --all-features
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -163,7 +175,7 @@ security:audit:
   <<: *rust-cache
   script:
     - cargo install cargo-audit
-    - cd code && cargo audit
+    - cd core && cargo audit
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -179,14 +191,14 @@ security:deny:
   <<: *rust-cache
   script:
     - cargo install cargo-deny
-    - cd code && cargo deny check
+    - cd core && cargo deny check
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - "**/Cargo.toml"
         - "**/Cargo.lock"
-        - "code/deny.toml"
+        - "core/deny.toml"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
@@ -199,10 +211,10 @@ build:rust:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && cargo build --workspace --release
+    - cd core && cargo build --workspace --release
   artifacts:
     paths:
-      - code/target/release/vauchi-*
+      - core/target/release/vauchi-*
     expire_in: 1 week
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -213,10 +225,10 @@ build:docs:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && cargo doc --workspace --no-deps
+    - cd core && cargo doc --workspace --no-deps
   artifacts:
     paths:
-      - code/target/doc/
+      - core/target/doc/
     expire_in: 1 week
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -244,7 +256,7 @@ build:android:
     - $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${ANDROID_NDK_VERSION}"
     - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}
   script:
-    - ./code/scripts/build-android.sh release
+    - ./core/scripts/build-android.sh release
     - cd android && ./gradlew assembleRelease
   artifacts:
     paths:
@@ -265,8 +277,8 @@ security:weekly:
   <<: *rust-cache
   script:
     - cargo install cargo-audit cargo-deny
-    - cd code && cargo audit
-    - cd code && cargo deny check
+    - cd core && cargo audit
+    - cd core && cargo deny check
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
@@ -348,7 +360,7 @@ changeset:release:
     - npm ci
     - |
       # Get version from package.json
-      VERSION=$(node -p "require('./code/vauchi-desktop/ui/package.json').version || require('./package.json').version")
+      VERSION=$(node -p "require('./desktop/ui/package.json').version || require('./package.json').version")
       TAG="v$VERSION"
 
       # Check if tag already exists
@@ -382,8 +394,8 @@ pages:
   image: rust:latest
   <<: *rust-cache
   script:
-    - cd code && cargo doc --workspace --no-deps
-    - mv code/target/doc public
+    - cd core && cargo doc --workspace --no-deps
+    - mv core/target/doc public
     - echo '<meta http-equiv="refresh" content="0; url=vauchi_core/index.html">' > public/index.html
   artifacts:
     paths:
