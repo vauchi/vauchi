@@ -15,18 +15,19 @@ just check    # Run all checks
 ## MANDATORY
 
 - **Principles**: All work must align with `PRINCIPLES.md`
+- **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
 - **TDD**: Red→Green→Refactor. Test FIRST. Tests trace to `features/*.feature`
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
-- **Docs naming**: All files in `_private/docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
+- **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
+- **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
   - Exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`, problem artifacts
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
-See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
+See: `docs/2026-01-23-problem-to-solution-flow.md`
 
 ### Core Principle
 
@@ -40,10 +41,10 @@ intake → investigating → planning → implementing → testing → done (or 
 
 ### Workflow Steps
 
-1. **Create Problem Record** in `_private/docs/planning/problems/YYYY-MM-DD-problem-slug/`
+1. **Create Problem Record** in `docs/planning/problems/YYYY-MM-DD-problem-slug/`
 2. **Discussion** - Is it actually a problem? If no → archive with learnings
 3. **Investigation** - Research the problem, identify solutions
-   - External knowledge needed? → Create `_private/docs/knowledge/YYYY-MM-DD-topic.md`
+   - External knowledge needed? → Create `docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
 4. **Validate Solutions** against `PRINCIPLES.md`:
    - Core Principles (Privacy, Trust, Quality)
@@ -69,7 +70,7 @@ If unforeseen errors occur during implementation:
 ### Directory Structure
 
 ```
-_private/docs/
+docs/
 ├── knowledge/                    # External research (shared)
 └── planning/
     ├── problems/                 # Problem records with all artifacts
@@ -120,23 +121,24 @@ just help                   # Show all commands
 
 | Dir | Purpose |
 |-----|---------|
+| docs/ | Architecture, planning, TDD rules |
+| scripts/ | Dev tools, hooks, utilities |
+| assets/ | Brand assets, logos |
+| website/ | Landing page source |
 | features/ | Gherkin specs (shared across platforms) |
 | android/ | Kotlin/Compose app |
 | ios/ | SwiftUI app |
-| _private/ | Consolidated private repo (GitLab only) |
 
-### Private Directory Structure (`_private/`)
+### Private Content (`_private/`)
+
+Only truly sensitive content lives in `_private/`:
 
 | Subdir | Purpose |
 |--------|---------|
-| `_private/docs/` | Architecture, planning, TDD rules |
-| `_private/assets/` | Brand assets, images |
-| `_private/website/` | Landing page |
-| `_private/strategy/` | Business strategy |
-| `_private/dev-tools/` | Dev scripts, hooks, utilities |
-| `_private/infra/` | Deployment, runners, infrastructure |
+| `infra/` | Deployment configs, server IPs, runner tokens |
+| `strategy/` | Business strategy, funding plans |
 
-The `_private/` repo is not mirrored to GitHub and requires GitLab access.
+See `VISIBILITY_POLICY.md` for what goes where.
 
 ## Dependencies
 
@@ -220,7 +222,7 @@ git -C core checkout -b feature/remote-content-updates
 ## Related MRs
 
 - vauchi/features!42 - Gherkin specs
-- vauchi/private!15 - Planning documents
+- vauchi/private!15 - Infrastructure changes
 - vauchi/core!78 - Implementation
 ```
 

@@ -233,11 +233,18 @@
     },
     "todo-tree.filtering.excludeGlobs": ["**/node_modules/**", "**/target/**"],
 
-    "cucumberautocomplete.steps": ["features/step_definitions/**/*.rs", "e2e/tests/**/*.rs"],
+    "cucumberautocomplete.steps": [
+      "features/step_definitions/**/*.rs",
+      "e2e/tests/**/*.rs",
+    ],
     "cucumberautocomplete.strictGherkinCompletion": true,
 
     "testing.automaticallyOpenPeekView": "failureVisible",
     "testing.defaultGutterClickAction": "run",
+    "swift.path": "/home/megloff1/.local/share/swiftly/toolchains/6.2.3/usr/bin",
+    "swift.swiftEnvironmentVariables": {
+      "DEVELOPER_DIR": "public",
+    },
   },
   "extensions": {
     "recommendations": [

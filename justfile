@@ -47,7 +47,7 @@ lint:
 
 # Interactive commit across repos with changes
 commit:
-    ./_private/dev-tools/scripts/commit-interactive.sh
+    ./scripts/scripts/commit-interactive.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # APPLICATIONS - Run local services
@@ -310,7 +310,7 @@ docs:
 
 # Install git hooks
 install-hooks:
-    cp _private/dev-tools/hooks/* .git/hooks/
+    cp scripts/hooks/* .git/hooks/
     chmod +x .git/hooks/*
 
 # Show all commands
@@ -468,32 +468,32 @@ build-relay:
 
 # Start local relay (memory storage)
 dev-relay:
-    ./_private/dev-tools/scripts/dev/local-relay.sh
+    ./scripts/scripts/dev/local-relay.sh
 
 # Start local relay with TLS (for iOS/Android testing)
 dev-relay-tls:
-    ./_private/dev-tools/scripts/dev/local-relay-tls.sh
+    ./scripts/scripts/dev/local-relay-tls.sh
 
 # Setup local CA for mobile TLS testing
 dev-relay-tls-setup:
-    ./_private/dev-tools/scripts/dev/local-relay-tls.sh --setup
+    ./scripts/scripts/dev/local-relay-tls.sh --setup
 
 # Run CLI with isolated data (e.g., just dev-cli alice init "Alice")
 [positional-arguments]
 dev-cli *args:
-    ./_private/dev-tools/scripts/dev/multi-cli.sh "$@"
+    ./scripts/scripts/dev/multi-cli.sh "$@"
 
 # Run TUI with isolated data
 dev-tui instance:
-    ./_private/dev-tools/scripts/dev/multi-tui.sh {{instance}}
+    ./scripts/scripts/dev/multi-tui.sh {{instance}}
 
 # Clean test data
 dev-clean:
-    ./_private/dev-tools/scripts/dev/cleanup.sh all
+    ./scripts/scripts/dev/cleanup.sh all
 
 # Run E2E test checklist (manual device testing)
 e2e-checklist *args:
-    ./_private/dev-tools/scripts/dev/e2e-test-checklist.sh {{ args }}
+    ./scripts/scripts/dev/e2e-test-checklist.sh {{ args }}
 
 # ═══════════════════════════════════════════════════════════════
 # CROSS-PLATFORM E2E TESTING
@@ -501,88 +501,88 @@ e2e-checklist *args:
 
 # Check E2E testing status (all platforms)
 e2e-status:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh status
+    ./scripts/scripts/e2e/orchestrate.sh status
 
 # Clean all E2E test data
 e2e-clean:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh clean
+    ./scripts/scripts/e2e/orchestrate.sh clean
 
 # Show E2E setup guide
 e2e-setup:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh setup
+    ./scripts/scripts/e2e/orchestrate.sh setup
 
 # Show E2E infrastructure as Mermaid diagram
 e2e-map:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh map
+    ./scripts/scripts/e2e/orchestrate.sh map
 
 # List available E2E test scenarios
 e2e-scenarios:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenarios
+    ./scripts/scripts/e2e/orchestrate.sh scenarios
 
 # Run an E2E test scenario (use 'all' to run all automated scenarios)
 e2e-scenario name="":
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenario {{name}}
+    ./scripts/scripts/e2e/orchestrate.sh scenario {{name}}
 
 # Run all automated E2E scenarios and show results report
 e2e-scenario-all:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenario all
+    ./scripts/scripts/e2e/orchestrate.sh scenario all
 
 # Show latest E2E test report
 e2e-report:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh report
+    ./scripts/scripts/e2e/orchestrate.sh report
 
 # Teardown E2E infrastructure (stop relay, clean all test data)
 e2e-teardown-and-clean-infra:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh teardown
+    ./scripts/scripts/e2e/orchestrate.sh teardown
 
 # ─── CLI E2E ────────────────────────────────────────────────────
 
 # Run CLI command for instance (e.g., just e2e-cli alice init "Alice")
 [positional-arguments]
 e2e-cli *args:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh cli "$@"
+    ./scripts/scripts/e2e/orchestrate.sh cli "$@"
 
 # Run CLI exchange test between two instances
 e2e-cli-test alice="alice" bob="bob":
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh cli-test {{alice}} {{bob}}
+    ./scripts/scripts/e2e/orchestrate.sh cli-test {{alice}} {{bob}}
 
 # ─── TUI E2E ────────────────────────────────────────────────────
 
 # Launch TUI for instance (e.g., just e2e-tui alice)
 e2e-tui instance:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh tui {{instance}}
+    ./scripts/scripts/e2e/orchestrate.sh tui {{instance}}
 
 # Launch multiple TUI instances in separate terminals
 e2e-tui-multi *instances:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh tui-multi {{instances}}
+    ./scripts/scripts/e2e/orchestrate.sh tui-multi {{instances}}
 
 # ─── Desktop E2E ────────────────────────────────────────────────
 
 # Launch desktop app for instance
 e2e-desktop instance="default":
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop {{instance}}
+    ./scripts/scripts/e2e/orchestrate.sh desktop {{instance}}
 
 # Launch desktop in dev mode for instance
 e2e-desktop-dev instance="default":
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
+    ./scripts/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
 
 # Build desktop release binary
 e2e-desktop-build:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop-build
+    ./scripts/scripts/e2e/orchestrate.sh desktop-build
 
 # ─── Mobile E2E ─────────────────────────────────────────────────
 
 # Deploy apps to all mobile devices (iOS + Android)
 e2e-deploy:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy
+    ./scripts/scripts/e2e/orchestrate.sh deploy
 
 # Deploy iOS app to macOS VM simulator
 e2e-deploy-ios:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy-ios
+    ./scripts/scripts/e2e/orchestrate.sh deploy-ios
 
 # Deploy Android APK to local emulator
 e2e-deploy-android:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy-android
+    ./scripts/scripts/e2e/orchestrate.sh deploy-android
 
 # Start Android emulator manually (with xcb Qt platform for Wayland compatibility)
 e2e-android-start avd="Pixel_7":
@@ -590,25 +590,25 @@ e2e-android-start avd="Pixel_7":
 
 # Run interactive mobile E2E test session
 e2e-test-mobile:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh test
+    ./scripts/scripts/e2e/orchestrate.sh test
 
 # Take screenshots from mobile devices
 e2e-screenshot:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh screenshot
+    ./scripts/scripts/e2e/orchestrate.sh screenshot
 
 # Collect logs from mobile devices
 e2e-logs:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh logs
+    ./scripts/scripts/e2e/orchestrate.sh logs
 
 # ─── Relay ──────────────────────────────────────────────────────
 
 # Start local TLS relay for E2E testing
 e2e-relay:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh relay
+    ./scripts/scripts/e2e/orchestrate.sh relay
 
 # Setup local CA for TLS relay
 e2e-relay-setup:
-    ./_private/dev-tools/scripts/e2e/orchestrate.sh relay-setup
+    ./scripts/scripts/e2e/orchestrate.sh relay-setup
 
 # ═══════════════════════════════════════════════════════════════════
 # DEPLOYMENT
@@ -660,7 +660,7 @@ mail-list-users:
 
 # Explore codebase with local LLM (e.g., just tell-me-about "iOS tests")
 tell-me-about *topic:
-    ./_private/dev-tools/scripts/tell-me-about.sh {{topic}}
+    ./scripts/scripts/tell-me-about.sh {{topic}}
 
 # ═══════════════════════════════════════════════════════════════════
 # GITLAB RUNNERS & VMS
