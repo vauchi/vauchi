@@ -1,0 +1,16 @@
+# GitLab CODEOWNERS
+# https://docs.gitlab.com/ee/user/project/codeowners/
+#
+# These owners will be requested for review when files matching
+# the pattern are modified in a merge request.
+
+# Default owner for everything
+* @megloff1
+
+# Security-sensitive files require explicit review
+/.gitlab-ci.yml @megloff1
+/.license-decisions.yml @megloff1
+/deny.toml @megloff1
+
+# Infrastructure and deployment
+/_private/ @megloff1

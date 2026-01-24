@@ -22,12 +22,17 @@
 #   2. Uncomment the `tags:` sections in job definitions
 #   3. Remove `when: never` from build:ios and build:relay-image
 
-# GitLab Ultimate Security Scanning Templates
+# GitLab Ultimate Templates
+# Security scanning, code quality, and license compliance
 include:
+  # Security Scanning
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - template: Security/Container-Scanning.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+  # Code Quality
+  - template: Jobs/Code-Quality.gitlab-ci.yml
 
 stages:
   - lint
@@ -45,17 +50,40 @@ variables:
   # Set to "true" to enable code jobs (requires cross-project token access)
   # To enable, configure each sub-project's CI/CD settings:
   #   Settings > CI/CD > Job token permissions > Add "vauchi/vauchi"
-  # Infrastructure ready: runners in VMs, cross-project access configured
-  # Disabled until clippy warnings in core are fixed
-  ENABLE_CODE_JOBS: "false"
+  ENABLE_CODE_JOBS: "true"
 
+  # ============================================================
   # GitLab Ultimate Security Scanning Configuration
-  SAST_EXCLUDED_PATHS: "target/, node_modules/, dist/, builds/, cache/, tmp/"
-  DS_EXCLUDED_PATHS: "target/, node_modules/, builds/"
-  SECRET_DETECTION_EXCLUDED_PATHS: "target/, node_modules/, builds/, cache/"
+  # ============================================================
 
-  # Container scanning for relay image
+  # SAST (Static Application Security Testing)
+  SAST_EXCLUDED_PATHS: "target/, node_modules/, dist/, builds/, cache/, tmp/"
+  SAST_EXCLUDED_ANALYZERS: ""
+  # Enable Rust analyzer (semgrep)
+  SAST_ANALYZER_IMAGE_TAG: "5"
+
+  # Dependency Scanning
+  DS_EXCLUDED_PATHS: "target/, node_modules/, builds/"
+  # Enable Cargo.lock scanning for Rust
+  DS_EXCLUDED_ANALYZERS: ""
+
+  # Secret Detection
+  SECRET_DETECTION_EXCLUDED_PATHS: "target/, node_modules/, builds/, cache/, tmp/"
+  SECRET_DETECTION_HISTORIC_SCAN: "true"
+
+  # Container Scanning
   CS_IMAGE: $CI_REGISTRY_IMAGE/relay:$CI_COMMIT_SHA
+  CS_SEVERITY_THRESHOLD: "MEDIUM"
+
+  # License Compliance
+  LICENSE_FINDER_CLI_OPTS: "--decisions-file=.license-decisions.yml"
+
+  # Code Quality
+  CODE_QUALITY_DISABLED: "false"
+  CODECLIMATE_DEBUG: "false"
+
+  # Coverage (for test jobs)
+  COVERAGE_REGEX: '/^\s*Total:\s+(\d+(?:\.\d+)?%)/'
 
 # Clone sub-repositories (main repo is a meta-repo)
 # Requires CI job token to access private repos
@@ -166,6 +194,36 @@ test:all-features:
   rules:
     - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+
+# Test with coverage reporting (GitLab Ultimate feature)
+test:coverage:
+  stage: test
+  image: rust:latest
+  tags:
+    - linux
+    - rust
+    - self-hosted
+  <<: *rust-cache
+  before_script:
+    - rustup component add llvm-tools-preview
+    - cargo install cargo-llvm-cov --locked || true
+    - *clone-repos
+  script:
+    - cd core && cargo llvm-cov --workspace --lcov --output-path lcov.info
+    - cd core && cargo llvm-cov report --workspace
+  coverage: '/Total:\s+(\d+(?:\.\d+)?%)/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: core/cobertura.xml
+    paths:
+      - core/lcov.info
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+  allow_failure: true  # Don't block if coverage tools fail
 
 # ============================================================
 # E2E Smoke Stage (Fast feedback on every MR)
@@ -529,4 +587,135 @@ pages:
       - public
   rules:
     - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
-# trigger
+
+# ============================================================
+# GitLab Ultimate Security Scan Overrides
+# ============================================================
+# Override template rules to run on MRs and main branch
+
+# SAST runs on all source code changes
+sast:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Dependency scanning for Cargo.lock and package.json
+dependency_scanning:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Secret detection on all commits
+secret_detection:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# Container scanning when relay image is built
+container_scanning:
+  stage: security
+  needs:
+    - job: build:relay-image
+      optional: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+# License compliance scanning
+license_scanning:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - "**/package.json"
+        - "**/package-lock.json"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Code quality analysis
+code_quality:
+  stage: lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+    expire_in: 1 week
+
+# ============================================================
+# Additional Security Tools
+# ============================================================
+
+# Rust-specific security: cargo-audit with SARIF output
+security:audit-sarif:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-audit --features=sarif || true
+    - *clone-repos
+  script:
+    - cd core && cargo audit --json > ../gl-sast-report.json || true
+    - cd core && cargo audit
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true
+
+# License check with cargo-deny (detailed Rust license analysis)
+security:license-check:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-deny || true
+    - *clone-repos
+  script:
+    - cd core && cargo deny check licenses
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - "core/deny.toml"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
+
+# Ban check with cargo-deny (prevent problematic crates)
+security:ban-check:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-deny || true
+    - *clone-repos
+  script:
+    - cd core && cargo deny check bans
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - "core/deny.toml"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
