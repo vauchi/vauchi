@@ -666,52 +666,52 @@ tell-me-about *topic:
 # GITLAB RUNNERS & VMS
 # ═══════════════════════════════════════════════════════════════════
 
-# Start all runner VMs (in parallel)
+# Start all runners (VMs + docker-local service)
 runners-start:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Starting all runner VMs in parallel..."
+    echo "Starting all runners..."
 
-    # Start all VMs without waiting
+    # Start VMs in parallel
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh start-nowait &
     pid_linux=$!
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh start-nowait &
     pid_macos=$!
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh start-nowait &
-    pid_dind=$!
 
-    # Wait for all start commands to complete
-    wait $pid_linux $pid_macos $pid_dind 2>/dev/null || true
+    # Start docker-local service
+    systemctl --user start gitlab-runner 2>/dev/null || echo "[SKIP] docker-local service not configured"
+
+    # Wait for VM start commands
+    wait $pid_linux $pid_macos 2>/dev/null || true
 
     echo ""
     echo "Waiting for VMs to become ready..."
 
-    # Wait for SSH on all VMs in parallel
+    # Wait for SSH on VMs
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh wait &
     pid_wait_linux=$!
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh wait &
     pid_wait_macos=$!
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh wait &
-    pid_wait_dind=$!
 
-    # Wait for all to be ready
     wait $pid_wait_linux && echo "[OK] Linux VM ready" || echo "[SKIP] Linux VM not available"
     wait $pid_wait_macos && echo "[OK] macOS VM ready" || echo "[SKIP] macOS VM not available"
-    wait $pid_wait_dind && echo "[OK] DinD VM ready" || echo "[SKIP] DinD VM not available"
+
+    # Check docker-local
+    systemctl --user is-active gitlab-runner &>/dev/null && echo "[OK] Docker-local runner active" || echo "[SKIP] Docker-local not running"
 
     echo ""
     echo "Done. Run 'just runners-status' to verify."
 
-# Stop all runner VMs
+# Stop all runners (VMs + docker-local service)
 runners-stop:
-    @echo "Stopping all runner VMs..."
+    @echo "Stopping all runners..."
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh stop || true
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh stop || true
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh stop || true
+    systemctl --user stop gitlab-runner 2>/dev/null || true
 
-# Show status of all runner VMs
+# Show status of all runners
 runners-status:
-    @echo "=== Runner VM Status ==="
+    @echo "=== Runner Status ==="
     @echo ""
     @echo "Linux VM:"
     @./_private/infra/runners/linux-vm/vm-lifecycle.sh status || echo "  Not configured"
@@ -719,10 +719,10 @@ runners-status:
     @echo "macOS VM:"
     @./_private/infra/runners/macos-vm/vm-lifecycle.sh status || echo "  Not configured"
     @echo ""
-    @echo "DinD VM:"
-    @./_private/infra/runners/dind-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @echo "Docker-local (systemd):"
+    @systemctl --user status gitlab-runner --no-pager 2>&1 | head -5 || echo "  Not configured"
     @echo ""
-    @echo "=== GitLab Runner Status ==="
+    @echo "=== GitLab Runner Config ==="
     @gitlab-runner list 2>&1 | head -20 || echo "  gitlab-runner not installed"
 
 # ─── Linux VM ──────────────────────────────────────────────────────
@@ -753,16 +753,24 @@ vm-macos-stop:
 vm-macos-ssh *args:
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh ssh {{args}}
 
-# ─── DinD VM ───────────────────────────────────────────────────────
+# ─── Docker-local Runner (systemd) ─────────────────────────────────
 
-# Start DinD VM
-vm-dind-start:
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh start
+# Start docker-local runner service
+docker-runner-start:
+    systemctl --user start gitlab-runner
 
-# Stop DinD VM
-vm-dind-stop:
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh stop
+# Stop docker-local runner service
+docker-runner-stop:
+    systemctl --user stop gitlab-runner
 
-# SSH into DinD VM
-vm-dind-ssh *args:
-    ./_private/infra/runners/dind-vm/vm-lifecycle.sh ssh {{args}}
+# Show docker-local runner status
+docker-runner-status:
+    systemctl --user status gitlab-runner --no-pager
+
+# View docker-local runner logs
+docker-runner-logs:
+    journalctl --user -u gitlab-runner -f
+
+# Restart docker-local runner
+docker-runner-restart:
+    systemctl --user restart gitlab-runner
