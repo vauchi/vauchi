@@ -154,6 +154,103 @@ just tell-me-about "crypto implementation"
 
 This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summarize findings.
 
-## Commits
+## Git Workflow (MANDATORY)
 
-All tests green. Update `_docs/planning/` and other relevant documentation. Check `features/` for features references. Use changeset.
+### Branch Naming
+
+All work MUST be done on a branch. Branch names follow this pattern:
+
+```
+{type}/{short-description}
+```
+
+| Type | Use Case | Example |
+|------|----------|---------|
+| `feature/` | New functionality | `feature/remote-content-updates` |
+| `bugfix/` | Bug fixes | `bugfix/qr-code-timeout` |
+| `refactor/` | Code restructuring | `refactor/crypto-module` |
+| `investigation/` | Research/exploration | `investigation/webrtc-feasibility` |
+
+### Workflow
+
+```
+1. Create branch    → git checkout -b feature/my-feature
+2. Make changes     → Follow TDD, commit atomically
+3. Push branch      → git push -u origin feature/my-feature
+4. Create MR        → Use GitLab UI or glab CLI
+5. Link related MRs → See "Cross-Repo Changes" below
+6. Review & merge   → Squash or rebase, delete branch
+```
+
+### Commit Messages
+
+```
+{type}: {Short description}
+
+{Longer description if needed}
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+
+### Cross-Repo Changes
+
+When work spans multiple repositories, create a branch with the **same name** in each repo and link the MRs together.
+
+**Example:** A feature touching `features/`, `_docs/`, and `core/`:
+
+```bash
+# Same branch name in all repos
+git -C features checkout -b feature/remote-content-updates
+git -C _docs checkout -b feature/remote-content-updates
+git -C core checkout -b feature/remote-content-updates
+```
+
+**In each MR description, add a "Related MRs" section:**
+
+```markdown
+## Related MRs
+
+- vauchi/features!42 - Gherkin specs
+- vauchi/docs!15 - Planning documents
+- vauchi/core!78 - Implementation
+```
+
+Use GitLab MR reference format: `{group}/{project}!{mr_number}`
+
+### MR Description Template
+
+```markdown
+## Summary
+- Bullet points of changes
+
+## Related MRs
+- vauchi/other-repo!123 - Description
+
+## Test Plan
+- [ ] Tests pass
+- [ ] Manual testing done
+
+## Checklist
+- [ ] Follows TDD
+- [ ] Documentation updated
+- [ ] Feature file updated (if applicable)
+```
+
+### Commands
+
+```bash
+# Create and push branch
+git checkout -b feature/my-feature
+git push -u origin feature/my-feature
+
+# Create MR (requires glab auth)
+glab mr create --title "feat: My feature" --target-branch main
+
+# View MR
+glab mr view
+
+# Check out MR locally
+glab mr checkout 42
+```
