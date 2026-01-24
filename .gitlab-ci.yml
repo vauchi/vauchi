@@ -2,6 +2,12 @@
 #
 # Mirrors GitHub Actions functionality for GitLab users
 #
+# GitLab Ultimate Features (via Open Source Program):
+#   - SAST: Static application security testing
+#   - Dependency Scanning: Check for vulnerable dependencies
+#   - Secret Detection: Prevent accidental credential commits
+#   - Container Scanning: Scan Docker images for vulnerabilities
+#
 # Runner Configuration:
 #   Currently using GitLab shared runners for all jobs.
 #   Self-hosted runner support is prepared but commented out.
@@ -12,9 +18,16 @@
 #   - dind, docker-build: DinD VM (self-hosted)
 #
 # To enable self-hosted runners:
-#   1. Register runners with the appropriate tags (see _infra/runners/)
+#   1. Register runners with the appropriate tags (see _private/infra/runners/)
 #   2. Uncomment the `tags:` sections in job definitions
 #   3. Remove `when: never` from build:ios and build:relay-image
+
+# GitLab Ultimate Security Scanning Templates
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
 
 stages:
   - lint
@@ -35,6 +48,14 @@ variables:
   # Infrastructure ready: runners in VMs, cross-project access configured
   # Disabled until clippy warnings in core are fixed
   ENABLE_CODE_JOBS: "false"
+
+  # GitLab Ultimate Security Scanning Configuration
+  SAST_EXCLUDED_PATHS: "target/, node_modules/, dist/, builds/, cache/, tmp/"
+  DS_EXCLUDED_PATHS: "target/, node_modules/, builds/"
+  SECRET_DETECTION_EXCLUDED_PATHS: "target/, node_modules/, builds/, cache/"
+
+  # Container scanning for relay image
+  CS_IMAGE: $CI_REGISTRY_IMAGE/relay:$CI_COMMIT_SHA
 
 # Clone sub-repositories (main repo is a meta-repo)
 # Requires CI job token to access private repos
