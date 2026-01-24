@@ -165,20 +165,25 @@ This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summari
 
 ## Git Workflow (MANDATORY)
 
-### Branch Naming
+### Branch Protection
 
-All work MUST be done on a branch. Branch names follow this pattern:
+All repos have protected `main` branches:
+- **Direct push to main**: Blocked (no one)
+- **Merge via MR**: Maintainers only
+- **Force push**: Disabled
+
+### Branch Naming
 
 ```
 {type}/{short-description}
 ```
 
-| Type | Use Case | Example |
-|------|----------|---------|
-| `feature/` | New functionality | `feature/remote-content-updates` |
-| `bugfix/` | Bug fixes | `bugfix/qr-code-timeout` |
-| `refactor/` | Code restructuring | `refactor/crypto-module` |
-| `investigation/` | Research/exploration | `investigation/webrtc-feasibility` |
+| Type | Use Case |
+|------|----------|
+| `feature/` | New functionality |
+| `bugfix/` | Bug fixes |
+| `refactor/` | Code restructuring |
+| `investigation/` | Research/exploration |
 
 ### Workflow
 
@@ -186,9 +191,9 @@ All work MUST be done on a branch. Branch names follow this pattern:
 1. Create branch    → git checkout -b feature/my-feature
 2. Make changes     → Follow TDD, commit atomically
 3. Push branch      → git push -u origin feature/my-feature
-4. Create MR        → Use GitLab UI or glab CLI
-5. Link related MRs → See "Cross-Repo Changes" below
-6. Review & merge   → Squash or rebase, delete branch
+4. Create MR        → glab mr create --title "feat: ..." --target-branch main
+5. CI passes        → Security scans + tests must pass
+6. Review & merge   → Maintainer merges, branch deleted
 ```
 
 ### Commit Messages

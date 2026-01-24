@@ -17,7 +17,20 @@ just check
 
 ## Development Workflow
 
-### 1. TDD Required
+### 1. Merge Requests Required
+
+All repos have protected `main` branches. Direct push is blocked.
+
+```bash
+git checkout -b feature/my-feature
+# make changes
+git push -u origin feature/my-feature
+glab mr create --title "feat: My feature" --target-branch main
+```
+
+CI must pass (security scans + tests) before merge.
+
+### 2. TDD Required
 
 All code changes must follow Test-Driven Development:
 
