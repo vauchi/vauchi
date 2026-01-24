@@ -13,11 +13,10 @@ set shell := ["bash", "-cu"]
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "core relay cli tui desktop e2e features android ios dev-tools"
+public_repos := "core relay cli tui desktop e2e features android ios"
 
-# Private repositories (not mirrored, cloned with _ prefix)
-# These require GitLab access
-private_repos := "assets docs website strategy infra"
+# Private repository (consolidated, cloned as _private)
+private_repo := "private"
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
@@ -48,7 +47,7 @@ lint:
 
 # Interactive commit across repos with changes
 commit:
-    ./_dev-tools/scripts/commit-interactive.sh
+    ./_private/dev-tools/scripts/commit-interactive.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # APPLICATIONS - Run local services
@@ -146,15 +145,12 @@ clone-repos:
             git clone "{{gitlab_base}}/$repo.git" "$repo" 2>/dev/null || echo "  $repo (skipped)"
         fi
     done
-    echo "Cloning private repositories (with _ prefix)..."
-    for repo in {{private_repos}}; do
-        local_name="_$repo"
-        if [[ -d "$local_name" ]]; then
-            echo "  $local_name (exists)"
-        else
-            git clone "{{gitlab_base}}/$repo.git" "$local_name" 2>/dev/null || echo "  $local_name (skipped - no access?)"
-        fi
-    done
+    echo "Cloning private repository..."
+    if [[ -d "_private" ]]; then
+        echo "  _private (exists)"
+    else
+        git clone "{{gitlab_base}}/{{private_repo}}.git" "_private" 2>/dev/null || echo "  _private (skipped - no access?)"
+    fi
 
 # Pull latest changes from all repos
 pull-all:
@@ -193,7 +189,7 @@ clean:
     done
 
     # Node modules and build outputs
-    for dir in desktop/ui _website; do
+    for dir in desktop/ui _private/website; do
         if [[ -d "$dir/node_modules" ]]; then
             echo "  Cleaning $dir/node_modules"
             rm -rf "$dir/node_modules"
@@ -314,7 +310,7 @@ docs:
 
 # Install git hooks
 install-hooks:
-    cp _dev-tools/hooks/* .git/hooks/
+    cp _private/dev-tools/hooks/* .git/hooks/
     chmod +x .git/hooks/*
 
 # Show all commands
@@ -472,32 +468,32 @@ build-relay:
 
 # Start local relay (memory storage)
 dev-relay:
-    ./_dev-tools/scripts/dev/local-relay.sh
+    ./_private/dev-tools/scripts/dev/local-relay.sh
 
 # Start local relay with TLS (for iOS/Android testing)
 dev-relay-tls:
-    ./_dev-tools/scripts/dev/local-relay-tls.sh
+    ./_private/dev-tools/scripts/dev/local-relay-tls.sh
 
 # Setup local CA for mobile TLS testing
 dev-relay-tls-setup:
-    ./_dev-tools/scripts/dev/local-relay-tls.sh --setup
+    ./_private/dev-tools/scripts/dev/local-relay-tls.sh --setup
 
 # Run CLI with isolated data (e.g., just dev-cli alice init "Alice")
 [positional-arguments]
 dev-cli *args:
-    ./_dev-tools/scripts/dev/multi-cli.sh "$@"
+    ./_private/dev-tools/scripts/dev/multi-cli.sh "$@"
 
 # Run TUI with isolated data
 dev-tui instance:
-    ./_dev-tools/scripts/dev/multi-tui.sh {{instance}}
+    ./_private/dev-tools/scripts/dev/multi-tui.sh {{instance}}
 
 # Clean test data
 dev-clean:
-    ./_dev-tools/scripts/dev/cleanup.sh all
+    ./_private/dev-tools/scripts/dev/cleanup.sh all
 
 # Run E2E test checklist (manual device testing)
 e2e-checklist *args:
-    ./_dev-tools/scripts/dev/e2e-test-checklist.sh {{ args }}
+    ./_private/dev-tools/scripts/dev/e2e-test-checklist.sh {{ args }}
 
 # ═══════════════════════════════════════════════════════════════
 # CROSS-PLATFORM E2E TESTING
@@ -505,88 +501,88 @@ e2e-checklist *args:
 
 # Check E2E testing status (all platforms)
 e2e-status:
-    ./_dev-tools/scripts/e2e/orchestrate.sh status
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh status
 
 # Clean all E2E test data
 e2e-clean:
-    ./_dev-tools/scripts/e2e/orchestrate.sh clean
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh clean
 
 # Show E2E setup guide
 e2e-setup:
-    ./_dev-tools/scripts/e2e/orchestrate.sh setup
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh setup
 
 # Show E2E infrastructure as Mermaid diagram
 e2e-map:
-    ./_dev-tools/scripts/e2e/orchestrate.sh map
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh map
 
 # List available E2E test scenarios
 e2e-scenarios:
-    ./_dev-tools/scripts/e2e/orchestrate.sh scenarios
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenarios
 
 # Run an E2E test scenario (use 'all' to run all automated scenarios)
 e2e-scenario name="":
-    ./_dev-tools/scripts/e2e/orchestrate.sh scenario {{name}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenario {{name}}
 
 # Run all automated E2E scenarios and show results report
 e2e-scenario-all:
-    ./_dev-tools/scripts/e2e/orchestrate.sh scenario all
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh scenario all
 
 # Show latest E2E test report
 e2e-report:
-    ./_dev-tools/scripts/e2e/orchestrate.sh report
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh report
 
 # Teardown E2E infrastructure (stop relay, clean all test data)
 e2e-teardown-and-clean-infra:
-    ./_dev-tools/scripts/e2e/orchestrate.sh teardown
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh teardown
 
 # ─── CLI E2E ────────────────────────────────────────────────────
 
 # Run CLI command for instance (e.g., just e2e-cli alice init "Alice")
 [positional-arguments]
 e2e-cli *args:
-    ./_dev-tools/scripts/e2e/orchestrate.sh cli "$@"
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh cli "$@"
 
 # Run CLI exchange test between two instances
 e2e-cli-test alice="alice" bob="bob":
-    ./_dev-tools/scripts/e2e/orchestrate.sh cli-test {{alice}} {{bob}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh cli-test {{alice}} {{bob}}
 
 # ─── TUI E2E ────────────────────────────────────────────────────
 
 # Launch TUI for instance (e.g., just e2e-tui alice)
 e2e-tui instance:
-    ./_dev-tools/scripts/e2e/orchestrate.sh tui {{instance}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh tui {{instance}}
 
 # Launch multiple TUI instances in separate terminals
 e2e-tui-multi *instances:
-    ./_dev-tools/scripts/e2e/orchestrate.sh tui-multi {{instances}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh tui-multi {{instances}}
 
 # ─── Desktop E2E ────────────────────────────────────────────────
 
 # Launch desktop app for instance
 e2e-desktop instance="default":
-    ./_dev-tools/scripts/e2e/orchestrate.sh desktop {{instance}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop {{instance}}
 
 # Launch desktop in dev mode for instance
 e2e-desktop-dev instance="default":
-    ./_dev-tools/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
 
 # Build desktop release binary
 e2e-desktop-build:
-    ./_dev-tools/scripts/e2e/orchestrate.sh desktop-build
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh desktop-build
 
 # ─── Mobile E2E ─────────────────────────────────────────────────
 
 # Deploy apps to all mobile devices (iOS + Android)
 e2e-deploy:
-    ./_dev-tools/scripts/e2e/orchestrate.sh deploy
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy
 
 # Deploy iOS app to macOS VM simulator
 e2e-deploy-ios:
-    ./_dev-tools/scripts/e2e/orchestrate.sh deploy-ios
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy-ios
 
 # Deploy Android APK to local emulator
 e2e-deploy-android:
-    ./_dev-tools/scripts/e2e/orchestrate.sh deploy-android
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh deploy-android
 
 # Start Android emulator manually (with xcb Qt platform for Wayland compatibility)
 e2e-android-start avd="Pixel_7":
@@ -594,25 +590,25 @@ e2e-android-start avd="Pixel_7":
 
 # Run interactive mobile E2E test session
 e2e-test-mobile:
-    ./_dev-tools/scripts/e2e/orchestrate.sh test
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh test
 
 # Take screenshots from mobile devices
 e2e-screenshot:
-    ./_dev-tools/scripts/e2e/orchestrate.sh screenshot
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh screenshot
 
 # Collect logs from mobile devices
 e2e-logs:
-    ./_dev-tools/scripts/e2e/orchestrate.sh logs
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh logs
 
 # ─── Relay ──────────────────────────────────────────────────────
 
 # Start local TLS relay for E2E testing
 e2e-relay:
-    ./_dev-tools/scripts/e2e/orchestrate.sh relay
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh relay
 
 # Setup local CA for TLS relay
 e2e-relay-setup:
-    ./_dev-tools/scripts/e2e/orchestrate.sh relay-setup
+    ./_private/dev-tools/scripts/e2e/orchestrate.sh relay-setup
 
 # ═══════════════════════════════════════════════════════════════════
 # DEPLOYMENT
@@ -620,15 +616,15 @@ e2e-relay-setup:
 
 # Deploy relay using Kamal
 deploy-relay:
-    kamal deploy -c _infra/config/deploy.yml
+    kamal deploy -c _private/infra/config/deploy.yml
 
 # Show relay logs
 relay-logs:
-    kamal app logs -f -c _infra/config/deploy.yml
+    kamal app logs -f -c _private/infra/config/deploy.yml
 
 # Prepare mail server (run before port 25 is open)
 mail-prepare:
-    ./_infra/mail/prepare-mail.sh
+    ./_private/infra/mail/prepare-mail.sh
 
 # Deploy mail server (run after port 25 is open)
 mail-deploy:
@@ -664,7 +660,7 @@ mail-list-users:
 
 # Explore codebase with local LLM (e.g., just tell-me-about "iOS tests")
 tell-me-about *topic:
-    ./_dev-tools/scripts/tell-me-about.sh {{topic}}
+    ./_private/dev-tools/scripts/tell-me-about.sh {{topic}}
 
 # ═══════════════════════════════════════════════════════════════════
 # GITLAB RUNNERS & VMS
@@ -677,11 +673,11 @@ runners-start:
     echo "Starting all runner VMs in parallel..."
 
     # Start all VMs without waiting
-    ./_infra/runners/linux-vm/vm-lifecycle.sh start-nowait &
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh start-nowait &
     pid_linux=$!
-    ./_infra/runners/macos-vm/vm-lifecycle.sh start-nowait &
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh start-nowait &
     pid_macos=$!
-    ./_infra/runners/dind-vm/vm-lifecycle.sh start-nowait &
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh start-nowait &
     pid_dind=$!
 
     # Wait for all start commands to complete
@@ -691,11 +687,11 @@ runners-start:
     echo "Waiting for VMs to become ready..."
 
     # Wait for SSH on all VMs in parallel
-    ./_infra/runners/linux-vm/vm-lifecycle.sh wait &
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh wait &
     pid_wait_linux=$!
-    ./_infra/runners/macos-vm/vm-lifecycle.sh wait &
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh wait &
     pid_wait_macos=$!
-    ./_infra/runners/dind-vm/vm-lifecycle.sh wait &
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh wait &
     pid_wait_dind=$!
 
     # Wait for all to be ready
@@ -709,22 +705,22 @@ runners-start:
 # Stop all runner VMs
 runners-stop:
     @echo "Stopping all runner VMs..."
-    ./_infra/runners/linux-vm/vm-lifecycle.sh stop || true
-    ./_infra/runners/macos-vm/vm-lifecycle.sh stop || true
-    ./_infra/runners/dind-vm/vm-lifecycle.sh stop || true
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh stop || true
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh stop || true
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh stop || true
 
 # Show status of all runner VMs
 runners-status:
     @echo "=== Runner VM Status ==="
     @echo ""
     @echo "Linux VM:"
-    @./_infra/runners/linux-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @./_private/infra/runners/linux-vm/vm-lifecycle.sh status || echo "  Not configured"
     @echo ""
     @echo "macOS VM:"
-    @./_infra/runners/macos-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @./_private/infra/runners/macos-vm/vm-lifecycle.sh status || echo "  Not configured"
     @echo ""
     @echo "DinD VM:"
-    @./_infra/runners/dind-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @./_private/infra/runners/dind-vm/vm-lifecycle.sh status || echo "  Not configured"
     @echo ""
     @echo "=== GitLab Runner Status ==="
     @gitlab-runner list 2>&1 | head -20 || echo "  gitlab-runner not installed"
@@ -733,40 +729,40 @@ runners-status:
 
 # Start Linux VM
 vm-linux-start:
-    ./_infra/runners/linux-vm/vm-lifecycle.sh start
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh start
 
 # Stop Linux VM
 vm-linux-stop:
-    ./_infra/runners/linux-vm/vm-lifecycle.sh stop
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh stop
 
 # SSH into Linux VM
 vm-linux-ssh *args:
-    ./_infra/runners/linux-vm/vm-lifecycle.sh ssh {{args}}
+    ./_private/infra/runners/linux-vm/vm-lifecycle.sh ssh {{args}}
 
 # ─── macOS VM ──────────────────────────────────────────────────────
 
 # Start macOS VM
 vm-macos-start:
-    ./_infra/runners/macos-vm/vm-lifecycle.sh start
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh start
 
 # Stop macOS VM
 vm-macos-stop:
-    ./_infra/runners/macos-vm/vm-lifecycle.sh stop
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh stop
 
 # SSH into macOS VM
 vm-macos-ssh *args:
-    ./_infra/runners/macos-vm/vm-lifecycle.sh ssh {{args}}
+    ./_private/infra/runners/macos-vm/vm-lifecycle.sh ssh {{args}}
 
 # ─── DinD VM ───────────────────────────────────────────────────────
 
 # Start DinD VM
 vm-dind-start:
-    ./_infra/runners/dind-vm/vm-lifecycle.sh start
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh start
 
 # Stop DinD VM
 vm-dind-stop:
-    ./_infra/runners/dind-vm/vm-lifecycle.sh stop
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh stop
 
 # SSH into DinD VM
 vm-dind-ssh *args:
-    ./_infra/runners/dind-vm/vm-lifecycle.sh ssh {{args}}
+    ./_private/infra/runners/dind-vm/vm-lifecycle.sh ssh {{args}}

@@ -19,14 +19,14 @@ just check    # Run all checks
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `_docs/planning/todo/` doc to `done/`
-- **Docs naming**: All files in `_docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
+- **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
+- **Docs naming**: All files in `_private/docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
   - Exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`, problem artifacts
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
-See: `_docs/2026-01-23-problem-to-solution-flow.md`
+See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
 
 ### Core Principle
 
@@ -40,10 +40,10 @@ intake → investigating → planning → implementing → testing → done (or 
 
 ### Workflow Steps
 
-1. **Create Problem Record** in `_docs/planning/problems/YYYY-MM-DD-problem-slug/`
+1. **Create Problem Record** in `_private/docs/planning/problems/YYYY-MM-DD-problem-slug/`
 2. **Discussion** - Is it actually a problem? If no → archive with learnings
 3. **Investigation** - Research the problem, identify solutions
-   - External knowledge needed? → Create `_docs/knowledge/YYYY-MM-DD-topic.md`
+   - External knowledge needed? → Create `_private/docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
 4. **Validate Solutions** against `PRINCIPLES.md`:
    - Core Principles (Privacy, Trust, Quality)
@@ -69,7 +69,7 @@ If unforeseen errors occur during implementation:
 ### Directory Structure
 
 ```
-_docs/
+_private/docs/
 ├── knowledge/                    # External research (shared)
 └── planning/
     ├── problems/                 # Problem records with all artifacts
@@ -123,13 +123,20 @@ just help                   # Show all commands
 | features/ | Gherkin specs (shared across platforms) |
 | android/ | Kotlin/Compose app |
 | ios/ | SwiftUI app |
-| _docs/ | Architecture, planning, TDD rules (private) |
-| _assets/ | Brand assets, images (private) |
-| _website/ | Landing page (private) |
-| _strategy/ | Business strategy (private) |
-| _dev-tools/ | Dev scripts, hooks, utilities |
+| _private/ | Consolidated private repo (GitLab only) |
 
-Private repos (prefixed with `_`) are not mirrored to GitHub and require GitLab access.
+### Private Directory Structure (`_private/`)
+
+| Subdir | Purpose |
+|--------|---------|
+| `_private/docs/` | Architecture, planning, TDD rules |
+| `_private/assets/` | Brand assets, images |
+| `_private/website/` | Landing page |
+| `_private/strategy/` | Business strategy |
+| `_private/dev-tools/` | Dev scripts, hooks, utilities |
+| `_private/infra/` | Deployment, runners, infrastructure |
+
+The `_private/` repo is not mirrored to GitHub and requires GitLab access.
 
 ## Dependencies
 
@@ -198,12 +205,12 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 
 When work spans multiple repositories, create a branch with the **same name** in each repo and link the MRs together.
 
-**Example:** A feature touching `features/`, `_docs/`, and `core/`:
+**Example:** A feature touching `features/`, `_private/`, and `core/`:
 
 ```bash
 # Same branch name in all repos
 git -C features checkout -b feature/remote-content-updates
-git -C _docs checkout -b feature/remote-content-updates
+git -C _private checkout -b feature/remote-content-updates
 git -C core checkout -b feature/remote-content-updates
 ```
 
@@ -213,7 +220,7 @@ git -C core checkout -b feature/remote-content-updates
 ## Related MRs
 
 - vauchi/features!42 - Gherkin specs
-- vauchi/docs!15 - Planning documents
+- vauchi/private!15 - Planning documents
 - vauchi/core!78 - Implementation
 ```
 
