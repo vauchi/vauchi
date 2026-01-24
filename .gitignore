@@ -20,16 +20,9 @@
 
 
 # ===========================================
-# Private repos (not mirrored to GitHub)
-# Prefixed with _ to distinguish from public repos
+# Private content (not mirrored to GitHub)
 # ===========================================
-/_assets/
-/_docs/
-/_website/
-/_strategy/
-/_infra/
-/_dev-tools/
-/_VMs/
+/_private/
 
 # ===========================================
 # Ignore generated/cache directories

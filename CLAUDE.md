@@ -117,17 +117,17 @@ just help                   # Show all commands
 | desktop/ | Tauri + SolidJS desktop app |
 | e2e/ | End-to-end tests |
 
-## Other Directories
+## Other Repositories
 
-| Dir | Purpose |
-|-----|---------|
-| docs/ | Architecture, planning, TDD rules |
-| scripts/ | Dev tools, hooks, utilities |
-| assets/ | Brand assets, logos |
-| website/ | Landing page source |
-| features/ | Gherkin specs (shared across platforms) |
-| android/ | Kotlin/Compose app |
-| ios/ | SwiftUI app |
+| Repo | Purpose | URL |
+|------|---------|-----|
+| docs/ | Architecture, planning, TDD rules | [gitlab.com/vauchi/docs](https://gitlab.com/vauchi/docs) |
+| scripts/ | Dev tools, hooks, utilities | [gitlab.com/vauchi/scripts](https://gitlab.com/vauchi/scripts) |
+| website/ | Landing page source | [gitlab.com/vauchi/website](https://gitlab.com/vauchi/website) |
+| features/ | Gherkin specs (shared across platforms) | [gitlab.com/vauchi/features](https://gitlab.com/vauchi/features) |
+| assets/ | Brand assets, logos | [gitlab.com/vauchi/assets](https://gitlab.com/vauchi/assets) |
+| android/ | Kotlin/Compose app | [gitlab.com/vauchi/android](https://gitlab.com/vauchi/android) |
+| ios/ | SwiftUI app | [gitlab.com/vauchi/ios](https://gitlab.com/vauchi/ios) |
 
 ### Private Content (`_private/`)
 
