@@ -1,25 +1,408 @@
 # GitLab CI/CD Pipeline for Vauchi
 #
-# Meta-repo CI - handles changesets and releases.
-# Code-level CI (lint, test, build) runs in individual sub-repos.
+# Mirrors GitHub Actions functionality for GitLab users
 #
-# To enable code jobs in the meta-repo, you need to configure cross-project
-# CI job token access. In each sub-project (core, cli, relay, tui, desktop, e2e):
-#   Settings > CI/CD > Job token permissions > Add "vauchi/vauchi"
+# Runner Configuration:
+#   Currently using GitLab shared runners for all jobs.
+#   Self-hosted runner support is prepared but commented out.
 #
-# Then set CI variable: ENABLE_CODE_JOBS=true
+# Self-hosted Runner Tags (when registered):
+#   - linux, rust, node, android: Linux VM (self-hosted)
+#   - macos, ios, xcode: macOS VM (self-hosted)
+#   - dind, docker-build: DinD VM (self-hosted)
+#
+# To enable self-hosted runners:
+#   1. Register runners with the appropriate tags (see _infra/runners/)
+#   2. Uncomment the `tags:` sections in job definitions
+#   3. Remove `when: never` from build:ios and build:relay-image
 
 stages:
   - lint
   - test
+  - e2e-smoke
+  - security
+  - build
+  - e2e-release
   - release
+  - deploy
 
 variables:
+  CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+  RUST_BACKTRACE: "1"
   # Set to "true" to enable code jobs (requires cross-project token access)
+  # To enable, configure each sub-project's CI/CD settings:
+  #   Settings > CI/CD > Job token permissions > Add "vauchi/vauchi"
   ENABLE_CODE_JOBS: "false"
 
+# Clone sub-repositories (main repo is a meta-repo)
+# Requires CI job token to access private repos
+.clone-repos: &clone-repos
+  before_script:
+    - |
+      echo "Cloning sub-repositories..."
+      for repo in core relay cli tui desktop e2e; do
+        if [ ! -d "$repo" ]; then
+          git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/$repo.git" "$repo" || echo "Failed to clone $repo"
+        fi
+      done
+
+# Cache Cargo dependencies
+.rust-cache: &rust-cache
+  <<: *clone-repos
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-rust
+    paths:
+      - .cargo/bin/
+      - .cargo/registry/index/
+      - .cargo/registry/cache/
+      - .cargo/git/db/
+      - core/target/
+
 # ============================================================
-# Meta-repo Jobs (always work)
+# Lint Stage
+# ============================================================
+
+lint:format:
+  stage: lint
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  script:
+    - rustup component add rustfmt
+    - cd core && cargo fmt --all -- --check
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+lint:clippy:
+  stage: lint
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  script:
+    - rustup component add clippy
+    - cd core && cargo clippy --workspace -- -D warnings
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+lint:bindings:
+  stage: lint
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cd core && RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    - cd core && ./scripts/validate-bindings.sh
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "core/vauchi-mobile/**/*"
+        - "core/vauchi-core/**/*"
+        - "android/app/src/main/kotlin/uniffi/**/*"
+        - "ios/Vauchi/Generated/**/*"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+# ============================================================
+# Test Stage
+# ============================================================
+
+test:unit:
+  stage: test
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  script:
+    - cd core && cargo test --workspace
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+test:all-features:
+  stage: test
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  script:
+    - cd core && cargo test --workspace --all-features
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+
+# ============================================================
+# E2E Smoke Stage (Fast feedback on every MR)
+# ============================================================
+
+e2e:smoke:
+  stage: e2e-smoke
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-nextest --locked || true
+  script:
+    # Build CLI and relay binaries
+    - cd cli && cargo build --target-dir ../target
+    - cd ../relay && cargo build --target-dir ../target
+    # Run smoke tests only (tests prefixed with smoke_)
+    - cd ../e2e && cargo nextest run --no-fail-fast smoke_ -- --ignored 2>&1 || true
+    - cd ../e2e && cargo nextest run smoke_ -- --ignored --message-format json > ../target/e2e-smoke-results.json 2>&1 || true
+  artifacts:
+    when: always
+    paths:
+      - target/e2e-smoke-results.json
+    reports:
+      junit: target/e2e-results.xml
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+  allow_failure: true  # Don't block MRs initially while stabilizing
+
+# ============================================================
+# E2E Release Stage (Full validation before release)
+# ============================================================
+
+e2e:release:
+  stage: e2e-release
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  before_script:
+    - cargo install cargo-nextest --locked || true
+  script:
+    # Build CLI and relay binaries in release mode
+    - cd cli && cargo build --release --target-dir ../target
+    - cd ../relay && cargo build --release --target-dir ../target
+    # Run all e2e tests (smoke + integration)
+    - cd ../e2e && cargo nextest run --release -- --ignored
+  artifacts:
+    when: always
+    paths:
+      - target/e2e-release-results.json
+    reports:
+      junit: target/e2e-results.xml
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  allow_failure: false  # RELEASE GATE - blocks if E2E fails
+
+# ============================================================
+# Security Stage
+# ============================================================
+
+security:audit:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cargo install cargo-audit
+    - cd core && cargo audit
+  allow_failure: true
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "schedule"
+
+security:deny:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cargo install cargo-deny
+    - cd core && cargo deny check
+  allow_failure: true
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - "core/deny.toml"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "schedule"
+
+# ============================================================
+# Build Stage
+# ============================================================
+
+build:rust:
+  stage: build
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - rust
+  #   - self-hosted
+  <<: *rust-cache
+  script:
+    - cd core && cargo build --workspace --release
+  artifacts:
+    paths:
+      - core/target/release/vauchi-*
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+build:docs:
+  stage: build
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cd core && cargo doc --workspace --no-deps
+  artifacts:
+    paths:
+      - core/target/doc/
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "develop"
+
+build:android:
+  stage: build
+  image: rust:latest
+  # Self-hosted runner tags (uncomment when runners are registered):
+  # tags:
+  #   - linux
+  #   - android
+  #   - self-hosted
+  <<: *rust-cache
+  variables:
+    ANDROID_NDK_VERSION: "26.1.10909125"
+  before_script:
+    - apt-get update && apt-get install -y openjdk-17-jdk wget unzip
+    - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+    - cargo install cargo-ndk
+    # Install Android SDK and NDK (simplified - may need adjustment for actual GitLab runners)
+    - export ANDROID_HOME=/opt/android-sdk
+    - mkdir -p $ANDROID_HOME
+    - wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+    - unzip -q cmdline-tools.zip -d $ANDROID_HOME
+    - mv $ANDROID_HOME/cmdline-tools $ANDROID_HOME/cmdline-tools-latest
+    - mkdir -p $ANDROID_HOME/cmdline-tools
+    - mv $ANDROID_HOME/cmdline-tools-latest $ANDROID_HOME/cmdline-tools/latest
+    - yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+    - $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${ANDROID_NDK_VERSION}"
+    - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}
+  script:
+    - ./core/scripts/build-android.sh release
+    - cd android && ./gradlew assembleRelease
+  artifacts:
+    paths:
+      - android/app/build/outputs/apk/release/*.apk
+    expire_in: 1 week
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
+  allow_failure: true  # May fail if Android SDK setup has issues
+
+# iOS build (requires macOS runner with Xcode)
+# NOTE: Requires self-hosted macOS runner - skipped until runner is registered
+build:ios:
+  stage: build
+  tags:
+    - macos
+    - ios
+    - xcode
+    - self-hosted
+  variables:
+    BUILD_MODE: release
+  before_script:
+    - rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+  script:
+    - ./ios/build-ios.sh
+    - cd ios && xcodebuild -scheme Vauchi -destination 'generic/platform=iOS Simulator' -configuration Release build
+  artifacts:
+    paths:
+      - ios/build/Build/Products/Release-iphonesimulator/*.app
+    expire_in: 1 week
+  rules:
+    # Skipped until self-hosted macOS runner is registered
+    - when: never
+    # Uncomment below when macOS runner is available:
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    #   changes:
+    #     - "ios/**/*"
+    #     - "core/vauchi-mobile/**/*"
+  allow_failure: true
+
+# Build relay container image
+# NOTE: Requires self-hosted DinD runner - skipped until runner is registered
+build:relay-image:
+  stage: build
+  tags:
+    - dind
+    - docker-build
+    - self-hosted
+  variables:
+    DOCKER_BUILDKIT: "1"
+  script:
+    - docker build -t registry.gitlab.com/vauchi/relay:${CI_COMMIT_SHA} -f relay/Dockerfile .
+    - docker tag registry.gitlab.com/vauchi/relay:${CI_COMMIT_SHA} registry.gitlab.com/vauchi/relay:latest
+    - |
+      if [ -n "$CI_REGISTRY_PASSWORD" ]; then
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin registry.gitlab.com
+        docker push registry.gitlab.com/vauchi/relay:${CI_COMMIT_SHA}
+        docker push registry.gitlab.com/vauchi/relay:latest
+      else
+        echo "No registry credentials, skipping push"
+      fi
+  rules:
+    # Skipped until self-hosted DinD runner is registered
+    - when: never
+    # Uncomment below when DinD runner is available:
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  allow_failure: true
+
+# ============================================================
+# Scheduled Jobs
+# ============================================================
+
+# Weekly security scan
+security:weekly:
+  stage: security
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cargo install cargo-audit cargo-deny
+    - cd core && cargo audit
+    - cd core && cargo deny check
+  rules:
+    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "schedule"
+
+# ============================================================
+# Release Stage (Changesets)
 # ============================================================
 
 # Node.js cache for changeset jobs
@@ -121,69 +504,19 @@ changeset:release:
   allow_failure: true
 
 # ============================================================
-# Code Jobs (require ENABLE_CODE_JOBS=true and cross-project access)
+# Pages (Documentation)
 # ============================================================
-#
-# These jobs clone sub-repositories and require cross-project CI token access.
-# To enable:
-# 1. In each sub-project, go to: Settings > CI/CD > Job token permissions
-# 2. Add "vauchi/vauchi" to allow access
-# 3. Set CI variable ENABLE_CODE_JOBS=true in this project
 
-# Clone sub-repositories (main repo is a meta-repo)
-.clone-repos: &clone-repos
-  before_script:
-    - |
-      echo "Cloning sub-repositories..."
-      for repo in core relay cli tui desktop e2e; do
-        if [ ! -d "$repo" ]; then
-          git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/$repo.git" "$repo" || echo "Failed to clone $repo"
-        fi
-      done
-
-# Cache Cargo dependencies
-.rust-cache: &rust-cache
-  <<: *clone-repos
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}-rust
+pages:
+  stage: deploy
+  image: rust:latest
+  <<: *rust-cache
+  script:
+    - cd core && cargo doc --workspace --no-deps
+    - mv core/target/doc public
+    - echo '<meta http-equiv="refresh" content="0; url=vauchi_core/index.html">' > public/index.html
+  artifacts:
     paths:
-      - .cargo/bin/
-      - .cargo/registry/index/
-      - .cargo/registry/cache/
-      - .cargo/git/db/
-      - core/target/
-  variables:
-    CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
-    RUST_BACKTRACE: "1"
-
-lint:format:
-  stage: lint
-  image: rust:latest
-  <<: *rust-cache
-  script:
-    - rustup component add rustfmt
-    - cd core && cargo fmt --all -- --check
+      - public
   rules:
-    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
-
-lint:clippy:
-  stage: lint
-  image: rust:latest
-  <<: *rust-cache
-  script:
-    - rustup component add clippy
-    - cd core && cargo clippy --workspace -- -D warnings
-  rules:
-    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"
-
-test:unit:
-  stage: test
-  image: rust:latest
-  <<: *rust-cache
-  script:
-    - cd core && cargo test --workspace
-  rules:
-    - if: $ENABLE_CODE_JOBS == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $ENABLE_CODE_JOBS == "true" && $CI_COMMIT_BRANCH == "main"

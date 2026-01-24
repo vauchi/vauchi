@@ -160,7 +160,10 @@ clone-repos:
 pull-all:
     #!/usr/bin/env bash
     for dir in */; do
-        [[ -d "${dir}.git" ]] && (cd "$dir" && git pull --rebase 2>/dev/null || git pull) || true
+        if [[ -d "${dir}.git" ]]; then
+            echo -n "${dir%/}: "
+            (cd "$dir" && git pull --rebase 2>&1) || (cd "$dir" && git pull 2>&1) || echo "FAILED"
+        fi
     done
 
 # Push all repos with commits ahead of origin
@@ -178,8 +181,127 @@ push-all:
 
 # Clean all build artifacts
 clean:
-    cd core && cargo clean
+    #!/usr/bin/env bash
+    echo "Cleaning build artifacts..."
+
+    # Rust targets
+    for dir in core relay cli tui desktop/src-tauri e2e; do
+        if [[ -d "$dir/target" ]]; then
+            echo "  Cleaning $dir/target"
+            rm -rf "$dir/target"
+        fi
+    done
+
+    # Node modules and build outputs
+    for dir in desktop/ui _website; do
+        if [[ -d "$dir/node_modules" ]]; then
+            echo "  Cleaning $dir/node_modules"
+            rm -rf "$dir/node_modules"
+        fi
+        if [[ -d "$dir/dist" ]]; then
+            echo "  Cleaning $dir/dist"
+            rm -rf "$dir/dist"
+        fi
+    done
+
+    # Android build
+    if [[ -d "android/app/build" ]]; then
+        echo "  Cleaning android/app/build"
+        rm -rf android/app/build
+    fi
+
+    # iOS build
+    if [[ -d "ios/build" ]]; then
+        echo "  Cleaning ios/build"
+        rm -rf ios/build
+    fi
+
+    # Tmp and cache
     rm -rf tmp/* cache/*
+
+    echo "Done!"
+
+# Clean only Rust targets (faster)
+clean-rust:
+    #!/usr/bin/env bash
+    echo "Cleaning Rust targets..."
+    for dir in core relay cli tui desktop/src-tauri e2e; do
+        if [[ -d "$dir/target" ]]; then
+            echo "  $dir/target"
+            rm -rf "$dir/target"
+        fi
+    done
+    echo "Done!"
+
+# ═══════════════════════════════════════════════════════════════════
+# MULTI-REPO GIT COMMANDS
+# ═══════════════════════════════════════════════════════════════════
+
+# Show git status for all repos
+git-status:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            status=$(cd "$dir" && git status --porcelain 2>/dev/null)
+            branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
+            ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "?")
+            behind=$(cd "$dir" && git rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
+
+            if [[ -n "$status" ]] || [[ "$branch" != "main" ]] || [[ "$ahead" != "0" ]] || [[ "$behind" != "0" ]]; then
+                echo "=== ${dir%/} (${branch:-detached}) ==="
+                [[ "$ahead" != "0" && "$ahead" != "?" ]] && echo "  ↑ $ahead ahead"
+                [[ "$behind" != "0" && "$behind" != "?" ]] && echo "  ↓ $behind behind"
+                [[ -n "$status" ]] && echo "$status" | sed 's/^/  /'
+                echo ""
+            fi
+        fi
+    done
+    echo "Repos on main with no changes: not shown"
+
+# Checkout main branch in all repos
+git-checkout-main:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            echo -n "${dir%/}: "
+            (cd "$dir" && git checkout main 2>&1) | tail -1
+        fi
+    done
+
+# Fetch all repos
+git-fetch:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            echo -n "${dir%/}: "
+            (cd "$dir" && git fetch --all 2>&1) | grep -E "^Fetching|error|fatal" || echo "up to date"
+        fi
+    done
+
+# Show branches across all repos
+git-branches:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
+            branches=$(cd "$dir" && git branch --list 2>/dev/null | wc -l)
+            echo "${dir%/}: ${branch:-detached} ($branches branches)"
+        fi
+    done
+
+# Delete merged branches in all repos
+git-clean-branches:
+    #!/usr/bin/env bash
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            merged=$(cd "$dir" && git branch --merged main 2>/dev/null | grep -v "^\*\|main" | wc -l)
+            if [[ "$merged" -gt 0 ]]; then
+                echo "=== ${dir%/} ==="
+                (cd "$dir" && git branch --merged main | grep -v "^\*\|main" | xargs -r git branch -d)
+            fi
+        fi
+    done
+    echo "Done!"
 
 # Run tests with coverage
 coverage:
@@ -543,3 +665,108 @@ mail-list-users:
 # Explore codebase with local LLM (e.g., just tell-me-about "iOS tests")
 tell-me-about *topic:
     ./_dev-tools/scripts/tell-me-about.sh {{topic}}
+
+# ═══════════════════════════════════════════════════════════════════
+# GITLAB RUNNERS & VMS
+# ═══════════════════════════════════════════════════════════════════
+
+# Start all runner VMs (in parallel)
+runners-start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Starting all runner VMs in parallel..."
+
+    # Start all VMs without waiting
+    ./_infra/runners/linux-vm/vm-lifecycle.sh start-nowait &
+    pid_linux=$!
+    ./_infra/runners/macos-vm/vm-lifecycle.sh start-nowait &
+    pid_macos=$!
+    ./_infra/runners/dind-vm/vm-lifecycle.sh start-nowait &
+    pid_dind=$!
+
+    # Wait for all start commands to complete
+    wait $pid_linux $pid_macos $pid_dind 2>/dev/null || true
+
+    echo ""
+    echo "Waiting for VMs to become ready..."
+
+    # Wait for SSH on all VMs in parallel
+    ./_infra/runners/linux-vm/vm-lifecycle.sh wait &
+    pid_wait_linux=$!
+    ./_infra/runners/macos-vm/vm-lifecycle.sh wait &
+    pid_wait_macos=$!
+    ./_infra/runners/dind-vm/vm-lifecycle.sh wait &
+    pid_wait_dind=$!
+
+    # Wait for all to be ready
+    wait $pid_wait_linux && echo "[OK] Linux VM ready" || echo "[SKIP] Linux VM not available"
+    wait $pid_wait_macos && echo "[OK] macOS VM ready" || echo "[SKIP] macOS VM not available"
+    wait $pid_wait_dind && echo "[OK] DinD VM ready" || echo "[SKIP] DinD VM not available"
+
+    echo ""
+    echo "Done. Run 'just runners-status' to verify."
+
+# Stop all runner VMs
+runners-stop:
+    @echo "Stopping all runner VMs..."
+    ./_infra/runners/linux-vm/vm-lifecycle.sh stop || true
+    ./_infra/runners/macos-vm/vm-lifecycle.sh stop || true
+    ./_infra/runners/dind-vm/vm-lifecycle.sh stop || true
+
+# Show status of all runner VMs
+runners-status:
+    @echo "=== Runner VM Status ==="
+    @echo ""
+    @echo "Linux VM:"
+    @./_infra/runners/linux-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @echo ""
+    @echo "macOS VM:"
+    @./_infra/runners/macos-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @echo ""
+    @echo "DinD VM:"
+    @./_infra/runners/dind-vm/vm-lifecycle.sh status || echo "  Not configured"
+    @echo ""
+    @echo "=== GitLab Runner Status ==="
+    @gitlab-runner list 2>&1 | head -20 || echo "  gitlab-runner not installed"
+
+# ─── Linux VM ──────────────────────────────────────────────────────
+
+# Start Linux VM
+vm-linux-start:
+    ./_infra/runners/linux-vm/vm-lifecycle.sh start
+
+# Stop Linux VM
+vm-linux-stop:
+    ./_infra/runners/linux-vm/vm-lifecycle.sh stop
+
+# SSH into Linux VM
+vm-linux-ssh *args:
+    ./_infra/runners/linux-vm/vm-lifecycle.sh ssh {{args}}
+
+# ─── macOS VM ──────────────────────────────────────────────────────
+
+# Start macOS VM
+vm-macos-start:
+    ./_infra/runners/macos-vm/vm-lifecycle.sh start
+
+# Stop macOS VM
+vm-macos-stop:
+    ./_infra/runners/macos-vm/vm-lifecycle.sh stop
+
+# SSH into macOS VM
+vm-macos-ssh *args:
+    ./_infra/runners/macos-vm/vm-lifecycle.sh ssh {{args}}
+
+# ─── DinD VM ───────────────────────────────────────────────────────
+
+# Start DinD VM
+vm-dind-start:
+    ./_infra/runners/dind-vm/vm-lifecycle.sh start
+
+# Stop DinD VM
+vm-dind-stop:
+    ./_infra/runners/dind-vm/vm-lifecycle.sh stop
+
+# SSH into DinD VM
+vm-dind-ssh *args:
+    ./_infra/runners/dind-vm/vm-lifecycle.sh ssh {{args}}
