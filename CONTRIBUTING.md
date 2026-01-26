@@ -17,52 +17,85 @@ just check
 
 ## Development Workflow
 
-### 1. Merge Requests Required
+All repos have protected `main` branches — no direct pushes, merge via MR only, force push disabled.
 
-All repos have protected `main` branches. Direct push is blocked.
+### Step 1: Create a branch
 
 ```bash
 git checkout -b feature/my-feature
-# make changes
+```
+
+Branch naming: `{type}/{short-description}`
+
+| Type | Use Case |
+|------|----------|
+| `feature/` | New functionality |
+| `bugfix/` | Bug fixes |
+| `refactor/` | Code restructuring |
+| `investigation/` | Research/exploration |
+
+For **multi-repo features**, use the **same branch name** in every affected repo:
+
+```bash
+git -C features checkout -b feature/remote-content-updates
+git -C core checkout -b feature/remote-content-updates
+git -C docs checkout -b feature/remote-content-updates
+```
+
+### Step 2: Do the work — commit often
+
+- **If changing code: strict TDD.** Red → Green → Refactor. No exceptions.
+  1. Write failing test first (Red)
+  2. Write minimal code to pass (Green)
+  3. Refactor
+  4. Tests must trace to `features/*.feature` scenarios
+- Commit atomically — each commit should be a single logical change.
+- Run `just check` before pushing (formats, lints, tests).
+- See [PRINCIPLES.md](PRINCIPLES.md) for core principles.
+
+Commit message format:
+```
+{type}: {Short description}
+
+{Longer description if needed}
+```
+
+Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+
+Use imperative mood: "Add feature" not "Added feature". Keep first line under 72 characters.
+
+Use `just commit` for interactive commits across all repos with changes.
+
+### Step 3: Create a Merge Request
+
+```bash
 git push -u origin feature/my-feature
 glab mr create --title "feat: My feature" --target-branch main
 ```
 
 CI must pass (security scans + tests) before merge.
 
-### 2. TDD Required
+If the work spans multiple repos, each MR **must list the related MRs** it depends on:
 
-All code changes must follow Test-Driven Development:
+```markdown
+## Summary
+- Bullet points of changes
 
-1. Write failing test first (Red)
-2. Write minimal code to pass (Green)
-3. Refactor
-4. Tests must trace to `features/*.feature` scenarios
+## Related MRs
+- vauchi/features!42 - Gherkin specs
+- vauchi/core!78 - Implementation
 
-See [PRINCIPLES.md](PRINCIPLES.md) for core principles.
+## Test Plan
+- [ ] Tests pass
+- [ ] Manual testing done
 
-### 2. Before Committing
-
-```bash
-just check    # Runs fmt-check, lint, test
+## Checklist
+- [ ] Follows TDD
+- [ ] Documentation updated
+- [ ] Feature file updated (if applicable)
 ```
 
-Or individually:
-```bash
-just fmt                    # Format code
-just lint                   # Clippy (must pass)
-just test                   # All tests green
-```
-
-### 3. Commit Messages
-
-- Use imperative mood: "Add feature" not "Added feature"
-- Reference issue numbers where applicable
-- Keep first line under 72 characters
-
-### 4. Multi-Repo Commits
-
-Use `just commit` for interactive commits across all repos with changes.
+Use GitLab MR reference format: `{group}/{project}!{mr_number}`
 
 ## Code Guidelines
 
@@ -120,18 +153,35 @@ RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
 - Run `validate-bindings.sh` to check expected types
 - Regenerate with the steps above
 
-## Repository Structure
+## Repository Organisation
 
-| Repo | Purpose |
-|------|---------|
-| core/ | Core library (Rust) |
-| relay/ | WebSocket relay server |
-| cli/ | Command-line interface |
-| desktop/ | Desktop app (Tauri) |
-| android/ | Android app |
-| ios/ | iOS app |
-| features/ | Gherkin specs (shared) |
-| e2e/ | End-to-end tests |
+This is a multi-repo project under the [`vauchi` GitLab group](https://gitlab.com/vauchi). The root repo (`vauchi/vauchi`) is the workspace orchestrator — `just setup` clones all sub-repos as sibling directories. Each subdirectory is its own Git repo at `gitlab.com/vauchi/<name>`.
+
+```
+vauchi/                          ← root repo (justfile, CI config)
+│
+├── core/                        ← Rust workspace: vauchi-core + vauchi-mobile (UniFFI)
+├── relay/                       ← WebSocket relay server (standalone Rust)
+├── cli/                         ← Command-line interface
+├── tui/                         ← Terminal user interface
+├── desktop/                     ← Tauri + SolidJS desktop app
+│
+├── android/                     ← Kotlin/Compose native app
+├── ios/                         ← SwiftUI native app
+├── vauchi-mobile-android/       ← Generated Kotlin bindings + JNI libs (Gradle distribution)
+├── vauchi-mobile-swift/         ← Generated Swift bindings + XCFramework (SPM distribution)
+│
+├── e2e/                         ← End-to-end tests
+├── features/                    ← Gherkin specs (shared across all platforms)
+│
+├── docs/                        ← Architecture, planning, TDD rules
+├── scripts/                     ← Dev tools, hooks, utilities
+├── website/                     ← Landing page source
+├── assets/                      ← Brand assets, logos
+└── _private/                    ← Sensitive content (infra, strategy)
+```
+
+**Mobile bindings** (`vauchi-mobile-swift/`, `vauchi-mobile-android/`) are **not manually edited** — `core/` CI generates UniFFI bindings and pushes artifacts to these repos when merging to `main`.
 
 ## Useful Commands
 
