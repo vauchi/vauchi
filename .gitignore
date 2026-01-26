@@ -17,7 +17,8 @@
 /docs/
 /website/
 /scripts/
-
+/assets/
+/gitlab-profile/
 
 # ===========================================
 # Private content (not mirrored to GitHub)
@@ -67,7 +68,9 @@
 .ai/
 .claude/
 
-
+*secret*
+*.evn*
 .env
 .kamal/secret
 .kamal/secrets
+vauchi.code-workspace
