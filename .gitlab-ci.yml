@@ -36,6 +36,8 @@ stages:
   - security
 
 # REUSE compliance check
+# Always runs on MRs because REUSE verifies ALL files have proper SPDX headers.
+# If a new file is added without a header, this job must catch it.
 reuse-lint:
   image:
     name: fsfe/reuse:latest
