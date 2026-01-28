@@ -37,7 +37,9 @@ stages:
 
 # REUSE compliance check
 reuse-lint:
-  image: fsfe/reuse:latest
+  image:
+    name: fsfe/reuse:latest
+    entrypoint: [""]
   stage: lint
   script:
     - reuse lint
