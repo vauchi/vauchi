@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Vauchi
 
 **Privacy-focused updatable contact cards via in-person QR exchange.**
@@ -141,7 +144,7 @@ Funds go toward:
 
 ## License
 
-[MIT](LICENSE)
+[GPL-3.0-or-later](LICENSE)
 
 ## Links
 

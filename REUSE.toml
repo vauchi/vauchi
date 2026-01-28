@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "vauchi"
+SPDX-PackageSupplier = "Mattia Egloff <mattia.egloff@pm.me>"
+
+# Binary and uncommentable files
+[[annotations]]
+path = ["**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.ico", "**/*.woff", "**/*.woff2", "**/*.gif", "**/*.svg"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Lock files and generated JSON
+[[annotations]]
+path = ["**/package-lock.json", "**/yarn.lock", "**/*.lock"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# VS Code workspace files
+[[annotations]]
+path = ["**/*.code-workspace"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# License files themselves
+[[annotations]]
+path = ["LICENSES/**"]
+SPDX-FileCopyrightText = "Free Software Foundation"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Git and editor config files
+[[annotations]]
+path = [".gitignore", ".DS_Store", "**/.gitkeep"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# JSON config files (can't have comments)
+[[annotations]]
+path = ["package.json", "opencode.json", ".changeset/config.json", ".aiassistant/**"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
