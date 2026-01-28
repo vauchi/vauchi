@@ -21,7 +21,8 @@ If you accidentally commit a secret, consider it compromised and rotate it immed
 
 | Directory | Content | Why Public |
 |-----------|---------|------------|
-| `docs/` | Architecture, planning, guides | Helps contributors understand the project |
+| `docs/` | Architecture, guides, workflows | Helps contributors understand the project |
+| `features/` | Gherkin feature specs | Defines expected behavior for TDD |
 | `scripts/` | Dev tools, hooks, utilities | Helps contributors set up and work |
 | `assets/` | Logo, brand assets | Used publicly in apps and website |
 | `website/` | Landing page source | Served publicly anyway |

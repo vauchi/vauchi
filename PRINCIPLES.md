@@ -52,7 +52,7 @@ Confidence through discipline, not hope.
 | **No Sharing** | User data never shared with third parties |
 | **Selective Visibility** | Users control per-field, per-contact visibility |
 
-**Details**: [THREAT_ANALYSIS.md](_docs/2026-01-22-THREAT_ANALYSIS.md), [privacy-policy.md](_docs/legal/2026-01-22-privacy-policy.md)
+**Details**: [THREAT_ANALYSIS.md](docs/2026-01-22-THREAT_ANALYSIS.md), [privacy-policy.md](docs/legal/2026-01-22-privacy-policy.md)
 
 ### Security Principles
 
@@ -64,7 +64,7 @@ Confidence through discipline, not hope.
 | **Memory Safety** | Rust enforces safety; no unsafe in crypto paths |
 | **Defense in Depth** | Multiple layers: encryption, signing, verification |
 
-**Details**: [security.md](_docs/architecture/2026-01-22-security.md), [decisions.md](_docs/architecture/2026-01-22-decisions.md), [THREAT_ANALYSIS.md](_docs/2026-01-22-THREAT_ANALYSIS.md)
+**Details**: [security.md](docs/architecture/2026-01-22-security.md), [decisions.md](docs/architecture/2026-01-22-decisions.md), [THREAT_ANALYSIS.md](docs/2026-01-22-THREAT_ANALYSIS.md)
 
 ### Technical Principles
 
@@ -76,7 +76,7 @@ Confidence through discipline, not hope.
 | **Clean Dependencies** | vauchi-core standalone; downstream repos use git deps |
 | **Gherkin Traceability** | Features in `features/*.feature` drive test writing |
 
-**Details**: [TDD_RULES.md](_docs/2026-01-22-TDD_RULES.md), [decisions.md](_docs/architecture/2026-01-22-decisions.md)
+**Details**: [TDD_RULES.md](docs/2026-01-22-TDD_RULES.md), [decisions.md](docs/architecture/2026-01-22-decisions.md)
 
 ### UX Principles
 
@@ -88,7 +88,7 @@ Confidence through discipline, not hope.
 | **Portable Identity** | No vendor lock-in; restore from backup, switch devices |
 | **Cross-Platform Consistency** | Same experience on iOS, Android, desktop |
 
-**Details**: [aha-moments.md](_docs/2026-01-22-aha-moments.md), [user-guide.md](_docs/2026-01-22-user-guide.md)
+**Details**: [aha-moments.md](docs/2026-01-22-aha-moments.md), [user-guide.md](docs/2026-01-22-user-guide.md)
 
 ### Process Principles
 
@@ -100,7 +100,7 @@ Confidence through discipline, not hope.
 | **Small Atomic Commits** | After each green, after each refactor |
 | **Retrospective Required** | Learn from every completed problem |
 
-**Details**: [problem-to-solution-flow.md](_docs/2026-01-23-problem-to-solution-flow.md)
+**Details**: [problem-to-solution-flow.md](docs/2026-01-23-problem-to-solution-flow.md)
 
 ---
 

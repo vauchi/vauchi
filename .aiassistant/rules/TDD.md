@@ -2,7 +2,7 @@
 apply: always
 ---
 
-<!-- CONDENSED: Quick reference for AI assistants. Full version: /_docs/2026-01-22-TDD_RULES.md -->
+<!-- CONDENSED: Quick reference for AI assistants. Full version: /docs/2026-01-22-TDD_RULES.md -->
 
 ## MANDATORY
 

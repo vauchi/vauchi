@@ -20,7 +20,7 @@ just check    # Run all checks
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` only. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `docs/planning/todo/` doc to `done/`
+- **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
 - **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
   - Exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`, problem artifacts
 
@@ -41,10 +41,10 @@ intake → investigating → planning → implementing → testing → done (or 
 
 ### Workflow Steps
 
-1. **Create Problem Record** in `docs/problems/YYYY-MM-DD-problem-slug/`
+1. **Create Problem Record** in `_private/docs/problems/YYYY-MM-DD-problem-slug/`
 2. **Discussion** - Is it actually a problem? If no → archive with learnings
 3. **Investigation** - Research the problem, identify solutions
-   - External knowledge needed? → Create `docs/knowledge/YYYY-MM-DD-topic.md`
+   - External knowledge needed? → Create `_private/docs/knowledge/YYYY-MM-DD-topic.md`
    - Write investigation document
 4. **Validate Solutions** against `PRINCIPLES.md`:
    - Core Principles (Privacy, Trust, Quality)
@@ -69,29 +69,40 @@ If unforeseen errors occur during implementation:
 
 ### Directory Structure
 
+Problem records and planning artifacts live in `_private/docs/` (private). Public documentation lives in `docs/` (public).
+
 ```
-docs/
-├── knowledge/                    # External research (shared)
-├── problems/                     # Problem records with all artifacts
+_private/docs/                            # PRIVATE — internal workflow
+├── knowledge/                            # External research (shared)
+├── problems/                             # Problem records with all artifacts
 │   └── YYYY-MM-DD-slug/
-│       ├── README.md             # Status, description, links
+│       ├── README.md                     # Status, description, links
 │       ├── investigation.md
 │       ├── rejected-solutions.md
 │       ├── implementation-plan.md
 │       ├── retrospective.md
-│       └── post-mortem.md        # If needed
+│       └── post-mortem.md                # If needed
 └── planning/
-    ├── proposals/                # Draft plans awaiting review
-    ├── todo/                     # Accepted plans in progress
-    ├── ready-for-review/         # Implementation done, awaiting approval
-    ├── done/                     # Completed (reference)
-    ├── investigations/           # Shared investigations
-    ├── retrospectives/           # Shared retrospectives
-    ├── post-mortems/             # Shared post-mortems
-    └── archived/                 # Not valid / deferred
+    ├── proposals/                        # Draft plans awaiting review
+    ├── todo/                             # Accepted plans in progress
+    ├── ready-for-review/                 # Implementation done, awaiting approval
+    ├── done/                             # Completed (reference)
+    ├── investigations/                   # Shared investigations
+    ├── retrospectives/                   # Shared retrospectives
+    ├── post-mortems/                     # Shared post-mortems
+    └── archived/                         # Not valid / deferred
+
+docs/                                     # PUBLIC — community documentation
+├── architecture/                         # System design documents
+├── development/                          # Developer guides
+├── diagrams/                             # Visual system documentation
+├── knowledge/                            # External research
+├── legal/                                # Privacy policy
+├── postmortems/                          # Post-incident analysis
+└── workflows/                            # Workflow documentation
 ```
 
-**Alert threshold**: If `proposals/` has 5+ unreviewed docs, alert the user.
+**Alert threshold**: If `_private/docs/planning/proposals/` has 5+ unreviewed docs, alert the user.
 
 ## Commands
 
@@ -175,17 +186,19 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 
 | Repo | Purpose |
 |------|---------|
-| `docs/` | Architecture, planning, TDD rules |
+| `docs/` | Architecture, guides, workflows, TDD rules (public) |
 | `scripts/` | Dev tools, hooks, utilities |
 | `website/` | Landing page source |
 | `assets/` | Brand assets, logos |
 
 ### Private Content (`_private/`)
 
-Only truly sensitive content lives in `_private/`:
+Internal content that is not public-facing lives in `_private/`:
 
 | Subdir | Purpose |
 |--------|---------|
+| `docs/` | Problem records, planning, roadmap, internal strategy docs |
+| `features/` | Future/unreleased feature specs, ideas |
 | `infra/` | Deployment configs, server IPs, runner tokens |
 | `strategy/` | Business strategy, funding plans |
 
