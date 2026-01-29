@@ -137,6 +137,75 @@ setup: clone-repos
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
+# Install development dependencies (macOS via Homebrew + Cargo)
+install-dev-deps:
+    #!/usr/bin/env bash
+    set -e
+
+    echo "=== Installing development dependencies ==="
+    echo ""
+
+    # ── Homebrew packages ──────────────────────────────────────────
+    echo "── Homebrew packages ──"
+    brew_pkgs=(just glab node)
+    for pkg in "${brew_pkgs[@]}"; do
+        if brew list "$pkg" &>/dev/null; then
+            echo "  $pkg (already installed)"
+        else
+            echo "  Installing $pkg..."
+            brew install "$pkg"
+        fi
+    done
+    echo ""
+
+    # ── Rust toolchain ─────────────────────────────────────────────
+    echo "── Rust toolchain ──"
+    if command -v rustup &>/dev/null; then
+        echo "  rustup (already installed)"
+        echo "  Ensuring llvm-tools-preview component..."
+        rustup component add llvm-tools-preview
+    else
+        echo "  Installing rustup..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+        rustup component add llvm-tools-preview
+    fi
+    echo ""
+
+    # ── Cargo tools ────────────────────────────────────────────────
+    echo "── Cargo tools ──"
+    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov tauri-cli)
+    for tool in "${cargo_tools[@]}"; do
+        bin_name="$tool"
+        # tauri-cli installs as "cargo-tauri"
+        [[ "$tool" == "tauri-cli" ]] && bin_name="cargo-tauri"
+        if cargo install --list | grep -q "^${tool} "; then
+            echo "  $tool (already installed)"
+        else
+            echo "  Installing $tool..."
+            cargo install "$tool"
+        fi
+    done
+    echo ""
+
+    # ── iOS targets (macOS only) ───────────────────────────────────
+    echo "── iOS Rust targets ──"
+    rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+    echo ""
+
+    # ── Android targets (optional, skip if no NDK) ─────────────────
+    echo "── Android Rust targets ──"
+    rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+    echo ""
+
+    echo "=== Done ==="
+    echo ""
+    echo "Optional (install manually if needed):"
+    echo "  brew install kamal              # Relay deployment"
+    echo "  brew install --cask android-studio  # Android SDK + emulator"
+    echo ""
+    echo "Next: just setup && just check"
+
 # Clone all repositories
 clone-repos:
     #!/usr/bin/env bash
