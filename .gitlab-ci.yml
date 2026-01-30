@@ -6,11 +6,14 @@
 #
 # Mirrors GitHub Actions functionality for GitLab users
 #
+# Pipeline strategy:
+#   - MR: Full validation (reuse-lint, secret detection)
+#   - Scheduled: Security scans
+#   Main branch is protected and merge-only. All validation happens
+#   during the MR pipeline; post-merge pipelines are unnecessary.
+#
 # GitLab Ultimate Features (via Open Source Program):
-#   - SAST: Static application security testing
-#   - Dependency Scanning: Check for vulnerable dependencies
 #   - Secret Detection: Prevent accidental credential commits
-#   - Container Scanning: Scan Docker images for vulnerabilities
 #
 # Runner Configuration:
 #   Currently using GitLab shared runners for all jobs.
@@ -35,7 +38,7 @@ stages:
   - lint
   - security
 
-# REUSE compliance check
+# REUSE compliance check (MR only)
 # Always runs on MRs because REUSE verifies ALL files have proper SPDX headers.
 # If a new file is added without a header, this job must catch it.
 reuse-lint:
@@ -48,14 +51,10 @@ reuse-lint:
     - reuse lint
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
 
-# Secret detection on all commits
+# Secret detection (MR + scheduled)
 secret_detection:
   stage: security
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "develop"
-
-
+    - if: $CI_PIPELINE_SOURCE == "schedule"
