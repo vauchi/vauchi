@@ -172,7 +172,17 @@ install-dev-deps:
     fi
     echo ""
 
-    # ── Cargo tools ────────────────────────────────────────────────
+    # ── cargo-binstall (pre-built binary installer) ─────────────────
+    echo "── cargo-binstall ──"
+    if command -v cargo-binstall &>/dev/null; then
+        echo "  cargo-binstall (already installed)"
+    else
+        echo "  Installing cargo-binstall..."
+        curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+    fi
+    echo ""
+
+    # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
     cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov tauri-cli)
     for tool in "${cargo_tools[@]}"; do
@@ -183,7 +193,7 @@ install-dev-deps:
             echo "  $tool (already installed)"
         else
             echo "  Installing $tool..."
-            cargo install "$tool"
+            cargo binstall "$tool" --no-confirm 2>/dev/null || cargo install "$tool"
         fi
     done
     echo ""
