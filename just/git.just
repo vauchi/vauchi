@@ -6,6 +6,7 @@
 # Usage: just git <recipe>
 
 # Stash changes, checkout main, and pull latest in all repos
+[no-cd]
 main:
     #!/usr/bin/env bash
     switch_to_main() {
@@ -40,6 +41,7 @@ main:
     done
 
 # Show git status for all repos
+[no-cd]
 status:
     #!/usr/bin/env bash
     for dir in */; do
@@ -61,6 +63,7 @@ status:
     echo "Repos on main with no changes: not shown"
 
 # Checkout main branch in all repos
+[no-cd]
 checkout-main:
     #!/usr/bin/env bash
     for dir in */; do
@@ -71,6 +74,7 @@ checkout-main:
     done
 
 # Fetch all repos
+[no-cd]
 fetch:
     #!/usr/bin/env bash
     for dir in */; do
@@ -81,6 +85,7 @@ fetch:
     done
 
 # Show branches across all repos
+[no-cd]
 branches:
     #!/usr/bin/env bash
     for dir in */; do
@@ -92,6 +97,7 @@ branches:
     done
 
 # Delete merged branches in all repos
+[no-cd]
 clean-branches:
     #!/usr/bin/env bash
     for dir in */; do
@@ -106,6 +112,7 @@ clean-branches:
     echo "Done!"
 
 # Pull latest changes from all repos
+[no-cd]
 pull-all:
     #!/usr/bin/env bash
     for dir in */; do
@@ -116,6 +123,7 @@ pull-all:
     done
 
 # Push all repos with commits ahead of origin
+[no-cd]
 push-all:
     #!/usr/bin/env bash
     for dir in */; do
