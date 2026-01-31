@@ -74,3 +74,6 @@
 .kamal/secret
 .kamal/secrets
 vauchi.code-workspace
+
+# macOS
+.DS_Store
