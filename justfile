@@ -105,9 +105,59 @@ install-hooks:
     cp scripts/hooks/* .git/hooks/
     chmod +x .git/hooks/*
 
-# Show all commands
+# Show quick reference
 help:
-    @just --list
+    #!/usr/bin/env bash
+    cat <<'HELP'
+    Vauchi Development Commands
+    ═══════════════════════════
+
+    Daily workflow:
+      just check              Format + lint + test (core/)
+      just build              Build core workspace
+      just test               Run tests
+      just fmt                Format code
+      just fix                Auto-fix lint issues
+      just commit             Interactive commit across repos
+
+    Git (multi-repo):
+      just git main           Stash → checkout main → pull (all repos)
+      just git status         Show status across all repos
+      just git pull-all       Pull latest in all repos
+      just git push-all       Push repos with commits ahead
+      just git fetch          Fetch all repos
+      just git branches       Show branches across repos
+
+    Apps:
+      just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
+      just relay              Start relay server
+      just tui                Run TUI
+
+    Setup:
+      just setup              Clone all repos, init workspace
+      just install-dev-deps   Install toolchain (Homebrew + Cargo)
+      just clean              Clean all build artifacts
+
+    Mobile:
+      just check-ios          iOS lint + build + test
+      just check-android      Android lint + build + test
+      just check-mobile       Both
+
+    E2E:
+      just e2e                List available tests
+      just e2e-run <name>     Run E2E test (or 'all')
+      just e2e-smoke          Fast smoke tests
+
+    Other:
+      just coverage           Test coverage report
+      just docs               Open Rust docs
+      just audit              Security audit
+      just deploy-relay       Deploy relay via Kamal
+      just runners-start      Start GitLab CI runners
+
+    Full list:  just --list --list-submodules
+    Git cmds:   just --list --list-submodules | grep git
+    HELP
 
 # ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS
