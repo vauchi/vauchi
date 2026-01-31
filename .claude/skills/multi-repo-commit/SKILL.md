@@ -1,11 +1,11 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: multi-repo-commit
 description: Commit changes across multiple vauchi sub-repositories with consistent messages and co-author lines
 disable-model-invocation: true
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Commit staged and unstaged changes across multiple vauchi sub-repositories. $ARGUMENTS may specify which repos to commit, or leave blank to auto-detect all repos with changes.
 

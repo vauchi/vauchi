@@ -1,11 +1,11 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: problem-workflow
 description: Create and manage problem records following the mandatory Problem to Solution Flow
 disable-model-invocation: true
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Start or advance a problem record following the mandatory Problem to Solution Flow. $ARGUMENTS describes the problem or references an existing problem slug.
 

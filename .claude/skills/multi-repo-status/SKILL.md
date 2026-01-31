@@ -1,11 +1,11 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: multi-repo-status
 description: Check git status, branches, and uncommitted changes across all vauchi sub-repositories
 disable-model-invocation: true
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Check git status across all vauchi sub-repositories. For each repo that has changes, show the branch, uncommitted changes, and commits ahead of main.
 

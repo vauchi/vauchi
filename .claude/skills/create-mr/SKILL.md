@@ -1,11 +1,11 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: create-mr
 description: Create GitLab merge requests for vauchi repos with proper templates and cross-repo linking
 disable-model-invocation: true
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Create GitLab merge requests for one or more vauchi repositories. $ARGUMENTS may specify which repos, or leave blank to auto-detect repos with branches ahead of main.
 
