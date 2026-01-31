@@ -5,8 +5,9 @@
 # Application running recipes
 
 # Run an application: just run [cli|tui|desktop|android|ios|relay]
+[group('apps')]
+[script('bash')]
 run platform="" *args:
-    #!/usr/bin/env bash
     set -e
     case "{{platform}}" in
         cli)
@@ -64,13 +65,19 @@ run platform="" *args:
     esac
 
 # Start relay server
+[group('apps')]
+[working-directory('relay')]
 relay:
-    cd relay && cargo run
+    cargo run
 
 # Run TUI application
+[group('apps')]
+[working-directory('tui')]
 tui:
-    cd tui && cargo run
+    cargo run
 
 # Run desktop in dev mode
+[group('apps')]
+[working-directory('desktop')]
 desktop-dev:
-    cd desktop && cargo tauri dev
+    cargo tauri dev

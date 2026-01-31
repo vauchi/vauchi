@@ -7,8 +7,8 @@
 
 # Stash changes, checkout main, and pull latest in all repos
 [no-cd]
+[script('bash')]
 main:
-    #!/usr/bin/env bash
     switch_to_main() {
         local label="$1"
         local dir="$2"
@@ -42,8 +42,9 @@ main:
 
 # Show git status for all repos
 [no-cd]
+[default]
+[script('bash')]
 status:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             status=$(cd "$dir" && git status --porcelain 2>/dev/null)
@@ -64,8 +65,8 @@ status:
 
 # Checkout main branch in all repos
 [no-cd]
+[script('bash')]
 checkout-main:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             echo -n "${dir%/}: "
@@ -75,8 +76,8 @@ checkout-main:
 
 # Fetch all repos
 [no-cd]
+[script('bash')]
 fetch:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             echo -n "${dir%/}: "
@@ -86,8 +87,8 @@ fetch:
 
 # Show branches across all repos
 [no-cd]
+[script('bash')]
 branches:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
@@ -98,8 +99,9 @@ branches:
 
 # Delete merged branches in all repos
 [no-cd]
+[confirm('This will delete merged branches in all repos. Continue?')]
+[script('bash')]
 clean-branches:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             merged=$(cd "$dir" && git branch --merged main 2>/dev/null | grep -v "^\*\|main" | wc -l)
@@ -113,8 +115,8 @@ clean-branches:
 
 # Pull latest changes from all repos
 [no-cd]
+[script('bash')]
 pull-all:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             echo -n "${dir%/}: "
@@ -124,8 +126,8 @@ pull-all:
 
 # Push all repos with commits ahead of origin
 [no-cd]
+[script('bash')]
 push-all:
-    #!/usr/bin/env bash
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")

@@ -9,18 +9,23 @@
 # ═══════════════════════════════════════════════════════════════════
 
 # Build Android native libraries
+[group('mobile')]
 build-android mode="debug":
     ./core/scripts/build-android.sh {{mode}}
 
 # Build Android APK
+[group('mobile')]
+[working-directory('android')]
 android mode="debug": (build-android mode)
-    cd android && ./gradlew assemble{{mode}}
+    ./gradlew assemble{{mode}}
 
 # Build iOS framework (macOS only)
+[group('mobile')]
 build-ios mode="debug":
     BUILD_MODE={{mode}} ./ios/build-ios.sh
 
 # Generate UniFFI mobile bindings
+[group('mobile')]
 bindings:
     ./core/scripts/build-bindings.sh
 
@@ -29,8 +34,9 @@ bindings:
 # ═══════════════════════════════════════════════════════════════════
 
 # Run iOS checks (lint, build, test) — mirrors CI pipeline
+[group('mobile')]
+[script('bash')]
 check-ios:
-    #!/usr/bin/env bash
     set -e
     cd ios
     echo "=== iOS: Generating Xcode project ==="
@@ -49,8 +55,9 @@ check-ios:
     echo "=== iOS checks passed ==="
 
 # Run Android checks (lint, build, test) — mirrors CI pipeline
+[group('mobile')]
+[script('bash')]
 check-android:
-    #!/usr/bin/env bash
     set -e
     cd android
     echo "=== Android: Lint ==="
@@ -65,4 +72,5 @@ check-android:
     echo "=== Android checks passed ==="
 
 # Run all mobile checks (iOS + Android)
+[group('mobile')]
 check-mobile: check-ios check-android

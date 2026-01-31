@@ -22,8 +22,16 @@ public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e fe
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
 
+# ─── Aliases ─────────────────────────────────────────────────────
+
+alias b := build
+alias t := test
+alias c := check
+alias f := fmt
+
 # ─── Modules ──────────────────────────────────────────────────────
 
+[doc('Multi-repo git operations')]
 mod git 'just/git.just'
 
 import 'just/apps.just'
@@ -39,29 +47,41 @@ import 'just/dev.just'
 # ═══════════════════════════════════════════════════════════════════
 
 # Run all checks (format, lint, test)
+[group('daily')]
 check: fmt-check lint test
 
 # Build core workspace
+[group('daily')]
+[working-directory('core')]
 build:
-    cd core && cargo build --workspace
+    cargo build --workspace
 
 # Run tests
+[group('daily')]
+[working-directory('core')]
 test:
-    cd core && cargo test --workspace
+    cargo test --workspace
 
 # Format code
+[group('daily')]
+[working-directory('core')]
 fmt:
-    cd core && cargo fmt --all
+    cargo fmt --all
 
 # Check formatting (no changes)
+[private]
+[working-directory('core')]
 fmt-check:
-    cd core && cargo fmt --all -- --check
+    cargo fmt --all -- --check
 
 # Run clippy lints
+[group('daily')]
+[working-directory('core')]
 lint:
-    cd core && cargo clippy --workspace -- -D warnings
+    cargo clippy --workspace -- -D warnings
 
 # Interactive commit across repos with changes
+[group('daily')]
 commit:
     ./scripts/scripts/commit-interactive.sh
 
@@ -70,44 +90,60 @@ commit:
 # ═══════════════════════════════════════════════════════════════════
 
 # Run tests for specific crate
+[group('extended')]
+[working-directory('core')]
 test-crate crate:
-    cd core && cargo test -p {{crate}}
+    cargo test -p {{crate}}
 
 # Build release binaries
+[group('extended')]
+[working-directory('core')]
 build-release:
-    cd core && cargo build --workspace --release
+    cargo build --workspace --release
 
 # Run security audit
+[group('extended')]
+[working-directory('core')]
 audit:
-    cd core && cargo audit
-    cd core && cargo deny check
+    cargo audit
+    cargo deny check
 
 # Auto-fix lint issues
+[group('extended')]
+[working-directory('core')]
 fix:
-    cd core && cargo fmt --all
-    cd core && cargo clippy --workspace --fix --allow-dirty --allow-staged
+    cargo fmt --all
+    cargo clippy --workspace --fix --allow-dirty --allow-staged
 
 # Watch for changes and run tests
+[group('extended')]
+[working-directory('core')]
 watch:
-    cd core && cargo watch -x "test --workspace"
+    cargo watch -x "test --workspace"
 
 # Run tests with coverage
+[group('extended')]
+[working-directory('core')]
 coverage:
-    cd core && cargo llvm-cov --workspace --html
+    cargo llvm-cov --workspace --html
     @echo "Report: core/target/llvm-cov/html/index.html"
 
 # Generate and open Rust docs
+[group('extended')]
+[working-directory('core')]
 docs:
-    cd core && cargo doc --workspace --no-deps --open
+    cargo doc --workspace --no-deps --open
 
 # Install git hooks
+[group('extended')]
 install-hooks:
     cp scripts/hooks/* .git/hooks/
     chmod +x .git/hooks/*
 
 # Show quick reference
+[group('tools')]
+[script('bash')]
 help:
-    #!/usr/bin/env bash
     cat <<'HELP'
     Vauchi Development Commands
     ═══════════════════════════
@@ -164,5 +200,6 @@ help:
 # ═══════════════════════════════════════════════════════════════════
 
 # Explore codebase with local LLM (e.g., just tell-me-about "iOS tests")
+[group('tools')]
 tell-me-about *topic:
     ./scripts/scripts/tell-me-about.sh {{topic}}

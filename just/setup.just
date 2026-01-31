@@ -5,13 +5,15 @@
 # Setup & maintenance recipes
 
 # Clone all repos and set up workspace (run first after cloning meta-repo)
+[group('setup')]
 setup: clone-repos
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
 # Install development dependencies (macOS via Homebrew + Cargo)
+[group('setup')]
+[script('bash')]
 install-dev-deps:
-    #!/usr/bin/env bash
     set -e
 
     echo "=== Installing development dependencies ==="
@@ -89,8 +91,9 @@ install-dev-deps:
     echo "Next: just setup && just check"
 
 # Clone all repositories
+[private]
+[script('bash')]
 clone-repos:
-    #!/usr/bin/env bash
     set -e
     echo "Cloning public repositories..."
     for repo in {{public_repos}}; do
@@ -108,8 +111,10 @@ clone-repos:
     fi
 
 # Clean all build artifacts
+[group('setup')]
+[confirm('This will remove all build artifacts, node_modules, and caches. Continue?')]
+[script('bash')]
 clean:
-    #!/usr/bin/env bash
     echo "Cleaning build artifacts..."
 
     # Rust targets
@@ -150,8 +155,10 @@ clean:
     echo "Done!"
 
 # Clean only Rust targets (faster)
+[group('setup')]
+[confirm('This will remove all Rust target directories. Continue?')]
+[script('bash')]
 clean-rust:
-    #!/usr/bin/env bash
     echo "Cleaning Rust targets..."
     for dir in core relay cli tui desktop/src-tauri e2e; do
         if [[ -d "$dir/target" ]]; then

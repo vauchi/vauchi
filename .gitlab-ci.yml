@@ -33,24 +33,15 @@
 # Security scanning, code quality, and license compliance
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
+  - project: 'vauchi/scripts'
+    ref: main
+    file: '/ci-templates/reuse.yml'
 
 stages:
   - lint
   - security
 
-# REUSE compliance check (MR only)
-# Always runs on MRs because REUSE verifies ALL files have proper SPDX headers.
-# If a new file is added without a header, this job must catch it.
-reuse-lint:
-  image:
-    name: fsfe/reuse:latest
-    entrypoint: [""]
-  tags: [docker]
-  stage: lint
-  script:
-    - reuse lint
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+# REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
 # Secret detection (MR + scheduled)
 secret_detection:

@@ -9,8 +9,9 @@
 # ═══════════════════════════════════════════════════════════════════
 
 # Start all runners (VMs + docker-local service)
+[group('runners')]
+[script('bash')]
 runners-start:
-    #!/usr/bin/env bash
     set -euo pipefail
     echo "Starting all runners..."
 
@@ -45,6 +46,7 @@ runners-start:
     echo "Done. Run 'just runners-status' to verify."
 
 # Stop all runners (VMs + docker-local service)
+[group('runners')]
 runners-stop:
     @echo "Stopping all runners..."
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh stop || true
@@ -52,6 +54,7 @@ runners-stop:
     systemctl --user stop gitlab-runner 2>/dev/null || true
 
 # Show status of all runners
+[group('runners')]
 runners-status:
     @echo "=== Runner Status ==="
     @echo ""
@@ -70,49 +73,60 @@ runners-status:
 # ─── Linux VM ──────────────────────────────────────────────────────
 
 # Start Linux VM
+[group('runners')]
 vm-linux-start:
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh start
 
 # Stop Linux VM
+[group('runners')]
 vm-linux-stop:
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh stop
 
 # SSH into Linux VM
+[group('runners')]
 vm-linux-ssh *args:
     ./_private/infra/runners/linux-vm/vm-lifecycle.sh ssh {{args}}
 
 # ─── macOS VM ──────────────────────────────────────────────────────
 
 # Start macOS VM
+[group('runners')]
 vm-macos-start:
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh start
 
 # Stop macOS VM
+[group('runners')]
 vm-macos-stop:
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh stop
 
 # SSH into macOS VM
+[group('runners')]
 vm-macos-ssh *args:
     ./_private/infra/runners/macos-vm/vm-lifecycle.sh ssh {{args}}
 
 # ─── Docker-local Runner (systemd) ─────────────────────────────────
 
 # Start docker-local runner service
+[group('runners')]
 docker-runner-start:
     systemctl --user start gitlab-runner
 
 # Stop docker-local runner service
+[group('runners')]
 docker-runner-stop:
     systemctl --user stop gitlab-runner
 
 # Show docker-local runner status
+[group('runners')]
 docker-runner-status:
     systemctl --user status gitlab-runner --no-pager
 
 # View docker-local runner logs
+[group('runners')]
 docker-runner-logs:
     journalctl --user -u gitlab-runner -f
 
 # Restart docker-local runner
+[group('runners')]
 docker-runner-restart:
     systemctl --user restart gitlab-runner
