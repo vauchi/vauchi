@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 ---
 name: multi-repo-commit
 description: Commit changes across multiple vauchi sub-repositories with consistent messages and co-author lines

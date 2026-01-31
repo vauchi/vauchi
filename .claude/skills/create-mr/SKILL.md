@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 ---
 name: create-mr
 description: Create GitLab merge requests for vauchi repos with proper templates and cross-repo linking
