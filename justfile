@@ -196,6 +196,20 @@ help:
     HELP
 
 # ═══════════════════════════════════════════════════════════════════
+# I18N / LOCALES
+# ═══════════════════════════════════════════════════════════════════
+
+# Validate locale files (check for missing/extra keys)
+[group('tools')]
+sync-locales:
+    ./scripts/scripts/sync-locales.sh
+
+# Validate locale files strictly (fail on any issues, for CI)
+[group('tools')]
+sync-locales-strict:
+    ./scripts/scripts/sync-locales.sh --strict
+
+# ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS
 # ═══════════════════════════════════════════════════════════════════
 
