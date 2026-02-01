@@ -1,0 +1,121 @@
+{
+  "$schema": "https://fundingjson.org/schema/v1.1.0.json",
+  "version": "v1.1.0",
+  "entity": {
+    "type": "individual",
+    "role": "owner",
+    "name": "Mattia Egloff",
+    "email": "mattia.egloff@pm.me",
+    "description": "Creator and maintainer of Vauchi — privacy-focused updatable contact cards via in-person QR exchange. E2E encrypted using Signal protocol (X3DH + Double Ratchet), decentralized, no accounts required. Built in Rust with iOS (SwiftUI), Android (Kotlin/Compose), Desktop (Tauri), CLI, and TUI clients.",
+    "webpageUrl": {
+      "url": "https://vauchi.app"
+    }
+  },
+  "projects": [
+    {
+      "guid": "vauchi",
+      "name": "Vauchi",
+      "description": "Privacy-focused updatable contact cards. Exchange contact information in person via QR code, with end-to-end encryption. When you update your phone number or email, everyone who has your card sees the change — without any central server having access to your data. Uses Signal protocol cryptography (X3DH + Double Ratchet) with a zero-knowledge relay.",
+      "webpageUrl": {
+        "url": "https://vauchi.app"
+      },
+      "repositoryUrl": {
+        "url": "https://gitlab.com/vauchi/vauchi"
+      },
+      "licenses": [
+        "spdx:GPL-3.0-or-later"
+      ],
+      "tags": [
+        "privacy",
+        "encryption",
+        "rust",
+        "contacts",
+        "e2e-encryption",
+        "signal-protocol",
+        "cross-platform",
+        "open-source",
+        "decentralized"
+      ]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "github-sponsors",
+        "type": "payment-provider",
+        "address": "https://github.com/sponsors/vauchi",
+        "description": "Recurring or one-time sponsorship via GitHub Sponsors."
+      },
+      {
+        "guid": "liberapay",
+        "type": "payment-provider",
+        "address": "https://liberapay.com/vauchi",
+        "description": "Recurring donations via Liberapay. No platform fees."
+      },
+      {
+        "guid": "bank-transfer",
+        "type": "bank",
+        "address": "",
+        "description": "Direct bank transfer. Contact mattia.egloff@pm.me for details."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "development-monthly",
+        "status": "active",
+        "name": "Full-time development",
+        "description": "Fund dedicated development of Vauchi: cross-platform apps, relay infrastructure, protocol specification, and security audits.",
+        "amount": 8000,
+        "currency": "CHF",
+        "frequency": "monthly",
+        "channels": [
+          "github-sponsors",
+          "liberapay",
+          "bank-transfer"
+        ]
+      },
+      {
+        "guid": "security-audit",
+        "status": "active",
+        "name": "Security audit",
+        "description": "Fund an external security audit of Vauchi's cryptographic implementation (Signal protocol: X3DH + Double Ratchet in Rust).",
+        "amount": 10000,
+        "currency": "CHF",
+        "frequency": "one-time",
+        "channels": [
+          "github-sponsors",
+          "liberapay",
+          "bank-transfer"
+        ]
+      },
+      {
+        "guid": "infrastructure",
+        "status": "active",
+        "name": "Relay infrastructure",
+        "description": "Cover relay server hosting, domain costs, and CI/CD infrastructure.",
+        "amount": 600,
+        "currency": "CHF",
+        "frequency": "yearly",
+        "channels": [
+          "github-sponsors",
+          "liberapay",
+          "bank-transfer"
+        ]
+      },
+      {
+        "guid": "any-amount",
+        "status": "active",
+        "name": "Support Vauchi",
+        "description": "Contribute any amount to support privacy-respecting open-source software.",
+        "amount": 0,
+        "currency": "CHF",
+        "frequency": "one-time",
+        "channels": [
+          "github-sponsors",
+          "liberapay",
+          "bank-transfer"
+        ]
+      }
+    ]
+  }
+}
