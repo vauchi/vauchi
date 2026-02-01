@@ -130,17 +130,22 @@ All code must have tests. No exceptions.
 
 ## Support the Project
 
+[![Sponsor on GitHub](https://img.shields.io/badge/sponsor-GitHub%20Sponsors-ea4aaa)](https://github.com/sponsors/vauchi)
+[![Donate on Liberapay](https://img.shields.io/badge/donate-Liberapay-f6c915)](https://liberapay.com/Vauchi/donate)
+
 Vauchi is open source and community-funded. No VC money, no data harvesting business model.
 
 If you believe in privacy-respecting software:
 
 - **GitHub Sponsors**: [Sponsor Vauchi](https://github.com/sponsors/vauchi)
-- **Open Collective**: [opencollective.com/vauchi](https://opencollective.com/vauchi)
+- **Liberapay**: [liberapay.com/Vauchi](https://liberapay.com/Vauchi/donate)
 
 Funds go toward:
 - Development hardware and testing devices
 - Infrastructure costs (relay server)
 - Security audits
+
+See [SUPPORTERS.md](SUPPORTERS.md) for sponsorship tiers.
 
 ## License
 
