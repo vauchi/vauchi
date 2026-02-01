@@ -189,7 +189,8 @@ help:
       just docs               Open Rust docs
       just audit              Security audit
       just vrt-gallery        Cross-platform VRT screenshot gallery
-      just deploy-relay       Deploy relay via Kamal
+      just validate            Pre-flight deployment checks
+      just deploy              Deploy relay + landing via Kamal
       just runners-start      Start GitLab CI runners
 
     Full list:  just --list --list-submodules

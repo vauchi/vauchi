@@ -3,57 +3,98 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Deployment recipes
+# Config: _private/infra/config/deploy.combined.yml
 
 # ═══════════════════════════════════════════════════════════════════
-# DEPLOYMENT
+# VALIDATION
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy relay using Kamal
+# Run pre-flight validation checks
 [group('deploy')]
-deploy-relay:
-    kamal deploy -c _private/infra/config/deploy.yml
+validate *FLAGS:
+    ./_private/infra/scripts/validate.sh {{FLAGS}}
+
+# ═══════════════════════════════════════════════════════════════════
+# KAMAL DEPLOYMENT (relay + landing)
+# ═══════════════════════════════════════════════════════════════════
+
+# Deploy relay + landing (full build + push + deploy)
+[group('deploy')]
+deploy: validate
+    ./_private/infra/scripts/deploy-all.sh --skip-validation
+
+# Deploy existing images only (skip build + push)
+[group('deploy')]
+deploy-skip-push:
+    ./_private/infra/scripts/deploy-all.sh --skip-push
+
+# Deploy a specific image version
+[group('deploy')]
+deploy-version VERSION:
+    ./_private/infra/scripts/deploy-all.sh --version={{VERSION}}
 
 # Show relay logs
 [group('deploy')]
 relay-logs:
-    kamal app logs -f -c _private/infra/config/deploy.yml
+    kamal app logs -f -c _private/infra/config/deploy.combined.yml
 
-# Prepare mail server (run before port 25 is open)
+# ═══════════════════════════════════════════════════════════════════
+# MAIL DEPLOYMENT
+# ═══════════════════════════════════════════════════════════════════
+
+# Sync mail config + restart changed services
+[group('deploy')]
+deploy-mail:
+    ./_private/infra/scripts/deploy-mail.sh
+
+# Preview mail config changes (dry run)
+[group('deploy')]
+deploy-mail-dry:
+    ./_private/infra/scripts/deploy-mail.sh --dry-run
+
+# Prepare mail server for first-time setup
 [group('deploy')]
 mail-prepare:
     ./_private/infra/mail/prepare-mail.sh
 
-# Deploy mail server (run after port 25 is open)
+# ═══════════════════════════════════════════════════════════════════
+# DEPLOY EVERYTHING
+# ═══════════════════════════════════════════════════════════════════
+
+# Deploy Kamal services + sync mail config
 [group('deploy')]
-mail-deploy:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && ./deploy-mail.sh"
+deploy-all: deploy deploy-mail
+
+# ═══════════════════════════════════════════════════════════════════
+# MAIL MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════
 
 # Show mail server logs
 [group('deploy')]
 mail-logs:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && docker compose logs -f mailserver"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose logs -f mailserver"
 
 # Mail server status
 [group('deploy')]
 mail-status:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && docker compose ps && echo '' && ./setup.sh email list"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose ps && echo '' && ./setup.sh email list"
 
 # Webmail logs
 [group('deploy')]
 mail-webmail-logs:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && docker compose logs -f roundcube webmail-nginx"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose logs -f roundcube webmail-nginx"
 
 # Add mail user
 [group('deploy')]
 mail-add-user email:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && ./setup.sh email add {{email}}"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email add {{email}}"
 
 # Update mail user password
 [group('deploy')]
 mail-update-password email:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && ./setup.sh email update {{email}}"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email update {{email}}"
 
 # List mail users
 [group('deploy')]
 mail-list-users:
-    ssh fufadmin@bold-hopper-vps "cd /opt/mail && ./setup.sh email list"
+    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email list"
