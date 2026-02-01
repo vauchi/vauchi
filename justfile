@@ -188,6 +188,7 @@ help:
       just coverage           Test coverage report
       just docs               Open Rust docs
       just audit              Security audit
+      just vrt-gallery        Cross-platform VRT screenshot gallery
       just deploy-relay       Deploy relay via Kamal
       just runners-start      Start GitLab CI runners
 
@@ -208,6 +209,15 @@ sync-locales:
 [group('tools')]
 sync-locales-strict:
     ./scripts/scripts/sync-locales.sh --strict
+
+# ═══════════════════════════════════════════════════════════════════
+# VISUAL REGRESSION TESTING
+# ═══════════════════════════════════════════════════════════════════
+
+# Generate cross-platform VRT gallery (iOS, Android, Desktop, TUI)
+[group('tools')]
+vrt-gallery:
+    ./scripts/scripts/vrt-gallery.sh
 
 # ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS
