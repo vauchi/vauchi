@@ -57,3 +57,7 @@ Create GitLab merge requests for one or more vauchi repositories. $ARGUMENTS may
 5. **Cross-link MRs** — After all MRs are created, update each MR's description to include the actual MR numbers of related MRs using `glab mr update <id> --description "..."`.
 
 6. **Report results** — Show a table with links to all created MRs.
+
+## Pre-Requisite
+
+Before creating MRs, run `/pre-mr-check` to ensure all CI checks pass locally. This prevents failed pipelines and wasted CI time.
