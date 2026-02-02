@@ -133,8 +133,9 @@ The audit counts keyword matches in tests, not implementation completeness.
 
 | Feature | Status | Why Not MVP |
 |---------|--------|-------------|
-| BLE/NFC exchange | Stubbed | QR works, BLE is enhancement |
-| NFC tag as device | Planned | Post-MVP enhancement |
+| BLE exchange | Stubbed | QR works, BLE is enhancement |
+| NFC exchange | Removed (post-MVP) | Code removed; QR+BLE sufficient |
+| NFC tag as device | Removed (post-MVP) | Mailbox-based exchange deferred |
 | Tor mode | Planned | Privacy enhancement, not core |
 | Hidden contacts | Planned | Privacy enhancement |
 | Duress password | Planned | Security enhancement |
