@@ -21,7 +21,7 @@ just check    # Run all checks
 - **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
 - **TDD**: Red→Green→Refactor. Test FIRST. Tests trace to `features/*.feature`
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
-- **Crypto**: `ring` only. Never mock crypto
+- **Crypto**: `ring` primary; `chacha20poly1305` and `argon2` are spec-mandated exceptions. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
 - **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
@@ -65,8 +65,8 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 │
 ├── android/                     ← Kotlin/Compose native app
 ├── ios/                         ← SwiftUI native app
-├── vauchi-mobile-android/       ← Generated Kotlin bindings + JNI libs (SPM distribution)
-├── vauchi-mobile-swift/         ← Generated Swift bindings + XCFramework (Gradle distribution)
+├── vauchi-mobile-android/       ← Generated Kotlin bindings + JNI libs (Gradle distribution)
+├── vauchi-mobile-swift/         ← Generated Swift bindings + XCFramework (SPM distribution)
 │
 ├── e2e/                         ← End-to-end tests
 ├── features/                    ← Gherkin specs (shared across all platforms)
@@ -142,11 +142,13 @@ See `VISIBILITY_POLICY.md` for what goes where.
 ```
 core/vauchi-core (standalone, no workspace deps)
     ↑ (git dependency)
-relay/, cli/, tui/, desktop/, e2e/
+cli/, tui/, desktop/, e2e/
 ```
 
-All downstream repos use git dependencies with tag-based version pinning.
-Local development uses `.cargo/config.toml` path overrides.
+`relay/` is standalone — it does **not** depend on vauchi-core.
+
+Downstream repos use git dependencies with branch-based pinning (`branch = "main"`).
+Local development uses `.cargo/config.toml` path overrides to point at local checkouts.
 
 ## Exploration
 
