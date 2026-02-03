@@ -3,7 +3,7 @@
 
 # CLAUDE.md
 
-Privacy-focused updatable contact cards via in-person QR exchange. E2E encrypted, decentralized.
+Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, decentralized.
 
 ## Quick Start
 

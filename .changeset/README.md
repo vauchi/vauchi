@@ -26,8 +26,8 @@ This will prompt you to:
 
 | Type | When to use |
 |------|-------------|
-| **major** | Breaking changes (API changes, protocol changes) |
-| **minor** | New features, backward-compatible |
+| **major** | Protocol or data format changes |
+| **minor** | New features |
 | **patch** | Bug fixes, performance improvements |
 
 ### Examples

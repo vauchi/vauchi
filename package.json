@@ -2,7 +2,7 @@
   "name": "vauchi",
   "version": "0.0.0",
   "private": true,
-  "description": "Privacy-focused updatable contact cards via in-person QR exchange",
+  "description": "Privacy-focused updatable contact cards via in-person exchange",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-org/vauchi.git"
