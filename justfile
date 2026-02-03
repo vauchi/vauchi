@@ -163,6 +163,8 @@ help:
       just git push-all       Push repos with commits ahead
       just git fetch          Fetch all repos
       just git branches       Show branches across repos
+      just git cleanup        Preview merged branch cleanup (dry run)
+      just git cleanup run    Delete merged branches + prune stale refs
 
     Apps:
       just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
