@@ -18,7 +18,7 @@ core/
 │   │   ├── lib.rs          # Module exports and public API
 │   │   ├── api/            # High-level orchestration (feature-gated: network)
 │   │   ├── crypto/         # ring + documented exceptions
-│   │   ├── exchange/       # X3DH, QR, proximity, BLE, NFC
+│   │   ├── exchange/       # X3DH, QR, proximity, BLE (NFC Active + NFC Dead Drop planned)
 │   │   ├── contact/        # Contact model + visibility
 │   │   ├── contact_card/   # Shareable card fields
 │   │   ├── storage/        # SQLite persistence
