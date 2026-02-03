@@ -12,7 +12,7 @@ All solutions must be validated against these principles before implementation.
 
 ## Core Value Statement
 
-Vauchi is built on three interlocking commitments:
+Vauchi is built on five interlocking commitments:
 
 ### 1. Privacy is a right, not an option
 
@@ -40,6 +40,24 @@ Confidence through discipline, not hope.
 - Problem-first workflow with full traceability
 - Threat modeling drives security decisions
 - No hacks, no tech debt, no ignored tests
+
+### 4. Simplicity serves the user
+
+Vauchi respects your time and attention — it does one thing well and stays out of your way.
+
+- No engagement tricks, no notifications designed to pull you back
+- Clear, minimal interface — useful without a learning curve
+- Features earn their place by solving real problems, not adding complexity
+- The app is a tool, not a destination
+
+### 5. Beauty adapts to the user
+
+Simplicity and beauty go hand in hand — and beauty is personal.
+
+- Design that feels good without demanding attention
+- Theming and customisation let users make it their own
+- Aesthetic choices serve clarity, never compete with it
+- A beautiful tool is one that fits the person using it
 
 ---
 
@@ -113,7 +131,7 @@ Confidence through discipline, not hope.
 
 When evaluating a proposed solution, check:
 
-1. **Does it align with Core Principles?** (Privacy, Trust, Quality)
+1. **Does it align with Core Principles?** (Privacy, Trust, Quality, Simplicity, Beauty)
 2. **Does it fit the Culture?** (Process Principles)
 3. **Is it compatible with Current Implementation?** (Technical Principles)
 4. **Does it support existing Features?** (UX Principles)
@@ -126,7 +144,7 @@ When facing a design decision:
 
 1. Start with the user's perspective
 2. Assume adversarial conditions (what could go wrong?)
-3. Choose the option that best upholds all three core values
+3. Choose the option that best upholds all five core values
 4. Document the decision and rationale
 
 ### For New Contributors
