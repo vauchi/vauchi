@@ -86,7 +86,7 @@ Advanced privacy and testing infrastructure.
 | Feature | Status | Problem Record |
 |---------|--------|----------------|
 | Tor Mode | Pending | `2026-01-26-tor-mode` — real Tor integration, not proxy stub |
-| Relay Federation | Pending | Protocol design + implementation |
+| Relay Federation | Phase 1 done | Phase 1 merged: static peer offloading, forwarding hints, integrity hashing (`relay!22`). Phase 2-4 pending: client multi-relay, gossip discovery, mutual TLS |
 | Cargo Fuzz Targets | Pending | `2026-02-03-cargo-fuzz-targets` — all attack surfaces |
 | Testing Infrastructure Gaps | Pending | `2026-02-03-testing-infrastructure-gaps` — Miri, cargo-deny CI, MASVS checklist |
 | Accessibility Audit | Pending | Formal audit with real screen readers |
