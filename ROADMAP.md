@@ -40,7 +40,7 @@ All 18 features must be production-ready with real implementations before real d
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
 | No unwraps in crypto | Done | 0 production unwraps |
 | Accessibility (Phase 1-5) | Done | VoiceOver, TalkBack, ARIA complete |
-| Phase 2 Security Hardening | Partial | Desktop key storage fixed, cert pinning implemented |
+| Phase 2 Security Hardening | Done | Desktop key storage fixed, cert pinning implemented, scans clean |
 | Security scan | Done | cargo-audit: 0 vulns (2026-02-02, all repos) |
 
 ---
@@ -55,7 +55,7 @@ Finish the security layer that protects everything else.
 
 | Feature | Status | Problem Record |
 |---------|--------|----------------|
-| Phase 2 Security Hardening | In progress | `2026-02-02-phase2-security-hardening` |
+| Phase 2 Security Hardening | Done | `2026-02-02-phase2-security-hardening` — scans clean, key storage fixed, cert pinning implemented |
 | Android KeyStore Auth | Done | `2026-02-03-android-keystore-authentication` |
 | Crypto-Shredding | Done | `2026-02-02-crypto-shredding` |
 | GDPR Compliance | Done | DPIA v1.2 + controller model documented |
@@ -94,7 +94,7 @@ Advanced privacy and testing infrastructure.
 | Relay Federation | Phase 1 done | Phase 1 merged: static peer offloading, forwarding hints, integrity hashing (`relay!22`). Phase 2-4 pending: client multi-relay, gossip discovery, mutual TLS |
 | Protocol Hardening | Done | All 3 gaps closed: inner transport encryption (Noise NK), AEAD identity binding, fixed-size padding |
 | Cargo Fuzz Targets | Done | `2026-02-03-cargo-fuzz-targets` — 10 targets covering all attack surfaces |
-| Testing Infrastructure Gaps | Pending | `2026-02-03-testing-infrastructure-gaps` — Miri, cargo-deny CI, MASVS checklist |
+| Testing Infrastructure Gaps | Done | `2026-02-03-testing-infrastructure-gaps` — cargo-deny CI (all repos), MASVS L1 self-assessment, Miri deprioritized (no unsafe) |
 | Accessibility Audit | Pending | Formal audit with real screen readers |
 
 ### Phase 5: Validation
