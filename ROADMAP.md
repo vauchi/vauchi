@@ -52,9 +52,10 @@ Finish the security layer that protects everything else.
 | Feature | Status | Problem Record |
 |---------|--------|----------------|
 | Phase 2 Security Hardening | In progress | `2026-02-02-phase2-security-hardening` |
-| Android KeyStore Auth | Pending | `2026-02-03-android-keystore-auth` |
-| Crypto-Shredding | Pending | `2026-02-03-crypto-shredding` |
-| GDPR Compliance | Pending | Planning doc: `16-gdpr-compliance.md` |
+| Android KeyStore Auth | Done | `2026-02-03-android-keystore-authentication` |
+| Crypto-Shredding | Done | `2026-02-02-crypto-shredding` |
+| GDPR Compliance | Done | DPIA v1.2 + controller model documented |
+| Protocol Hardening Gap 1 | Done | Noise NK inner transport encryption (relay + core) |
 
 ### Phase 2: Core Exchange
 
@@ -87,6 +88,7 @@ Advanced privacy and testing infrastructure.
 |---------|--------|----------------|
 | Tor Mode | Pending | `2026-01-26-tor-mode` — real Tor integration, not proxy stub |
 | Relay Federation | Phase 1 done | Phase 1 merged: static peer offloading, forwarding hints, integrity hashing (`relay!22`). Phase 2-4 pending: client multi-relay, gossip discovery, mutual TLS |
+| Protocol Hardening | Done | All 3 gaps closed: inner transport encryption (Noise NK), AEAD identity binding, fixed-size padding |
 | Cargo Fuzz Targets | Pending | `2026-02-03-cargo-fuzz-targets` — all attack surfaces |
 | Testing Infrastructure Gaps | Pending | `2026-02-03-testing-infrastructure-gaps` — Miri, cargo-deny CI, MASVS checklist |
 | Accessibility Audit | Pending | Formal audit with real screen readers |
