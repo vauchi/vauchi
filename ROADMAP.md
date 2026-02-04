@@ -31,7 +31,10 @@ All 18 features must be production-ready with real implementations before real d
 | Relay deployed | Done | https://relay.vauchi.app returns 200 |
 | Relay persistence | Done | SQLite default backend, TTL, cleanup |
 | Relay rate limiting | Done | Token bucket, per-client, configurable |
-| Rust tests | Done | 966 pass, all green |
+| Contact exchange (Mutual QR) | Done | Symmetric DH, fresh ephemeral keys, 14 tests |
+| Contact exchange (NFC Active) | Done | 174-byte APDU payload, VNFC magic, 25 tests |
+| Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 27 tests |
+| Rust tests | Done | 1032 pass, all green |
 | iOS test files | Done | 10 files — KeychainService, Audio, Exchange, etc. |
 | Android test files | Done | 10 files — SyncWorker, Audio, Exchange, etc. |
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
@@ -60,13 +63,13 @@ Finish the security layer that protects everything else.
 
 ### Phase 2: Core Exchange
 
-Real hardware exchange methods — no stub implementations.
+Core protocol and payload modules complete. Platform hardware adapters deferred to platform integration.
 
 | Feature | Status | Problem Record |
 |---------|--------|----------------|
-| Mutual Offline QR Exchange | Pending | Two-way scan, proximity-verified |
-| BLE Exchange | Pending | `2026-02-03-ble-exchange` — real CoreBluetooth / Android BLE, GATT services |
-| NFC Active Exchange | Planning | `2026-02-02-nfc-active-device-exchange` — HCE, CoreNFC, device-to-device |
+| Mutual Offline QR Exchange | Done | `2026-02-03-mutual-offline-exchange` — symmetric DH, fresh ephemeral keys |
+| BLE Exchange | Done | `2026-02-03-ble-exchange` — `BLETransport` trait, GATT service, `ExchangeBle` payload |
+| NFC Active Exchange | Done | `2026-02-02-nfc-active-device-exchange` — `ExchangeNfc` payload, APDU protocol |
 
 ### Phase 3: Platform Completeness
 
