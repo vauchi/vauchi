@@ -73,16 +73,16 @@ Core protocol and payload modules complete. Platform hardware adapters deferred 
 
 ### Phase 3: Platform Completeness
 
-Features that make the app usable across all platforms.
+Core Rust modules done and tested for all 6 features. Remaining work is platform UI wiring (iOS, Android, Desktop, CLI, TUI).
 
 | Feature | Status | Problem Record |
 |---------|--------|----------------|
-| Internationalization | Pending | Planning doc: `13-internationalization-implementation.md` |
-| In-app Help Updates | Pending | FAQ, tooltips, privacy explainer — all platforms |
-| Remote Theming Updates | Pending | Mobile + CLI/TUI theme system |
-| Aha Moments | Pending | Planning doc: `19-user-testing-readiness.md` — real animations, all platforms |
-| Performance & Scalability | Pending | Planning doc: `15-performance-scalability.md` — platform wiring |
-| Platform Edge Cases | Pending | Planning doc: `18-platform-edge-cases.md` — iOS background, Android doze, crash recovery |
+| Internationalization | Core done | `src/i18n.rs` — 18 tests, 4 locales. Platform UI wiring remaining |
+| In-app Help Updates | Core done | `src/help.rs` — 14 tests, 16 FAQs. Platform UI layout remaining |
+| Remote Theming Updates | Core done | `src/theme.rs` — 24 tests, 12 themes. Platform theme application remaining |
+| Aha Moments | Core done | UniFFI bindings exposed. Trigger integration at milestones remaining |
+| Performance & Scalability | Core done | `2026-02-01-performance-scalability` — pagination + batch sync, 19 tests. Real device profiling remaining |
+| Platform Edge Cases | Core done | `2026-02-01-platform-edge-cases` — crash recovery + clock skew, 22 tests. Platform service hardening remaining |
 
 ### Phase 4: Privacy & Hardening
 
@@ -93,7 +93,7 @@ Advanced privacy and testing infrastructure.
 | Tor Mode | Pending | `2026-01-26-tor-mode` — real Tor integration, not proxy stub |
 | Relay Federation | Phase 1 done | Phase 1 merged: static peer offloading, forwarding hints, integrity hashing (`relay!22`). Phase 2-4 pending: client multi-relay, gossip discovery, mutual TLS |
 | Protocol Hardening | Done | All 3 gaps closed: inner transport encryption (Noise NK), AEAD identity binding, fixed-size padding |
-| Cargo Fuzz Targets | Pending | `2026-02-03-cargo-fuzz-targets` — all attack surfaces |
+| Cargo Fuzz Targets | Done | `2026-02-03-cargo-fuzz-targets` — 10 targets covering all attack surfaces |
 | Testing Infrastructure Gaps | Pending | `2026-02-03-testing-infrastructure-gaps` — Miri, cargo-deny CI, MASVS checklist |
 | Accessibility Audit | Pending | Formal audit with real screen readers |
 
@@ -135,8 +135,8 @@ Physical devices, cross-platform verification, production preparation.
 | GDPR compliance | Pending | Data export, deletion, consent |
 | i18n on all platforms | Pending | String extraction, locale switching |
 | Accessibility audited | Pending | Screen reader validation |
-| Fuzz targets covering attack surfaces | Pending | cargo-fuzz CI job |
-| All platform edge cases handled | Pending | Background, doze, crash recovery |
+| Fuzz targets covering attack surfaces | Done | 10 targets: QR, relay, padding, delta, recovery, NFC, BLE (x2), exchange payload, encrypted exchange |
+| All platform edge cases handled | Core done | Crash recovery + clock skew tested; platform hardening remaining |
 | TDD followed for all features | Ongoing | Red→Green→Refactor, no exceptions |
 | 90%+ test coverage (vauchi-core) | Ongoing | Real crypto in tests, no mocking |
 
