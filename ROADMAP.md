@@ -4,7 +4,7 @@
 # Roadmap - February 2026
 
 **Goal**: Full-feature production release — all 18 features implemented with real code, no stubs or mocks
-**Last audit**: 2026-02-03
+**Last audit**: 2026-02-04
 
 ---
 
@@ -38,6 +38,7 @@ All 18 features must be production-ready with real implementations before real d
 | No unwraps in crypto | Done | 0 production unwraps |
 | Accessibility (Phase 1-5) | Done | VoiceOver, TalkBack, ARIA complete |
 | Phase 2 Security Hardening | Partial | Desktop key storage fixed, cert pinning implemented |
+| Security scan | Done | cargo-audit: 0 vulns (2026-02-02, all repos) |
 
 ---
 
@@ -126,7 +127,7 @@ Physical devices, cross-platform verification, production preparation.
 | No plaintext secrets | Done | Code review |
 | Rate limiting active | Done | Relay config |
 | Persistence working | Done | SQLite default |
-| No critical vulnerabilities | Done | cargo-audit: 0 vulns (2026-01-22) |
+| No critical vulnerabilities | Done | cargo-audit: 0 vulns (2026-02-02) |
 | Tor mode functional | Pending | Real Tor integration test |
 | GDPR compliance | Pending | Data export, deletion, consent |
 | i18n on all platforms | Pending | String extraction, locale switching |
@@ -191,4 +192,4 @@ curl https://relay.vauchi.app/health
 
 ## Verification
 
-**Last verification**: 2026-02-03
+**Last verification**: 2026-02-04
