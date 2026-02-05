@@ -86,7 +86,7 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 2. `build:ios` (macOS), `build:android` (Linux+NDK), `build:validate-bindings`
 3. `package:xcframework` (macOS), `package:android` (Linux)
 4. `publish:packages`, `publish:core`, `publish:mobile`, `release:create`
-5. `trigger:downstream` — triggers swift + android distribution repos
+5. `trigger:swift` + `trigger:android` — triggers distribution repos via native `trigger:` keyword
 
 ### Relay (`relay/.gitlab-ci.yml`)
 - Lint + test + security + Docker build
@@ -128,7 +128,7 @@ core tag v*.*.* →
             auto-create MR to bump dependency
 ```
 
-**Uses Pipeline Trigger API** (not GitLab `trigger:` keyword) to pass `UPSTREAM_VERSION` variable.
+**Uses native GitLab `trigger:` keyword** to pass `UPSTREAM_VERSION` variable (CI_JOB_TOKEN lacks `api` scope for Pipeline API).
 
 ## Common Failure Modes
 
@@ -142,7 +142,7 @@ core tag v*.*.* →
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
 | Version mismatch at publish | Tag != Cargo.toml version | Auto-creates MR to sync |
-| Downstream trigger fails | Missing trigger token | `allow_failure: true` (non-blocking) |
+| Downstream trigger fails | CI_JOB_TOKEN allowlist misconfigured | `allow_failure: true` (non-blocking), manual trigger via `glab` |
 
 ## Timeout Reference
 

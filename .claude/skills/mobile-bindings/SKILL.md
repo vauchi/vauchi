@@ -162,7 +162,7 @@ On tag `v*.*.*`:
 2. **build:ios** (macOS runner) + **build:android** (Linux+NDK) + **build:validate-bindings**
 3. **package:xcframework** + **package:android**
 4. **publish:packages** → GitLab Generic Packages registry
-5. **trigger:downstream** → triggers distribution repos via Pipeline Trigger API
+5. **trigger:swift** + **trigger:android** → triggers distribution repos via native `trigger:` keyword
 
 ### Binding Validation
 
@@ -263,5 +263,5 @@ just check-mobile       # Both
 2. **vauchi-mobile-swift/android are auto-generated** — don't edit manually
 3. **rustls required** — adding OpenSSL deps breaks Android/iOS builds
 4. **XCFramework needs macOS** — iOS packaging can't run on Linux
-5. **Pipeline Trigger API** used (not GitLab `trigger:` keyword) to pass UPSTREAM_VERSION
+5. **Native `trigger:` keyword** used to pass UPSTREAM_VERSION (CI_JOB_TOKEN lacks `api` scope for Pipeline API)
 6. **Version mismatch** — if tag != Cargo.toml version, CI auto-creates MR to sync
