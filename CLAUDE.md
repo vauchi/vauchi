@@ -131,7 +131,7 @@ Internal content that is not public-facing lives in `_private/`:
 | Subdir | Purpose |
 |--------|---------|
 | `docs/` | Problem records, planning, roadmap, internal strategy docs |
-| `features/` | Future/unreleased feature specs, ideas |
+| `features/` | Brainstorming ideas (prose). Draft Gherkin scenarios live in problem records until promoted to public `features/` |
 | `infra/` | Deployment configs, server IPs, runner tokens |
 | `strategy/` | Business strategy, funding plans |
 
