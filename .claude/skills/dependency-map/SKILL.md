@@ -134,15 +134,18 @@ Caret ranges (`^`) — allows minor/patch updates.
 
 ## Shared Locales
 
-**Location**: `locales/` (workspace root)
+**Location**: `locales/` (own repo: `vauchi/locales`, cloned by `just setup`)
 
-Files: `en.json`, `de.json`, `fr.json`, `es.json`
+Files: `en.json`, `de.json`, `fr.json`, `es.json` (753 keys each)
 
 Key format: `section.element` (e.g., `contacts.empty`, `action.save`)
 
+Runtime loading: `i18n::init(resource_dir)` loads from JSON files at startup. `load_locale_from_bytes()` for CDN hot-reload.
+
 Consumed by:
-- **iOS/Android**: Via `get_available_locales()` in vauchi-mobile bindings
-- **Desktop**: Fetched as remote content updates (HTTP)
+- **Desktop**: Bundled as Tauri resources (`desktop/src-tauri/resources/locales/`), loaded via `i18n::init()`
+- **iOS/Android**: Via `init_locales(resource_dir)` UniFFI export + `get_available_locales()`
+- **Core tests**: Uses `core/vauchi-core/locales/` copy
 
 Validate: `just sync-locales`
 

@@ -29,7 +29,7 @@ Every sub-directory is its own git repo. Always use `git -C <dir>` to target the
 | Android app | `android/` | `vauchi/android` |
 | E2E tests | `e2e/` | `vauchi/e2e` |
 | Website / landing page | `website/` | `vauchi/website` |
-| Shared locales (canonical) | `locales/` | root repo |
+| Shared locales (canonical) | `locales/` | `vauchi/locales` |
 | Justfile, CI, workspace config | root | `vauchi/vauchi` |
 
 ## Common Pitfalls
@@ -93,5 +93,5 @@ git -C features checkout -b feature/my-feature
 | Planning todo | `_private/docs/planning/todo/YYYY-MM-DD-name.md` |
 | Public architecture doc | `docs/YYYY-MM-DD-name.md` |
 | Gherkin feature | `features/feature-name.feature` |
-| Shared locale file | `locales/en.json` (root repo) |
+| Shared locale file | `locales/en.json` (`vauchi/locales` repo) |
 | Core Rust code | `core/vauchi-core/src/` |

@@ -17,7 +17,7 @@ set shell := ["bash", "-cu"]
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e features android ios docs website"
+public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e features android ios docs locales website"
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"

@@ -120,7 +120,7 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 
 | Repo | Purpose |
 |------|---------|
-| `locales/` | Locale JSON files (en, de, fr, es — 620+ keys). Loaded at runtime by `i18n::init()` |
+| `locales/` | Locale JSON files (en, de, fr, es — 753 keys). Own repo (`vauchi/locales`), loaded at runtime by `i18n::init()` |
 
 **Support:**
 
