@@ -70,6 +70,7 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 │
 ├── e2e/                         ← End-to-end tests
 ├── features/                    ← Gherkin specs (shared across all platforms)
+├── locales/                     ← Locale JSON files (public, translatable)
 │
 ├── docs/                        ← Architecture, planning, TDD rules
 ├── scripts/                     ← Dev tools, hooks, utilities
@@ -114,6 +115,12 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 |------|---------|
 | `e2e/` | End-to-end tests |
 | `features/` | Gherkin specs (shared across all platforms) |
+
+**Content:**
+
+| Repo | Purpose |
+|------|---------|
+| `locales/` | Locale JSON files (en, de, fr, es — 620+ keys). Loaded at runtime by `i18n::init()` |
 
 **Support:**
 
