@@ -4,7 +4,7 @@
 # Roadmap - February 2026
 
 **Goal**: Full-feature production release — all 18 features implemented with real code, no stubs or mocks
-**Last audit**: 2026-02-04
+**Last audit**: 2026-02-06 (code-verified)
 
 ---
 
@@ -33,10 +33,10 @@ All 18 features must be production-ready with real implementations before real d
 | Relay rate limiting | Done | Token bucket, per-client, configurable |
 | Contact exchange (Mutual QR) | Done | Symmetric DH, fresh ephemeral keys, 14 tests |
 | Contact exchange (NFC Active) | Done | 174-byte APDU payload, VNFC magic, 25 tests |
-| Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 27 tests |
-| Rust tests | Done | 1032 pass, all green |
-| iOS test files | Done | 10 files — KeychainService, Audio, Exchange, etc. |
-| Android test files | Done | 10 files — SyncWorker, Audio, Exchange, etc. |
+| Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 28 tests |
+| Rust tests | Done | ~1,950 tests across 166 files |
+| iOS test files | Done | 17 files — KeychainService, Audio, Exchange, Accessibility, VRT, etc. |
+| Android test files | Done | 13 files — SyncWorker, Audio, Exchange, Accessibility, Screenshots, etc. |
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
 | No unwraps in crypto | Done | 0 production unwraps |
 | Accessibility (Phase 1-5) | Done | VoiceOver, TalkBack, ARIA complete |
@@ -49,73 +49,90 @@ All 18 features must be production-ready with real implementations before real d
 
 All features below must be complete — with real implementations — before real device testing.
 
-### Phase 1: Security Foundation
+### Phase 1: Security Foundation ✓
 
-Finish the security layer that protects everything else.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Phase 2 Security Hardening | Done | Scans clean, key storage fixed, cert pinning (275 lines), desktop keychain (707 lines) |
+| Android KeyStore Auth | Done | Biometric-gated key access, 300s timeout, 166 lines |
+| Crypto-Shredding | Done | SMK hierarchy (192 lines), CEK (66 lines), ShredManager (937 lines, 3-phase protocol) |
+| GDPR Compliance | Done | DPIA v1.2, data export, deletion, consent — all platforms wired |
+| Protocol Hardening Gap 1 | Done | Noise NK inner transport encryption (361 lines core + relay) |
 
-| Feature | Status | Problem Record |
-|---------|--------|----------------|
-| Phase 2 Security Hardening | Done | `2026-02-02-phase2-security-hardening` — scans clean, key storage fixed, cert pinning implemented |
-| Android KeyStore Auth | Done | `2026-02-03-android-keystore-authentication` |
-| Crypto-Shredding | Done | `2026-02-02-crypto-shredding` |
-| GDPR Compliance | Done | DPIA v1.2 + controller model documented |
-| Protocol Hardening Gap 1 | Done | Noise NK inner transport encryption (relay + core) |
+### Phase 2: Core Exchange ✓
 
-### Phase 2: Core Exchange
-
-Core protocol and payload modules complete. Platform hardware adapters deferred to platform integration.
-
-| Feature | Status | Problem Record |
-|---------|--------|----------------|
-| Mutual Offline QR Exchange | Done | `2026-02-03-mutual-offline-exchange` — symmetric DH, fresh ephemeral keys |
-| BLE Exchange | Done | `2026-02-03-ble-exchange` — `BLETransport` trait, GATT service, `ExchangeBle` payload |
-| NFC Active Exchange | Done | `2026-02-02-nfc-active-device-exchange` — `ExchangeNfc` payload, APDU protocol |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Mutual Offline QR Exchange | Done | Symmetric DH, fresh ephemeral keys, 14 tests |
+| BLE Exchange | Done | `BLETransport` trait, GATT service, `ExchangeBle` payload, 28 tests |
+| NFC Active Exchange | Done | `ExchangeNfc` payload, APDU protocol, 25 tests |
 
 ### Phase 3: Platform Completeness
 
-Core Rust modules done and tested for all 6 features. Remaining work is platform UI wiring (iOS, Android, Desktop, CLI, TUI).
+Core Rust modules done and tested for all 6 features. Remaining work is platform UI wiring.
 
-| Feature | Status | Problem Record |
-|---------|--------|----------------|
-| Internationalization | Core done | `src/i18n.rs` — 18 tests, 4 locales. Platform UI wiring remaining |
-| In-app Help Updates | Core done | `src/help.rs` — 14 tests, 16 FAQs. Platform UI layout remaining |
-| Remote Theming Updates | Core done | `src/theme.rs` — 24 tests, 12 themes. Platform theme application remaining |
-| Aha Moments | Core done | UniFFI bindings exposed. Trigger integration at milestones remaining |
-| Performance & Scalability | Core done | `2026-02-01-performance-scalability` — pagination + batch sync, 19 tests. Real device profiling remaining |
-| Platform Edge Cases | Core done | `2026-02-01-platform-edge-cases` — crash recovery + clock skew, 22 tests. Platform service hardening remaining |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Internationalization | Done | `src/i18n.rs` — 534 lines, 18 tests, 4 locales, 775 keys, runtime loading. All platforms wired |
+| In-app Help Updates | Core done | `src/help.rs` — 390 lines, 15 tests, 15 FAQs. iOS + Android + Desktop UI done. CLI/TUI partial |
+| Remote Theming Updates | Core done | `src/theme.rs` — 545 lines, 7 unit tests, 12 themes. iOS + Android + Desktop UI done |
+| Aha Moments | Core done | Localized, CLI + TUI + iOS + Android done. Desktop partial |
+| Performance & Scalability | Core done | Pagination + batch sync, 24 tests. Real device profiling remaining |
+| Platform Edge Cases | Core done | Crash recovery (11 tests) + clock skew (23 tests) = 34 tests. Platform service hardening remaining |
 
 ### Phase 4: Privacy & Hardening
 
-Advanced privacy and testing infrastructure.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Tor Mode | Done | 594 lines, feature-gated `tor = []`, arti-ready |
+| Relay Federation | Done | All 4 phases: static federation, gossip discovery, mutual TLS (1,526 lines) |
+| Protocol Hardening | Partial | Noise NK + fixed-size padding done. **AEAD identity binding not found in code** |
+| Cargo Fuzz Targets | Done | 10 targets covering all attack surfaces |
+| Testing Infrastructure Gaps | Done | cargo-deny CI (all repos), MASVS L1 self-assessment |
+| Recovery Trust Contacts | Done | All platforms complete |
+| CLI API Drift | Done | All 17 compilation errors resolved |
+| Relay Authentication | Needs verification | Ed25519 code not found in relay; MR may not have landed |
+| X3DH Protocol Hardening | Done | Migration v18: visibility_rules encrypted, PBKDF2 600K |
+| Trust Metrics & Indicators | Planning | Migration v19. Depends on X3DH v18 |
+| Accessibility Audit | Planning | Formal audit with real screen readers |
+| Birthday Field | Planning | No migration needed |
+| Local Contact Annotations | Planning | Migration v20. Depends on Trust Metrics v19 |
+| Contact Network Statistics | Planning | Pure computation, no migration |
 
-| Feature | Status | Problem Record |
-|---------|--------|----------------|
-| Tor Mode | Done | `2026-01-26-tor-mode` — types, config, storage, transport, API, CLI, TUI. Feature-gated `tor = []` with arti-ready architecture |
-| Relay Federation | Done | All 4 phases complete: Phase 1 static federation (`relay!22`), Phase 2 client multi-relay (forwarding hints, relay list), Phase 3 gossip discovery (peer advertisement, dynamic registry), Phase 4 mutual TLS (tokio-rustls) |
-| Protocol Hardening | Done | All 3 gaps closed: inner transport encryption (Noise NK), AEAD identity binding, fixed-size padding |
-| Cargo Fuzz Targets | Done | `2026-02-03-cargo-fuzz-targets` — 10 targets covering all attack surfaces |
-| Testing Infrastructure Gaps | Done | `2026-02-03-testing-infrastructure-gaps` — cargo-deny CI (all repos), MASVS L1 self-assessment, Miri deprioritized (no unsafe) |
-| Accessibility Audit | Pending | Formal audit with real screen readers |
+### Security Gaps (Found in 2026-02-06 Code Audit)
+
+| Gap | Severity | Status | Notes |
+|-----|----------|--------|-------|
+| Device Linking Proximity | **CRITICAL** | Intake | No proximity check before master seed transfer. Remote QR attack possible |
+| Account Deletion Relay Purge | **HIGH** | Investigating | Revocations generated but not auto-sent via relay |
+| Proximity Verification Integration | **MEDIUM** | Investigating | 510 lines of audio code on iOS+Android but NOT integrated into exchange flows |
+| Fingerprint Verification UI | **MEDIUM** | Intake | Core API exists, UI scaffolding but doesn't show actual key fingerprints |
+| Field Validation Core-Mobile | None | Done | Core + UniFFI + iOS + Android all wired — no gap |
 
 ### Phase 5: Validation
 
-All features integrated, verified on simulators and emulators.
-
-| Milestone | Description |
-|-----------|-------------|
-| E2E on simulators/emulators | Full test suite on iOS Simulator, Android Emulator, desktop dev builds |
-| Relay on VPS | Production relay deployment verified |
-| Full regression green | All 18 features passing, no regressions |
+| Milestone | Status | Description |
+|-----------|--------|-------------|
+| Visual Regression Testing | Testing | ~95 baselines across 4 platforms (23 iOS, 14 Android, 34 Desktop, 24 TUI). CI stabilization remaining |
+| E2E on simulators/emulators | Pending | Full test suite on iOS Simulator, Android Emulator, desktop dev builds |
+| Relay on VPS | Done | Production relay deployment verified |
+| Full regression green | Pending | All features passing, no regressions |
 
 ### Phase 6: Real Device Testing
-
-Physical devices, cross-platform verification, production preparation.
 
 | Milestone | Description |
 |-----------|-------------|
 | Physical iOS + Android | Real hardware testing on iPhones and Android phones |
 | Cross-platform exchange | iOS <-> Android exchange verified (QR, BLE, NFC) |
 | Production release prep | App store submissions, release tagging, monitoring |
+
+### Phase 7: Post-Launch Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| NFC Dead Drop Exchange | Planning | Passive NFC tag as physical dead drop |
+| Facilitated Introductions | Investigating | Principle-compliant mutual introduction. Depends on Trust Metrics |
+| Resistance Features | Planning | Duress PIN, hidden contacts, panic widget, emergency broadcast, mesh exchange |
 
 ---
 
@@ -127,32 +144,23 @@ Physical devices, cross-platform verification, production preparation.
 | All exchange methods real | Pending | QR + BLE + NFC on real hardware |
 | Card updates sync | Pending | Cross-platform E2E test |
 | Recovery works | Pending | Cross-platform E2E test |
-| No plaintext secrets | Done | Code review |
+| No plaintext secrets | Done | All fields encrypted (migration v18) |
 | Rate limiting active | Done | Relay config |
 | Persistence working | Done | SQLite default |
 | No critical vulnerabilities | Done | cargo-audit: 0 vulns (2026-02-02) |
-| Tor mode functional | Done | Types, storage, transport, API, CLI, TUI implemented. Arti runtime integration pending feature flag activation |
-| GDPR compliance | Pending | Data export, deletion, consent |
-| i18n on all platforms | Pending | String extraction, locale switching |
+| Tor mode functional | Done | Types, storage, transport, API, CLI, TUI implemented |
+| GDPR compliance | Done | Data export, deletion (7-day grace), consent — all platforms wired |
+| i18n on all platforms | Done | 775 keys, runtime loading, all platforms wired |
 | Accessibility audited | Pending | Screen reader validation |
-| Fuzz targets covering attack surfaces | Done | 10 targets: QR, relay, padding, delta, recovery, NFC, BLE (x2), exchange payload, encrypted exchange |
-| All platform edge cases handled | Core done | Crash recovery + clock skew tested; platform hardening remaining |
+| Fuzz targets covering attack surfaces | Done | 10 targets |
+| All platform edge cases handled | Core done | Platform hardening remaining |
+| Device linking proximity-verified | **Not done** | CRITICAL: no proximity check before seed transfer |
+| Account deletion notifies contacts | **Not done** | Revocations not auto-sent via relay |
+| Relay client authentication | **Needs verification** | Ed25519 code not found in relay |
+| Proximity verification in exchange | **Not done** | Audio code exists but not integrated |
+| Key fingerprint verification UI | **Not done** | UI doesn't display actual fingerprints |
 | TDD followed for all features | Ongoing | Red→Green→Refactor, no exceptions |
 | 90%+ test coverage (vauchi-core) | Ongoing | Real crypto in tests, no mocking |
-
----
-
-## Feature Audit Correction
-
-The automated feature-audit.sh reports misleading coverage numbers:
-
-| Feature | Audit Says | Reality |
-|---------|------------|---------|
-| visibility_labels | "0% done" | Code exists: labels.rs, storage/labels.rs, API |
-| contact_recovery | "0% coverage" | 28k lines in recovery/mod.rs |
-
-The audit counts keyword matches in tests, not implementation completeness.
-**Action**: Fix audit script OR ignore these metrics.
 
 ---
 
@@ -184,6 +192,8 @@ curl https://relay.vauchi.app/health
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
+| Device linking remote attack | **High** | **Critical** | No proximity verification before seed transfer. Fix before real device testing |
+| Account deletion silent failure | Medium | High | Contacts not notified on deletion. Wire relay revocation sending |
 | BLE/NFC platform differences | High | Medium | Test on both iOS and Android early |
 | Tor integration complexity | Medium | Medium | Prototype with arti crate first |
 | Real device issues | Medium | High | Validate on simulators/emulators first, then physical devices |
@@ -195,4 +205,4 @@ curl https://relay.vauchi.app/health
 
 ## Verification
 
-**Last verification**: 2026-02-04
+**Last verification**: 2026-02-06 (code-verified audit)
