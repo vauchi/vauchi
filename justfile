@@ -212,7 +212,8 @@ lint-docs:
     ERRORS=0
 
     # Only scan repos we author (not generated repos like vauchi-mobile-*)
-    REPOS=("." "_private" "docs" "scripts" "assets")
+    # Note: docs/ is now a mkdocs site without date-prefix convention
+    REPOS=("." "_private" "scripts" "assets")
 
     echo "═══ Checking doc naming convention ═══"
     for repo in "${REPOS[@]}"; do
@@ -223,7 +224,7 @@ lint-docs:
 
         # Skip well-known filenames that don't need date prefixes
         case "$filename" in
-          README.md|CLAUDE.md|CONTRIBUTING.md|roadmap.md|PRINCIPLES.md|VISIBILITY_POLICY.md) continue ;;
+          README.md|CLAUDE.md|roadmap.md|VISIBILITY_POLICY.md) continue ;;
           STRUCTURE.md|ARCHITECTURE.md|SECURITY.md|CHECKLIST.md) continue ;;
           investigation.md|implementation-plan.md|retrospective.md|post-mortem.md|rejected-solutions.md) continue ;;
         esac

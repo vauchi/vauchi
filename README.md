@@ -27,7 +27,7 @@ Vauchi solves this:
 2. **Trust is earned in person** — QR exchange with physical proximity, not platform-mediated
 3. **Quality through rigor** — Test-driven development, threat modeling, no shortcuts
 
-See [PRINCIPLES.md](PRINCIPLES.md) for the full philosophy.
+See [Principles](https://docs.vauchi.app/about/principles/) for the full philosophy.
 
 ## Architecture
 
@@ -123,8 +123,8 @@ For security issues, see [SECURITY.md](SECURITY.md).
 ## Contributing
 
 We welcome contributions. Please read:
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Development workflow
-- [PRINCIPLES.md](PRINCIPLES.md) — Core principles (mandatory)
+- [Contributing Guide](https://docs.vauchi.app/developers/contributing/) — Development workflow
+- [Principles](https://docs.vauchi.app/about/principles/) — Core principles (mandatory)
 
 All code must have tests. No exceptions.
 
@@ -145,7 +145,7 @@ Funds go toward:
 - Infrastructure costs (relay server)
 - Security audits
 
-See [SUPPORTERS.md](SUPPORTERS.md) for sponsorship tiers.
+See [Supporters](https://docs.vauchi.app/about/supporters/) for sponsorship tiers.
 
 ## License
 

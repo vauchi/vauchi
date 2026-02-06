@@ -111,9 +111,10 @@ Detect the repo type from project files and run the appropriate checks:
 
 ---
 
-#### Docs (`docs/`): Documentation
+#### Docs (`docs/`): Documentation (mkdocs site)
 
-1. **Doc naming**: All files must follow `YYYY-MM-DD-name.md` convention (exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`)
+1. **Mkdocs build**: `mkdocs build --strict` (if mkdocs installed)
+2. **Markdown lint**: `markdownlint '**/*.md' --ignore node_modules --ignore site`
 
 ---
 

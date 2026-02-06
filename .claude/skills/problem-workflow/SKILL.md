@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Start or advance a problem record following the mandatory Problem to Solution Flow. $ARGUMENTS describes the problem or references an existing problem slug.
 
-See also: `docs/2026-01-23-problem-to-solution-flow.md`
+See also: `_private/docs/2026-01-23-problem-to-solution-flow.md`
 
 ## Problem Lifecycle
 
@@ -51,7 +51,7 @@ Based on current status, guide to the next step:
 - Write `investigation.md` in the problem directory
 
 ### investigating → planning
-- Validate solutions against `PRINCIPLES.md`:
+- Validate solutions against [Principles](https://docs.vauchi.app/about/principles/):
   - Core Principles (Privacy, Trust, Quality)
   - Culture (Process Principles)
   - Current Implementation (Technical Principles)

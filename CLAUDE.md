@@ -17,21 +17,20 @@ just check    # Run all checks
 
 ## MANDATORY
 
-- **Principles**: All work must align with `PRINCIPLES.md`
+- **Principles**: All work must align with [docs/about/principles.md](docs/about/principles.md)
 - **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
 - **TDD**: Red→Green→Refactor. Test FIRST. Tests trace to `features/*.feature`
 - **Structure**: `src/` = prod, `tests/` = tests (siblings)
 - **Crypto**: `ring` primary; `chacha20poly1305` and `argon2` are spec-mandated exceptions. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
-- **Docs naming**: All files in `docs/` must be prefixed with date: `YYYY-MM-DD-<name>.md`
-  - Exceptions: `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `roadmap.md`, `diagrams/*`, problem artifacts
+- **Public docs**: `docs/` contains end-user and community developer documentation (mkdocs site)
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
 Use `/problem-workflow` to create and advance problem records.
-See: `docs/2026-01-23-problem-to-solution-flow.md`
+See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
 
 Lifecycle: `intake → investigating → planning → implementing → testing → done`
 
@@ -126,7 +125,7 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 
 | Repo | Purpose |
 |------|---------|
-| `docs/` | Architecture, guides, workflows, TDD rules (public) |
+| `docs/` | Public documentation website (mkdocs) — user guides, contributing, security |
 | `scripts/` | Dev tools, hooks, utilities |
 | `website/` | Landing page source |
 | `assets/` | Brand assets, logos |

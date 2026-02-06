@@ -7,7 +7,7 @@
     "find": true,
     "rust": true
   },
-  "instructions": ["CLAUDE.md","CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"],
+  "instructions": ["CLAUDE.md", ".cursor/rules/*.md"],
   "compaction": {
     "auto": true,
     "prune": true

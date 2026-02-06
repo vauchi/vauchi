@@ -41,5 +41,5 @@ Closes #
 - [ ] Code follows project style
 - [ ] Documentation updated (if needed)
 - [ ] No new warnings from `cargo clippy`
-- [ ] Changes align with [PRINCIPLES.md](PRINCIPLES.md)
+- [ ] Changes align with [Principles](https://docs.vauchi.app/about/principles/)
 - [ ] Cross-repo MR dependencies listed (if applicable)
