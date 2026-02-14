@@ -74,6 +74,9 @@ ignore = [
 "groups" = "contacts"
 "labels" = "contacts"
 "first-contact" = "contacts"
+"new-contact" = "contacts"
+"view-status" = "contacts"
+"profile-change" = "contacts"
 
 # Security & crypto cluster
 "keys" = "crypto"
@@ -91,6 +94,7 @@ ignore = [
 "access" = "security"
 "audit" = "security"
 "passwords" = "security"
+"abuse" = "security"
 
 # Privacy cluster
 "consent" = "privacy"
@@ -115,6 +119,7 @@ ignore = [
 "acceptance" = "vouching"
 "incentives" = "vouching"
 "isolated" = "vouching"
+"contribution" = "vouching"
 "verification" = "identity"
 "identity-collision" = "identity"
 
@@ -133,6 +138,8 @@ ignore = [
 "propagation" = "sync"
 "clock-drift" = "sync"
 "clock-skew" = "sync"
+"interruption" = "sync"
+"multi-user" = "sync"
 
 # Relay & network cluster
 "delivery" = "relay"
@@ -144,6 +151,7 @@ ignore = [
 "p2p" = "relay"
 "network" = "relay"
 "custom-network" = "relay"
+"no-message" = "relay"
 "tor" = "tor-mode"
 "tor-mode" = "tor-mode"
 "tor-bridge" = "tor-mode"
@@ -238,7 +246,11 @@ ignore = [
 "no-action" = "contact-actions"
 "no-handler" = "contact-actions"
 "malformed" = "validation"
+"all-types" = "validation"
 "fallback" = "contact-actions"
+
+# UI preferences
+"preferences" = "ui"
 
 # Edge cases / misc
 "edge-case" = "edge-cases"
@@ -376,7 +388,7 @@ pattern = "device.?sync|inter.?device"
 tag = "device-sync"
 
 [[tags.name_patterns.rust]]
-pattern = "uniffi|mobile.?bind"
+pattern = "uniffi|mobile.?bind|^Mobile[A-Z]|^VauchiMobile$|^PlatformAudio|^MobileProximity|^MobilePlatform"
 tag = "mobile-bindings"
 
 [[tags.name_patterns.rust]]
