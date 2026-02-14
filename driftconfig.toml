@@ -1,0 +1,413 @@
+# driftconfig.toml — Vauchi project-specific drift-detector configuration
+#
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# ─── Indexing ─────────────────────────────────────────────
+
+[indexing]
+ignore = [
+  "**/_private/infra/**",
+  "**/_private/strategy/**",
+  "**/drift-detector/**",
+]
+
+# ─── Concept Aliases ─────────────────────────────────────
+
+[concepts.aliases]
+# Accessibility cluster
+"a11y" = "accessibility"
+"screen-reader" = "accessibility"
+"keyboard" = "accessibility"
+"visual" = "accessibility"
+"contrast" = ["accessibility", "theming"]
+"color" = ["accessibility", "theming"]
+"text-size" = "accessibility"
+"motor" = "accessibility"
+"touch-target" = "accessibility"
+"timing" = "accessibility"
+"gestures" = "accessibility"
+"switch-control" = "accessibility"
+"switch-access" = "accessibility"
+"cognitive" = "accessibility"
+"clarity" = "accessibility"
+"focus" = "accessibility"
+"assistive" = "accessibility"
+"voice-control" = "accessibility"
+"voice-access" = "accessibility"
+
+# Exchange cluster
+"proximity" = "exchange"
+"proximity-fail" = "exchange"
+"qr-code" = ["exchange", "qr"]
+"qr" = ["exchange", "qr"]
+"ble" = ["exchange", "mobile"]
+"nfc" = ["exchange", "mobile"]
+"exchange-state" = "exchange"
+"exchange-error" = "exchange"
+"self-exchange" = "exchange"
+"prekey" = ["exchange", "crypto"]
+"audio" = "exchange"
+"cross-platform" = "exchange"
+"first-exchange" = "exchange"
+
+# Contact management cluster
+"contact-actions" = "contacts"
+"contact-card" = "contacts"
+"add-field" = "contacts"
+"edit-field" = "contacts"
+"remove-field" = "contacts"
+"display-name" = "contacts"
+"avatar" = "contacts"
+"ordering" = "contacts"
+"social-registry" = "contacts"
+"merge" = "contacts"
+"duplicate" = "contacts"
+"favorites" = "contacts"
+"notes" = "contacts"
+"share" = "contacts"
+"block" = "contacts"
+"remove" = "contacts"
+"filter" = "contacts"
+"search" = "contacts"
+"view" = "contacts"
+"groups" = "contacts"
+"labels" = "contacts"
+"first-contact" = "contacts"
+
+# Security & crypto cluster
+"keys" = "crypto"
+"e2e" = "crypto"
+"auth" = "security"
+"attacks" = "security"
+"spoofing" = "security"
+"access" = "security"
+"audit" = "security"
+"passwords" = "security"
+
+# Privacy cluster
+"consent" = "privacy"
+"gdpr" = "privacy"
+"compliance" = "privacy"
+"data" = "privacy"
+"plausible-deniability" = ["privacy", "duress"]
+"duress-login" = "duress"
+"decoy-profile" = "duress"
+"decoy-management" = "duress"
+"believability" = "duress"
+"silent" = "duress"
+"hidden" = "visibility"
+"hide" = "visibility"
+"unhide" = "visibility"
+
+# Identity & vouching cluster
+"proof" = "vouching"
+"trust" = "vouching"
+"trust-levels" = "vouching"
+"mutual" = "vouching"
+"acceptance" = "vouching"
+"incentives" = "vouching"
+"isolated" = "vouching"
+"verification" = "identity"
+"identity-collision" = "identity"
+
+# Device & sync cluster
+"link" = "device"
+"unlink" = "device"
+"multi-device" = "device"
+"activity" = "device"
+"race-condition" = "sync"
+"conflict" = "sync"
+"concurrent" = "sync"
+"propagation" = "sync"
+"clock-drift" = "sync"
+"clock-skew" = "sync"
+
+# Relay & network cluster
+"delivery" = "relay"
+"infrastructure" = "relay"
+"persistence" = "relay"
+"expiration" = "relay"
+"retry" = "relay"
+"federation" = "relay"
+"p2p" = "relay"
+"network" = "relay"
+"custom-network" = "relay"
+
+# Updates cluster
+"updates" = "sync"
+"receive" = "sync"
+"config-update" = "sync"
+"content-updates" = "sync"
+"remote-content" = "sync"
+
+# Notifications
+"notifications" = "notifications"
+
+# UI / UX cluster
+"ui" = "ui"
+"ux" = "ui"
+"onboarding" = "ui"
+"first-launch" = "ui"
+"demo" = "ui"
+"demo-appear" = "ui"
+"demo-content" = "ui"
+"demo-dismiss" = "ui"
+"demo-edge" = "ui"
+"demo-persistence" = "ui"
+"demo-privacy" = "ui"
+"demo-updates" = "ui"
+
+# Theme cluster
+"dark" = "theming"
+"light" = "theming"
+"accent" = "theming"
+"catppuccin" = "theming"
+"dracula" = "theming"
+"nord" = "theming"
+"solarized" = "theming"
+"gruvbox" = "theming"
+"appearance" = "theming"
+"selection" = "theming"
+"system" = "theming"
+"auto" = "theming"
+"schema" = "theming"
+
+# Platform tags
+"ios" = "mobile"
+"android" = "mobile"
+
+# Performance cluster
+"startup" = "performance"
+"scale" = "performance"
+"memory" = "performance"
+"resources" = "performance"
+"stress" = "performance"
+"efficiency" = "performance"
+
+# Recovery & storage
+"backup" = "recovery"
+"restore" = "recovery"
+"offline" = "storage"
+"offline-pack" = "storage"
+
+# Contact actions (URI handling)
+"phone" = "contact-actions"
+"tel" = "contact-actions"
+"sms" = "contact-actions"
+"email" = "contact-actions"
+"mailto" = "contact-actions"
+"website" = "contact-actions"
+"https" = "contact-actions"
+"http" = "contact-actions"
+"social" = "contact-actions"
+"profile-url" = "contact-actions"
+"deep-link" = "contact-actions"
+"address" = "contact-actions"
+"maps" = "contact-actions"
+"directions" = "contact-actions"
+"heuristic" = "contact-actions"
+"no-action" = "contact-actions"
+"no-handler" = "contact-actions"
+"malformed" = "validation"
+"fallback" = "contact-actions"
+
+# Edge cases / misc
+"edge-case" = "edge-cases"
+"limitations" = "edge-cases"
+"error" = "errors"
+"errors" = "errors"
+
+# ─── Path Tags ───────────────────────────────────────────
+
+[tags.path.rust]
+# Module-based tags
+"/crypto/" = "crypto"
+"/crypto.rs" = "crypto"
+"/contact/" = "contact-card"
+"/contact_card/" = "contact-card"
+"/storage/" = "storage"
+"/storage.rs" = "storage"
+"/exchange/" = "exchange"
+"/exchange.rs" = "exchange"
+"/relay/" = "relay"
+"/relay.rs" = "relay"
+"/identity/" = "identity"
+"/identity.rs" = "identity"
+"/recovery/" = "recovery"
+"/recovery.rs" = "recovery"
+"/sync/" = "sync"
+"/sync.rs" = "sync"
+"/api/" = "api"
+"/protocol/" = "protocol"
+"/protocol.rs" = "protocol"
+"/validation/" = "validation"
+"/validation.rs" = "validation"
+"/visibility/" = "visibility"
+"/visibility.rs" = "visibility"
+"/device/" = "device"
+"/device.rs" = "device"
+"/vouching/" = "vouching"
+"/vouching.rs" = "vouching"
+"/consent/" = "consent"
+"/consent.rs" = "consent"
+"/merge/" = "merge"
+"/merge.rs" = "merge"
+"/prekey/" = "prekey"
+"/prekey.rs" = "prekey"
+# Repo-level tags
+"/cli/" = "cli"
+"/tui/" = "tui"
+"/desktop/" = "desktop"
+
+[tags.path.typescript]
+"/components/" = "ui"
+"/theme/" = "theming"
+"/theming/" = "theming"
+"/i18n/" = "i18n"
+"/ipc/" = "ipc"
+"/commands/" = "ipc"
+"/store/" = "state"
+"/state/" = "state"
+"/settings/" = "settings"
+"/contacts/" = "contacts"
+"/exchange/" = "exchange"
+"/qr/" = "qr-code"
+"/desktop/" = "desktop"
+
+[tags.path.markdown]
+"/docs/" = "documentation"
+"/security/" = "security"
+
+# ─── Name Tag Patterns ───────────────────────────────────
+
+[[tags.name_patterns.rust]]
+pattern = "contact.?card"
+tag = "contact-card"
+
+[[tags.name_patterns.rust]]
+pattern = "crypt|encrypt|decrypt|cipher"
+tag = "crypto"
+
+[[tags.name_patterns.rust]]
+pattern = "exchange|swap"
+tag = "exchange"
+
+[[tags.name_patterns.rust]]
+pattern = "relay|websocket"
+tag = "relay"
+
+[[tags.name_patterns.rust]]
+pattern = "storage|persist|save|load"
+tag = "storage"
+
+[[tags.name_patterns.rust]]
+pattern = "identity|ident"
+tag = "identity"
+
+[[tags.name_patterns.rust]]
+pattern = "recovery|backup|restore"
+tag = "recovery"
+
+[[tags.name_patterns.rust]]
+pattern = "vouching|vouch|trust"
+tag = "vouching"
+
+[[tags.name_patterns.rust]]
+pattern = "device|multi.?device"
+tag = "device"
+
+[[tags.name_patterns.rust]]
+pattern = "sync|merge|conflict"
+tag = "sync"
+
+# ─── Heading Keywords ────────────────────────────────────
+
+[[tags.heading_keywords]]
+keyword = "security"
+tag = "security"
+
+[[tags.heading_keywords]]
+keyword = "crypto"
+tag = "crypto"
+
+[[tags.heading_keywords]]
+keyword = "privacy"
+tag = "privacy"
+
+[[tags.heading_keywords]]
+keyword = "exchange"
+tag = "exchange"
+
+[[tags.heading_keywords]]
+keyword = "contact"
+tag = "contacts"
+
+[[tags.heading_keywords]]
+keyword = "relay"
+tag = "relay"
+
+[[tags.heading_keywords]]
+keyword = "device"
+tag = "device"
+
+[[tags.heading_keywords]]
+keyword = "sync"
+tag = "sync"
+
+[[tags.heading_keywords]]
+keyword = "recovery"
+tag = "recovery"
+
+[[tags.heading_keywords]]
+keyword = "identity"
+tag = "identity"
+
+[[tags.heading_keywords]]
+keyword = "vouching"
+tag = "vouching"
+
+[[tags.heading_keywords]]
+keyword = "visibility"
+tag = "visibility"
+
+[[tags.heading_keywords]]
+keyword = "theme"
+tag = "theming"
+
+[[tags.heading_keywords]]
+keyword = "theming"
+tag = "theming"
+
+[[tags.heading_keywords]]
+keyword = "accessibility"
+tag = "accessibility"
+
+[[tags.heading_keywords]]
+keyword = "a11y"
+tag = "accessibility"
+
+[[tags.heading_keywords]]
+keyword = "performance"
+tag = "performance"
+
+[[tags.heading_keywords]]
+keyword = "api"
+tag = "api"
+
+# ─── Layer Detection ─────────────────────────────────────
+
+[layers.markdown]
+dev_doc_filenames = [
+  "CLAUDE.md",
+  "ARCHITECTURE.md",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+  "VISIBILITY_POLICY.md",
+]
+dev_doc_paths = ["_private/"]
+user_doc_paths = ["/docs/"]
+user_doc_filenames = ["README.md"]
+
+[layers.gherkin]
+problem_paths = ["_private/features/"]
