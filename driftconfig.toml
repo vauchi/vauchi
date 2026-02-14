@@ -364,7 +364,7 @@ pattern = "crypto.?shred"
 tag = "emergency-shred"
 
 [[tags.name_patterns.rust]]
-pattern = "tor|onion|bridge"
+pattern = "^tor|_tor_|_tor$|onion|obfs4"
 tag = "tor-mode"
 
 [[tags.name_patterns.rust]]
