@@ -78,6 +78,13 @@ ignore = [
 # Security & crypto cluster
 "keys" = "crypto"
 "e2e" = "crypto"
+"shred" = "emergency-shred"
+"panic-shred" = "emergency-shred"
+"emergency-shred" = "emergency-shred"
+"soft-shred" = "emergency-shred"
+"hard-shred" = "emergency-shred"
+"crypto-shredding" = ["crypto", "emergency-shred"]
+"crypto-shred" = ["crypto", "emergency-shred"]
 "auth" = "security"
 "attacks" = "security"
 "spoofing" = "security"
@@ -115,6 +122,10 @@ ignore = [
 "link" = "device"
 "unlink" = "device"
 "multi-device" = "device"
+"device-link" = "device-linking"
+"device-linking" = "device-linking"
+"device-sync" = "device-sync"
+"inter-device" = "device-sync"
 "activity" = "device"
 "race-condition" = "sync"
 "conflict" = "sync"
@@ -133,6 +144,11 @@ ignore = [
 "p2p" = "relay"
 "network" = "relay"
 "custom-network" = "relay"
+"tor" = "tor-mode"
+"tor-mode" = "tor-mode"
+"tor-bridge" = "tor-mode"
+"obfs4" = "tor-mode"
+"onion" = "tor-mode"
 
 # Updates cluster
 "updates" = "sync"
@@ -190,6 +206,18 @@ ignore = [
 "restore" = "recovery"
 "offline" = "storage"
 "offline-pack" = "storage"
+
+# Mobile bindings
+"uniffi" = "mobile-bindings"
+"mobile-bindings" = "mobile-bindings"
+"xcframework" = "mobile-bindings"
+"jni" = "mobile-bindings"
+
+# E2E testing
+"e2e-test" = "e2e-testing"
+"e2e-testing" = "e2e-testing"
+"maestro" = "e2e-testing"
+"integration-test" = "e2e-testing"
 
 # Contact actions (URI handling)
 "phone" = "contact-actions"
@@ -251,6 +279,12 @@ ignore = [
 "/vouching.rs" = "vouching"
 "/consent/" = "consent"
 "/consent.rs" = "consent"
+"/tor/" = "tor-mode"
+"/tor.rs" = "tor-mode"
+"/shred/" = "emergency-shred"
+"/shred.rs" = "emergency-shred"
+"/device_link/" = "device-linking"
+"/device_link.rs" = "device-linking"
 "/merge/" = "merge"
 "/merge.rs" = "merge"
 "/prekey/" = "prekey"
@@ -320,6 +354,34 @@ tag = "device"
 [[tags.name_patterns.rust]]
 pattern = "sync|merge|conflict"
 tag = "sync"
+
+[[tags.name_patterns.rust]]
+pattern = "shred|panic_shred|hard_shred|soft_shred"
+tag = "emergency-shred"
+
+[[tags.name_patterns.rust]]
+pattern = "crypto.?shred"
+tag = "emergency-shred"
+
+[[tags.name_patterns.rust]]
+pattern = "tor|onion|bridge"
+tag = "tor-mode"
+
+[[tags.name_patterns.rust]]
+pattern = "device.?link|link.?device"
+tag = "device-linking"
+
+[[tags.name_patterns.rust]]
+pattern = "device.?sync|inter.?device"
+tag = "device-sync"
+
+[[tags.name_patterns.rust]]
+pattern = "uniffi|mobile.?bind"
+tag = "mobile-bindings"
+
+[[tags.name_patterns.rust]]
+pattern = "duress|decoy"
+tag = "duress"
 
 # ─── Heading Keywords ────────────────────────────────────
 
@@ -394,6 +456,38 @@ tag = "performance"
 [[tags.heading_keywords]]
 keyword = "api"
 tag = "api"
+
+[[tags.heading_keywords]]
+keyword = "tor"
+tag = "tor-mode"
+
+[[tags.heading_keywords]]
+keyword = "shred"
+tag = "emergency-shred"
+
+[[tags.heading_keywords]]
+keyword = "panic"
+tag = "emergency-shred"
+
+[[tags.heading_keywords]]
+keyword = "duress"
+tag = "duress"
+
+[[tags.heading_keywords]]
+keyword = "uniffi"
+tag = "mobile-bindings"
+
+[[tags.heading_keywords]]
+keyword = "device link"
+tag = "device-linking"
+
+[[tags.heading_keywords]]
+keyword = "device sync"
+tag = "device-sync"
+
+[[tags.heading_keywords]]
+keyword = "e2e"
+tag = "e2e-testing"
 
 # ─── Layer Detection ─────────────────────────────────────
 
