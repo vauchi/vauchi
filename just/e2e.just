@@ -105,16 +105,18 @@ e2e-coverage:
     grep -h "^feature:" e2e/scenarios/*/*.yaml 2>/dev/null | sort -u | sed 's/feature: /  - /'
 
 # Build CLI binary (into shared target dir for e2e tests)
+# Uses --no-default-features to disable secure-storage (macOS Keychain)
+# which doesn't persist keys between CLI process invocations.
 [private]
 [working-directory('cli')]
 build-cli:
-    cargo build --target-dir ../target
+    cargo build --no-default-features --release --target-dir ../target
 
 # Build relay binary (into shared target dir for e2e tests)
 [private]
 [working-directory('relay')]
 build-relay:
-    cargo build --target-dir ../target
+    cargo build --release --target-dir ../target
 
 # ═══════════════════════════════════════════════════════════════
 # CROSS-PLATFORM E2E TESTING
