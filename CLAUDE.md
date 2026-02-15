@@ -143,6 +143,16 @@ Internal content that is not public-facing lives in `_private/`:
 
 See `VISIBILITY_POLICY.md` for what goes where.
 
+## Shell Commands
+
+- Before running commands in sub-repos, always verify the correct working directory. Multi-repo work requires explicit directory management — use `git -C <dir>` or verify `pwd` before executing.
+- Before suggesting tool installations, check what is already installed (e.g., `which <tool>`, `<tool> --version`) and focus on PATH/environment configuration issues first.
+- When asked about pricing, hardware, or real-world information, use web search immediately rather than answering from codebase analysis.
+
+## Rust / Cargo
+
+- When modifying `Cargo.toml`, keep git dependency branch references pointing to `main` unless explicitly told otherwise. Do not change branch refs to feature branches.
+
 ## Dependencies
 
 ```
@@ -167,6 +177,11 @@ just tell-me-about "crypto implementation"
 ```
 
 This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summarize findings.
+
+## GitLab Workflows
+
+- Always use `git push -o merge_request.create` for MR creation — never use `glab` CLI.
+- Use the `/create-mr` skill for multi-repo MR workflows.
 
 ## Git Workflow (MANDATORY)
 
