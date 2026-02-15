@@ -21,7 +21,7 @@ install-dev-deps:
 
     # ── Homebrew packages ──────────────────────────────────────────
     echo "── Homebrew packages ──"
-    brew_pkgs=(just glab node)
+    brew_pkgs=(just node)
     for pkg in "${brew_pkgs[@]}"; do
         if brew list "$pkg" &>/dev/null; then
             echo "  $pkg (already installed)"

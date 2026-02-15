@@ -14,7 +14,7 @@ Create GitLab merge requests for one or more vauchi repositories. $ARGUMENTS may
 1. **Detect repos needing MRs** — For each sub-repo and the root repo, check:
    - Current branch is not `main`
    - Has commits ahead of `origin/main`
-   - No existing open MR for this branch (`glab mr list --source-branch <branch>`)
+   - No existing open MR for this branch (check GitLab web UI or API)
 
 2. **For each repo needing an MR:**
    - Read the full diff: `git -C <dir> diff origin/main..HEAD`
@@ -40,21 +40,21 @@ Create GitLab merge requests for one or more vauchi repositories. $ARGUMENTS may
    - [ ] Feature file updated (if applicable)
    ```
 
-4. **Create the MR** using glab:
+4. **Create the MR** using git push options:
    ```bash
-   cd <repo-dir> && glab mr create \
-     --title "{type}: {description}" \
-     --target-branch main \
-     --description "..." \
-     --yes
+   cd <repo-dir> && git push -u origin <branch> \
+     -o merge_request.create \
+     -o merge_request.target=main \
+     -o merge_request.title="{type}: {description}" \
+     -o merge_request.description="..."
    ```
 
-   IMPORTANT glab flags:
-   - Use `--description` (NOT `--body`)
-   - Use `--yes` to skip prompts
-   - Use `--draft` if work is incomplete
+   Useful push options:
+   - `-o merge_request.draft` if work is incomplete
+   - `-o merge_request.label="label"` to add labels
+   - `-o merge_request.remove_source_branch` to auto-delete branch on merge
 
-5. **Cross-link MRs** — After all MRs are created, update each MR's description to include the actual MR numbers of related MRs using `glab mr update <id> --description "..."`.
+5. **Cross-link MRs** — After all MRs are created, update each MR's description via the GitLab web UI or API to include the actual MR numbers of related MRs.
 
 6. **Report results** — Show a table with links to all created MRs.
 

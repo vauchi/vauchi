@@ -142,7 +142,7 @@ core tag v*.*.* →
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
 | Version mismatch at publish | Tag != Cargo.toml version | Auto-creates MR to sync |
-| Downstream trigger fails | CI_JOB_TOKEN allowlist misconfigured | `allow_failure: true` (non-blocking), manual trigger via `glab` |
+| Downstream trigger fails | CI_JOB_TOKEN allowlist misconfigured | `allow_failure: true` (non-blocking), manual trigger via GitLab UI |
 
 ## Timeout Reference
 
@@ -163,11 +163,13 @@ core tag v*.*.* →
 ## Reading Job Logs
 
 ```bash
-# Via glab (must cd into correct repo)
-cd core && glab ci view
+# Via GitLab API (use CI_JOB_TOKEN in CI, or personal access token locally)
+curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  "https://gitlab.com/api/v4/projects/vauchi%2Fcore/pipelines" | jq '.[0]'
 
-# Via API (more reliable)
-glab api "projects/vauchi%2Fcore/pipelines" | jq '.[0]'
-glab api "projects/vauchi%2Fcore/pipelines/:id/jobs" | jq '.[] | {name, status}'
-glab api "projects/vauchi%2Fcore/jobs/:job_id/trace" > job.log
+curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  "https://gitlab.com/api/v4/projects/vauchi%2Fcore/pipelines/:id/jobs" | jq '.[] | {name, status}'
+
+curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+  "https://gitlab.com/api/v4/projects/vauchi%2Fcore/jobs/:job_id/trace" > job.log
 ```

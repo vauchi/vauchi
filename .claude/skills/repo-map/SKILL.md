@@ -62,15 +62,14 @@ git -C _private push -u origin investigation/my-branch
 ### 3. MR creation targets the sub-repo remote
 
 ```bash
-# Must cd into the repo for glab to detect the correct remote
-cd _private && glab mr create --title "..." --target-branch main --description "..." --yes
+# Must cd into the repo so git push targets the correct remote
+cd _private && git push -u origin <branch> \
+  -o merge_request.create \
+  -o merge_request.target=main \
+  -o merge_request.title="..."
 ```
 
-### 4. glab is NOT gh
-
-- Use `--description` (NOT `--body`) for MR/issue descriptions
-- Use `--yes` to skip prompts
-- Use `/create-mr` skill for the full MR workflow
+Use `/create-mr` skill for the full MR workflow.
 
 ### 5. Branch names should match across repos
 

@@ -208,8 +208,10 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 **3. Create a Merge Request**
 
 ```bash
-git push -u origin feature/my-feature
-glab mr create --title "feat: My feature" --target-branch main
+git push -u origin feature/my-feature \
+  -o merge_request.create \
+  -o merge_request.target=main \
+  -o merge_request.title="feat: My feature"
 ```
 
 MR description must include:
@@ -250,10 +252,9 @@ Each MR must list the related MRs it depends on in the **Related MRs** section s
 
 ```bash
 git checkout -b feature/my-feature       # Create branch
-git push -u origin feature/my-feature    # Push branch
-glab mr create --title "feat: ..."       # Create MR
-       --target-branch main
-glab mr view                             # View current MR
-glab mr checkout 42                      # Check out MR locally
+git push -u origin feature/my-feature \  # Push branch + create MR
+  -o merge_request.create \
+  -o merge_request.target=main \
+  -o merge_request.title="feat: ..."
 ```
 
