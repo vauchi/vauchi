@@ -22,6 +22,9 @@ public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e fe
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
 
+# Tooling repositories (url,dir format, outside vauchi group)
+tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector"
+
 # ─── Aliases ─────────────────────────────────────────────────────
 
 alias b := build

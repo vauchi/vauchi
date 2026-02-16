@@ -100,15 +100,37 @@ clone-repos:
         if [[ -d "$repo" ]]; then
             echo "  $repo (exists)"
         else
-            git clone "{{gitlab_base}}/$repo.git" "$repo" 2>/dev/null || echo "  $repo (skipped)"
+            if git clone "{{gitlab_base}}/$repo.git" "$repo" 2>/dev/null; then
+                echo "  $repo (cloned)"
+            else
+                echo "  $repo (skipped)"
+            fi
         fi
     done
     echo "Cloning private repository..."
     if [[ -d "_private" ]]; then
         echo "  _private (exists)"
     else
-        git clone "{{gitlab_base}}/{{private_repo}}.git" "_private" 2>/dev/null || echo "  _private (skipped - no access?)"
+        if git clone "{{gitlab_base}}/{{private_repo}}.git" "_private" 2>/dev/null; then
+            echo "  _private (cloned)"
+        else
+            echo "  _private (skipped - no access?)"
+        fi
     fi
+    echo "Cloning tooling repositories..."
+    for entry in {{tooling_repos}}; do
+        url="${entry%%,*}"
+        dir="${entry##*,}"
+        if [[ -d "$dir" ]]; then
+            echo "  $dir (exists)"
+        else
+            if git clone "$url" "$dir" 2>/dev/null; then
+                echo "  $dir (cloned)"
+            else
+                echo "  $dir (skipped)"
+            fi
+        fi
+    done
 
 # Clean all build artifacts
 [group('setup')]
