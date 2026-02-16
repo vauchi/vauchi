@@ -31,10 +31,10 @@ All 18 features must be production-ready with real implementations before real d
 | Relay deployed | Done | https://relay.vauchi.app returns 200 |
 | Relay persistence | Done | SQLite default backend, TTL, cleanup |
 | Relay rate limiting | Done | Token bucket, per-client, configurable |
-| Contact exchange (Mutual QR) | Done | Symmetric DH, fresh ephemeral keys, 14 tests |
+| Contact exchange (Mutual QR) | Done | Symmetric DH, fresh ephemeral keys, 13 tests |
 | Contact exchange (NFC Active) | Done | 174-byte APDU payload, VNFC magic, 25 tests |
-| Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 28 tests |
-| Rust tests | Done | ~1,950 tests across 166 files |
+| Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 27 tests |
+| Rust tests | Done | ~2,119 tests across 166+ files |
 | iOS test files | Done | 17 files — KeychainService, Audio, Exchange, Accessibility, VRT, etc. |
 | Android test files | Done | 13 files — SyncWorker, Audio, Exchange, Accessibility, Screenshots, etc. |
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
@@ -63,8 +63,8 @@ All features below must be complete — with real implementations — before rea
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Mutual Offline QR Exchange | Done | Symmetric DH, fresh ephemeral keys, 14 tests |
-| BLE Exchange | Done | `BLETransport` trait, GATT service, `ExchangeBle` payload, 28 tests |
+| Mutual Offline QR Exchange | Done | Symmetric DH, fresh ephemeral keys, 13 tests |
+| BLE Exchange | Done | `BLETransport` trait, GATT service, `ExchangeBle` payload, 27 tests |
 | NFC Active Exchange | Done | `ExchangeNfc` payload, APDU protocol, 25 tests |
 
 ### Phase 3: Platform Completeness
@@ -73,8 +73,8 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Internationalization | Done | `src/i18n.rs` — 534 lines, 18 tests, 4 locales, 775 keys, runtime loading. All platforms wired |
-| In-app Help Updates | Core done | `src/help.rs` — 390 lines, 15 tests, 15 FAQs. iOS + Android + Desktop UI done. CLI/TUI partial |
+| Internationalization | Done | `src/i18n.rs` — 534 lines, 18 tests, 4 locales, 754 keys, runtime loading. All platforms wired |
+| In-app Help Updates | Core done | `src/help.rs` — 390 lines, 15 tests, 14 FAQs. iOS + Android + Desktop UI done. CLI/TUI partial |
 | Remote Theming Updates | Core done | `src/theme.rs` — 545 lines, 7 unit tests, 12 themes. iOS + Android + Desktop UI done |
 | Aha Moments | Core done | Localized, CLI + TUI + iOS + Android done. Desktop partial |
 | Performance & Scalability | Core done | Pagination + batch sync, 24 tests. Real device profiling remaining |
@@ -91,7 +91,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | Testing Infrastructure Gaps | Done | cargo-deny CI (all repos), MASVS L1 self-assessment |
 | Recovery Trust Contacts | Done | All platforms complete |
 | CLI API Drift | Done | All 17 compilation errors resolved |
-| Relay Authentication | Needs verification | Ed25519 code not found in relay; MR may not have landed |
+| Relay Authentication | Done | Ed25519 handshake verification in relay. Client hex format in core |
 | X3DH Protocol Hardening | Done | Migration v18: visibility_rules encrypted, PBKDF2 600K |
 | Trust Metrics & Indicators | Planning | Migration v19. Depends on X3DH v18 |
 | Accessibility Audit | Planning | Formal audit with real screen readers |
@@ -103,7 +103,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
-| Device Linking Proximity | **CRITICAL** | Intake | No proximity check before master seed transfer. Remote QR attack possible |
+| Device Linking Proximity | **CRITICAL** | Intake | Core proximity gate exists but clients bypass it. Remote QR attack possible without client integration |
 | Account Deletion Relay Purge | **HIGH** | Investigating | Revocations generated but not auto-sent via relay |
 | Proximity Verification Integration | **MEDIUM** | Investigating | 510 lines of audio code on iOS+Android but NOT integrated into exchange flows |
 | Fingerprint Verification UI | **MEDIUM** | Intake | Core API exists, UI scaffolding but doesn't show actual key fingerprints |
@@ -132,7 +132,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 |---------|--------|-------|
 | NFC Dead Drop Exchange | Planning | Passive NFC tag as physical dead drop |
 | Facilitated Introductions | Investigating | Principle-compliant mutual introduction. Depends on Trust Metrics |
-| Resistance Features | Planning | Duress PIN, hidden contacts, panic widget, emergency broadcast, mesh exchange |
+| Resistance Features | Implementing | Duress PIN, hidden contacts, emergency broadcast implemented. Panic widget + mesh exchange spec-only |
 
 ---
 
@@ -150,13 +150,13 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | No critical vulnerabilities | Done | cargo-audit: 0 vulns (2026-02-02) |
 | Tor mode functional | Done | Types, storage, transport, API, CLI, TUI implemented |
 | GDPR compliance | Done | Data export, deletion (7-day grace), consent — all platforms wired |
-| i18n on all platforms | Done | 775 keys, runtime loading, all platforms wired |
+| i18n on all platforms | Done | 754 keys, runtime loading, all platforms wired |
 | Accessibility audited | Pending | Screen reader validation |
 | Fuzz targets covering attack surfaces | Done | 10 targets |
 | All platform edge cases handled | Core done | Platform hardening remaining |
-| Device linking proximity-verified | **Not done** | CRITICAL: no proximity check before seed transfer |
+| Device linking proximity-verified | **Not done** | CRITICAL: core gate exists but clients bypass; no proximity check in practice |
 | Account deletion notifies contacts | **Not done** | Revocations not auto-sent via relay |
-| Relay client authentication | **Needs verification** | Ed25519 code not found in relay |
+| Relay client authentication | Done | Ed25519 handshake verification in relay |
 | Proximity verification in exchange | **Not done** | Audio code exists but not integrated |
 | Key fingerprint verification UI | **Not done** | UI doesn't display actual fingerprints |
 | TDD followed for all features | Ongoing | Red→Green→Refactor, no exceptions |

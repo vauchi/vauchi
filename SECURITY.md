@@ -55,10 +55,11 @@ We will not take legal action against researchers who:
 
 | Component | Algorithm | Library |
 |-----------|-----------|---------|
-| Key exchange | X3DH | ring |
-| Message encryption | Double Ratchet + AES-256-GCM | ring |
-| Signatures | Ed25519 | ring |
-| Key derivation | HKDF-SHA256 | ring |
+| Key exchange | X25519 / X3DH | `x25519-dalek` |
+| Message encryption | Double Ratchet + XChaCha20-Poly1305 | `chacha20poly1305` |
+| Signatures | Ed25519 | `ring` |
+| Key derivation | HKDF-SHA256 | `ring` |
+| Password KDF | Argon2id | `argon2` |
 
 ### Trust Model
 

@@ -136,7 +136,7 @@ Caret ranges (`^`) — allows minor/patch updates.
 
 **Location**: `locales/` (own repo: `vauchi/locales`, cloned by `just setup`)
 
-Files: `en.json`, `de.json`, `fr.json`, `es.json` (753 keys each)
+Files: `en.json`, `de.json`, `fr.json`, `es.json` (754 keys each)
 
 Key format: `section.element` (e.g., `contacts.empty`, `action.save`)
 
