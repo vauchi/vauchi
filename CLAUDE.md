@@ -73,8 +73,10 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 │
 ├── docs/                        ← Architecture, planning, TDD rules
 ├── scripts/                     ← Dev tools, hooks, utilities
+├── drift-detector/              ← Traceability & cross-layer drift detection (MCP + CI)
 ├── website/                     ← Landing page source
 ├── assets/                      ← Brand assets, logos
+├── gitlab-profile/              ← GitLab group profile page
 └── _private/                    ← Sensitive content (see below)
 ```
 
@@ -127,6 +129,8 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 |------|---------|
 | `docs/` | Public documentation website (mkdocs) — user guides, contributing, security |
 | `scripts/` | Dev tools, hooks, utilities |
+| `drift-detector/` | Traceability matrix & cross-layer drift detection tool (MCP server + CI gate) |
+| `gitlab-profile/` | GitLab group profile page (`.gitlab/README.md`) |
 | `website/` | Landing page source |
 | `assets/` | Brand assets, logos |
 

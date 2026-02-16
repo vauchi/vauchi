@@ -211,6 +211,25 @@ e2e-desktop-dev instance="default":
 e2e-desktop-build:
     ./scripts/scripts/e2e/orchestrate.sh desktop-build
 
+# Run mobile E2E tests (requires booted simulator/emulator + Maestro)
+[group('e2e')]
+[script('bash')]
+e2e-mobile: build-cli build-relay
+    echo "Running mobile E2E tests..."
+    cd e2e && cargo test integration_cli_to_ios -- --ignored --nocapture
+    cd e2e && cargo test integration_cli_to_android -- --ignored --nocapture
+    echo ""
+    echo "Mobile E2E tests complete."
+
+# Run all E2E tests (CLI + Desktop + Mobile)
+[group('e2e')]
+[script('bash')]
+e2e-all: build-cli build-relay
+    echo "Running full E2E suite (all platforms)..."
+    cd e2e && cargo test -- --ignored --nocapture
+    echo ""
+    echo "Full E2E suite complete."
+
 # ─── Mobile E2E ─────────────────────────────────────────────────
 
 # Deploy apps to all mobile devices (iOS + Android)
