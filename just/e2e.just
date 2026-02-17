@@ -216,8 +216,8 @@ e2e-desktop-build:
 [script('bash')]
 e2e-mobile: build-cli build-relay
     echo "Running mobile E2E tests..."
-    cd e2e && cargo test integration_cli_to_ios -- --ignored --nocapture
-    cd e2e && cargo test integration_cli_to_android -- --ignored --nocapture
+    cd e2e && cargo test test_ios_simulator_exchange -- --ignored --nocapture
+    cd e2e && cargo test test_android_emulator_exchange -- --ignored --nocapture
     echo ""
     echo "Mobile E2E tests complete."
 
