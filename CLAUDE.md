@@ -56,8 +56,8 @@ This is a **multi-repo project** under the [`vauchi` GitLab group](https://gitla
 ```
 vauchi/                          ← root repo (this file, justfile, CI config)
 │
-│── core/                        ← Rust workspace: vauchi-core + vauchi-mobile (UniFFI)
-│── relay/                       ← WebSocket relay server (standalone Rust)
+│── core/                        ← Rust workspace: vauchi-core + vauchi-mobile + vauchi-protocol
+│── relay/                       ← WebSocket relay server (uses vauchi-protocol)
 │── cli/                         ← Command-line interface
 │── tui/                         ← Terminal user interface
 │── desktop/                     ← Tauri + SolidJS desktop app
@@ -88,8 +88,8 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
 | Repo | Purpose |
 |------|---------|
-| `core/` | Rust workspace containing `vauchi-core` (crypto, storage, protocol) and `vauchi-mobile` (UniFFI bindings) |
-| `relay/` | WebSocket relay server (standalone) |
+| `core/` | Rust workspace containing `vauchi-core` (crypto, storage, protocol), `vauchi-mobile` (UniFFI bindings), and `vauchi-protocol` (shared message types) |
+| `relay/` | WebSocket relay server (uses `vauchi-protocol` for shared types) |
 
 **Clients** — platform apps:
 
@@ -163,9 +163,13 @@ See `VISIBILITY_POLICY.md` for what goes where.
 core/vauchi-core (standalone, no workspace deps)
     ↑ (git dependency)
 cli/, tui/, desktop/, e2e/
+
+core/vauchi-protocol (shared message types, serde-only)
+    ↑ (git dependency)
+relay/
 ```
 
-`relay/` is standalone — it does **not** depend on vauchi-core.
+`relay/` depends on `vauchi-protocol` for shared message types but does **not** depend on `vauchi-core`.
 
 Downstream repos use git dependencies with branch-based pinning (`branch = "main"`).
 Local development uses `.cargo/config.toml` path overrides to point at local checkouts.
