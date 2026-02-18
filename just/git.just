@@ -9,6 +9,43 @@
 [no-cd]
 [script('bash')]
 main:
+    # First pass: collect dirty repos and show changes
+    dirty_repos=()
+    dirty_labels=()
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir=".git"
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir}.git"
+        fi
+        if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+            dirty_repos+=("$dir")
+            dirty_labels+=("$label")
+        fi
+    done
+
+    if [[ ${#dirty_repos[@]} -gt 0 ]]; then
+        echo "The following repos have uncommitted changes that will be stashed:"
+        echo ""
+        for i in "${!dirty_repos[@]}"; do
+            dir="${dirty_repos[$i]}"
+            label="${dirty_labels[$i]}"
+            echo "=== $label ==="
+            git -C "$dir" status --short
+            echo ""
+        done
+        read -rp "Stash these changes and switch to main? [y/N] " answer
+        if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
+            echo "Aborted."
+            exit 0
+        fi
+        echo ""
+    fi
+
+    # Second pass: stash, checkout main, and pull
     switch_to_main() {
         local label="$1"
         local dir="$2"
