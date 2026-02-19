@@ -188,6 +188,7 @@ help:
       just git branches       Show branches across repos
       just git cleanup        Preview merged branch cleanup (dry run)
       just git cleanup run    Delete merged branches + prune stale refs
+      just git stash-clear    Clear all stashes across all repos
 
     Apps:
       just run <platform>     Run app (cli|tui|desktop|relay|android|ios)

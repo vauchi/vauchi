@@ -272,6 +272,42 @@ cleanup mode='dry-run':
         fi
     fi
 
+# Clear all stashes across all repos
+[no-cd]
+[script('bash')]
+stash-clear:
+    echo "Clearing git stash in all repos..."
+    echo ""
+
+    cleared=()
+
+    # Root repo
+    count=$(git stash list 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$count" -gt 0 ]]; then
+        git stash clear
+        echo "vauchi (root): cleared $count stash(es)"
+        cleared+=("vauchi (root)")
+    fi
+
+    # Sub-repos
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            count=$(git -C "$dir" stash list 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "$count" -gt 0 ]]; then
+                git -C "$dir" stash clear
+                echo "${dir%/}: cleared $count stash(es)"
+                cleared+=("${dir%/}")
+            fi
+        fi
+    done
+
+    echo ""
+    if [[ ${#cleared[@]} -eq 0 ]]; then
+        echo "No stashes found in any repo."
+    else
+        echo "Cleared stashes in ${#cleared[@]} repo(s): ${cleared[*]}"
+    fi
+
 # Pull latest changes from all repos
 [no-cd]
 [script('bash')]
