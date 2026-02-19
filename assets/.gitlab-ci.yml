@@ -6,13 +6,7 @@
 #
 # Brand assets and images
 
-include:
-  - project: 'vauchi/scripts'
-    ref: main
-    file: '/ci-templates/reuse.yml'
-
 stages:
-  - lint
   - validate
 
 validate:files:
