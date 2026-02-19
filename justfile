@@ -124,6 +124,11 @@ fix:
 watch:
     cargo watch -x "test --workspace"
 
+# Engineering metrics dashboard (PI-21)
+[group('extended')]
+metrics *args:
+    ./scripts/scripts/engineering-metrics.sh {{args}}
+
 # Run tests with coverage
 [group('extended')]
 [working-directory('core')]
@@ -211,6 +216,7 @@ help:
       just e2e-smoke          Fast smoke tests
 
     Other:
+      just metrics            Engineering metrics dashboard (PI-21)
       just coverage           Test coverage report
       just docs               Open Rust docs
       just audit              Security audit
