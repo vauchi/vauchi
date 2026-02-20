@@ -74,7 +74,7 @@ for test_line in $TEST_LINES; do
   BODY=$(sed -n "${BODY_START},${BODY_END}p" "$FILE_PATH")
 
   # Assertion patterns: assert!, assert_eq!, assert_ne!, prop_assert!, .expect(, #[should_panic]
-  if ! echo "$BODY" | grep -qE 'assert(_eq|_ne)?!|prop_assert!|\.expect\(|\.unwrap\(|#\[should_panic\]'; then
+  if ! echo "$BODY" | grep -qE 'assert(_eq|_ne)?!|prop_assert!|\.expect\(|#\[should_panic\]'; then
     VIOLATIONS+=("$FN_NAME (line $FN_LINE)")
   fi
 done

@@ -47,6 +47,16 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-test-assertions.sh",
             "statusMessage": "Checking test assertions..."
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-css.sh",
+            "statusMessage": "Linting CSS..."
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-html.sh",
+            "statusMessage": "Linting HTML..."
           }
         ]
       }

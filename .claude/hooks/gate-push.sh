@@ -4,6 +4,7 @@
 # - Runs clippy before pushing Rust repos
 # - Runs swiftlint before pushing Swift repos
 # - Runs Kotlin compilation check before pushing Android repo
+# - Runs prettier, stylelint, htmlhint before pushing web repos
 
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
@@ -34,6 +35,23 @@ fi
 # Resolve to absolute path
 REPO_DIR=$(cd "$REPO_DIR" 2>/dev/null && pwd) || exit 0
 REPO_NAME=$(basename "$REPO_DIR")
+
+# Find a Node tool binary by walking up from a directory to the nearest node_modules/.bin.
+find_node_bin() {
+  local tool="$1" dir="$2"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -x "$dir/node_modules/.bin/$tool" ]]; then
+      echo "$dir/node_modules/.bin/$tool"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  if command -v "$tool" &>/dev/null; then
+    command -v "$tool"
+    return 0
+  fi
+  return 1
+}
 
 # ── Rust repos ──────────────────────────────────────────────────────
 WORK_DIR="$REPO_DIR"
@@ -93,6 +111,56 @@ elif [[ "$REPO_NAME" == "android" ]]; then
       echo "" >&2
       echo "Push blocked: Kotlin compilation failed. Fix errors before pushing." >&2
       exit 2
+    fi
+  fi
+fi
+
+# ── Web checks (repos with web source) ─────────────────────────────
+# Runs for desktop/ui and other repos that have prettier as a dependency.
+UI_DIR=""
+if [[ "$REPO_NAME" == "desktop" && -f "$REPO_DIR/ui/package.json" ]]; then
+  UI_DIR="$REPO_DIR/ui"
+elif [[ -f "$REPO_DIR/package.json" ]] && grep -q '"prettier"' "$REPO_DIR/package.json" 2>/dev/null; then
+  UI_DIR="$REPO_DIR"
+fi
+
+if [[ -n "$UI_DIR" ]]; then
+  # Prettier check
+  PRETTIER=$(find_node_bin prettier "$UI_DIR")
+  if [[ -n "$PRETTIER" ]]; then
+    echo "[gate-push] Checking web formatting ($REPO_NAME)..."
+    if ! "$PRETTIER" --check "$UI_DIR/src" 2>&1; then
+      echo "" >&2
+      echo "Push blocked: prettier check failed in $REPO_NAME. Run 'prettier --write src/' to fix." >&2
+      exit 2
+    fi
+  fi
+
+  # Stylelint check
+  STYLELINT=$(find_node_bin stylelint "$UI_DIR")
+  if [[ -n "$STYLELINT" ]]; then
+    CSS_FILES=$(find "$UI_DIR/src" -name '*.css' -o -name '*.scss' 2>/dev/null)
+    if [[ -n "$CSS_FILES" ]]; then
+      echo "[gate-push] Running stylelint ($REPO_NAME)..."
+      if ! "$STYLELINT" "$UI_DIR/src/**/*.css" "$UI_DIR/src/**/*.scss" 2>&1; then
+        echo "" >&2
+        echo "Push blocked: stylelint found issues in $REPO_NAME. Fix before pushing." >&2
+        exit 2
+      fi
+    fi
+  fi
+
+  # HTMLHint check
+  HTMLHINT=$(find_node_bin htmlhint "$UI_DIR")
+  if [[ -n "$HTMLHINT" ]]; then
+    HTML_FILES=$(find "$UI_DIR" -maxdepth 2 -name '*.html' ! -path '*/node_modules/*' ! -path '*/dist/*' 2>/dev/null)
+    if [[ -n "$HTML_FILES" ]]; then
+      echo "[gate-push] Running htmlhint ($REPO_NAME)..."
+      if ! echo "$HTML_FILES" | xargs "$HTMLHINT" 2>&1; then
+        echo "" >&2
+        echo "Push blocked: htmlhint found issues in $REPO_NAME. Fix before pushing." >&2
+        exit 2
+      fi
     fi
   fi
 fi
