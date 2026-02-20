@@ -18,20 +18,25 @@ validate *FLAGS:
 # KAMAL DEPLOYMENT (relay + landing)
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy relay + landing (full build + push + deploy)
+# Deploy relay + landing using pre-built CI images (auto-resolves version from relay origin/main)
 [group('deploy')]
 deploy: validate
     ./_private/infra/scripts/deploy-all.sh --skip-validation
 
-# Deploy existing images only (skip build + push)
+# Deploy relay + landing with local build + push (escape hatch for manual builds)
 [group('deploy')]
-deploy-skip-push:
-    ./_private/infra/scripts/deploy-all.sh --skip-push
+deploy-with-build: validate
+    ./_private/infra/scripts/deploy-all.sh --skip-validation --with-build
 
 # Deploy a specific image version
 [group('deploy')]
 deploy-version VERSION:
     ./_private/infra/scripts/deploy-all.sh --version={{VERSION}}
+
+# Verify website image contains only expected files (no workspace leaks)
+[group('deploy')]
+test-website-image:
+    ./_private/infra/scripts/test-website-image.sh
 
 # Show relay logs
 [group('deploy')]
