@@ -47,6 +47,15 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 - **CC-13 Stateful Property Tests for Lifecycles**: For domain objects with state machines (identity, contacts, exchange, sync, backup), write stateful property tests that verify invariants across random operation sequences.
 - **CC-14 Adversarial Test Data for Security Boundaries**: For functions processing user input or external data, include parameterized tests with adversarial payloads (empty, max-length, unicode, RTL, null bytes, injection payloads, corrupted data, tampered signatures).
 
+## Pre-Push Rules (MANDATORY)
+
+These rules prevent the most common CI failures. Derived from post-mortem analysis of pipeline history (2026-02-20).
+
+- **CC-15 Run Checks Before Pushing**: Before every `git push`, run the repo's check command (`just check`, `cargo fmt && cargo clippy`, `swiftformat . && swiftlint`) and fix all failures. Never push code that hasn't passed local linting and formatting.
+- **CC-16 Cross-Repo Push Order**: When a feature spans multiple repos, only push the **upstream** repo first (e.g., `core/` before `cli/`, `android/`, `ios/`). Mark downstream MRs as **Draft** and note in the description that they depend on the upstream MR being merged and bindings published. Do not push consumer branches that call APIs not yet on `main`.
+- **CC-17 Verify Assertions in Every Test**: Before committing a test file, verify every `#[test]` function contains at least one `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`. Zero-assertion tests are rejected by CI.
+- **CC-18 Never Retry Without Fixing**: If a pipeline fails, read the job log and fix the root cause before re-running. Never retry the same commit expecting a different result.
+
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
