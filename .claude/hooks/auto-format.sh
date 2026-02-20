@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
 # Auto-format files after Write/Edit to prevent formatting CI failures.
 # Runs the appropriate formatter based on file extension.
 # Only outputs a message when the file was actually changed.

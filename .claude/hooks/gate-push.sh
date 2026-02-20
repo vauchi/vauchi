@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
 # PreToolUse hook: intercepts git push commands.
 # - Blocks --no-verify (prevents bypassing pre-push hooks)
 # - Runs clippy before pushing Rust repos

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
 # Check that every #[test] function contains at least one assertion.
 # Catches zero-assertion tests that would be rejected by CI quality gates.
 # Runs after Write/Edit on Rust test files.
