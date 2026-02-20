@@ -6,7 +6,7 @@
 
 # Clone all repos and set up workspace (run first after cloning meta-repo)
 [group('setup')]
-setup: clone-repos
+setup: clone-repos && install-hooks
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 

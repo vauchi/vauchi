@@ -142,31 +142,10 @@ coverage:
 docs:
     cargo doc --workspace --no-deps --open
 
-# Install git hooks across all Rust repos
+# Install git hooks (pre-commit + pre-push) across all repos
 [group('extended')]
-[script('bash')]
 install-hooks:
-    set -euo pipefail
-    HOOK_SRC="$(pwd)/scripts/hooks/pre-push"
-    REPOS=("." "core" "relay" "cli" "tui" "desktop" "e2e")
-    INSTALLED=()
-    SKIPPED=()
-
-    for repo in "${REPOS[@]}"; do
-        HOOKS_DIR="$repo/.git/hooks"
-        if [[ -d "$repo/.git" ]]; then
-            cp "$HOOK_SRC" "$HOOKS_DIR/pre-push"
-            chmod +x "$HOOKS_DIR/pre-push"
-            INSTALLED+=("$repo")
-        else
-            SKIPPED+=("$repo")
-        fi
-    done
-
-    echo "Pre-push hook installed in: ${INSTALLED[*]}"
-    if [[ ${#SKIPPED[@]} -gt 0 ]]; then
-        echo "Skipped (no .git): ${SKIPPED[*]}"
-    fi
+    bash scripts/install-hooks.sh
 
 # Show quick reference
 [group('tools')]
