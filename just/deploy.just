@@ -77,12 +77,31 @@ verify-backup:
     ssh vauchi@bold-hopper-vps "/opt/vauchi-infra/scripts/verify-backup.sh"
 
 # ═══════════════════════════════════════════════════════════════════
+# MONITORING (Prometheus + Grafana)
+# ═══════════════════════════════════════════════════════════════════
+
+# Deploy / update monitoring stack (Prometheus + Grafana + node_exporter)
+[group('deploy')]
+deploy-monitoring:
+    ./_private/infra/scripts/deploy-monitoring.sh
+
+# Show monitoring stack status
+[group('deploy')]
+monitoring-status:
+    ./_private/infra/scripts/deploy-monitoring.sh --status
+
+# Follow Grafana logs
+[group('deploy')]
+monitoring-logs:
+    ./_private/infra/scripts/deploy-monitoring.sh --logs
+
+# ═══════════════════════════════════════════════════════════════════
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy Kamal services + sync mail config
+# Deploy Kamal services + sync mail config + monitoring
 [group('deploy')]
-deploy-all: deploy deploy-mail
+deploy-all: deploy deploy-mail deploy-monitoring
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL MANAGEMENT
