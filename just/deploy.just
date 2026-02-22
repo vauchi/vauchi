@@ -63,6 +63,20 @@ mail-prepare:
     ./_private/infra/mail/prepare-mail.sh
 
 # ═══════════════════════════════════════════════════════════════════
+# BACKUP & RESTORE
+# ═══════════════════════════════════════════════════════════════════
+
+# Run backup on the VPS
+[group('deploy')]
+backup:
+    ssh vauchi@bold-hopper-vps "/opt/vauchi-infra/scripts/backup.sh"
+
+# Verify latest backup is restorable (runs on VPS)
+[group('deploy')]
+verify-backup:
+    ssh vauchi@bold-hopper-vps "/opt/vauchi-infra/scripts/verify-backup.sh"
+
+# ═══════════════════════════════════════════════════════════════════
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
 
