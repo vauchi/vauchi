@@ -6,12 +6,22 @@
 #
 # Brand assets and images
 
+include:
+  - project: 'vauchi/scripts'
+    ref: main
+    file:
+      - '/ci-templates/reuse.yml'
+
 stages:
+  - lint
   - validate
+
+# REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
 validate:files:
   stage: validate
   image: alpine:latest
+  needs: []
   script:
     - echo "Validating asset files..."
     - test -f logo.svg || (echo "Missing logo.svg" && exit 1)

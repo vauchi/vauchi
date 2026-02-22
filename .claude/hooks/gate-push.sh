@@ -18,6 +18,11 @@ if ! echo "$COMMAND" | grep -qE '^\s*git\s+(-C\s+\S+\s+)?push'; then
   exit 0
 fi
 
+# Skip checks for branch/tag deletions (no code pushed)
+if echo "$COMMAND" | grep -qF -- '--delete'; then
+  exit 0
+fi
+
 # Block --no-verify (prevents bypassing pre-push hooks)
 if echo "$COMMAND" | grep -qF -- '--no-verify'; then
   echo "--no-verify is blocked. Pre-push hooks exist to prevent CI failures. Fix the issues instead of bypassing." >&2
