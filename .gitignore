@@ -29,6 +29,7 @@
 # ===========================================
 # Ignore generated/cache directories
 # ===========================================
+/data/
 /tmp/
 /cache/
 /target/
