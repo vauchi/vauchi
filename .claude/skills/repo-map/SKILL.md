@@ -30,6 +30,10 @@ Every sub-directory is its own git repo. Always use `git -C <dir>` to target the
 | E2E tests | `e2e/` | `vauchi/e2e` |
 | Website / landing page | `website/` | `vauchi/website` |
 | Shared locales (canonical) | `locales/` | `vauchi/locales` |
+| Theme definitions (12 themes) | `themes/` | `vauchi/themes` |
+| Brand assets, logos | `assets/` | `vauchi/assets` |
+| Dev tools, hooks, utilities | `scripts/` | `vauchi/scripts` |
+| GitLab group profile | `gitlab-profile/` | `vauchi/gitlab-profile` |
 | Justfile, CI, workspace config | root | `vauchi/vauchi` |
 
 ## Common Pitfalls
@@ -93,4 +97,5 @@ git -C features checkout -b feature/my-feature
 | Public architecture doc | `docs/YYYY-MM-DD-name.md` |
 | Gherkin feature | `features/feature-name.feature` |
 | Shared locale file | `locales/en.json` (`vauchi/locales` repo) |
+| Theme definitions | `themes/themes.json` (`vauchi/themes` repo) |
 | Core Rust code | `core/vauchi-core/src/` |
