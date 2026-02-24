@@ -30,6 +30,7 @@
 # ===========================================
 # Ignore generated/cache directories
 # ===========================================
+/.worktrees/
 /data/
 /tmp/
 /cache/
