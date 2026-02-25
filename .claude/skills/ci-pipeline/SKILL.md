@@ -130,6 +130,36 @@ core tag v*.*.* →
 
 **Uses native GitLab `trigger:` keyword** to pass `UPSTREAM_VERSION` variable (CI_JOB_TOKEN lacks `api` scope for Pipeline API).
 
+## Branch Protection & CI Push Access
+
+All repos inherit a group-level rule: **push = No one**, merge = Maintainers, force push = disabled.
+
+**Binding repos have a project-level override** because CI must push generated bindings to main:
+
+| Repo | Push | Force Push | Reason |
+|------|------|------------|--------|
+| `vauchi-mobile-swift` | Maintainers | **true** | CI force-pushes bindings |
+| `vauchi-mobile-android` | Maintainers | false | CI pushes bindings |
+| All other repos | No one | false | MR-only (inherited) |
+
+**Do not remove** the project-level rules on binding repos — the release pipeline will break.
+
+The CI bot (`group_122552022_bot_*`, Maintainer level 40) authenticates via `CI_JOB_TOKEN` and pushes the generated commit + tag. Core's `auto-tag:version` uses `PROJECT_ACCESS_TOKEN` instead (CI_JOB_TOKEN pushes don't trigger new pipelines).
+
+See `_private/docs/development/2026-02-25-branch-protection-config.md` for full details.
+
+## CI Job Token Allowlists
+
+| Repo | Allows Triggers From |
+|------|---------------------|
+| `vauchi-mobile-swift` | `core`, `ios`, `vauchi-mobile-swift` |
+| `vauchi-mobile-android` | `core`, `android`, `vauchi-mobile-android` |
+| `ios` | `ios`, `vauchi-mobile-swift` |
+| `android` | `android`, `vauchi-mobile-android` |
+| `desktop` | `vauchi` (root), `core`, `desktop` |
+| `cli` | `vauchi` (root), `core`, `cli` |
+| `tui` | `vauchi` (root), `core`, `tui` |
+
 ## Common Failure Modes
 
 | Failure | Cause | Fix |
