@@ -276,12 +276,30 @@ help:
     ═══════════════════════════
 
     Daily workflow:
-      just check              Format + lint + test (core/)
-      just build              Build core workspace
-      just test               Run tests
-      just fmt                Format code
-      just fix                Auto-fix lint issues
+      just check [repo]       Format + lint + test
+      just build [repo]       Build
+      just test [repo]        Run tests
+      just fmt [repo]         Format code
+      just lint [repo]        Run lints
+      just fix [repo]         Auto-fix formatting + lint
       just commit             Interactive commit across repos
+
+      Repo argument: omit = auto-detect from pwd (or all from workspace root)
+      Examples: just test core, just lint cli, just check desktop
+      Valid repos: core cli relay tui e2e desktop android ios docs
+                   locales themes features website scripts
+
+    GitLab:
+      just gitlab mr-list [repo]            List open MRs
+      just gitlab mr-view <id> [repo]       View MR details
+      just gitlab mr-create [repo]          Create MR from current branch
+      just gitlab mr-approve <id> [repo]    Approve MR
+      just gitlab mr-merge <id> [repo]      Merge MR
+      just gitlab pipeline-status [repo]    Pipeline status (current branch)
+      just gitlab pipeline-list [repo]      Recent pipelines
+      just gitlab pipeline-log <id> [repo]  Job log output
+      just gitlab issue-list [repo]         List open issues
+      just gitlab issue-create <t> [repo]   Create issue
 
     Git (multi-repo):
       just git main           Stash → checkout main → pull (all repos)
@@ -292,41 +310,31 @@ help:
       just git branches       Show branches across repos
       just git cleanup        Preview merged branch cleanup (dry run)
       just git cleanup run    Delete merged branches + prune stale refs
-      just git stash-clear    Clear all stashes across all repos
 
     Apps:
       just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
       just relay              Start relay server
       just tui                Run TUI
 
+    Extended:
+      just test-crate <crate> Test specific crate in core workspace
+      just audit [repo]       Security audit (Rust repos)
+      just coverage           Coverage report (core)
+      just watch              Watch + test (core)
+      just build-release      Release build (core)
+
     Setup:
       just setup              Clone all repos, init workspace
       just install-dev-deps   Install toolchain (Homebrew + Cargo)
       just clean              Clean all build artifacts
 
-    Mobile:
-      just check-ios          iOS lint + build + test
-      just check-android      Android lint + build + test
-      just check-mobile       Both
-
-    E2E:
-      just e2e                List available tests
-      just e2e-run <name>     Run E2E test (or 'all')
-      just e2e-smoke          Fast smoke tests
-
     Other:
-      just metrics            Engineering metrics dashboard (PI-21)
-      just coverage           Test coverage report
-      just docs               Open Rust docs
-      just audit              Security audit
+      just metrics            Engineering metrics dashboard
       just lint-docs          Check doc naming, links, license text
-      just vrt-gallery        Cross-platform VRT screenshot gallery
-      just validate            Pre-flight deployment checks
-      just deploy              Deploy relay + landing via Kamal
-      just runners-start      Start GitLab CI runners
+      just sync-locales       Validate locale files
+      just vrt-gallery        Cross-platform VRT gallery
 
     Full list:  just --list --list-submodules
-    Git cmds:   just --list --list-submodules | grep git
     HELP
 
 # ═══════════════════════════════════════════════════════════════════
