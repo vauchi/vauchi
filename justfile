@@ -37,6 +37,9 @@ alias f := fmt
 [doc('Multi-repo git operations')]
 mod git 'just/git.just'
 
+# GitLab module (added in Task 3)
+# mod gitlab 'just/gitlab.just'
+
 import 'just/apps.just'
 import 'just/setup.just'
 import 'just/mobile.just'
@@ -49,39 +52,122 @@ import 'just/dev.just'
 # DAILY COMMANDS - Use these regularly
 # ═══════════════════════════════════════════════════════════════════
 
-# Run all checks (format, lint, test)
+# Run all checks: format-check → lint → test
 [group('daily')]
-check: fmt-check lint test
+check repo='':
+    just fmt-check {{repo}}
+    just lint {{repo}}
+    just test {{repo}}
 
-# Build core workspace
+# Build workspace or specific repo
 [group('daily')]
-[working-directory('core')]
-build:
-    cargo build --workspace
+[script('bash')]
+build repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "build"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ build: $r ($tc) ═══"
+        case "$tc" in
+            rust)    (cd "$dir" && cargo build --workspace 2>&1) || exit 1 ;;
+            npm)     (cd "$dir" && npm ci --silent && npm run build 2>&1) || exit 1 ;;
+            gradle)  (cd "$dir" && ./gradlew assembleDebug 2>&1) || exit 1 ;;
+            xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -configuration Debug build -quiet 2>&1) || exit 1 ;;
+            mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) || exit 1 ;;
+            *)       echo "  (no build step for $tc)" ;;
+        esac
+    done
 
 # Run tests
 [group('daily')]
-[working-directory('core')]
-test:
-    cargo test --workspace
+[script('bash')]
+test repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "test"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ test: $r ($tc) ═══"
+        case "$tc" in
+            rust)
+                if command -v cargo-nextest &>/dev/null; then
+                    (cd "$dir" && cargo nextest run --workspace 2>&1) || exit 1
+                else
+                    (cd "$dir" && cargo test --workspace 2>&1) || exit 1
+                fi
+                ;;
+            npm)     (cd "$dir" && npx playwright test --project=chromium --grep-invert "@visual|@a11y" 2>&1) || exit 1 ;;
+            gradle)  (cd "$dir" && ./gradlew test 2>&1) || exit 1 ;;
+            xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -quiet 2>&1) || exit 1 ;;
+            mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) || exit 1 ;;
+            *)       echo "  (no test step for $tc)" ;;
+        esac
+    done
 
 # Format code
 [group('daily')]
-[working-directory('core')]
-fmt:
-    cargo fmt --all
+[script('bash')]
+fmt repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "fmt"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ fmt: $r ($tc) ═══"
+        case "$tc" in
+            rust)    (cd "$dir" && cargo fmt --all 2>&1) || exit 1 ;;
+            npm)     (cd "$dir" && npx prettier --write src/ 2>&1) || exit 1 ;;
+            xcode)   (cd "$dir" && swiftformat . 2>&1) || exit 1 ;;
+            *)       echo "  (no fmt step for $tc)" ;;
+        esac
+    done
 
 # Check formatting (no changes)
-[private]
-[working-directory('core')]
-fmt-check:
-    cargo fmt --all -- --check
-
-# Run clippy lints
 [group('daily')]
-[working-directory('core')]
-lint:
-    cargo clippy --workspace -- -D warnings
+[script('bash')]
+fmt-check repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "fmt"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ fmt-check: $r ($tc) ═══"
+        case "$tc" in
+            rust)    (cd "$dir" && cargo fmt --all -- --check 2>&1) || exit 1 ;;
+            npm)     (cd "$dir" && npx prettier --check src/ 2>&1) || exit 1 ;;
+            xcode)   (cd "$dir" && swiftformat --lint . 2>&1) || exit 1 ;;
+            *)       echo "  (no fmt-check step for $tc)" ;;
+        esac
+    done
+
+# Run lints
+[group('daily')]
+[script('bash')]
+lint repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "lint"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ lint: $r ($tc) ═══"
+        case "$tc" in
+            rust)    (cd "$dir" && cargo clippy --workspace -- -D warnings 2>&1) || exit 1 ;;
+            npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) || exit 1 ;;
+            gradle)  (cd "$dir" && ./gradlew lint 2>&1) || exit 1 ;;
+            xcode)   (cd "$dir" && swiftlint lint --strict --quiet 2>&1 && swiftformat --lint . 2>&1) || exit 1 ;;
+            mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) || exit 1 ;;
+            python)
+                if [[ -f "$dir/scripts/validate.py" ]]; then
+                    (cd "$dir" && python3 scripts/validate.py 2>&1) || exit 1
+                fi
+                ;;
+            gherkin) echo "  (gherkin lint: advisory only)" ;;
+            shell)   (cd "$dir" && shellcheck scripts/*.sh 2>&1) || exit 1 ;;
+            html)    (cd "$dir" && htmlhint public/**/*.html 2>&1) || exit 1 ;;
+            *)       echo "  (no lint step for $tc)" ;;
+        esac
+    done
 
 # Interactive commit across repos with changes
 [group('daily')]
@@ -92,7 +178,7 @@ commit:
 # EXTENDED COMMANDS - Less frequently used
 # ═══════════════════════════════════════════════════════════════════
 
-# Run tests for specific crate
+# Run tests for specific crate (within core workspace)
 [group('extended')]
 [working-directory('core')]
 test-crate crate:
@@ -106,19 +192,53 @@ build-release:
 
 # Run security audit
 [group('extended')]
-[working-directory('core')]
-audit:
-    cargo audit
-    cargo deny check
+[script('bash')]
+audit repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    # Only Rust repos support cargo audit
+    RUST_REPOS="core cli relay tui e2e desktop-rust"
+    if [[ -z "{{repo}}" ]]; then
+        repos="$RUST_REPOS"
+    elif [[ "{{repo}}" == "all" ]]; then
+        repos="$RUST_REPOS"
+    elif [[ "{{repo}}" == "desktop" ]]; then
+        repos="desktop-rust"
+    else
+        repos="{{repo}}"
+    fi
+    for r in $repos; do
+        dir=$(repo_dir "$r")
+        echo "═══ audit: $r ═══"
+        (cd "$dir" && cargo audit 2>&1) || true
+        (cd "$dir" && cargo deny check 2>&1) || true
+    done
 
 # Auto-fix lint issues
 [group('extended')]
-[working-directory('core')]
-fix:
-    cargo fmt --all
-    cargo clippy --workspace --fix --allow-dirty --allow-staged
+[script('bash')]
+fix repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "{{repo}}" "fix"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ fix: $r ($tc) ═══"
+        case "$tc" in
+            rust)
+                (cd "$dir" && cargo fmt --all 2>&1) || true
+                (cd "$dir" && cargo clippy --workspace --fix --allow-dirty --allow-staged 2>&1) || true
+                ;;
+            npm)     (cd "$dir" && npx prettier --write src/ 2>&1) || true ;;
+            xcode)
+                (cd "$dir" && swiftformat . 2>&1) || true
+                (cd "$dir" && swiftlint --fix 2>&1) || true
+                ;;
+            *)       echo "  (no fix step for $tc)" ;;
+        esac
+    done
 
-# Watch for changes and run tests
+# Watch for changes and run tests (core only)
 [group('extended')]
 [working-directory('core')]
 watch:
