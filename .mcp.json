@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "drift": {
+      "command": "npx",
+      "args": ["-y", "driftdetect-mcp"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "rust-tools": {
+      "command": "rust-mcp-server",
+      "args": ["--workspace", "."]
+    },
+    "drift-detector": {
+      "command": "node",
+      "args": ["drift-detector/dist/index.js"]
+    }
+  }
+}

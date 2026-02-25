@@ -84,7 +84,6 @@ vauchi.code-workspace
 .drift.db
 .drift.db-shm
 .drift.db-wal
-.mcp.json
 
 # macOS
 .DS_Store
