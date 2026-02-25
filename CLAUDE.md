@@ -56,6 +56,33 @@ These rules prevent the most common CI failures. Derived from post-mortem analys
 - **CC-17 Verify Assertions in Every Test**: Before committing a test file, verify every `#[test]` function contains at least one `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`. Zero-assertion tests are rejected by CI.
 - **CC-18 Never Retry Without Fixing**: If a pipeline fails, read the job log and fix the root cause before re-running. Never retry the same commit expecting a different result.
 
+## Tool Usage (MANDATORY)
+
+**Always use `just` recipes instead of raw commands.** This applies to all build, test, lint, format, and GitLab operations. The `just` recipes handle correct working directories, toolchain detection, and multi-repo orchestration.
+
+| Instead of... | Use... |
+|---------------|--------|
+| `cargo build` | `just build [repo]` |
+| `cargo test` / `cargo nextest` | `just test [repo]` |
+| `cargo fmt` | `just fmt [repo]` |
+| `cargo clippy` | `just lint [repo]` |
+| `cargo fmt && cargo clippy && cargo test` | `just check [repo]` |
+| `cargo test -p <crate>` | `just test-crate <crate>` |
+| `cargo fmt && cargo clippy --fix` | `just fix [repo]` |
+| `cargo audit` / `cargo deny` | `just audit [repo]` |
+| `glab mr list` / `glab mr create` | `just gitlab mr-list [repo]` / `just gitlab mr-create [repo]` |
+| `glab ci status` | `just gitlab pipeline-status [repo]` |
+| `git push -o merge_request.create ...` | `just gitlab mr-create [repo]` |
+| Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` |
+
+**Repo argument rules:**
+- **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
+- **Explicit name** → `just test core`, `just lint relay`, `just check desktop`
+- **`all`** → `just test all` runs across all applicable repos
+- **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
+
+**Valid repo names:** `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`
+
 ## PROBLEM WORKFLOW (MANDATORY)
 
 **All significant work MUST follow the Problem to Solution Flow.**
@@ -69,13 +96,50 @@ Lifecycle: `intake → investigating → planning → implementing → testing �
 ## Commands
 
 ```bash
-just setup                  # Clone all repos, set up workspace
-just check                  # Format, lint, test
-just build                  # Build Rust workspace
-just test                   # Run all tests
-just fmt                    # Format code
-just lint                   # Run clippy
+# Daily workflow
+just check [repo]           # Format-check + lint + test
+just build [repo]           # Build
+just test [repo]            # Run tests
+just fmt [repo]             # Format code
+just lint [repo]            # Run lints
+just fix [repo]             # Auto-fix formatting + lint
 just commit                 # Interactive commit across repos
+
+# Repo targeting
+just test core              # Test core only
+just lint desktop           # Lint desktop (Rust + frontend)
+just check                  # Check all (from workspace root)
+
+# Extended
+just test-crate <crate>     # Test specific crate in core workspace
+just audit [repo]           # Security audit (Rust repos)
+just coverage               # Coverage report (core)
+just watch                  # Watch + test (core)
+just build-release          # Release build (core)
+
+# GitLab
+just gitlab mr-list [repo]          # List open MRs
+just gitlab mr-view <id> [repo]     # View MR details
+just gitlab mr-create [repo]        # Create MR from current branch
+just gitlab mr-approve <id> [repo]  # Approve MR
+just gitlab mr-merge <id> [repo]    # Merge MR
+just gitlab pipeline-status [repo]  # Pipeline status
+just gitlab pipeline-list [repo]    # Recent pipelines
+just gitlab pipeline-log <id> [repo] # Job log
+just gitlab issue-list [repo]       # List issues
+just gitlab issue-create <title> [repo] # Create issue
+
+# Git (multi-repo)
+just git status             # Status across all repos
+just git main               # Stash → checkout main → pull (all repos)
+just git pull-all           # Pull latest in all repos
+just git branches           # Show branches across repos
+just git cleanup            # Preview merged branch cleanup
+
+# Setup
+just setup                  # Clone all repos, init workspace
+just install-dev-deps       # Install toolchain
+just clean                  # Clean all build artifacts
 just help                   # Show all commands
 ```
 
