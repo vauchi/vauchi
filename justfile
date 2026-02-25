@@ -37,8 +37,8 @@ alias f := fmt
 [doc('Multi-repo git operations')]
 mod git 'just/git.just'
 
-# GitLab module (added in Task 3)
-# mod gitlab 'just/gitlab.just'
+[doc('GitLab MR, pipeline, and issue operations')]
+mod gitlab 'just/gitlab.just'
 
 import 'just/apps.just'
 import 'just/setup.just'
