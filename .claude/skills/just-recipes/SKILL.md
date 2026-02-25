@@ -10,29 +10,90 @@ description: Complete reference of all just commands across the vauchi workspace
 
 Aliases: `b` = build, `t` = test, `c` = check, `f` = fmt
 
+## Repo Targeting
+
+All daily commands accept an optional `[repo]` argument:
+
+- **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
+- **Explicit name** → `just test core`, `just lint relay`, `just check desktop`
+- **`all`** → `just test all` runs across all applicable repos
+- **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
+
+**Valid repo names:** `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`
+
+**Toolchain dispatch per repo:**
+
+| Repo | Toolchain | build | test | fmt | lint | fix |
+|------|-----------|-------|------|-----|------|-----|
+| core, cli, relay, tui, e2e, desktop-rust | rust | cargo build | cargo nextest | cargo fmt | cargo clippy | cargo fmt + clippy --fix |
+| desktop-ui | npm | npm run build | playwright | prettier | eslint + stylelint | prettier |
+| android | gradle | gradlew assembleDebug | gradlew test | — | gradlew lint | — |
+| ios | xcode | xcodebuild build | xcodebuild test | swiftformat | swiftlint + swiftformat --lint | swiftformat + swiftlint --fix |
+| docs | mkdocs | mkdocs build --strict | mkdocs build --strict | — | markdownlint | — |
+| locales, themes | python | — | — | — | python3 validate.py | — |
+| features | gherkin | — | — | — | advisory only | — |
+| scripts | shell | — | — | — | shellcheck | — |
+| website | html | — | — | — | htmlhint | — |
+
 ## Daily (Most Used)
 
-| Recipe | What It Runs | Purpose |
-|--------|-------------|---------|
-| `just check` | `fmt-check` + `lint` + `test` | Run all checks |
-| `just build` | `cd core && cargo build --workspace` | Build core workspace |
-| `just test` | `cd core && cargo test --workspace` | Run all tests |
-| `just fmt` | `cd core && cargo fmt --all` | Format code |
-| `just lint` | `cd core && cargo clippy --workspace -- -D warnings` | Clippy lints |
-| `just commit` | `./scripts/scripts/commit-interactive.sh` | Interactive commit across repos |
+| Recipe | Purpose |
+|--------|---------|
+| `just check [repo]` | Run fmt-check → lint → test |
+| `just build [repo]` | Build (dispatches per toolchain) |
+| `just test [repo]` | Run tests (dispatches per toolchain) |
+| `just fmt [repo]` | Format code |
+| `just fmt-check [repo]` | Check formatting (no changes) |
+| `just lint [repo]` | Run lints |
+| `just fix [repo]` | Auto-fix formatting + lints |
+| `just commit` | Interactive commit across repos |
 
 ## Extended
 
-| Recipe | What It Runs | Purpose |
-|--------|-------------|---------|
-| `just test-crate <name>` | `cd core && cargo test -p <name>` | Test specific crate |
-| `just build-release` | `cd core && cargo build --workspace --release` | Release build |
-| `just audit` | `cargo audit && cargo deny check` | Security audit |
-| `just fix` | `cargo fmt --all && cargo clippy --fix --allow-dirty` | Auto-fix lints |
-| `just watch` | `cargo watch -x "test --workspace"` | Watch + test |
-| `just coverage` | `cargo llvm-cov --workspace --html` | Coverage report |
-| `just docs` | `cargo doc --workspace --no-deps --open` | Generate docs |
-| `just install-hooks` | Copy scripts/hooks/ to .git/hooks/ | Git hooks |
+| Recipe | Purpose |
+|--------|---------|
+| `just test-crate <name>` | Test specific crate in core workspace |
+| `just build-release` | Release build (core) |
+| `just audit [repo]` | Security audit (Rust repos: cargo audit + cargo deny) |
+| `just watch` | Watch + test (core) |
+| `just coverage` | Coverage report (core) |
+| `just docs` | Generate Rust docs |
+| `just install-hooks` | Install git hooks across repos |
+
+## GitLab (`just gitlab ...`)
+
+All recipes require `glab` auth. Error immediately if not authenticated.
+
+### MR Operations
+
+| Recipe | Purpose |
+|--------|---------|
+| `just gitlab mr-list [repo]` | List open merge requests |
+| `just gitlab mr-view <id> [repo]` | View MR details |
+| `just gitlab mr-create [repo]` | Create MR from current branch (pushes + fills from commits) |
+| `just gitlab mr-approve <id> [repo]` | Approve MR |
+| `just gitlab mr-merge <id> [repo]` | Merge MR |
+| `just gitlab mr-close <id> [repo]` | Close MR |
+
+### Pipeline Operations
+
+| Recipe | Purpose |
+|--------|---------|
+| `just gitlab pipeline-status [repo]` | Pipeline status for current branch |
+| `just gitlab pipeline-list [repo]` | List recent pipelines |
+| `just gitlab pipeline-jobs <id> [repo]` | List jobs in a pipeline |
+| `just gitlab pipeline-log <job_id> [repo]` | View job log output |
+| `just gitlab pipeline-retry <id> [repo]` | Retry failed pipeline |
+| `just gitlab pipeline-cancel <id> [repo]` | Cancel running pipeline |
+
+### Issue Operations
+
+| Recipe | Purpose |
+|--------|---------|
+| `just gitlab issue-list [repo]` | List open issues |
+| `just gitlab issue-view <id> [repo]` | View issue details |
+| `just gitlab issue-create <title> [repo]` | Create issue |
+| `just gitlab issue-close <id> [repo]` | Close issue |
 
 ## Git Multi-Repo (`just git ...`)
 
@@ -42,10 +103,12 @@ Aliases: `b` = build, `t` = test, `c` = check, `f` = fmt
 | `just git main` | Stash + checkout main + pull (all repos) |
 | `just git fetch` | Fetch all repos |
 | `just git branches` | Show branches across repos |
-| `just git clean-branches` | Delete merged branches |
+| `just git cleanup` | Preview merged branch cleanup (dry run) |
+| `just git cleanup run` | Delete merged branches + prune stale refs |
 | `just git pull-all` | Pull all repos (with rebase) |
 | `just git push-all` | Push repos with unpushed commits |
 | `just git checkout-main` | Checkout main in all repos |
+| `just git stash-clear` | Clear stashes across all repos |
 
 ## Apps
 
@@ -197,6 +260,7 @@ Aliases: `b` = build, `t` = test, `c` = check, `f` = fmt
 ```
 justfile                  # Root (imports below)
 ├── just/git.just         # Git multi-repo (mod)
+├── just/gitlab.just      # GitLab MR/pipeline/issue ops (mod)
 ├── just/apps.just        # App runners
 ├── just/setup.just       # Setup + clean
 ├── just/mobile.just      # Mobile builds
