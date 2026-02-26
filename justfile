@@ -23,7 +23,7 @@ public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e fe
 private_repo := "private"
 
 # Tooling repositories (url,dir format, outside vauchi group)
-tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector"
+tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@gitlab.com:megloff1/markdown-plan.git,markdown-plan"
 
 # ─── Aliases ─────────────────────────────────────────────────────
 

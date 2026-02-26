@@ -6,7 +6,7 @@
 
 # Clone all repos and set up workspace (run first after cloning meta-repo)
 [group('setup')]
-setup: clone-repos && install-hooks
+setup: clone-repos && install-hooks install-mdplan
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
@@ -131,6 +131,22 @@ clone-repos:
             fi
         fi
     done
+
+# Install markdown-plan CLI tool
+[private]
+[script('bash')]
+install-mdplan:
+    set -e
+    if command -v mdplan &>/dev/null; then
+        echo "  mdplan (already installed)"
+    else
+        echo "  Installing mdplan..."
+        if command -v pipx &>/dev/null; then
+            pipx install ./markdown-plan/python
+        else
+            pip install --user ./markdown-plan/python
+        fi
+    fi
 
 # Clean all build artifacts
 [group('setup')]

@@ -95,5 +95,8 @@ vauchi.code-workspace
 .drift.db-shm
 .drift.db-wal
 
+
+/markdown-plan/
+
 # macOS
 .DS_Store
