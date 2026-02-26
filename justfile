@@ -460,7 +460,9 @@ vrt-gallery:
 # DRIFT DETECTION
 # ═══════════════════════════════════════════════════════════════════
 
-# Run drift audit (human-readable summary, fail on high severity)
+# Run drift audit (human-readable, fail on high severity by default)
+# Usage: just drift [--severity=high] [--group-by=category] [--limit=50] [--verbose]
+# Backward compat: just drift medium  (sets --fail-on=medium)
 [group('tools')]
 [script('bash')]
 drift *args:
@@ -470,10 +472,23 @@ drift *args:
         echo "Building drift-detector..."
         npm run build --silent
     fi
-    FAIL_ON="${1:-high}"
-    node dist/index.js --root .. audit --fail-on="$FAIL_ON"
+    # Backward compat: if first arg doesn't start with --, treat as --fail-on value
+    EXTRA_ARGS=""
+    FAIL_ON="high"
+    FIRST=true
+    for arg in {{args}}; do
+        if $FIRST && [[ ! "$arg" == --* ]]; then
+            FAIL_ON="$arg"
+            FIRST=false
+            continue
+        fi
+        FIRST=false
+        EXTRA_ARGS="$EXTRA_ARGS $arg"
+    done
+    node dist/index.js --root .. audit --fail-on="$FAIL_ON" $EXTRA_ARGS
 
 # Run drift audit with JSON output (for CI pipelines)
+# Usage: just drift-ci [--severity=high] [--category=missing_test] [--limit=100]
 [group('tools')]
 [script('bash')]
 drift-ci *args:
@@ -483,8 +498,19 @@ drift-ci *args:
         echo "Building drift-detector..."
         npm run build --silent
     fi
-    FAIL_ON="${1:-high}"
-    node dist/index.js --root .. audit --ci --fail-on="$FAIL_ON"
+    EXTRA_ARGS=""
+    FAIL_ON="high"
+    FIRST=true
+    for arg in {{args}}; do
+        if $FIRST && [[ ! "$arg" == --* ]]; then
+            FAIL_ON="$arg"
+            FIRST=false
+            continue
+        fi
+        FIRST=false
+        EXTRA_ARGS="$EXTRA_ARGS $arg"
+    done
+    node dist/index.js --root .. audit --ci --fail-on="$FAIL_ON" $EXTRA_ARGS
 
 # ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS
