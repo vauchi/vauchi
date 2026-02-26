@@ -3,6 +3,28 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# ─── Workspace ──────────────────────────────────────────
+
+[workspace]
+repos = [
+  { name = "root", path = "." },
+  { name = "core", path = "core/" },
+  { name = "relay", path = "relay/" },
+  { name = "cli", path = "cli/" },
+  { name = "tui", path = "tui/" },
+  { name = "desktop", path = "desktop/" },
+  { name = "android", path = "android/" },
+  { name = "ios", path = "ios/" },
+  { name = "e2e", path = "e2e/" },
+  { name = "features", path = "features/" },
+  { name = "docs", path = "docs/" },
+  { name = "locales", path = "locales/" },
+  { name = "themes", path = "themes/" },
+  { name = "scripts", path = "scripts/" },
+  { name = "website", path = "website/" },
+  { name = "_private", path = "_private/" },
+]
+
 # ─── Indexing ─────────────────────────────────────────────
 
 [indexing]
