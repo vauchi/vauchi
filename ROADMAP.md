@@ -92,7 +92,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | Relay Authentication | Done | Ed25519 handshake verification in relay. Client hex format in core |
 | X3DH Protocol Hardening | Done | Migration v18: visibility_rules encrypted, PBKDF2 600K |
 | Trust Metrics & Indicators | ~95% implemented | `TrustLevel` enum (4 levels), `ProfileValidation`, scoring in core. Needs v19 migration |
-| Accessibility Audit | Planning | Formal audit with real screen readers |
+| Accessibility Audit | Desktop ARIA audit done | Desktop: 4 PASS, 14 PARTIAL, 6 FAIL. VoiceOver/TalkBack formal audit remaining |
 | Birthday Field | Needs implementation | `FieldType::Birthday` with date validation — currently only test mock |
 | Local Contact Annotations | Needs implementation | Migration v20. Depends on Trust Metrics v19 |
 | Contact Network Statistics | Needs implementation | Pure computation, no migration |
@@ -117,7 +117,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | UI-01: No dialogs for reversible actions | 2 | 3 | 4 | 9 |
 | UI-02: Confirm irrevocable inline | 4 | 6 | 3 | 13 |
 | UI-03: Inline over overlay | 10 | 13 | 2 | 25 |
-| UI-04–08: Other rules | 6 | 5 | 0 | 11 |
+| UI-04–08: Other rules | 8 | 6 | 4 | 18 |
 | **Total** | **24** | **28** | **13** | **65** |
 
 ### Social Network Integration (v1.0)
@@ -253,18 +253,21 @@ curl https://relay.vauchi.app/health
 - **Trust Metrics corrected** — ~95% implemented in core (TrustLevel enum, ProfileValidation, scoring). Only v19 migration missing.
 - **Birthday Field clarified** — needs real `FieldType::Birthday` with date validation. Currently only test mock.
 - **4 P0 security gap problem records created** — device linking proximity, account deletion relay purge, proximity audio integration, fingerprint verification UI.
+- **SP-4 now DONE** — desktop strip=true + LTO + opt-level="z" (20→7 MB). All release builds verified.
+- **SP-5 now ~97%** — icons (all platforms), signing, privacy policy, Playwright a11y audit (14/14) all done. Only manual store actions remain.
+- **Desktop ARIA audit done** — 4 PASS, 14 PARTIAL, 6 FAIL. Problem record `2026-02-26-desktop-accessibility-remediation` created.
 - **Post-launch only**: NFC Dead Drop, Facilitated Introductions, Demo Web App, Windows (conditional).
 
 </details>
 
 <details>
-<summary>2026-02-25 Re-Verification Findings</summary>
+<summary>2026-02-25 Re-Verification Findings (partially superseded by 2026-02-26 above)</summary>
 
 7 parallel agents verified all SP statuses against actual code. Key corrections:
 
 - **P0 security gaps**: Previous "ALL 5 CLOSED" was incorrect. Only 1/5 closed (field validation). 4 remain open.
-- **SP-4**: Was ~98%, now ~75-80%. Desktop CI release build missing. Android APK exceeds size target.
-- **SP-5**: Was ~90%, now ~85%. App store metadata is ~10%, not "remaining". App store submission 0%.
+- **SP-4**: Was ~98%, corrected to ~75-80% → **now DONE** (see 2026-02-26 above).
+- **SP-5**: Was ~90%, corrected to ~85% → **now ~97%** (see 2026-02-26 above).
 - **SP-8b**: Was "Phase 2 done", now fully DONE. All 4 phases verified complete.
 - **SP-9**: Was "~10 remain", now ~95%. Most cross-repo items verified merged. 2-4 items unclear.
 - **SP-11**: Was "Phase 1-5 done", now ~35%. Label counts were wrong. No formal audit done.
