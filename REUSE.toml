@@ -38,6 +38,12 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 
 # JSON config files (can't have comments)
 [[annotations]]
-path = ["package.json", "opencode.json", "funding.json", ".changeset/config.json", ".aiassistant/**", "locales/*.json", ".mcp.json"]
+path = ["package.json", "opencode.json", "funding.json", ".changeset/config.json", "locales/*.json", ".mcp.json"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Claude Code rules and agents (YAML frontmatter prevents inline SPDX)
+[[annotations]]
+path = [".claude/rules/**", ".claude/agents/**"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
