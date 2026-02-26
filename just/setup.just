@@ -143,8 +143,13 @@ install-mdplan:
         echo "  Installing mdplan..."
         if command -v pipx &>/dev/null; then
             pipx install ./markdown-plan/python
-        else
+        elif command -v pip3 &>/dev/null; then
+            pip3 install --user ./markdown-plan/python
+        elif command -v pip &>/dev/null; then
             pip install --user ./markdown-plan/python
+        else
+            echo "Error: pip/pip3/pipx not found. Install with: brew install pipx" >&2
+            exit 1
         fi
     fi
 
