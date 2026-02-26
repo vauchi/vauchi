@@ -172,24 +172,22 @@ cargo llvm-cov -p vauchi-core --lcov --output-path lcov.info
 
 ```bash
 # All tests
-just test                          # cargo test --workspace (in core/)
+just test                          # All tests (in core/)
+just test core                     # Explicit repo target
 just check                         # fmt + lint + test
 
-# Specific
+# Specific crate
 just test-crate vauchi-core        # Single crate
-cargo test --test contact_tests    # Single test file
-cargo test --test integration      # Integration suite
-cargo test --test property_tests   # Property tests
-
-# With output
-cargo test -- --nocapture
-
-# Slow/ignored tests
-cargo test -- --ignored
+just test-crate vauchi-mobile      # Mobile bindings
 
 # Watch mode
-just watch                         # cargo watch -x "test --workspace"
+just watch                         # Watch + auto-test (core)
+
+# Coverage
+just coverage                      # HTML report → core/target/llvm-cov/html/
 ```
+
+> **Note**: For running a single test file or with flags like `--nocapture` or `--ignored`, raw `cargo test` is acceptable since `just` has no equivalent recipe for these granular operations.
 
 ## Cargo.toml Test Entries
 

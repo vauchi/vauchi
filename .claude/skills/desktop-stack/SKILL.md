@@ -187,23 +187,27 @@ export default Home;
 
 ```bash
 # Development
-cargo tauri dev                    # Dev mode with Vite hot reload
-just desktop-dev                   # Same via just
+just desktop-dev                   # Dev mode with Vite hot reload
 
 # Build
-cargo tauri build                  # Production binary
-cd ui && npm run build             # Frontend only
+just build desktop                 # Production binary
+just build desktop-ui              # Frontend only
 
 # Test
-cargo test -p vauchi-desktop       # Rust backend tests
-cd ui && npm test                  # Playwright E2E
-cd ui && npm run test:visual       # Visual regression (@visual tag)
-cd ui && npm run test:update-snapshots  # Update baselines
+just test desktop                  # All desktop tests (Rust + frontend)
+just test desktop-ui               # Playwright E2E only
 
-# Lint
-cd ui && npm run lint              # ESLint
-cd ui && npm run format:check      # Prettier check
+# Lint & Check
+just lint desktop                  # All desktop linting
+just check desktop                 # fmt + lint + test (all-in-one)
+just fix desktop                   # Auto-fix formatting + lint
+
+# Visual regression (no just recipe — use npm directly)
+cd desktop/ui && npm run test:visual
+cd desktop/ui && npm run test:update-snapshots
 ```
+
+> **Note**: For visual regression tests and snapshot updates, use npm directly since `just` has no dedicated recipe for these.
 
 ## PITFALL: Frontend Must Build Before Clippy
 

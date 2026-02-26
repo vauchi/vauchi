@@ -51,7 +51,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
    ```
 
 4. **Run pre-push validation** for each repo:
-   - Rust repos: `cargo check --quiet --manifest-path "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml"`
+   - Rust repos: `just check $dir`
    - Check no `Cargo.toml` has non-main branch refs:
      ```bash
      grep -rn 'branch = ' "$CLAUDE_PROJECT_DIR/$dir/"**/Cargo.toml 2>/dev/null | grep -v 'main'

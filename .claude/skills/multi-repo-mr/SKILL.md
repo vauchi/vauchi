@@ -14,7 +14,7 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
 - **MR creation**: Use `git push -o merge_request.create` — NEVER use `glab` CLI
 - **Directory safety**: Always use `git -C <absolute-path>` — NEVER cd without verifying
 - **Branch refs**: Keep all `Cargo.toml` branch refs pointing to `main` — NEVER change to feature branches
-- **Pre-push check**: Run `cargo check --workspace` in Rust repos before pushing
+- **Pre-push check**: Run `just check <repo>` in Rust repos before pushing
 
 ## Steps
 
@@ -33,9 +33,9 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
      ```bash
      grep -rn 'branch = ' "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml" 2>/dev/null | grep -v 'main'
      ```
-   - For Rust repos, run `cargo check`:
+   - For Rust repos, run checks:
      ```bash
-     cargo check --quiet --manifest-path "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml" 2>&1
+     just check $dir
      ```
 
 3. **Push and create MRs in parallel** — Use Task sub-agents (one per repo) to:

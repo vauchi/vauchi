@@ -1,6 +1,6 @@
 ## Visibility Boundary (CRITICAL)
 
-- **Implementation plans, design docs, problem records** → always go in `_private/docs/plans/` or `_private/docs/problems/`
+- **Implementation plans, design docs** → go in `_private/docs/plans/` (standalone) or `_private/docs/problems/YYYY-MM-DD-slug/` (part of a problem record)
 - **Planning workflow docs (todo/done/roadmap)** → always go in `_private/docs/planning/`
 - **Never write plans to `docs/`** — the `docs/` repo is public and deployed to docs.vauchi.app
 - **Never embed local absolute paths** (`/Users/...`) in any document — use project-relative paths

@@ -51,15 +51,11 @@ Detect the repo type from project files and run the appropriate checks:
 
 #### Rust repos (`Cargo.toml` present): core, relay, cli, tui, e2e
 
-1. **Format**: `cargo fmt --check`
-2. **Lint**: `cargo clippy --all-targets -- -D warnings`
-   - For `core/`: this includes `--tests` (CI runs `clippy --all-targets`)
-   - Pay attention to: unused imports, dead code in test modules, unnecessary `mut`, `type_complexity`, `manual_div_ceil`, and other common issues
-3. **Test**: `cargo test --workspace`
+1. **All-in-one**: `just check <repo>` (runs fmt-check + lint + test)
    - For `core/`: verify both `vauchi-core` and `vauchi-mobile` test
-4. **Security** (if Cargo.toml/Cargo.lock changed):
-   - `cargo audit` (if installed)
-   - `cargo deny check licenses` (if installed and `deny.toml` exists)
+   - Pay attention to: unused imports, dead code in test modules, unnecessary `mut`, `type_complexity`, `manual_div_ceil`, and other common issues
+2. **Security** (if Cargo.toml/Cargo.lock changed):
+   - `just audit <repo>` (if available)
 
 ---
 

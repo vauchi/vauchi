@@ -249,6 +249,8 @@ val vauchi = VauchiMobile(storagePath = filesDir.resolve("vauchi.db").absolutePa
 
 ## Local Development
 
+Always use `just` recipes for local development. The raw `cargo build` commands in sections above document what CI does internally.
+
 ```bash
 just bindings           # Generate UniFFI bindings locally
 just build-ios debug    # Build iOS framework (macOS only)

@@ -76,7 +76,7 @@ cd _private && git push -u origin <branch> \
 
 Use `/create-mr` skill for the full MR workflow.
 
-### 5. Branch names should match across repos
+### 4. Branch names should match across repos
 
 When work spans multiple repos, use the same branch name everywhere:
 ```bash
