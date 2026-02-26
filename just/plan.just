@@ -126,6 +126,57 @@ plan-list dir='_private/docs':
         printf "%-60s %s\n" "$relpath" "$stats"
     done < <(find "{{dir}}" -name "*.plan.md" -print0 | sort -z)
 
+# Show remaining tasks from master plan
+[group('tools')]
+[script('bash')]
+task-list:
+    set -euo pipefail
+    WORKSPACE_ROOT="$(pwd)"
+    PLAN="$WORKSPACE_ROOT/_private/docs/planning/master-plan.plan.md"
+    if [[ ! -f "$PLAN" ]]; then
+        echo "ERROR: $PLAN not found"
+        exit 1
+    fi
+    python3 << 'PYEOF'
+    import re
+    with open("_private/docs/planning/master-plan.plan.md") as f:
+        lines = f.readlines()
+    # Parse top-level SPs and their subtasks
+    current_sp = None
+    tasks = []  # (indent, desc, done, deps)
+    for line in lines:
+        line = line.rstrip()
+        # Top-level: "N. [x] SP-..." or "N. SP-..."
+        m = re.match(r'^(\d+)\.\s+(\[x\]\s+)?(.+)$', line)
+        if m:
+            done = bool(m.group(2))
+            desc = m.group(3).strip()
+            tasks.append((0, desc, done))
+            continue
+        # Subtask: "   - [x] ..." or "   - ..."
+        m = re.match(r'^(\s+)[-*]\s+(\[x\]\s+)?(.+)$', line)
+        if m:
+            done = bool(m.group(2))
+            desc = m.group(3).strip()
+            tasks.append((1, desc, done))
+    # Print remaining
+    total = len(tasks)
+    done_count = sum(1 for _, _, d in tasks if d)
+    remaining = [(indent, desc) for indent, desc, d in tasks if not d]
+    print(f"Master Plan: {done_count}/{total} tasks done, {len(remaining)} remaining\n")
+    current_parent = None
+    for indent, desc in remaining:
+        if indent == 0:
+            current_parent = desc
+            # Extract SP name before @(...)
+            clean = re.sub(r'\s*@\(.+?\)', '', desc)
+            deps = re.findall(r'@\(([^)]+)\)', desc)
+            dep_str = f"  (blocked by: {deps[0]})" if deps else ""
+            print(f"  {clean}{dep_str}")
+        else:
+            print(f"    - {desc}")
+    PYEOF
+
 # Show .plan.md files with no git changes in N days
 [group('tools')]
 [script('bash')]
