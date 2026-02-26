@@ -47,6 +47,7 @@ import 'just/e2e.just'
 import 'just/deploy.just'
 import 'just/runners.just'
 import 'just/dev.just'
+import 'just/plan.just'
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
