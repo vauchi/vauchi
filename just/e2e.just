@@ -267,6 +267,167 @@ e2e-screenshot:
 e2e-logs:
     ./scripts/scripts/e2e/orchestrate.sh logs
 
+# ─── Maestro ─────────────────────────────────────────────────────
+
+# Verify Maestro CLI is installed and environment is ready
+[group('e2e')]
+[script('bash')]
+maestro-setup:
+    set -euo pipefail
+    echo "═══ Maestro Environment Check ═══"
+    echo ""
+
+    ERRORS=0
+
+    # 1. Maestro CLI
+    if command -v maestro &>/dev/null; then
+        echo "  [OK] Maestro CLI: $(maestro --version 2>&1 | head -1)"
+    else
+        echo "  [MISSING] Maestro CLI"
+        echo "    Install: curl -Ls 'https://get.maestro.mobile.dev' | bash"
+        ERRORS=$((ERRORS + 1))
+    fi
+    echo ""
+
+    # 2. iOS tooling (macOS only)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        echo "  --- iOS ---"
+        if command -v xcrun &>/dev/null; then
+            echo "  [OK] Xcode CLI tools: $(xcodebuild -version 2>/dev/null | head -1 || echo 'unknown')"
+            BOOTED=$(xcrun simctl list devices booted 2>/dev/null | grep -c "Booted" || echo 0)
+            echo "  [INFO] Booted simulators: $BOOTED"
+            if [[ "$BOOTED" -eq 0 ]]; then
+                echo "    Hint: xcrun simctl boot 'iPhone 15 Pro'"
+            fi
+        else
+            echo "  [MISSING] Xcode CLI tools"
+            echo "    Install: xcode-select --install"
+            ERRORS=$((ERRORS + 1))
+        fi
+        echo ""
+    fi
+
+    # 3. Android tooling
+    echo "  --- Android ---"
+    if [[ -n "${ANDROID_HOME:-}" ]]; then
+        echo "  [OK] ANDROID_HOME: $ANDROID_HOME"
+    elif [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+        echo "  [OK] ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+    else
+        echo "  [MISSING] ANDROID_HOME / ANDROID_SDK_ROOT not set"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    if command -v adb &>/dev/null; then
+        DEVICES=$(adb devices 2>/dev/null | grep -c "device$" || echo 0)
+        echo "  [OK] ADB: $(adb --version 2>&1 | head -1)"
+        echo "  [INFO] Connected devices: $DEVICES"
+        if [[ "$DEVICES" -eq 0 ]]; then
+            echo "    Hint: emulator -avd Pixel_7  (or start via Android Studio)"
+        fi
+    else
+        echo "  [MISSING] ADB not in PATH"
+        ERRORS=$((ERRORS + 1))
+    fi
+    echo ""
+
+    # 4. Flow files
+    echo "  --- Maestro Flows ---"
+    IOS_FLOWS=$(find e2e/maestro/ios -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
+    ANDROID_FLOWS=$(find e2e/maestro/android -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
+    echo "  [INFO] iOS flows: $IOS_FLOWS"
+    echo "  [INFO] Android flows: $ANDROID_FLOWS"
+    echo ""
+
+    # Summary
+    if [[ $ERRORS -gt 0 ]]; then
+        echo "RESULT: $ERRORS issue(s) found. Fix them before running Maestro tests."
+        exit 1
+    fi
+    echo "RESULT: Environment is ready for Maestro testing."
+
+# Run Maestro iOS flows (requires booted simulator)
+[group('e2e')]
+[script('bash')]
+e2e-ios flow="create_identity":
+    set -euo pipefail
+    if ! command -v maestro &>/dev/null; then
+        echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
+        exit 1
+    fi
+
+    FLOW_PATH="e2e/maestro/ios/{{flow}}.yaml"
+    if [[ ! -f "$FLOW_PATH" ]]; then
+        echo "Error: Flow not found: $FLOW_PATH"
+        echo "Available iOS flows:"
+        find e2e/maestro/ios -name "*.yaml" -exec basename {} .yaml \; | sort | sed 's/^/  /'
+        exit 1
+    fi
+
+    echo "Running iOS flow: {{flow}}"
+    maestro test "$FLOW_PATH" --platform ios "$@"
+
+# Run Maestro Android flows (requires running emulator)
+[group('e2e')]
+[script('bash')]
+e2e-android flow="create_identity":
+    set -euo pipefail
+    if ! command -v maestro &>/dev/null; then
+        echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
+        exit 1
+    fi
+
+    FLOW_PATH="e2e/maestro/android/{{flow}}.yaml"
+    if [[ ! -f "$FLOW_PATH" ]]; then
+        echo "Error: Flow not found: $FLOW_PATH"
+        echo "Available Android flows:"
+        find e2e/maestro/android -name "*.yaml" -exec basename {} .yaml \; | sort | sed 's/^/  /'
+        exit 1
+    fi
+
+    echo "Running Android flow: {{flow}}"
+    maestro test "$FLOW_PATH" --platform android "$@"
+
+# Run all Maestro flows on both platforms
+[group('e2e')]
+[script('bash')]
+e2e-maestro platform="all":
+    set -euo pipefail
+    if ! command -v maestro &>/dev/null; then
+        echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
+        exit 1
+    fi
+
+    run_platform() {
+        local plat="$1"
+        local dir="e2e/maestro/$plat"
+        echo "═══ Running all $plat Maestro flows ═══"
+        for flow in "$dir"/*.yaml; do
+            name=$(basename "$flow" .yaml)
+            echo "  → $name"
+            maestro test "$flow" --platform "$plat" || {
+                echo "  ✗ FAILED: $name"
+                return 1
+            }
+            echo "  ✓ $name"
+        done
+        echo ""
+    }
+
+    case "{{platform}}" in
+        ios)     run_platform ios ;;
+        android) run_platform android ;;
+        all)
+            run_platform ios
+            run_platform android
+            ;;
+        *)
+            echo "Error: Unknown platform '{{platform}}'. Use: ios, android, or all"
+            exit 1
+            ;;
+    esac
+    echo "All Maestro flows completed."
+
 # ─── Relay ──────────────────────────────────────────────────────
 
 # Start local TLS relay for E2E testing
