@@ -4,7 +4,7 @@
 # Roadmap - February 2026
 
 **Goal**: Full-feature production release — all 18 features implemented with real code, no stubs or mocks
-**Last audit**: 2026-02-06 (code-verified)
+**Last audit**: 2026-02-25 (full codebase re-verification against master plan)
 
 ---
 
@@ -34,14 +34,14 @@ All 18 features must be production-ready with real implementations before real d
 | Contact exchange (Mutual QR) | Done | Symmetric DH, fresh ephemeral keys, 13 tests |
 | Contact exchange (NFC Active) | Done | 174-byte APDU payload, VNFC magic, 25 tests |
 | Contact exchange (BLE) | Done | GATT transport trait, VBLE magic, 27 tests |
-| Rust tests | Done | ~2,119 tests across 166+ files |
+| Rust tests | Done | ~2,981 tests across 166+ files (2,269 core, 282 relay, 118 cli, 186 tui, 75 mobile, 21 protocol, 30 e2e) |
 | iOS test files | Done | 17 files — KeychainService, Audio, Exchange, Accessibility, VRT, etc. |
 | Android test files | Done | 13 files — SyncWorker, Audio, Exchange, Accessibility, Screenshots, etc. |
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
 | No unwraps in crypto | Done | 0 production unwraps |
-| Accessibility (Phase 1-5) | Done | VoiceOver, TalkBack, ARIA complete |
+| Accessibility (Code remediation) | Done | iOS ~367 a11y refs, Android ~152 refs, Desktop ~373 aria- refs. Formal audit (VoiceOver/TalkBack) NOT done |
 | Phase 2 Security Hardening | Done | Desktop key storage fixed, cert pinning implemented, scans clean |
-| Security scan | Done | cargo-audit: 0 vulns (2026-02-02, all repos) |
+| Security scan | Done | cargo-audit: 0 vulns (2026-02-02, all repos). Note: 4 P0 security GAPS still open (see below) |
 
 ---
 
@@ -86,7 +86,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 |---------|--------|-------|
 | Tor Mode | Done | 594 lines, feature-gated `tor = []`, arti-ready |
 | Relay Federation | Done | All 4 phases: static federation, gossip discovery, mutual TLS (1,526 lines) |
-| Protocol Hardening | Partial | Noise NK + fixed-size padding done. **AEAD identity binding not found in code** |
+| Protocol Hardening | Done | Noise NK + fixed-size padding + AEAD identity binding (confirmed 2026-02-20 deep check) |
 | Cargo Fuzz Targets | Done | 10 targets covering all attack surfaces |
 | Testing Infrastructure Gaps | Done | cargo-deny CI (all repos), MASVS L1 self-assessment |
 | Recovery Trust Contacts | Done | All platforms complete |
@@ -103,10 +103,10 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
-| Device Linking Proximity | **CRITICAL** | Intake | Core proximity gate exists but clients bypass it. Remote QR attack possible without client integration |
-| Account Deletion Relay Purge | **HIGH** | Investigating | Revocations generated but not auto-sent via relay |
-| Proximity Verification Integration | **MEDIUM** | Investigating | 510 lines of audio code on iOS+Android but NOT integrated into exchange flows |
-| Fingerprint Verification UI | **MEDIUM** | Intake | Core API exists, UI scaffolding but doesn't show actual key fingerprints |
+| Device Linking Proximity | **CRITICAL** | **OPEN** | Proximity check optional, not mandatory before `approveDeviceLink()`. Remote QR attack still possible. Re-verified 2026-02-25 |
+| Account Deletion Relay Purge | **HIGH** | **OPEN** | Core generates revocations but iOS/Android don't auto-send via relay. Contacts not notified. Re-verified 2026-02-25 |
+| Proximity Verification Integration | **MEDIUM** | **OPEN** | 510+ lines audio code (`audio.rs`, `audio_cpal.rs`) exists but orphaned from exchange flow. Not wired into ceremony. Re-verified 2026-02-25 |
+| Fingerprint Verification UI | **MEDIUM** | **PARTIAL** | Fingerprints shown post-exchange in ContactDetailView but NOT during exchange confirmation step. Re-verified 2026-02-25 |
 | Field Validation Core-Mobile | None | Done | Core + UniFFI + iOS + Android all wired — no gap |
 
 ### Phase 5: Validation
@@ -132,7 +132,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 |---------|--------|-------|
 | NFC Dead Drop Exchange | Planning | Passive NFC tag as physical dead drop |
 | Facilitated Introductions | Investigating | Principle-compliant mutual introduction. Depends on Trust Metrics |
-| Resistance Features | Implementing | Duress PIN, hidden contacts, emergency broadcast implemented. Panic widget + mesh exchange spec-only |
+| Resistance Features | Implementing | ShredManager done (1,075 LOC), hidden contacts done. **Duress PIN + emergency broadcast are stubs** (~50 LOC each). Zero platform UI. Zero locale keys. Panic widget + mesh exchange spec-only |
 
 ---
 
@@ -205,4 +205,22 @@ curl https://relay.vauchi.app/health
 
 ## Verification
 
-**Last verification**: 2026-02-06 (code-verified audit)
+**Last verification**: 2026-02-25 (full codebase re-verification)
+
+<details>
+<summary>2026-02-25 Re-Verification Findings</summary>
+
+7 parallel agents verified all SP statuses against actual code. Key corrections:
+
+- **P0 security gaps**: Previous "ALL 5 CLOSED" was incorrect. Only 1/5 closed (field validation). 4 remain open.
+- **SP-4**: Was ~98%, now ~75-80%. Desktop CI release build missing. Android APK exceeds size target.
+- **SP-5**: Was ~90%, now ~85%. App store metadata is ~10%, not "remaining". App store submission 0%.
+- **SP-6**: Was "core done", now ~40%. duress.rs + emergency.rs are stubs. Zero platform UI/locale keys.
+- **SP-8b**: Was "Phase 2 done", now fully DONE. All 4 phases verified complete.
+- **SP-9**: Was "~10 remain", now ~95%. Most cross-repo items verified merged. 2-4 items unclear.
+- **SP-11**: Was "Phase 1-5 done", now ~35%. Label counts were wrong. No formal audit done.
+- **SP-14**: Confirmed Phase 1 DONE with verified metrics.
+
+See `_private/docs/planning/todo/2026-02-15-master-plan.md` for corrected statuses.
+
+</details>
