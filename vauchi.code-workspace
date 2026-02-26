@@ -2,85 +2,25 @@
   "folders": [
     {
       "path": ".",
-      "name": "vauchi (root)",
-    },
-    {
-      "path": "core",
-      "name": "core",
-    },
-    {
-      "path": "relay",
-      "name": "relay",
-    },
-    {
-      "path": "cli",
-      "name": "cli",
-    },
-    {
-      "path": "tui",
-      "name": "tui",
-    },
-    {
-      "path": "desktop",
-      "name": "desktop",
-    },
-    {
-      "path": "e2e",
-      "name": "e2e",
-    },
-    {
-      "path": "features",
-      "name": "features",
-    },
-    {
-      "path": "android",
-      "name": "android",
-    },
-    {
-      "path": "ios",
-      "name": "ios",
-    },
-    {
-      "path": "_dev-tools",
-      "name": "_dev-tools",
-    },
-    {
-      "path": "_docs",
-      "name": "_docs",
-    },
-    {
-      "path": "_infra",
-      "name": "_infra",
-    },
-    {
-      "path": "_assets",
-      "name": "_assets",
-    },
-    {
-      "path": "_website",
-      "name": "_website",
-    },
-    {
-      "path": "_strategy",
-      "name": "_strategy",
-    },
+      "name": "vauchi (root)"
+    }
   ],
   "settings": {
     "files.exclude": {
       "**/.git": true,
       "**/node_modules": true,
-      "**/target": true,
+      "**/target": true
     },
     "search.exclude": {
       "**/target": true,
-      "**/node_modules": true,
+      "**/node_modules": true
     },
 
     "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file",
     "editor.codeActionsOnSave": {
       "source.fixAll": "explicit",
-      "source.organizeImports": "explicit",
+      "source.organizeImports": "explicit"
     },
     "editor.minimap.enabled": false,
     "editor.scrollBeyondLastLine": false,
@@ -114,7 +54,7 @@
       "relay/Cargo.toml",
       "cli/Cargo.toml",
       "tui/Cargo.toml",
-      "e2e/Cargo.toml",
+      "e2e/Cargo.toml"
     ],
     "rust-analyzer.rustfmt.enableRangeFormatting": true,
     "rust-analyzer.check.command": "clippy",
@@ -137,75 +77,75 @@
 
     "workbench.colorCustomizations": {
       "editorInlayHint.foreground": "#888888",
-      "editorInlayHint.background": "#00000000",
+      "editorInlayHint.background": "#00000000"
     },
 
     "[rust]": {
       "editor.defaultFormatter": "rust-lang.rust-analyzer",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[typescript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[typescriptreact]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[javascript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[javascriptreact]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[jsonc]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[html]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
     "[css]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[swift]": {
       "editor.defaultFormatter": "vknabel.vscode-apple-swift-format",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[kotlin]": {
       "editor.defaultFormatter": "fwcd.kotlin",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[yaml]": {
       "editor.defaultFormatter": "redhat.vscode-yaml",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[toml]": {
       "editor.defaultFormatter": "tamasfe.even-better-toml",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[markdown]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "[gherkin]": {
       "editor.defaultFormatter": "alexkrechik.cucumberautocomplete",
-      "editor.formatOnSave": true,
+      "editor.formatOnSave": true
     },
 
     "prettier.singleQuote": true,
@@ -216,7 +156,7 @@
       "javascript",
       "javascriptreact",
       "typescript",
-      "typescriptreact",
+      "typescriptreact"
     ],
 
     "todo-tree.general.tags": ["TODO", "FIXME", "BUG", "HACK", "XXX"],
@@ -225,17 +165,17 @@
       "foreground": "#fff",
       "background": "#ffbd2a",
       "opacity": 50,
-      "gutterIcon": true,
+      "gutterIcon": true
     },
     "todo-tree.highlights.customHighlight": {
       "FIXME": { "background": "#ff5555" },
-      "BUG": { "background": "#ff5555" },
+      "BUG": { "background": "#ff5555" }
     },
     "todo-tree.filtering.excludeGlobs": ["**/node_modules/**", "**/target/**"],
 
     "cucumberautocomplete.steps": [
       "features/step_definitions/**/*.rs",
-      "e2e/tests/**/*.rs",
+      "e2e/tests/**/*.rs"
     ],
     "cucumberautocomplete.strictGherkinCompletion": true,
 
@@ -243,8 +183,8 @@
     "testing.defaultGutterClickAction": "run",
     "swift.path": "/home/megloff1/.local/share/swiftly/toolchains/6.2.3/usr/bin",
     "swift.swiftEnvironmentVariables": {
-      "DEVELOPER_DIR": "public",
-    },
+      "DEVELOPER_DIR": "public"
+    }
   },
   "extensions": {
     "recommendations": [
@@ -263,7 +203,7 @@
       "eamodio.gitlens",
       "gruntfuggly.todo-tree",
       "christian-kohler.path-intellisense",
-      "bierner.markdown-mermaid",
-    ],
-  },
+      "bierner.markdown-mermaid"
+    ]
+  }
 }
