@@ -43,7 +43,7 @@
 # Local/machine-specific directories
 # ===========================================
 /_VMs/
-/gitlab-profile/
+/github-profile/
 /vauchi-mobile-android/
 /vauchi-mobile-swift/
 
@@ -73,9 +73,18 @@
 # .claude/ is tracked (skills, agents, shared settings)
 # .claude/settings.local.json is excluded via .claude/.gitignore
 
-*secret*
-*.evn*
+# Secrets and credentials
 .env
+.env.*
+*.secret
+*.secrets
+secrets.yml
+secrets.yaml
+credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
 .kamal/secret
 .kamal/secrets
 vauchi.code-workspace
