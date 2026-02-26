@@ -365,7 +365,7 @@ e2e-ios flow="create_identity":
     fi
 
     echo "Running iOS flow: {{flow}}"
-    maestro test "$FLOW_PATH" --platform ios "$@"
+    maestro test "$FLOW_PATH" --platform ios
 
 # Run Maestro Android flows (requires running emulator)
 [group('e2e')]
@@ -386,7 +386,7 @@ e2e-android flow="create_identity":
     fi
 
     echo "Running Android flow: {{flow}}"
-    maestro test "$FLOW_PATH" --platform android "$@"
+    maestro test "$FLOW_PATH" --platform android
 
 # Run all Maestro flows on both platforms
 [group('e2e')]
