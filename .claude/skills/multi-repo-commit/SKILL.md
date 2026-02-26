@@ -27,7 +27,7 @@ Commit staged and unstaged changes across multiple vauchi sub-repositories. $ARG
 
      {Longer description if needed}
 
-     Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+     Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
      ```
    - Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 

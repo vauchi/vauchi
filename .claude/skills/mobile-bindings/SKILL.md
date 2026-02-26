@@ -1,6 +1,7 @@
 ---
 name: mobile-bindings
 description: UniFFI binding generation, packaging, CI-driven distribution to iOS (SPM) and Android (Maven), and consumer integration. Use when modifying mobile bindings or debugging mobile build issues.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

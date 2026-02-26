@@ -1,6 +1,7 @@
 ---
 name: ci-pipeline
 description: GitLab CI structure, shared templates, jobs per repo, common failure modes, and pipeline debugging. Use when investigating CI failures or modifying pipelines.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

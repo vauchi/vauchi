@@ -1,6 +1,7 @@
 ---
 name: desktop-stack
 description: Tauri + SolidJS desktop app conventions, IPC commands, i18n, theming, and build/test commands. Use when working on the desktop/ repo.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

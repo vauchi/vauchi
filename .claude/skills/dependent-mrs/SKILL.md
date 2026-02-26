@@ -1,6 +1,6 @@
 ---
 name: dependent-mrs
-description: Use when creating merge requests across repos with dependency ordering, or when checking if upstream MRs are merged so downstream drafts can be unblocked. Triggers on multi-repo features, cross-repo MRs, sequential merges, unblock drafts.
+description: Create tiered merge requests respecting the dependency graph (Tier 0 before Tier 1), or unblock downstream Draft MRs after upstream merges. Use instead of /create-mr when repos have dependency ordering (e.g. core before cli/desktop).
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
@@ -30,7 +30,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
 
 1. **Parse repos** from arguments. If empty, auto-detect repos with branches ahead of main:
    ```bash
-   WORKSPACE="/Users/megloff1/Workspace/vauchi-2"
+   WORKSPACE="$CLAUDE_PROJECT_DIR"
    for dir in core relay cli tui desktop e2e features docs scripts _private locales; do
      BRANCH=$(git -C "$WORKSPACE/$dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
      if [ "$BRANCH" != "main" ] && [ -n "$BRANCH" ]; then
@@ -46,22 +46,22 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
    ```bash
    # Collect branch names — if they differ, STOP and ask user
    for dir in <repos>; do
-     git -C "$WORKSPACE/$dir" rev-parse --abbrev-ref HEAD
+     git -C "$CLAUDE_PROJECT_DIR/$dir" rev-parse --abbrev-ref HEAD
    done
    ```
 
 4. **Run pre-push validation** for each repo:
-   - Rust repos: `cargo check --quiet --manifest-path "$WORKSPACE/$dir/Cargo.toml"`
+   - Rust repos: `cargo check --quiet --manifest-path "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml"`
    - Check no `Cargo.toml` has non-main branch refs:
      ```bash
-     grep -rn 'branch = ' "$WORKSPACE/$dir/"**/Cargo.toml 2>/dev/null | grep -v 'main'
+     grep -rn 'branch = ' "$CLAUDE_PROJECT_DIR/$dir/"**/Cargo.toml 2>/dev/null | grep -v 'main'
      ```
 
 5. **Create MRs tier by tier:**
 
    **Tier 0 repos** — create as ready MRs:
    ```bash
-   cd "$WORKSPACE/$dir" && git push -u origin "$BRANCH" \
+   cd "$CLAUDE_PROJECT_DIR/$dir" && git push -u origin "$BRANCH" \
      -o merge_request.create \
      -o merge_request.target=main \
      -o merge_request.title="{type}: {description}" \
@@ -70,7 +70,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
 
    **Tier 1 repos** — create as Draft MRs:
    ```bash
-   cd "$WORKSPACE/$dir" && git push -u origin "$BRANCH" \
+   cd "$CLAUDE_PROJECT_DIR/$dir" && git push -u origin "$BRANCH" \
      -o merge_request.create \
      -o merge_request.target=main \
      -o merge_request.title="Draft: {type}: {description}" \

@@ -1,6 +1,7 @@
 ---
 name: tdd-workflow
 description: TDD rules, test-to-feature mapping, coverage commands, test naming conventions, and test helper patterns. Use when writing tests or implementing features with TDD.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

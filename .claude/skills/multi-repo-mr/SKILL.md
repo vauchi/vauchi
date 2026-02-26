@@ -1,6 +1,6 @@
 ---
 name: multi-repo-mr
-description: Push branches and create MRs across multiple vauchi repos in parallel with CI validation
+description: Push branches and create MRs across multiple vauchi repos in parallel with CI validation. Same as /create-mr but with explicit parallel sub-agent dispatch. Prefer /create-mr for most cases or /dependent-mrs for tiered ordering.
 disable-model-invocation: true
 ---
 
@@ -20,7 +20,7 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
 
 1. **Detect repos with work to push** — For each sub-repo directory under the workspace root:
    ```bash
-   WORKSPACE="/Users/megloff1/Workspace/vauchi-2"
+   WORKSPACE="$CLAUDE_PROJECT_DIR"
    for dir in core relay cli tui desktop android ios e2e features docs scripts; do
      git -C "$WORKSPACE/$dir" rev-parse --abbrev-ref HEAD 2>/dev/null
      git -C "$WORKSPACE/$dir" log origin/main..HEAD --oneline 2>/dev/null
@@ -31,17 +31,17 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
 2. **Validate before pushing** — For each repo with changes:
    - Verify no `Cargo.toml` files have non-main branch refs:
      ```bash
-     grep -rn 'branch = ' "$WORKSPACE/$dir/Cargo.toml" 2>/dev/null | grep -v 'main'
+     grep -rn 'branch = ' "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml" 2>/dev/null | grep -v 'main'
      ```
    - For Rust repos, run `cargo check`:
      ```bash
-     cargo check --quiet --manifest-path "$WORKSPACE/$dir/Cargo.toml" 2>&1
+     cargo check --quiet --manifest-path "$CLAUDE_PROJECT_DIR/$dir/Cargo.toml" 2>&1
      ```
 
 3. **Push and create MRs in parallel** — Use Task sub-agents (one per repo) to:
    - Push with MR creation:
      ```bash
-     git -C "$WORKSPACE/$dir" push -u origin <branch> \
+     git -C "$CLAUDE_PROJECT_DIR/$dir" push -u origin <branch> \
        -o merge_request.create \
        -o merge_request.target=main \
        -o merge_request.title="{type}: {description}" \

@@ -1,6 +1,7 @@
 ---
 name: dependency-map
 description: Cross-repo dependency graph, git vs path overrides, version pinning strategy, and mobile binding consumption. Use when modifying Cargo.toml, updating dependencies, or debugging build issues.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

@@ -1,6 +1,7 @@
 ---
 name: rust-patterns
 description: Vauchi Rust conventions, crate structure, ring crypto rules, UniFFI binding patterns, error handling, and test layout. Use when writing or modifying Rust code in core/.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

@@ -1,6 +1,6 @@
 ---
 name: create-mr
-description: Create GitLab merge requests for vauchi repos with proper templates and cross-repo linking
+description: Create GitLab merge requests for one or more vauchi repos with proper templates and cross-repo linking. Use for simple MR creation WITHOUT dependency tier ordering. For tiered/ordered MRs use /dependent-mrs instead.
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,9 @@ Create GitLab merge requests for one or more vauchi repositories. $ARGUMENTS may
 
 ## Steps
 
+
 1. **Detect repos needing MRs** — For each sub-repo and the root repo, check:
+   - Get remote changes `git fetch`
    - Current branch is not `main`
    - Has commits ahead of `origin/main`
    - No existing open MR for this branch (check GitLab web UI or API)

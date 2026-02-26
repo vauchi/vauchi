@@ -1,6 +1,7 @@
 ---
 name: just-recipes
 description: Complete reference of all just commands across the vauchi workspace. Use when running builds, tests, deployments, or any just recipe.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->

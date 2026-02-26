@@ -1,6 +1,7 @@
 ---
 name: repo-map
 description: Multi-repo file location map and common pitfalls. Use when locating files, running git commands, or committing across the vauchi workspace.
+model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
