@@ -91,7 +91,10 @@ See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
 
 Lifecycle: `intake → investigating → planning → implementing → testing → done`
 
+Every problem record must have: **status**, **priority** (critical/high/medium/low), **owner**, **goals** (measurable success criteria). Critical/high problems require a **containment** action before investigation. Each phase has explicit **transition gates** (see SSOT doc). Rejected solutions go in `### Rejected Approaches` inside `implementation-plan.md`. Track Gherkin promotion with `promoted_to:` links.
+
 **Alert threshold**: If `_private/docs/planning/proposals/` has 5+ unreviewed docs, alert the user.
+**Staleness threshold**: Flag problems with no update for 14 days (intake) or 30 days (other phases).
 
 ## Commands
 
