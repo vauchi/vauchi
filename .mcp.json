@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "drift": {
-      "command": "node",
-      "args": ["drift-detector/dist/index.js"]
-    },
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]

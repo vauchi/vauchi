@@ -10,6 +10,9 @@ ignore = [
   "**/_private/infra/**",
   "**/_private/strategy/**",
   "**/drift-detector/**",
+  "**/builds/**",
+  "**/vauchi-mobile-android/vauchi-mobile-android-*/**",
+  "**/vauchi-mobile-swift/VauchiMobile*/**",
 ]
 
 # ─── Concept Aliases ─────────────────────────────────────

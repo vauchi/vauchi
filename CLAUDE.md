@@ -117,6 +117,12 @@ just coverage               # Coverage report (core)
 just watch                  # Watch + test (core)
 just build-release          # Release build (core)
 
+# Drift detection
+just drift                  # Audit drift (human-readable, fail on high)
+just drift medium           # Audit drift (fail on medium+)
+just drift-ci               # Audit drift (JSON output for CI)
+just drift-ci medium        # Audit drift CI (fail on medium+)
+
 # GitLab
 just gitlab mr-list [repo]          # List open MRs
 just gitlab mr-view <id> [repo]     # View MR details
@@ -225,7 +231,7 @@ These repos are **not manually edited**. `core/` CI builds UniFFI bindings for a
 |------|---------|
 | `docs/` | Public documentation website (mkdocs) — user guides, contributing, security |
 | `scripts/` | Dev tools, hooks, utilities |
-| `drift-detector/` | Traceability matrix & cross-layer drift detection tool (MCP server + CI gate) |
+| `drift-detector/` | Traceability matrix & cross-layer drift detection CLI tool + CI gate |
 | `gitlab-profile/` | GitLab group profile page (`.gitlab/README.md`) |
 | `website/` | Landing page source |
 | `assets/` | Brand assets, logos |
@@ -269,6 +275,23 @@ relay/
 
 Downstream repos use git dependencies with branch-based pinning (`branch = "main"`).
 Local development uses `.cargo/config.toml` path overrides to point at local checkouts.
+
+## Drift Detection
+
+Use `just drift` to detect cross-layer inconsistencies (missing tests, orphan code, stale docs, naming drift). Run it:
+
+- **After completing a feature** — verify nothing was missed across layers
+- **Before creating an MR** — catch drift before CI does
+- **When investigating test coverage gaps** — find untested code or orphan tests
+- **When refactoring** — ensure renames propagated across all layers
+
+```bash
+just drift                  # Human-readable audit, fail on high severity
+just drift medium           # Stricter: fail on medium+ severity
+just drift-ci               # JSON output (for scripts/CI)
+```
+
+Severity levels: `high` (missing tests for features, orphan code), `medium` (missing docs, naming inconsistencies), `low` (minor gaps).
 
 ## Exploration
 

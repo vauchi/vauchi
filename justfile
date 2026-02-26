@@ -457,6 +457,36 @@ vrt-gallery:
     ./scripts/scripts/vrt-gallery.sh
 
 # ═══════════════════════════════════════════════════════════════════
+# DRIFT DETECTION
+# ═══════════════════════════════════════════════════════════════════
+
+# Run drift audit (human-readable summary, fail on high severity)
+[group('tools')]
+[script('bash')]
+drift *args:
+    set -euo pipefail
+    cd drift-detector
+    if [[ ! -d dist ]]; then
+        echo "Building drift-detector..."
+        npm run build --silent
+    fi
+    FAIL_ON="${1:-high}"
+    node dist/index.js --root .. audit --fail-on="$FAIL_ON"
+
+# Run drift audit with JSON output (for CI pipelines)
+[group('tools')]
+[script('bash')]
+drift-ci *args:
+    set -euo pipefail
+    cd drift-detector
+    if [[ ! -d dist ]]; then
+        echo "Building drift-detector..."
+        npm run build --silent
+    fi
+    FAIL_ON="${1:-high}"
+    node dist/index.js --root .. audit --ci --fail-on="$FAIL_ON"
+
+# ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS
 # ═══════════════════════════════════════════════════════════════════
 
