@@ -177,6 +177,81 @@ task-list:
             print(f"    - {desc}")
     PYEOF
 
+# List problem records by status
+[group('tools')]
+[script('bash')]
+problem-list phase='':
+    set -euo pipefail
+    PROBLEMS="_private/docs/problems"
+    if [[ ! -d "$PROBLEMS" ]]; then
+        echo "ERROR: $PROBLEMS not found"
+        exit 1
+    fi
+    python3 << PYEOF
+    import os, re
+    from collections import defaultdict
+
+    phase_filter = '{{phase}}'.lower()
+    problems_dir = '$PROBLEMS'
+    by_status = defaultdict(list)
+
+    for d in sorted(os.listdir(problems_dir)):
+        readme = os.path.join(problems_dir, d, 'README.md')
+        if not os.path.isfile(readme):
+            continue
+        with open(readme) as f:
+            lines = f.readlines()
+        # Only search first 20 lines for status/priority (avoid matching item-level fields)
+        header = ''.join(lines[:20])
+        st = 'unknown'
+        for pat in [
+            r'\*\*Status\*\*\s*\|\s*\`?(\w+)',
+            r'\*\*Status:\*\*\s*\`?(\w+)',
+            r'\*\*Status\*\*\s*:\s*\`?(\w+)',
+            r'##\s+Status:\s*(\w+)',
+        ]:
+            m = re.search(pat, header)
+            if m:
+                st = m.group(1).lower()
+                break
+        pr = '?'
+        for pat in [
+            r'\*\*Priority\*\*\s*\|\s*\`?([^\n\`|]+)',
+            r'\*\*Priority:\*\*\s*\`?([^\n\`]+)',
+            r'\*\*Priority\*\*\s*:\s*\`?([^\n\`]+)',
+        ]:
+            m = re.search(pat, header)
+            if m:
+                pr = m.group(1).strip().split('—')[0].split('(')[0].strip()
+                break
+        by_status[st].append((pr, d))
+
+    order = ['intake', 'investigating', 'planning', 'implementing', 'testing', 'done', 'archived']
+    total = sum(len(v) for v in by_status.values())
+
+    if not phase_filter:
+        # Summary mode
+        print(f'Problem records: {total} total\n')
+        for phase in order:
+            items = by_status.get(phase, [])
+            if items:
+                print(f'  {phase:15s} {len(items):3d}')
+        unknown = [k for k in by_status if k not in order]
+        for k in unknown:
+            print(f'  {k:15s} {len(by_status[k]):3d}')
+        print()
+        active = sum(len(by_status.get(p, [])) for p in ['intake', 'investigating', 'planning', 'implementing', 'testing'])
+        print(f'Active: {active}  Done: {len(by_status.get("done", []))}  Archived: {len(by_status.get("archived", []))}')
+    else:
+        items = by_status.get(phase_filter, [])
+        if not items:
+            print(f'No problems in phase: {phase_filter}')
+        else:
+            print(f'{phase_filter.upper()} ({len(items)})\n')
+            for pr, d in items:
+                print(f'  [{pr:6s}] {d}')
+    PYEOF
+
 # Show .plan.md files with no git changes in N days
 [group('tools')]
 [script('bash')]
