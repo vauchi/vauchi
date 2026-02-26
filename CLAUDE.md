@@ -24,6 +24,7 @@ just check    # Run all checks
 - **Crypto**: `ring` primary; `chacha20poly1305` and `argon2` are spec-mandated exceptions. Never mock crypto
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
+- **Task Tracking**: Use markdown-plan `.plan.md` companion files for structured task DAGs. See `.claude/rules/markdown-plan.md`
 - **Public docs**: `docs/` contains end-user and community developer documentation (mkdocs site)
 
 ## Test Quality Rules (MANDATORY)
@@ -74,6 +75,8 @@ These rules prevent the most common CI failures. Derived from post-mortem analys
 | `glab ci status` | `just gitlab pipeline-status [repo]` |
 | `git push -o merge_request.create ...` | `just gitlab mr-create [repo]` |
 | Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` |
+| `mdplan history` / `mdplan plot` | `just plan-history <file>` / `just plan-plot <file>` |
+| Manual task checklists in docs | Companion `.plan.md` files in markdown-plan syntax |
 
 **Repo argument rules:**
 - **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
@@ -125,6 +128,13 @@ just drift                  # Audit drift (human-readable, fail on high)
 just drift medium           # Audit drift (fail on medium+)
 just drift-ci               # Audit drift (JSON output for CI)
 just drift-ci medium        # Audit drift CI (fail on medium+)
+
+# Task tracking (markdown-plan)
+just plan-validate [file|dir]  # Validate .plan.md files
+just plan-list [dir]           # List plans with task counts
+just plan-history <file>       # Task history as JSON
+just plan-plot <file>          # Burn-up chart in browser
+just plan-stale [days]         # Show stale plans (default: 30 days)
 
 # GitLab
 just gitlab mr-list [repo]          # List open MRs
