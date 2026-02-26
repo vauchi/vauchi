@@ -21,7 +21,9 @@ plan-validate target='':
         local file="$1"
         CHECKED=$((CHECKED + 1))
         result=$(python3 << PYEOF
-    import sys
+    import sys, types
+    # Shim pygit2 to avoid ImportError (mdplan.__init__ imports .git which needs it)
+    sys.modules.setdefault('pygit2', types.ModuleType('pygit2'))
     sys.path.insert(0, '$WORKSPACE_ROOT/markdown-plan/python/src')
     from mdplan.parse import parse_tree
     from mdplan.count import count_all_tasks, count_remaining_tasks
@@ -108,7 +110,8 @@ plan-list dir='_private/docs':
     while IFS= read -r -d '' file; do
         relpath="${file#$WORKSPACE_ROOT/}"
         stats=$(python3 << PYEOF
-    import sys
+    import sys, types
+    sys.modules.setdefault('pygit2', types.ModuleType('pygit2'))
     sys.path.insert(0, '$WORKSPACE_ROOT/markdown-plan/python/src')
     from mdplan.count import count_all_tasks, count_remaining_tasks
     with open('$file') as f:
