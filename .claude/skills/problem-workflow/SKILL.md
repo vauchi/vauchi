@@ -94,6 +94,11 @@ Based on current status, guide to the next step:
 
 ### planning → implementing
 **Gate**: Solution validated against criteria. `implementation-plan.md` attached with test strategy and rejected approaches. Draft Gherkin scenarios written.
+- Create companion `plan.md` in markdown-plan syntax:
+  - Extract task structure from implementation-plan.md
+  - Use ordered lists for sequential phases, unordered for parallel subtasks
+  - Add `@(substring)` dependencies where tasks depend on non-parent tasks
+  - Validate with `just plan-validate <path>/plan.md`
 - Promote Gherkin feature from problem directory → `features/*.feature`
 - Record `promoted_to: features/<file>.feature` in the problem README
 - Write E2E tests → `e2e/tests/`
@@ -136,6 +141,7 @@ _private/docs/problems/YYYY-MM-DD-slug/
 ├── knowledge/                # External research (if needed)
 ├── investigation.md          # Problem analysis (includes ### References)
 ├── implementation-plan.md    # Plan (includes ### Rejected Approaches + ### Test Strategy)
+├── plan.md                   # Task DAG in markdown-plan syntax
 ├── retrospective.md          # Post-completion (evaluates against goals)
 └── post-mortem.md            # If unforeseen errors occurred
 ```
