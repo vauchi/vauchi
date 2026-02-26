@@ -3,14 +3,14 @@
 
 # Roadmap - February 2026
 
-**Goal**: Full-feature production release — all 18 features implemented with real code, no stubs or mocks
-**Last audit**: 2026-02-25 (full codebase re-verification against master plan)
+**Goal**: Full-feature production release — all features implemented with real code, no stubs or mocks
+**Last audit**: 2026-02-26 (code-level audit, scope consolidated — resistance features, GUI compliance, social networks all v1.0)
 
 ---
 
 ## Approach
 
-All 18 features must be production-ready with real implementations before real device testing begins. No feature is deferred or deprioritised.
+All features must be production-ready with real implementations before real device testing begins. Resistance features, GUI guideline compliance, and social network integration are v1.0 — nothing deferred except post-launch items.
 
 - **No stubs**: Every feature uses real hardware APIs, real crypto, real platform integrations
 - **No mocks in production paths**: Mocks exist only in test code
@@ -45,9 +45,7 @@ All 18 features must be production-ready with real implementations before real d
 
 ---
 
-## What's Required (18 Features)
-
-All features below must be complete — with real implementations — before real device testing.
+## What's Required
 
 ### Phase 1: Security Foundation ✓
 
@@ -80,7 +78,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | Performance & Scalability | Core done | Pagination + batch sync, 24 tests. Real device profiling remaining |
 | Platform Edge Cases | Core done | Crash recovery (11 tests) + clock skew (23 tests) = 34 tests. Platform service hardening remaining |
 
-### Phase 4: Privacy & Hardening
+### Phase 4: Privacy, Hardening & Features
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -93,20 +91,49 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | CLI API Drift | Done | All 17 compilation errors resolved |
 | Relay Authentication | Done | Ed25519 handshake verification in relay. Client hex format in core |
 | X3DH Protocol Hardening | Done | Migration v18: visibility_rules encrypted, PBKDF2 600K |
-| Trust Metrics & Indicators | Planning | Migration v19. Depends on X3DH v18 |
+| Trust Metrics & Indicators | ~95% implemented | `TrustLevel` enum (4 levels), `ProfileValidation`, scoring in core. Needs v19 migration |
 | Accessibility Audit | Planning | Formal audit with real screen readers |
-| Birthday Field | Planning | No migration needed |
-| Local Contact Annotations | Planning | Migration v20. Depends on Trust Metrics v19 |
-| Contact Network Statistics | Planning | Pure computation, no migration |
+| Birthday Field | Needs implementation | `FieldType::Birthday` with date validation — currently only test mock |
+| Local Contact Annotations | Needs implementation | Migration v20. Depends on Trust Metrics v19 |
+| Contact Network Statistics | Needs implementation | Pure computation, no migration |
+
+### Resistance Features (v1.0)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Duress PIN | ~80% | Core+storage+CLI+mobile UI done (51+98+119 LOC). Missing: locales, auth→decoy flow, TUI, desktop dialog |
+| Panic Widget / Emergency Shred | ~75% | ShredManager done (1,075 LOC), iOS `panicShred()` done. Missing: Android widget, locales |
+| Hidden Contact UI | Done | All platforms |
+| Tor Mode Completion | Core done | Circuit isolation remaining |
+| Emergency Broadcast | ~70% | Core+storage+CLI+Desktop+Android done (47+101+126+78 LOC). Missing: locales, iOS config, TUI, send flow |
+| Mesh Exchange (BLE) | Core done | Zero platform implementation (30 Gherkin scenarios) |
+
+### GUI Guideline Compliance (v1.0)
+
+65 violations of `gui-guidelines.md` across 3 platforms. Zero infrastructure exists (no undo toast, inline confirm, click-to-edit).
+
+| Rule | Desktop | Android | iOS | Total |
+|------|---------|---------|-----|-------|
+| UI-01: No dialogs for reversible actions | 2 | 3 | 4 | 9 |
+| UI-02: Confirm irrevocable inline | 4 | 6 | 3 | 13 |
+| UI-03: Inline over overlay | 10 | 13 | 2 | 25 |
+| UI-04–08: Other rules | 6 | 5 | 0 | 11 |
+| **Total** | **24** | **28** | **13** | **65** |
+
+### Social Network Integration (v1.0)
+
+Core `SocialNetworkRegistry` + `ContentManager` + bundled networks.json exist. Remote update via CDN with SHA-256 + Ed25519. **No platform UI wired** — no social network picker on any platform. Desktop `get_social_networks()` Tauri command exists but is never called.
 
 ### Security Gaps (Found in 2026-02-06 Code Audit)
 
+Problem records created 2026-02-26. All must close before release.
+
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
-| Device Linking Proximity | **CRITICAL** | **OPEN** | Proximity check optional, not mandatory before `approveDeviceLink()`. Remote QR attack still possible. Re-verified 2026-02-25 |
-| Account Deletion Relay Purge | **HIGH** | **OPEN** | Core generates revocations but iOS/Android don't auto-send via relay. Contacts not notified. Re-verified 2026-02-25 |
-| Proximity Verification Integration | **MEDIUM** | **OPEN** | 510+ lines audio code (`audio.rs`, `audio_cpal.rs`) exists but orphaned from exchange flow. Not wired into ceremony. Re-verified 2026-02-25 |
-| Fingerprint Verification UI | **MEDIUM** | **PARTIAL** | Fingerprints shown post-exchange in ContactDetailView but NOT during exchange confirmation step. Re-verified 2026-02-25 |
+| Device Linking Proximity | **CRITICAL** | **OPEN** | Proximity check optional, not mandatory before `approveDeviceLink()`. Remote QR attack possible |
+| Account Deletion Relay Purge | **HIGH** | **OPEN** | Core generates revocations but iOS/Android don't auto-send via relay. Contacts not notified |
+| Proximity Verification Integration | **MEDIUM** | **OPEN** | 510+ lines audio code exists but orphaned from exchange flow. Not wired into ceremony |
+| Fingerprint Verification UI | **MEDIUM** | **PARTIAL** | Fingerprints shown post-exchange but NOT during exchange confirmation step |
 | Field Validation Core-Mobile | None | Done | Core + UniFFI + iOS + Android all wired — no gap |
 
 ### Phase 5: Validation
@@ -126,13 +153,14 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | Cross-platform exchange | iOS <-> Android exchange verified (QR, BLE, NFC) |
 | Production release prep | App store submissions, release tagging, monitoring |
 
-### Phase 7: Post-Launch Features
+### Post-Launch Features (v1.1+)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | NFC Dead Drop Exchange | Planning | Passive NFC tag as physical dead drop |
 | Facilitated Introductions | Investigating | Principle-compliant mutual introduction. Depends on Trust Metrics |
-| Resistance Features | Implementing | ShredManager done (1,075 LOC), hidden contacts done. **Duress PIN + emergency broadcast are stubs** (~50 LOC each). Zero platform UI. Zero locale keys. Panic widget + mesh exchange spec-only |
+| Demo Web App | Planning | WASM-based web demo |
+| Windows Release | Conditional | Ship if code signing cert obtained |
 
 ---
 
@@ -154,11 +182,18 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | Accessibility audited | Pending | Screen reader validation |
 | Fuzz targets covering attack surfaces | Done | 10 targets |
 | All platform edge cases handled | Core done | Platform hardening remaining |
-| Device linking proximity-verified | **Not done** | CRITICAL: core gate exists but clients bypass; no proximity check in practice |
-| Account deletion notifies contacts | **Not done** | Revocations not auto-sent via relay |
+| Device linking proximity-verified | **Not done** | CRITICAL: must make proximity mandatory |
+| Account deletion notifies contacts | **Not done** | Must auto-send revocations via relay |
 | Relay client authentication | Done | Ed25519 handshake verification in relay |
-| Proximity verification in exchange | **Not done** | Audio code exists but not integrated |
-| Key fingerprint verification UI | **Not done** | UI doesn't display actual fingerprints |
+| Proximity verification in exchange | **Not done** | Must wire audio code into exchange ceremony |
+| Key fingerprint verification UI | **Not done** | Must display during exchange confirmation |
+| Resistance features complete | ~65-75% | Duress, emergency, shred, mesh — locale keys + platform gaps remaining |
+| GUI guidelines compliant | **Not done** | 65 violations across 3 platforms |
+| Social network picker | **Not done** | Core registry exists, platform UIs not wired |
+| Trust Metrics | ~95% | Needs v19 migration |
+| Birthday field | **Not done** | Needs FieldType::Birthday with date validation |
+| Local Contact Annotations | **Not done** | Needs v20 migration |
+| Contact Network Statistics | **Not done** | Needs implementation |
 | TDD followed for all features | Ongoing | Red→Green→Refactor, no exceptions |
 | 90%+ test coverage (vauchi-core) | Ongoing | Real crypto in tests, no mocking |
 
@@ -195,6 +230,8 @@ curl https://relay.vauchi.app/health
 | Device linking remote attack | **High** | **Critical** | No proximity verification before seed transfer. Fix before real device testing |
 | Account deletion silent failure | Medium | High | Contacts not notified on deletion. Wire relay revocation sending |
 | BLE/NFC platform differences | High | Medium | Test on both iOS and Android early |
+| GUI guideline debt | High | Medium | 65 violations cause dialog fatigue. Fix before beta |
+| Social network picker missing | Medium | Medium | Core ready, UIs not wired. Wire before beta |
 | Tor integration complexity | Medium | Medium | Prototype with arti crate first |
 | Real device issues | Medium | High | Validate on simulators/emulators first, then physical devices |
 | App store rejection | Low | Medium | Follow guidelines, test on TestFlight first |
@@ -205,7 +242,20 @@ curl https://relay.vauchi.app/health
 
 ## Verification
 
-**Last verification**: 2026-02-25 (full codebase re-verification)
+**Last verification**: 2026-02-26 (code-level audit + scope consolidation)
+
+<details>
+<summary>2026-02-26 Scope Consolidation</summary>
+
+- **SP-6 resistance features moved to v1.0** (was Post-MVP). Deep audit found ~65-75% complete — NOT stubs as previously claimed. ShredManager, duress PIN, emergency broadcast all have multi-layer implementations (core+storage+CLI+mobile UI). Missing: locale keys, some platform gaps.
+- **SP-19 GUI Guideline Compliance added** — 65 violations found across 3 platforms. Problem record exists with full investigation.
+- **SP-20 Social Network Integration added** — core registry infrastructure complete but no platform UI picker wired.
+- **Trust Metrics corrected** — ~95% implemented in core (TrustLevel enum, ProfileValidation, scoring). Only v19 migration missing.
+- **Birthday Field clarified** — needs real `FieldType::Birthday` with date validation. Currently only test mock.
+- **4 P0 security gap problem records created** — device linking proximity, account deletion relay purge, proximity audio integration, fingerprint verification UI.
+- **Post-launch only**: NFC Dead Drop, Facilitated Introductions, Demo Web App, Windows (conditional).
+
+</details>
 
 <details>
 <summary>2026-02-25 Re-Verification Findings</summary>
@@ -215,7 +265,6 @@ curl https://relay.vauchi.app/health
 - **P0 security gaps**: Previous "ALL 5 CLOSED" was incorrect. Only 1/5 closed (field validation). 4 remain open.
 - **SP-4**: Was ~98%, now ~75-80%. Desktop CI release build missing. Android APK exceeds size target.
 - **SP-5**: Was ~90%, now ~85%. App store metadata is ~10%, not "remaining". App store submission 0%.
-- **SP-6**: Was "core done", now ~40%. duress.rs + emergency.rs are stubs. Zero platform UI/locale keys.
 - **SP-8b**: Was "Phase 2 done", now fully DONE. All 4 phases verified complete.
 - **SP-9**: Was "~10 remain", now ~95%. Most cross-repo items verified merged. 2-4 items unclear.
 - **SP-11**: Was "Phase 1-5 done", now ~35%. Label counts were wrong. No formal audit done.
