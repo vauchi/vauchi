@@ -61,34 +61,20 @@ Detect the repo type from project files and run the appropriate checks:
 
 #### Desktop (`desktop/`): Tauri + SolidJS
 
-1. **Frontend build** (required before Rust checks):
-   ```bash
-   cd desktop && npm ci && npm run build
-   ```
-2. **Frontend lint**: `npm run lint` + `npm run typecheck`
-3. **Frontend test**: `npm test`
-4. **Rust format**: `cd src-tauri && cargo fmt --check`
-5. **Rust lint**: `cd src-tauri && cargo clippy --all-targets -- -D warnings`
-6. **Rust test**: `cd src-tauri && cargo test`
-7. **Security**: `npm audit --audit-level=moderate` + `cargo audit`
+1. **All-in-one**: `just check desktop` (runs frontend build + fmt + lint + test for both Rust and UI)
+2. **Security** (if dependencies changed): `just audit desktop`
 
 ---
 
 #### Android (`android/`): Kotlin/Compose
 
-1. **Lint**: `./gradlew lint`
-2. **Test**: `./gradlew testDebugUnitTest`
-3. Set `JAVA_HOME` if needed (check for JDK 21)
+1. **All-in-one**: `just check android`
 
 ---
 
 #### iOS (`ios/`): SwiftUI
 
-1. **SwiftLint**: `swiftlint --strict` (if installed)
-2. **SwiftFormat**: `swiftformat --lint .` (if installed)
-3. **Xcodegen**: `xcodegen generate && git diff --exit-code` (verify project file is up to date)
-4. **Build**: `xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,...' build`
-5. **Test**: `xcodebuild test` (skip snapshot tests)
+1. **All-in-one**: `just check ios`
 
 ---
 
@@ -141,8 +127,8 @@ FAIL: Fix the issues above before creating MR
 
 ## Important Notes
 
+- Always use `just check <repo>` instead of raw `cargo`/`gradle`/`swift` commands
 - Run checks **in the same order CI does** to catch dependency issues
-- For Rust: `cargo clippy --all-targets` catches issues in tests, benches, and examples that `cargo clippy` alone misses
 - Shared test utilities (`tests/common/`) need `#[allow(dead_code)]` since each test binary compiles them independently
 - The `core/` repo runs clippy with `-D warnings` (deny all warnings) — this is the strictest level
 - After fixing issues, re-run just the failing checks to verify before pushing

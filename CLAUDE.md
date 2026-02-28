@@ -25,6 +25,7 @@ just check    # Run all checks
 - **Coverage**: 90%+ for vauchi-core
 - **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
 - **Task Tracking**: Use markdown-plan `.plan.md` companion files for structured task DAGs. See `.claude/rules/markdown-plan.md`
+- **Plan-Code Sync**: Never mark a plan item `[x]` on `main` unless implementing code is also on `main`. Plan and code must land atomically in the same MR.
 - **Public docs**: `docs/` contains end-user and community developer documentation (mkdocs site)
 
 ## Test Quality Rules (MANDATORY)
@@ -52,7 +53,7 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 
 These rules prevent the most common CI failures. Derived from post-mortem analysis of pipeline history (2026-02-20).
 
-- **CC-15 Run Checks Before Pushing**: Before every `git push`, run the repo's check command (`just check`, `cargo fmt && cargo clippy`, `swiftformat . && swiftlint`) and fix all failures. Never push code that hasn't passed local linting and formatting.
+- **CC-15 Run Checks Before Pushing**: Before every `git push`, run `just check [repo]` and fix all failures. Never push code that hasn't passed local linting and formatting.
 - **CC-16 Cross-Repo Push Order**: When a feature spans multiple repos, only push the **upstream** repo first (e.g., `core/` before `cli/`, `android/`, `ios/`). Mark downstream MRs as **Draft** and note in the description that they depend on the upstream MR being merged and bindings published. Do not push consumer branches that call APIs not yet on `main`.
 - **CC-17 Verify Assertions in Every Test**: Before committing a test file, verify every `#[test]` function contains at least one `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`. Zero-assertion tests are rejected by CI.
 - **CC-18 Never Retry Without Fixing**: If a pipeline fails, read the job log and fix the root cause before re-running. Never retry the same commit expecting a different result.
@@ -69,12 +70,25 @@ These rules prevent the most common CI failures. Derived from post-mortem analys
 | `cargo clippy` | `just lint [repo]` |
 | `cargo fmt && cargo clippy && cargo test` | `just check [repo]` |
 | `cargo test -p <crate>` | `just test-crate <crate>` |
+| `cargo test --test <name>` | `just test-file <name> [repo]` |
+| `cargo test <pattern>` | `just test-name <pattern> [repo]` |
 | `cargo fmt && cargo clippy --fix` | `just fix [repo]` |
 | `cargo audit` / `cargo deny` | `just audit [repo]` |
 | `glab mr list` / `glab mr create` | `just gitlab mr-list [repo]` / `just gitlab mr-create [repo]` |
 | `glab ci status` | `just gitlab pipeline-status [repo]` |
+| `glab mr list --source-branch` | `just gitlab mr-status [repo]` |
 | `git push -o merge_request.create ...` | `just gitlab mr-create [repo]` |
 | Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` |
+| `git fetch --all` across repos | `just git sync` |
+| `git diff origin/main...HEAD` | `just git diff-main [repo]` |
+| `git log origin/main..HEAD` | `just git log-branch [repo]` |
+| `git rebase origin/main` | `just git rebase-main [repo]` |
+| `git checkout -b <name>` across repos | `just git branch <name> [repos]` |
+| `grep -r` across repos | `just grep <pattern> [glob]` |
+| Searching by domain concept | `just concept <name>` |
+| `reuse lint` | `just reuse [repo]` |
+| Checking `branch = "main"` in Cargo.toml | `just check-refs` |
+| `git add -A && git commit -m` | `just commit-repo <repo> <msg>` |
 | `mdplan history` / `mdplan plot` | `just plan-history <file>` / `just plan-plot <file>` |
 | Manual task checklists in docs | Companion `.plan.md` files in markdown-plan syntax |
 
@@ -110,6 +124,7 @@ just fmt [repo]             # Format code
 just lint [repo]            # Run lints
 just fix [repo]             # Auto-fix formatting + lint
 just commit                 # Interactive commit across repos
+just commit-repo <repo> <msg> # Non-interactive commit (for automation)
 
 # Repo targeting
 just test core              # Test core only
@@ -118,6 +133,8 @@ just check                  # Check all (from workspace root)
 
 # Extended
 just test-crate <crate>     # Test specific crate in core workspace
+just test-file <name> [repo] # Run single test file
+just test-name <pattern> [repo] # Run tests matching name pattern
 just audit [repo]           # Security audit (Rust repos)
 just coverage               # Coverage report (core)
 just watch                  # Watch + test (core)
@@ -139,21 +156,40 @@ just plan-stale [days]         # Show stale plans (default: 30 days)
 # GitLab
 just gitlab mr-list [repo]          # List open MRs
 just gitlab mr-view <id> [repo]     # View MR details
-just gitlab mr-create [repo]        # Create MR from current branch
+just gitlab mr-create [repo] [title] # Create MR from current branch
 just gitlab mr-approve <id> [repo]  # Approve MR
 just gitlab mr-merge <id> [repo]    # Merge MR
+just gitlab mr-status [repo]        # MR status for current branch
 just gitlab pipeline-status [repo]  # Pipeline status
 just gitlab pipeline-list [repo]    # Recent pipelines
 just gitlab pipeline-log <id> [repo] # Job log
+just gitlab pipeline-wait [repo]    # Wait for pipeline to finish
 just gitlab issue-list [repo]       # List issues
 just gitlab issue-create <title> [repo] # Create issue
 
 # Git (multi-repo)
+just git sync               # Fetch all + pull where on main
 just git status             # Status across all repos
+just git branch-status      # Branch state: ahead/behind/merged
+just git diff-main [repo]   # Diff current branch vs main
+just git log-branch [repo]  # Commits on branch not on main
+just git rebase-main [repo] # Rebase branch on origin/main
 just git main               # Stash → checkout main → pull (all repos)
 just git pull-all           # Pull latest in all repos
+just git push-all           # Push repos with commits ahead
+just git push-all skip-tests # Push without running tests
+just git fetch              # Fetch all repos
 just git branches           # Show branches across repos
+just git branch <name> [repos] # Create branch across repos
+just git stash-list         # Show stashes across all repos
 just git cleanup            # Preview merged branch cleanup
+
+# Cross-repo tools
+just grep <pattern> [glob]  # Search across all repos
+just concept <name>         # Search by drift concept + aliases
+just check-refs             # Verify Cargo.toml branch refs → main
+just check-annotations [repo] # Check @scenario annotation coverage
+just reuse [repo]           # REUSE / SPDX license header check
 
 # Setup
 just setup                  # Clone all repos, init workspace
@@ -320,7 +356,7 @@ This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summari
 
 ## GitLab Workflows
 
-- Always use `git push -o merge_request.create` for MR creation — never use `glab` CLI.
+- Always use `just gitlab mr-create [repo]` for MR creation.
 - Use the `/create-mr` skill for multi-repo MR workflows.
 
 ## Git Workflow (MANDATORY)
@@ -363,10 +399,7 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 **3. Create a Merge Request**
 
 ```bash
-git push -u origin feature/my-feature \
-  -o merge_request.create \
-  -o merge_request.target=main \
-  -o merge_request.title="feat: My feature"
+just gitlab mr-create [repo]
 ```
 
 MR description must include:
@@ -407,9 +440,6 @@ Each MR must list the related MRs it depends on in the **Related MRs** section s
 
 ```bash
 git checkout -b feature/my-feature       # Create branch
-git push -u origin feature/my-feature \  # Push branch + create MR
-  -o merge_request.create \
-  -o merge_request.target=main \
-  -o merge_request.title="feat: ..."
+just gitlab mr-create [repo]             # Push branch + create MR
 ```
 

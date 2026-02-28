@@ -11,7 +11,7 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
 
 ## Constraints (MANDATORY)
 
-- **MR creation**: Use `git push -o merge_request.create` — NEVER use `glab` CLI
+- **MR creation**: Use `just gitlab mr-create [repo]` — handles push + MR creation with correct options
 - **Directory safety**: Always use `git -C <absolute-path>` — NEVER cd without verifying
 - **Branch refs**: Keep all `Cargo.toml` branch refs pointing to `main` — NEVER change to feature branches
 - **Pre-push check**: Run `just check <repo>` in Rust repos before pushing

@@ -39,9 +39,12 @@ mr-view id repo='':
     glab mr view "{{id}}" -R "vauchi/$r"
 
 # Create merge request from current branch
+# Usage: just gitlab mr-create [repo] [title]
+#   just gitlab mr-create core                    # auto-fill from commits
+#   just gitlab mr-create core "feat: my feature" # custom title
 [no-cd]
 [script('bash')]
-mr-create repo='':
+mr-create repo='' title='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -53,11 +56,16 @@ mr-create repo='':
         echo "ERROR: cannot create MR from main branch"
         exit 1
     fi
-    # Push branch if not tracking remote
+    # Push branch if not tracking remote (skip tests — CI runs them)
+    export SKIP_TESTS=1
     if ! git rev-parse --abbrev-ref "@{u}" &>/dev/null; then
         git push -u origin "$branch"
     fi
-    glab mr create --fill --target-branch main --push -R "vauchi/$r"
+    ARGS=(--fill --target-branch main --push -R "vauchi/$r")
+    if [[ -n "{{ title }}" ]]; then
+        ARGS+=(--title "{{ title }}")
+    fi
+    glab mr create "${ARGS[@]}"
 
 # Approve a merge request
 [no-cd]
@@ -194,3 +202,75 @@ issue-close id repo='':
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     glab issue close "{{id}}" -R "vauchi/$r"
+
+# ── Status & Wait ─────────────────────────────────────────────────
+
+# Show MR status for current branch
+[no-cd]
+[script('bash')]
+mr-status repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    dir=$(gitlab_repo_dir "{{repo}}")
+    branch=$(cd "$dir" && git branch --show-current)
+    if [[ "$branch" == "main" ]]; then
+        echo "On main branch — no MR to show"
+        exit 0
+    fi
+    # Find MR for this branch
+    mr_json=$(glab mr list -R "vauchi/$r" --source-branch "$branch" --json number,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
+    count=$(echo "$mr_json" | jq 'length')
+    if [[ "$count" == "0" ]]; then
+        echo "No MR found for branch '$branch' in vauchi/$r"
+        exit 0
+    fi
+    echo "$mr_json" | jq -r '.[] | "MR !\(.number): \(.title)\n  State: \(.state)\n  URL:   \(.webUrl)\n"'
+    # Show pipeline status
+    echo "Pipeline:"
+    glab ci status --branch "$branch" -R "vauchi/$r" 2>/dev/null || echo "  No pipeline found"
+
+# Wait for pipeline to complete on current branch
+# Usage: just gitlab pipeline-wait [repo]
+#   Polls every 30s until pipeline finishes (passed/failed/canceled)
+[no-cd]
+[script('bash')]
+pipeline-wait repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    dir=$(gitlab_repo_dir "{{repo}}")
+    branch=$(cd "$dir" && git branch --show-current)
+    echo "Waiting for pipeline on $branch in vauchi/$r..."
+    echo "(polling every 30s, Ctrl+C to stop)"
+    echo ""
+    while true; do
+        # Get pipeline status via glab ci status
+        output=$(glab ci status --branch "$branch" -R "vauchi/$r" 2>&1 || true)
+        # Check for terminal states
+        if echo "$output" | grep -qiE "passed|success"; then
+            echo "$output"
+            echo ""
+            echo "Pipeline PASSED"
+            exit 0
+        elif echo "$output" | grep -qiE "failed"; then
+            echo "$output"
+            echo ""
+            echo "Pipeline FAILED"
+            exit 1
+        elif echo "$output" | grep -qiE "canceled|cancelled"; then
+            echo "$output"
+            echo ""
+            echo "Pipeline CANCELED"
+            exit 1
+        elif echo "$output" | grep -qiE "no pipeline"; then
+            echo "  No pipeline found yet..."
+        else
+            # Still running — show compact status
+            timestamp=$(date +%H:%M:%S)
+            echo "  [$timestamp] Running..."
+        fi
+        sleep 30
+    done

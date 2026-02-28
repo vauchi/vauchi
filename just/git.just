@@ -320,15 +320,303 @@ pull-all:
     done
 
 # Push all repos with commits ahead of origin
+# Usage: just git push-all              (fmt + clippy + tests per repo)
+#        just git push-all skip-tests   (fmt + clippy only, skip tests)
 [no-cd]
 [script('bash')]
-push-all:
+push-all mode='full':
+    if [[ "{{ mode }}" == "skip-tests" ]]; then
+        export SKIP_TESTS=1
+        echo "Pushing with SKIP_TESTS=1 (fmt + clippy only)"
+        echo ""
+    fi
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
             if [[ "$ahead" -gt 0 ]]; then
-                echo "Pushing $dir ($ahead commits ahead)"
+                echo "Pushing ${dir%/} ($ahead commits ahead)"
                 (cd "$dir" && git push)
             fi
         fi
     done
+
+# Show diff of current branch vs origin/main
+# Usage: just git diff-main [repo]   (omit repo to diff all repos with branches)
+[no-cd]
+[script('bash')]
+diff-main repo='':
+    set -uo pipefail
+    if [[ -n "{{ repo }}" ]]; then
+        dir="{{ repo }}"
+        [[ "$dir" == "desktop" ]] && dir="desktop"
+        if [[ ! -d "$dir/.git" ]]; then
+            echo "ERROR: $dir is not a git repo" >&2
+            exit 1
+        fi
+        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        echo "=== ${dir} ==="
+        git -C "$dir" diff origin/main...HEAD
+    else
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                gitdir=".git"
+                label="vauchi (root)"
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                gitdir="${dir}.git"
+                label="${dir%/}"
+                dir="${dir%/}"
+            fi
+            branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+            [[ "$branch" == "main" || -z "$branch" ]] && continue
+            git -C "$dir" fetch origin main --quiet 2>/dev/null
+            count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+            [[ "$count" == "0" ]] && continue
+            echo "=== $label ($branch, $count commits) ==="
+            git -C "$dir" diff origin/main...HEAD --stat
+            echo ""
+        done
+    fi
+
+# Rebase current branch on origin/main
+# Usage: just git rebase-main [repo]   (omit repo to rebase all feature branches)
+[no-cd]
+[script('bash')]
+rebase-main repo='':
+    set -euo pipefail
+    rebase_repo() {
+        local label="$1" dir="$2"
+        local branch
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        if [[ "$branch" == "main" || -z "$branch" ]]; then
+            return 0
+        fi
+        echo "=== $label ($branch) ==="
+        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        local behind
+        behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+        if [[ "$behind" == "0" ]]; then
+            echo "  Already up to date with origin/main"
+            return 0
+        fi
+        echo "  $behind commits behind origin/main — rebasing..."
+        if git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
+            echo "  Rebase OK"
+        else
+            echo "  CONFLICT — resolve manually, then run: git -C $dir rebase --continue" >&2
+            git -C "$dir" rebase --abort 2>/dev/null
+            return 1
+        fi
+    }
+    if [[ -n "{{ repo }}" ]]; then
+        dir="{{ repo }}"
+        [[ ! -d "$dir/.git" ]] && { echo "ERROR: $dir is not a git repo" >&2; exit 1; }
+        rebase_repo "${dir}" "$dir"
+    else
+        failed=()
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                label="vauchi (root)"
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                label="${dir%/}"
+                dir="${dir%/}"
+            fi
+            if ! rebase_repo "$label" "$dir"; then
+                failed+=("$label")
+            fi
+        done
+        echo ""
+        if [[ ${#failed[@]} -gt 0 ]]; then
+            echo "FAILED: ${failed[*]} — resolve conflicts manually"
+            exit 1
+        else
+            echo "All branches up to date with origin/main"
+        fi
+    fi
+
+# Show commits on current branch not on main
+# Usage: just git log-branch [repo]   (omit repo to show all feature branches)
+[no-cd]
+[script('bash')]
+log-branch repo='':
+    set -uo pipefail
+    log_repo() {
+        local label="$1" dir="$2"
+        local branch
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        [[ "$branch" == "main" || -z "$branch" ]] && return 0
+        local count
+        count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+        [[ "$count" == "0" ]] && return 0
+        echo "=== $label ($branch, $count commits) ==="
+        git -C "$dir" log origin/main..HEAD --oneline --no-decorate
+        echo ""
+    }
+    if [[ -n "{{ repo }}" ]]; then
+        dir="{{ repo }}"
+        [[ ! -d "$dir/.git" ]] && { echo "ERROR: $dir is not a git repo" >&2; exit 1; }
+        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        log_repo "{{ repo }}" "$dir"
+    else
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                label="vauchi (root)"
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                label="${dir%/}"
+                dir="${dir%/}"
+            fi
+            log_repo "$label" "$dir"
+        done
+    fi
+
+# Fetch all repos and pull where on main (combines fetch + pull)
+[no-cd]
+[script('bash')]
+sync:
+    set -uo pipefail
+    sync_repo() {
+        local label="$1" dir="$2"
+        echo -n "$label: "
+        git -C "$dir" fetch --all --quiet 2>/dev/null
+        local branch
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        if [[ "$branch" == "main" ]]; then
+            output=$(git -C "$dir" pull --rebase --quiet 2>&1 || git -C "$dir" pull --quiet 2>&1)
+            if echo "$output" | grep -q "Already up to date"; then
+                echo "fetched, main up to date"
+            else
+                behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
+                echo "fetched, pulled main ($output)"
+            fi
+        else
+            local ahead behind
+            ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
+            behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
+            echo "fetched (on $branch, ↑$ahead ↓$behind vs main)"
+        fi
+    }
+    sync_repo "vauchi (root)" "."
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            sync_repo "${dir%/}" "$dir"
+        fi
+    done
+
+# Show branch status for all repos (branch, ahead/behind, merged)
+[no-cd]
+[script('bash')]
+branch-status:
+    set -uo pipefail
+    printf "%-20s %-30s %8s %8s %s\n" "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
+    printf "%-20s %-30s %8s %8s %s\n" "----" "------" "-----" "------" "-------"
+    check_repo() {
+        local label="$1" dir="$2"
+        local branch ahead behind merged
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "detached")
+        if [[ "$branch" == "main" ]]; then
+            behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
+            printf "%-20s %-30s %8s %8s %s\n" "$label" "main" "-" "$behind" "-"
+            return
+        fi
+        ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
+        behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
+        if git -C "$dir" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+            merged="yes"
+        else
+            merged="no"
+        fi
+        printf "%-20s %-30s %8s %8s %s\n" "$label" "$branch" "$ahead" "$behind" "$merged"
+    }
+    check_repo "vauchi (root)" "."
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            check_repo "${dir%/}" "$dir"
+        fi
+    done
+
+# Show stashes across all repos
+[no-cd]
+[script('bash')]
+stash-list:
+    found=0
+    # Root repo
+    stashes=$(git stash list 2>/dev/null)
+    if [[ -n "$stashes" ]]; then
+        count=$(echo "$stashes" | wc -l | tr -d ' ')
+        echo "=== vauchi (root) ($count) ==="
+        echo "$stashes"
+        echo ""
+        found=1
+    fi
+    # Sub-repos
+    for dir in */; do
+        if [[ -d "${dir}.git" ]]; then
+            stashes=$(git -C "$dir" stash list 2>/dev/null)
+            if [[ -n "$stashes" ]]; then
+                count=$(echo "$stashes" | wc -l | tr -d ' ')
+                echo "=== ${dir%/} ($count) ==="
+                echo "$stashes"
+                echo ""
+                found=1
+            fi
+        fi
+    done
+    if [[ "$found" -eq 0 ]]; then
+        echo "No stashes in any repo."
+    fi
+
+# Create a branch with the same name across repos
+# Usage: just git branch feature/my-feature core cli desktop
+#        just git branch feature/my-feature           (all repos)
+[no-cd]
+[script('bash')]
+branch name *repos='':
+    set -uo pipefail
+    if [[ -z "{{ name }}" ]]; then
+        echo "Usage: just git branch <branch-name> [repo1 repo2 ...]" >&2
+        exit 1
+    fi
+    targets=()
+    if [[ -n "{{ repos }}" ]]; then
+        for r in {{ repos }}; do
+            if [[ -d "$r/.git" ]]; then
+                targets+=("$r")
+            elif [[ "$r" == "root" || "$r" == "." ]]; then
+                targets+=(".")
+            else
+                echo "WARNING: $r is not a git repo, skipping" >&2
+            fi
+        done
+    else
+        # All repos
+        for dir in */; do
+            [[ -d "${dir}.git" ]] && targets+=("${dir%/}")
+        done
+    fi
+    created=()
+    skipped=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        current=$(git -C "$dir" branch --show-current 2>/dev/null)
+        if [[ "$current" == "{{ name }}" ]]; then
+            skipped+=("$label (already on it)")
+            continue
+        fi
+        if git -C "$dir" rev-parse --verify "{{ name }}" &>/dev/null; then
+            echo -n "$label: branch exists, switching... "
+            git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null
+            echo "OK"
+            created+=("$label")
+        else
+            echo -n "$label: creating {{ name }}... "
+            git -C "$dir" checkout -b "{{ name }}" --quiet 2>/dev/null
+            echo "OK"
+            created+=("$label")
+        fi
+    done
+    echo ""
+    [[ ${#created[@]} -gt 0 ]] && echo "Branch '{{ name }}' active in: ${created[*]}"
+    [[ ${#skipped[@]} -gt 0 ]] && echo "Skipped: ${skipped[*]}"

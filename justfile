@@ -220,6 +220,38 @@ lint *args:
 commit:
     ./scripts/scripts/commit-interactive.sh
 
+# Non-interactive commit for a single repo (for automation / Claude)
+# Usage: just commit-repo core "feat: add exchange timeout"
+#        just commit-repo . "chore: update justfile"   (root repo)
+[group('daily')]
+[no-cd]
+[script('bash')]
+commit-repo repo message:
+    set -euo pipefail
+    dir="{{ repo }}"
+    if [[ "$dir" == "." || "$dir" == "root" ]]; then
+        dir="."
+        label="vauchi (root)"
+    else
+        label="{{ repo }}"
+    fi
+    if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
+        echo "ERROR: $dir is not a git repo" >&2
+        exit 1
+    fi
+    # Check for changes
+    if [[ -z "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+        echo "$label: nothing to commit"
+        exit 0
+    fi
+    echo "=== $label ==="
+    git -C "$dir" status --short
+    echo ""
+    git -C "$dir" add -A
+    git -C "$dir" commit -m "{{ message }}"
+    echo ""
+    echo "Committed in $label"
+
 # ═══════════════════════════════════════════════════════════════════
 # EXTENDED COMMANDS - Less frequently used
 # ═══════════════════════════════════════════════════════════════════
@@ -229,6 +261,70 @@ commit:
 [working-directory('core')]
 test-crate crate:
     cargo test -p {{crate}}
+
+# Run a single test file by name
+# Usage: just test-file identity_test           (searches core/)
+#        just test-file exchange_test relay      (searches relay/)
+[group('extended')]
+[no-cd]
+[script('bash')]
+test-file name repo='core':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    repos=$(resolve_repo "{{ repo }}" "test")
+    for r in $repos; do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        case "$tc" in
+            rust)
+                echo "=== $r: cargo test --test {{ name }} ==="
+                (cd "$dir" && cargo test --test "{{ name }}" 2>&1) || true
+                ;;
+            npm)
+                echo "=== $r: npx vitest {{ name }} ==="
+                (cd "$dir" && npx vitest run "{{ name }}" 2>&1) || true
+                ;;
+            gradle)
+                echo "=== $r: ./gradlew test --tests *{{ name }}* ==="
+                (cd "$dir" && ./gradlew test --tests "*{{ name }}*" 2>&1) || true
+                ;;
+            *)
+                echo "=== $r: test-file not supported for $tc ==="
+                ;;
+        esac
+    done
+
+# Run tests matching a name pattern
+# Usage: just test-name exchange_round_trip          (searches core/)
+#        just test-name relay_failover e2e           (searches e2e/)
+[group('extended')]
+[no-cd]
+[script('bash')]
+test-name pattern repo='core':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    repos=$(resolve_repo "{{ repo }}" "test")
+    for r in $repos; do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        case "$tc" in
+            rust)
+                echo "=== $r: cargo test {{ pattern }} ==="
+                (cd "$dir" && cargo test "{{ pattern }}" 2>&1) || true
+                ;;
+            npm)
+                echo "=== $r: npx vitest -t '{{ pattern }}' ==="
+                (cd "$dir" && npx vitest run -t "{{ pattern }}" 2>&1) || true
+                ;;
+            gradle)
+                echo "=== $r: ./gradlew test --tests *{{ pattern }}* ==="
+                (cd "$dir" && ./gradlew test --tests "*{{ pattern }}*" 2>&1) || true
+                ;;
+            *)
+                echo "=== $r: test-name not supported for $tc ==="
+                ;;
+        esac
+    done
 
 # Build release binaries
 [group('extended')]
@@ -329,6 +425,7 @@ help:
       just lint [repo]        Run lints
       just fix [repo]         Auto-fix formatting + lint
       just commit             Interactive commit across repos
+      just commit-repo <r> <msg>  Non-interactive commit (for automation)
 
       Repo argument: omit = auto-detect from pwd (or all from workspace root)
       Examples: just test core, just lint cli, just check desktop
@@ -338,24 +435,34 @@ help:
     GitLab:
       just gitlab mr-list [repo]            List open MRs
       just gitlab mr-view <id> [repo]       View MR details
-      just gitlab mr-create [repo]          Create MR from current branch
+      just gitlab mr-create [repo] [title]  Create MR from current branch
       just gitlab mr-approve <id> [repo]    Approve MR
       just gitlab mr-merge <id> [repo]      Merge MR
+      just gitlab mr-status [repo]          MR status for current branch
       just gitlab pipeline-status [repo]    Pipeline status (current branch)
       just gitlab pipeline-list [repo]      Recent pipelines
       just gitlab pipeline-log <id> [repo]  Job log output
+      just gitlab pipeline-wait [repo]      Wait for pipeline to complete
       just gitlab issue-list [repo]         List open issues
       just gitlab issue-create <t> [repo]   Create issue
 
     Git (multi-repo):
+      just git sync           Fetch all + pull where on main
       just git main           Stash → checkout main → pull (all repos)
       just git status         Show status across all repos
+      just git branch-status  Branch state: ahead/behind/merged
+      just git diff-main [r]  Diff current branch vs main
+      just git log-branch [r] Commits on branch not on main
+      just git rebase-main [r] Rebase branch on origin/main
       just git pull-all       Pull latest in all repos
-      just git push-all       Push repos with commits ahead
+      just git push-all       Push repos with commits ahead (full checks)
+      just git push-all skip-tests  Push without running tests
       just git fetch          Fetch all repos
       just git branches       Show branches across repos
-      just git cleanup        Preview merged branch cleanup (dry run)
-      just git cleanup run    Delete merged branches + prune stale refs
+      just git branch <name> [repos]  Create branch across repos
+      just git stash-list     Show stashes across all repos
+      just git cleanup        Preview merged branch cleanup
+      just git cleanup run    Delete merged branches + prune refs
 
     Apps:
       just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
@@ -364,6 +471,8 @@ help:
 
     Extended:
       just test-crate <crate> Test specific crate in core workspace
+      just test-file <name> [repo]  Run single test file
+      just test-name <pat> [repo]   Run tests matching name pattern
       just audit [repo]       Security audit (Rust repos)
       just coverage           Coverage report (core)
       just watch              Watch + test (core)
@@ -374,7 +483,12 @@ help:
       just install-dev-deps   Install toolchain (Homebrew + Cargo)
       just clean              Clean all build artifacts
 
-    Other:
+    Tools:
+      just grep <pattern> [glob]  Search across all repos
+      just concept <name>     Search by drift concept + aliases
+      just check-refs         Verify Cargo.toml branch refs → main
+      just check-annotations [repo]  Check @scenario coverage
+      just reuse [repo]       REUSE / SPDX license header check
       just metrics            Engineering metrics dashboard
       just lint-docs          Check doc naming, links, license text
       just sync-locales       Validate locale files
@@ -382,6 +496,215 @@ help:
 
     Full list:  just --list --list-submodules
     HELP
+
+# ═══════════════════════════════════════════════════════════════════
+# CROSS-REPO TOOLS
+# ═══════════════════════════════════════════════════════════════════
+
+# Search across all repos for a pattern
+# Usage: just grep "fn exchange"
+#        just grep "vauchi_core" "*.toml"
+[group('tools')]
+[no-cd]
+[script('bash')]
+grep pattern glob='':
+    set -uo pipefail
+    GLOB_ARGS=()
+    if [[ -n "{{ glob }}" ]]; then
+        GLOB_ARGS=(--glob "{{ glob }}")
+    fi
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            search_dir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            search_dir="${dir%/}"
+        fi
+        # Skip generated/vendor dirs
+        results=$(rg "{{ pattern }}" "$search_dir" \
+            --no-heading --color=never \
+            --glob '!target/' --glob '!node_modules/' --glob '!dist/' \
+            --glob '!*.lock' --glob '!.git/' \
+            "${GLOB_ARGS[@]}" 2>/dev/null || true)
+        if [[ -n "$results" ]]; then
+            echo "=== $label ==="
+            echo "$results"
+            echo ""
+        fi
+    done
+
+# Verify Cargo.toml branch refs point to main
+# Usage: just check-refs
+[group('tools')]
+[no-cd]
+[script('bash')]
+check-refs:
+    set -euo pipefail
+    echo "Checking Cargo.toml git dependency branch refs..."
+    found=0
+    while IFS= read -r line; do
+        file=$(echo "$line" | cut -d: -f1)
+        content=$(echo "$line" | cut -d: -f2-)
+        # Extract the branch value
+        branch_val=$(echo "$content" | sed -n 's/.*branch\s*=\s*"\([^"]*\)".*/\1/p')
+        if [[ "$branch_val" != "main" ]]; then
+            echo "  FAIL: $file"
+            echo "        $content"
+            echo "        branch = \"$branch_val\" (expected \"main\")"
+            echo ""
+            found=1
+        fi
+    done < <(rg 'branch\s*=' --glob '*/Cargo.toml' --glob 'Cargo.toml' --no-heading 2>/dev/null || true)
+    if [[ "$found" -eq 0 ]]; then
+        echo "  All branch refs point to main"
+    else
+        echo "FAIL: Non-main branch refs found. Fix before pushing."
+        exit 1
+    fi
+
+# Run REUSE compliance check (SPDX license headers)
+# Usage: just reuse [repo]   (omit for all repos)
+[group('tools')]
+[no-cd]
+[script('bash')]
+reuse repo='':
+    if ! command -v reuse &>/dev/null; then
+        echo "WARNING: reuse not installed (pip install reuse)" >&2
+        exit 0
+    fi
+    set -uo pipefail
+    if [[ -n "{{ repo }}" ]]; then
+        dir="{{ repo }}"
+        [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
+        echo "=== {{ repo }} ==="
+        (cd "$dir" && reuse lint 2>&1) || true
+    else
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                label="vauchi (root)"
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                label="${dir%/}"
+                dir="${dir%/}"
+            fi
+            echo "=== $label ==="
+            (cd "$dir" && reuse lint 2>&1 | tail -3) || true
+            echo ""
+        done
+    fi
+
+# Search by drift-detector concept (uses concept aliases from driftconfig.toml)
+# Usage: just concept exchange     (finds exchange + proximity + qr + nfc + ble + audio + prekey)
+#        just concept security     (finds security + auth + attacks + spoofing + passwords)
+[group('tools')]
+[no-cd]
+[script('bash')]
+concept name:
+    set -euo pipefail
+    CONFIG="driftconfig.toml"
+    if [[ ! -f "$CONFIG" ]]; then
+        echo "ERROR: $CONFIG not found" >&2
+        exit 1
+    fi
+    # Build a regex pattern from concept + aliases
+    # Extract aliases that resolve to this concept
+    aliases=("{{ name }}")
+    while IFS= read -r line; do
+        # Lines like: "qr-code" = ["exchange", "qr"]  or  "proximity" = "exchange"
+        key=$(echo "$line" | sed -n 's/^"\([^"]*\)".*/\1/p')
+        [[ -z "$key" ]] && continue
+        # Check if value contains our concept
+        if echo "$line" | grep -qF "\"{{ name }}\""; then
+            aliases+=("$key")
+        fi
+    done < <(sed -n '/^\[concepts\.aliases\]/,/^\[/p' "$CONFIG" | grep '^"')
+    # Also add aliases that ARE the concept (concept = something)
+    while IFS= read -r line; do
+        key=$(echo "$line" | sed -n 's/^"\([^"]*\)".*/\1/p')
+        [[ -z "$key" || "$key" != "{{ name }}" ]] && continue
+        vals=$(echo "$line" | sed -n 's/.*= *"\([^"]*\)".*/\1/p')
+        if [[ -n "$vals" ]]; then
+            aliases+=("$vals")
+        fi
+    done < <(sed -n '/^\[concepts\.aliases\]/,/^\[/p' "$CONFIG" | grep '^"')
+    # Deduplicate
+    unique=($(printf '%s\n' "${aliases[@]}" | sort -u))
+    # Build regex: join with | for alternation, replace - with [-_] for flexible matching
+    pattern=$(printf '%s\n' "${unique[@]}" | sed 's/-/[-_]/g' | paste -sd'|' -)
+    echo "Concept: {{ name }}"
+    echo "Aliases: ${unique[*]}"
+    echo "Pattern: $pattern"
+    echo ""
+    echo "=== Feature scenarios ==="
+    rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
+    echo ""
+    echo "=== Tests ==="
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ desktop/src-tauri/src/ \
+        --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
+    echo ""
+    echo "=== Source ==="
+    rg -i "$pattern" core/vauchi-core/src/ relay/src/ \
+        --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
+    echo ""
+    echo "=== Docs ==="
+    rg -i "$pattern" docs/ _private/docs/ \
+        --glob '*.md' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
+
+# Check for tests missing @scenario annotations
+# Usage: just check-annotations [repo]
+[group('tools')]
+[no-cd]
+[script('bash')]
+check-annotations repo='core':
+    set -uo pipefail
+    case "{{ repo }}" in
+        core) dirs="core/vauchi-core/tests core/vauchi-mobile/tests" ;;
+        e2e)  dirs="e2e/tests" ;;
+        relay) dirs="relay/tests" ;;
+        cli)  dirs="cli/tests" ;;
+        tui)  dirs="tui/tests" ;;
+        all)  dirs="core/vauchi-core/tests core/vauchi-mobile/tests e2e/tests relay/tests cli/tests tui/tests" ;;
+        *)    echo "Unknown repo: {{ repo }}"; exit 1 ;;
+    esac
+    total=0
+    annotated=0
+    missing=()
+    for dir in $dirs; do
+        [[ ! -d "$dir" ]] && continue
+        while IFS= read -r file; do
+            while IFS= read -r test_name; do
+                line_num=$(echo "$test_name" | cut -d: -f1)
+                fn_name=$(echo "$test_name" | sed 's/.*fn //' | sed 's/(.*//')
+                total=$((total + 1))
+                # Check if preceding lines have @scenario annotation
+                prev_lines=$(head -n "$line_num" "$file" | tail -5)
+                if echo "$prev_lines" | grep -q "@scenario:"; then
+                    annotated=$((annotated + 1))
+                else
+                    missing+=("$file:$line_num $fn_name")
+                fi
+            done < <(grep -n '#\[test\]' "$file" | while IFS= read -r test_line; do
+                num=$(echo "$test_line" | cut -d: -f1)
+                # Get the fn line after #[test]
+                fn_line=$(sed -n "$((num+1)),$((num+5))p" "$file" | grep -m1 'fn ')
+                if [[ -n "$fn_line" ]]; then
+                    echo "$num:$fn_line"
+                fi
+            done)
+        done < <(find $dir -name '*.rs' -type f 2>/dev/null)
+    done
+    echo "Annotation coverage: $annotated/$total tests have @scenario"
+    pct=0
+    [[ "$total" -gt 0 ]] && pct=$((annotated * 100 / total))
+    echo "Coverage: ${pct}%"
+    echo ""
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "Missing @scenario annotations (${#missing[@]}):"
+        printf '  %s\n' "${missing[@]}" | head -30
+        [[ ${#missing[@]} -gt 30 ]] && echo "  ... and $((${#missing[@]} - 30)) more"
+    fi
 
 # ═══════════════════════════════════════════════════════════════════
 # DOCUMENTATION LINTING

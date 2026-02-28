@@ -218,7 +218,7 @@ Tauri's `generate_context!` macro reads `ui/dist/`. Clippy fails without a built
 # lint:clippy needs: [build:frontend-dist]
 ```
 
-Locally: run `cd ui && npm run build` before `cargo clippy` in `src-tauri/`.
+Locally: use `just check desktop` which handles the frontend build + Rust checks automatically.
 
 ## Test Server
 

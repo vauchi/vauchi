@@ -68,10 +68,15 @@ WORK_DIR="$REPO_DIR"
 if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   cd "$WORK_DIR"
 
+  # Note: this hook runs as a Claude Code PreToolUse hook, not via just.
+  # It uses raw cargo commands because just recipes may not be available in this context.
+  # The git pre-push hook (scripts/hooks/pre-push) uses the same raw commands for the same reason.
+  # For interactive use, always prefer: just fmt <repo>, just lint <repo>, just check <repo>.
+
   echo "[gate-push] Checking formatting ($REPO_NAME)..."
   if ! cargo fmt --all -- --check 2>&1; then
     echo "" >&2
-    echo "Push blocked: cargo fmt check failed in $REPO_NAME. Run 'cargo fmt --all' to fix." >&2
+    echo "Push blocked: format check failed in $REPO_NAME. Run 'just fmt $REPO_NAME' to fix." >&2
     exit 2
   fi
 
@@ -83,7 +88,7 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
 
   if ! cargo clippy --all-targets "${CLIPPY_EXTRA[@]}" -- -D warnings 2>&1; then
     echo "" >&2
-    echo "Push blocked: clippy found issues in $REPO_NAME. Fix warnings before pushing." >&2
+    echo "Push blocked: clippy found issues in $REPO_NAME. Run 'just fix $REPO_NAME' to auto-fix." >&2
     exit 2
   fi
 
