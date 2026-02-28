@@ -448,7 +448,8 @@ help:
 
     Git (multi-repo):
       just git sync           Fetch all + pull where on main
-      just git main           Stash → checkout main → pull (all repos)
+      just git main           Stash → checkout main → pull (interactive)
+      just git main yes       Same, non-interactive (auto-stash)
       just git status         Show status across all repos
       just git branch-status  Branch state: ahead/behind/merged
       just git diff-main [r]  Diff current branch vs main
@@ -486,8 +487,10 @@ help:
     Tools:
       just grep <pattern> [glob]  Search across all repos
       just concept <name>     Search by drift concept + aliases
+      just consumers <pattern> Find downstream usage of core API
       just check-refs         Verify Cargo.toml branch refs → main
       just check-annotations [repo]  Check @scenario coverage
+      just check-lifecycle    Validate feature lifecycle tags
       just reuse [repo]       REUSE / SPDX license header check
       just metrics            Engineering metrics dashboard
       just lint-docs          Check doc naming, links, license text
@@ -705,6 +708,96 @@ check-annotations repo='core':
         printf '  %s\n' "${missing[@]}" | head -30
         [[ ${#missing[@]} -gt 30 ]] && echo "  ... and $((${#missing[@]} - 30)) more"
     fi
+
+# Validate feature lifecycle tags (@implemented/@planned/@wip)
+# Every Scenario and Scenario Outline must have exactly one lifecycle tag
+[group('tools')]
+[no-cd]
+[script('bash')]
+check-lifecycle:
+    set -uo pipefail
+    echo "Checking feature lifecycle tags..."
+    echo ""
+    errors=0
+    total=0
+    while IFS= read -r file; do
+        line_num=0
+        while IFS= read -r line; do
+            line_num=$((line_num + 1))
+            # Find Scenario/Scenario Outline lines
+            if echo "$line" | grep -qE '^\s*(Scenario|Scenario Outline):'; then
+                total=$((total + 1))
+                # Look back up to 5 lines for lifecycle tags
+                start=$((line_num - 5))
+                [[ "$start" -lt 1 ]] && start=1
+                context=$(sed -n "${start},${line_num}p" "$file")
+                has_impl=$(echo "$context" | grep -c '@implemented' || true)
+                has_planned=$(echo "$context" | grep -c '@planned' || true)
+                has_wip=$(echo "$context" | grep -c '@wip' || true)
+                tag_count=$((has_impl + has_planned + has_wip))
+                if [[ "$tag_count" -eq 0 ]]; then
+                    scenario=$(echo "$line" | sed 's/^[[:space:]]*//')
+                    echo "  MISSING: $file:$line_num"
+                    echo "    $scenario"
+                    errors=$((errors + 1))
+                elif [[ "$tag_count" -gt 1 ]]; then
+                    scenario=$(echo "$line" | sed 's/^[[:space:]]*//')
+                    echo "  MULTIPLE: $file:$line_num (has $tag_count lifecycle tags)"
+                    echo "    $scenario"
+                    errors=$((errors + 1))
+                fi
+            fi
+        done < "$file"
+    done < <(find features/ -name '*.feature' -type f 2>/dev/null | sort)
+    echo ""
+    echo "Checked $total scenarios, $errors issues"
+    if [[ "$errors" -gt 0 ]]; then
+        echo "FAIL: Fix missing/duplicate lifecycle tags above"
+        exit 1
+    else
+        echo "OK: All scenarios have exactly one lifecycle tag"
+    fi
+
+# Find downstream consumers of a core function/type across repos
+# Usage: just consumers ExchangeSession
+#        just consumers "fn get_card"
+[group('tools')]
+[no-cd]
+[script('bash')]
+consumers pattern:
+    set -uo pipefail
+    echo "Searching for '{{ pattern }}' across downstream repos..."
+    echo ""
+    DOWNSTREAM_DIRS=(cli tui desktop/src-tauri e2e relay)
+    for dir in "${DOWNSTREAM_DIRS[@]}"; do
+        [[ ! -d "$dir" ]] && continue
+        label=$(basename "$dir")
+        [[ "$dir" == "desktop/src-tauri" ]] && label="desktop"
+        results=$(rg "{{ pattern }}" "$dir" \
+            --glob '*.rs' --glob '*.ts' --glob '*.tsx' \
+            --glob '!target/' --glob '!node_modules/' --glob '!dist/' \
+            -n --color=never 2>/dev/null || true)
+        if [[ -n "$results" ]]; then
+            count=$(echo "$results" | wc -l | tr -d ' ')
+            echo "=== $label ($count matches) ==="
+            echo "$results"
+            echo ""
+        fi
+    done
+    # Also check mobile bindings
+    for dir in android ios; do
+        [[ ! -d "$dir" ]] && continue
+        results=$(rg "{{ pattern }}" "$dir" \
+            --glob '*.kt' --glob '*.swift' \
+            --glob '!build/' --glob '!.gradle/' \
+            -n --color=never 2>/dev/null || true)
+        if [[ -n "$results" ]]; then
+            count=$(echo "$results" | wc -l | tr -d ' ')
+            echo "=== $dir ($count matches) ==="
+            echo "$results"
+            echo ""
+        fi
+    done
 
 # ═══════════════════════════════════════════════════════════════════
 # DOCUMENTATION LINTING

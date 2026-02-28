@@ -86,6 +86,7 @@ These rules prevent the most common CI failures. Derived from post-mortem analys
 | `git checkout -b <name>` across repos | `just git branch <name> [repos]` |
 | `grep -r` across repos | `just grep <pattern> [glob]` |
 | Searching by domain concept | `just concept <name>` |
+| Finding API consumers (CC-05) | `just consumers <pattern>` |
 | `reuse lint` | `just reuse [repo]` |
 | Checking `branch = "main"` in Cargo.toml | `just check-refs` |
 | `git add -A && git commit -m` | `just commit-repo <repo> <msg>` |
@@ -98,7 +99,7 @@ These rules prevent the most common CI failures. Derived from post-mortem analys
 - **`all`** → `just test all` runs across all applicable repos
 - **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
 
-**Valid repo names:** `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`
+**Valid repo names:** `root`, `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`, `_private`
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
@@ -169,6 +170,7 @@ just gitlab issue-create <title> [repo] # Create issue
 
 # Git (multi-repo)
 just git sync               # Fetch all + pull where on main
+just git main yes           # Checkout main + pull (non-interactive)
 just git status             # Status across all repos
 just git branch-status      # Branch state: ahead/behind/merged
 just git diff-main [repo]   # Diff current branch vs main
@@ -189,6 +191,8 @@ just grep <pattern> [glob]  # Search across all repos
 just concept <name>         # Search by drift concept + aliases
 just check-refs             # Verify Cargo.toml branch refs → main
 just check-annotations [repo] # Check @scenario annotation coverage
+just check-lifecycle        # Validate feature lifecycle tags
+just consumers <pattern>    # Find downstream usage of core API
 just reuse [repo]           # REUSE / SPDX license header check
 
 # Setup

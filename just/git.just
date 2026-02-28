@@ -6,9 +6,11 @@
 # Usage: just git <recipe>
 
 # Stash changes, checkout main, and pull latest in all repos
+# Usage: just git main          (interactive — prompts before stashing)
+#        just git main yes      (non-interactive — auto-stash without prompting)
 [no-cd]
 [script('bash')]
-main:
+main mode='':
     # First pass: collect dirty repos and show changes
     dirty_repos=()
     dirty_labels=()
@@ -37,10 +39,14 @@ main:
             git -C "$dir" status --short
             echo ""
         done
-        read -rp "Stash these changes and switch to main? [y/N] " answer
-        if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
-            echo "Aborted."
-            exit 0
+        if [[ "{{ mode }}" == "yes" ]]; then
+            echo "(auto-stashing — non-interactive mode)"
+        else
+            read -rp "Stash these changes and switch to main? [y/N] " answer
+            if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
+                echo "Aborted."
+                exit 0
+            fi
         fi
         echo ""
     fi
@@ -155,7 +161,11 @@ cleanup mode='dry-run':
         echo "DRY RUN — showing what would be cleaned"
         echo "(run 'just git cleanup run' to execute)"
     fi
-    echo "Tip: run 'just git fetch' first to ensure remote state is current"
+    echo "Fetching all repos first..."
+    for dir in . */; do
+        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
+        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null
+    done
     echo ""
 
     total_local=0
