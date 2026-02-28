@@ -247,7 +247,19 @@ commit-repo repo message:
     echo "=== $label ==="
     git -C "$dir" status --short
     echo ""
-    git -C "$dir" add -A
+    # Warn about untracked files (not staged by -u)
+    untracked=$(git -C "$dir" ls-files --others --exclude-standard 2>/dev/null)
+    if [[ -n "$untracked" ]]; then
+        echo "NOTE: Untracked files (not staged — use 'git add' manually if needed):"
+        echo "$untracked" | sed 's/^/  ? /'
+        echo ""
+    fi
+    git -C "$dir" add -u
+    # Check if anything was staged after add -u
+    if [[ -z "$(git -C "$dir" diff --cached --name-only 2>/dev/null)" ]]; then
+        echo "$label: only untracked files — nothing staged (use 'git -C $dir add <file>' to stage)"
+        exit 0
+    fi
     git -C "$dir" commit -m "{{ message }}"
     echo ""
     echo "Committed in $label"

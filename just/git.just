@@ -83,6 +83,32 @@ main mode='':
         fi
     done
 
+    # Auto-cleanup: delete local branches already merged into main
+    echo ""
+    cleaned=0
+    cleanup_merged() {
+        local label="$1" dir="$2"
+        local merged
+        merged=$(git -C "$dir" branch --merged main 2>/dev/null \
+            | grep -vE '^\*|^[[:space:]]+main$' \
+            | sed 's/^[[:space:]]*//' || true)
+        [[ -z "$merged" ]] && return 0
+        while IFS= read -r b; do
+            [[ -z "$b" ]] && continue
+            if git -C "$dir" branch -d "$b" &>/dev/null; then
+                echo "  $label: deleted merged branch '$b'"
+                cleaned=$((cleaned + 1))
+            fi
+        done <<< "$merged"
+    }
+    cleanup_merged "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && cleanup_merged "${dir%/}" "$dir"
+    done
+    if [[ "$cleaned" -gt 0 ]]; then
+        echo "Cleaned up $cleaned merged branch(es)"
+    fi
+
 # Show git status for all repos
 [no-cd]
 [default]
@@ -358,13 +384,16 @@ diff-main repo='':
     set -uo pipefail
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
+        [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
         [[ "$dir" == "desktop" ]] && dir="desktop"
-        if [[ ! -d "$dir/.git" ]]; then
+        if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
             echo "ERROR: $dir is not a git repo" >&2
             exit 1
         fi
         git -C "$dir" fetch origin main --quiet 2>/dev/null
-        echo "=== ${dir} ==="
+        label="{{ repo }}"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        echo "=== ${label} ==="
         git -C "$dir" diff origin/main...HEAD
     else
         for dir in . */; do
@@ -420,8 +449,14 @@ rebase-main repo='':
     }
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
-        [[ ! -d "$dir/.git" ]] && { echo "ERROR: $dir is not a git repo" >&2; exit 1; }
-        rebase_repo "${dir}" "$dir"
+        [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
+        if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
+            echo "ERROR: $dir is not a git repo" >&2
+            exit 1
+        fi
+        label="{{ repo }}"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        rebase_repo "$label" "$dir"
     else
         failed=()
         for dir in . */; do
@@ -465,9 +500,15 @@ log-branch repo='':
     }
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
-        [[ ! -d "$dir/.git" ]] && { echo "ERROR: $dir is not a git repo" >&2; exit 1; }
+        [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
+        if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
+            echo "ERROR: $dir is not a git repo" >&2
+            exit 1
+        fi
+        label="{{ repo }}"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
         git -C "$dir" fetch origin main --quiet 2>/dev/null
-        log_repo "{{ repo }}" "$dir"
+        log_repo "$label" "$dir"
     else
         for dir in . */; do
             if [[ "$dir" == "." ]]; then
