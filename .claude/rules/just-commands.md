@@ -51,3 +51,94 @@ This reduces token usage, avoids permission prompts, and searches across all rep
 - **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
 - **Explicit name** → `just test core`, `just lint relay`, `just check desktop`
 - **`all`** → `just test all` runs across all applicable repos
+- **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
+
+**Valid repo names:** `root`, `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`, `_private`
+
+### Full Command Reference
+
+```bash
+# Daily workflow
+just check [repo]           # Format-check + lint + test
+just build [repo]           # Build
+just test [repo]            # Run tests
+just fmt [repo]             # Format code
+just lint [repo]            # Run lints
+just fix [repo]             # Auto-fix formatting + lint
+just commit                 # Interactive commit across repos
+just commit-repo <repo> <msg> # Non-interactive commit (for automation)
+
+# Repo targeting
+just test core              # Test core only
+just lint desktop           # Lint desktop (Rust + frontend)
+just check                  # Check all (from workspace root)
+
+# Extended
+just test-crate <crate>     # Test specific crate in core workspace
+just test-file <name> [repo] # Run single test file
+just test-name <pattern> [repo] # Run tests matching name pattern
+just audit [repo]           # Security audit (Rust repos)
+just coverage               # Coverage report (core)
+just watch                  # Watch + test (core)
+just build-release          # Release build (core)
+
+# Drift detection
+just drift                  # Audit drift (human-readable, fail on high)
+just drift medium           # Audit drift (fail on medium+)
+just drift-ci               # Audit drift (JSON output for CI)
+just drift-ci medium        # Audit drift CI (fail on medium+)
+
+# Task tracking (markdown-plan)
+just plan-validate [file|dir]  # Validate .plan.md files
+just plan-list [dir]           # List plans with task counts
+just plan-history <file>       # Task history as JSON
+just plan-plot <file>          # Burn-up chart in browser
+just plan-stale [days]         # Show stale plans (default: 30 days)
+
+# GitLab
+just gitlab mr-list [repo]          # List open MRs
+just gitlab mr-view <id> [repo]     # View MR details
+just gitlab mr-create [repo] [title] # Create MR from current branch
+just gitlab mr-approve <id> [repo]  # Approve MR
+just gitlab mr-merge <id> [repo]    # Merge MR
+just gitlab mr-status [repo]        # MR status for current branch
+just gitlab pipeline-status [repo]  # Pipeline status
+just gitlab pipeline-list [repo]    # Recent pipelines
+just gitlab pipeline-log <id> [repo] # Job log
+just gitlab pipeline-wait [repo]    # Wait for pipeline to finish
+just gitlab issue-list [repo]       # List issues
+just gitlab issue-create <title> [repo] # Create issue
+
+# Git (multi-repo)
+just git sync               # Fetch all + pull where on main
+just git main yes           # Checkout main + pull (non-interactive)
+just git status             # Status across all repos
+just git branch-status      # Branch state: ahead/behind/merged
+just git diff-main [repo]   # Diff current branch vs main
+just git log-branch [repo]  # Commits on branch not on main
+just git rebase-main [repo] # Rebase branch on origin/main
+just git main               # Stash → checkout main → pull (all repos)
+just git pull-all           # Pull latest in all repos
+just git push-all           # Push repos with commits ahead
+just git push-all skip-tests # Push without running tests
+just git fetch              # Fetch all repos
+just git branches           # Show branches across repos
+just git branch <name> [repos] # Create branch across repos
+just git stash-list         # Show stashes across all repos
+just git cleanup            # Preview merged branch cleanup
+
+# Cross-repo tools
+just grep <pattern> [glob]  # Search across all repos
+just concept <name>         # Search by drift concept + aliases
+just check-refs             # Verify Cargo.toml branch refs → main
+just check-annotations [repo] # Check @scenario annotation coverage
+just check-lifecycle        # Validate feature lifecycle tags
+just consumers <pattern>    # Find downstream usage of core API
+just reuse [repo]           # REUSE / SPDX license header check
+
+# Setup
+just setup                  # Clone all repos, init workspace
+just install-dev-deps       # Install toolchain
+just clean                  # Clean all build artifacts
+just help                   # Show all commands
+```
