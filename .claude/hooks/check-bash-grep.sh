@@ -8,8 +8,12 @@
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
-# Skip commands containing git commit/tag (commit messages may mention grep -P)
+# Skip commands where "grep -P" appears only inside string arguments, not as an actual command.
+# This includes git commit messages, just recipe arguments, echo, etc.
 if echo "$COMMAND" | grep -qE 'git\s+(commit|tag)'; then
+  exit 0
+fi
+if echo "$COMMAND" | grep -qE '^\s*just\s'; then
   exit 0
 fi
 
