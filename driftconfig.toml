@@ -541,4 +541,4 @@ user_doc_paths = ["/docs/"]
 user_doc_filenames = ["README.md"]
 
 [layers.gherkin]
-problem_paths = ["_private/features/"]
+problem_paths = ["_private/features/", "_private/docs/problems/"]
