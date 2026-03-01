@@ -35,46 +35,19 @@ See `.claude/rules/testing-best-practices.md` for test design principles.
 
 ## Tool Usage (MANDATORY)
 
-**Always use `just` recipes instead of raw commands.** This applies to all build, test, lint, format, and GitLab operations. The `just` recipes handle correct working directories, toolchain detection, and multi-repo orchestration.
+**Always use `just` recipes instead of raw commands.** See `.claude/rules/just-commands.md` for the full reference.
 
 | Instead of... | Use... |
 |---------------|--------|
-| `cargo build` | `just build [repo]` |
-| `cargo test` / `cargo nextest` | `just test [repo]` |
-| `cargo fmt` | `just fmt [repo]` |
-| `cargo clippy` | `just lint [repo]` |
+| `cargo build` / `test` / `fmt` / `clippy` | `just build` / `test` / `fmt` / `lint` `[repo]` |
 | `cargo fmt && cargo clippy && cargo test` | `just check [repo]` |
 | `cargo test -p <crate>` | `just test-crate <crate>` |
-| `cargo test --test <name>` | `just test-file <name> [repo]` |
-| `cargo test <pattern>` | `just test-name <pattern> [repo]` |
-| `cargo fmt && cargo clippy --fix` | `just fix [repo]` |
-| `cargo audit` / `cargo deny` | `just audit [repo]` |
-| `glab mr list` / `glab mr create` | `just gitlab mr-list [repo]` / `just gitlab mr-create [repo]` |
-| `glab ci status` | `just gitlab pipeline-status [repo]` |
-| `glab mr list --source-branch` | `just gitlab mr-status [repo]` |
-| `git push -o merge_request.create ...` | `just gitlab mr-create [repo]` |
-| Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` |
-| `git fetch --all` across repos | `just git sync` |
-| `git diff origin/main...HEAD` | `just git diff-main [repo]` |
-| `git log origin/main..HEAD` | `just git log-branch [repo]` |
-| `git rebase origin/main` | `just git rebase-main [repo]` |
-| `git checkout -b <name>` across repos | `just git branch <name> [repos]` |
+| `glab mr create` / `glab ci status` | `just gitlab mr-create` / `just gitlab pipeline-status` `[repo]` |
+| Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` / `just git sync` |
 | `grep -r` across repos | `just grep <pattern> [glob]` |
 | Searching by domain concept | `just concept <name>` |
-| Finding API consumers (CC-05) | `just consumers <pattern>` |
-| `reuse lint` | `just reuse [repo]` |
-| Checking `branch = "main"` in Cargo.toml | `just check-refs` |
-| `git add -A && git commit -m` | `just commit-repo <repo> <msg>` |
-| `mdplan history` / `mdplan plot` | `just plan-history <file>` / `just plan-plot <file>` |
-| Manual task checklists in docs | Companion `.plan.md` files in markdown-plan syntax |
 
-**Repo argument rules:**
-- **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
-- **Explicit name** → `just test core`, `just lint relay`, `just check desktop`
-- **`all`** → `just test all` runs across all applicable repos
-- **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
-
-**Valid repo names:** `root`, `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`, `_private`
+Repo arg: omit = auto-detect or all, explicit = `just test core`, `desktop` = both rust + ui.
 
 ## PROBLEM WORKFLOW (MANDATORY)
 
@@ -109,20 +82,7 @@ See `.claude/rules/repo-organization.md` for the full directory tree and repo ta
 
 ## Dependencies
 
-```
-core/vauchi-core (standalone, no workspace deps)
-    ↑ (git dependency)
-cli/, tui/, desktop/, e2e/
-
-core/vauchi-protocol (shared message types, serde-only)
-    ↑ (git dependency)
-relay/
-```
-
-`relay/` depends on `vauchi-protocol` for shared message types but does **not** depend on `vauchi-core`.
-
-Downstream repos use git dependencies with branch-based pinning (`branch = "main"`).
-Local development uses `.cargo/config.toml` path overrides to point at local checkouts.
+`vauchi-core` → cli, tui, desktop, e2e (git dep). `vauchi-protocol` → relay (git dep, shared types only). Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides.
 
 ## Drift Detection
 
