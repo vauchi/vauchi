@@ -8,8 +8,6 @@ Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, d
 ## Quick Start
 
 ```bash
-git clone git@gitlab.com:vauchi/vauchi.git
-cd vauchi
 just setup    # Clone all repos
 just build    # Build Rust workspace
 just check    # Run all checks
@@ -19,108 +17,58 @@ just check    # Run all checks
 
 - **Principles**: All work must align with [docs/about/principles.md](docs/about/principles.md)
 - **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
-- **TDD**: Red→Green→Refactor. Test FIRST. Tests trace to `features/*.feature`
-- **Structure**: `src/` = prod, `tests/` = tests (siblings)
-- **Crypto**: `ring` primary; `chacha20poly1305` and `argon2` are spec-mandated exceptions. Never mock crypto
-- **Coverage**: 90%+ for vauchi-core
-- **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
-- **Task Tracking**: Use markdown-plan `.plan.md` companion files for structured task DAGs. See `.claude/rules/markdown-plan.md`
+- **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
+- **Test Quality**: CC-01 through CC-18 in `.claude/rules/test-quality-rules.md`
+- **Test Design**: `.claude/rules/testing-best-practices.md`
+- **Task Tracking**: Use `.plan.md` companion files for task DAGs. See `.claude/rules/markdown-plan.md`
 - **Plan-Code Sync**: Never mark a plan item `[x]` on `main` unless implementing code is also on `main`. Plan and code must land atomically in the same MR.
-- **Public docs**: `docs/` contains end-user and community developer documentation (mkdocs site)
-
-## Test Quality & Pre-Push Rules (MANDATORY)
-
-See `.claude/rules/test-quality-rules.md` for CC-01 through CC-18.
-See `.claude/rules/testing-best-practices.md` for test design principles.
+- **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 
 ## Tool Usage (MANDATORY)
 
-**Always use `just` recipes instead of raw commands.** See `.claude/rules/just-commands.md` for the full reference.
+**Always use `just` recipes instead of raw commands.** Run `just help` for commands.
+Full reference: `.claude/docs/just-commands.md`
 
-| Instead of... | Use... |
-|---------------|--------|
-| `cargo build` / `test` / `fmt` / `clippy` | `just build` / `test` / `fmt` / `lint` `[repo]` |
-| `cargo fmt && cargo clippy && cargo test` | `just check [repo]` |
-| `cargo test -p <crate>` | `just test-crate <crate>` |
-| `glab mr create` / `glab ci status` | `just gitlab mr-create` / `just gitlab pipeline-status` `[repo]` |
-| Raw `git -C <repo>` for multi-repo ops | `just git status` / `just git main` / `just git sync` |
-| `grep -r` across repos | `just grep <pattern> [glob]` |
-| Searching by domain concept | `just concept <name>` |
+Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test [repo]`,
+`cargo fmt && clippy && test` → `just check [repo]`, `grep -r` → `just grep <pattern>`,
+`glab mr create` → `just gitlab mr-create [repo]`
 
-Repo arg: omit = auto-detect or all, explicit = `just test core`, `desktop` = both rust + ui.
+## Problem Workflow (MANDATORY)
 
-## PROBLEM WORKFLOW (MANDATORY)
-
-**All significant work MUST follow the Problem to Solution Flow.**
-Use `/problem-workflow` to create and advance problem records.
+All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
 See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
 
 Lifecycle: `intake → investigating → planning → implementing → testing → done`
 
-Every problem record must have: **status**, **priority** (critical/high/medium/low), **owner**, **goals** (measurable success criteria). Critical/high problems require a **containment** action before investigation. Each phase has explicit **transition gates** (see SSOT doc). Rejected solutions go in `### Rejected Approaches` inside `implementation-plan.md`. Track Gherkin promotion with `promoted_to:` links.
+Every problem record must have: **status**, **priority**, **owner**, **goals**. Critical/high problems require **containment** before investigation. Rejected solutions go in `### Rejected Approaches`. Track Gherkin promotion with `promoted_to:` links.
 
-**Alert threshold**: If `_private/docs/planning/proposals/` has 5+ unreviewed docs, alert the user.
-**Staleness threshold**: Flag problems with no update for 14 days (intake) or 30 days (other phases).
+**Alert threshold**: 5+ unreviewed docs in `_private/docs/planning/proposals/`.
+**Staleness threshold**: 14 days (intake) or 30 days (other phases).
 
-## Commands
+## Shell & Cargo Rules
 
-See `.claude/rules/just-commands.md` for the full command reference, or run `just help`.
+- Verify correct working directory before sub-repo commands. Use `git -C <dir>` for cross-repo ops.
+- Check what's installed before suggesting tool installations.
+- When asked about pricing/hardware/real-world info, use web search.
+- Keep `Cargo.toml` git dependency branch refs pointing to `main`.
 
-## Repository Organisation
+## Dependencies & Repo Layout
 
-See `.claude/rules/repo-organization.md` for the full directory tree and repo tables.
+`vauchi-core` → cli, tui, desktop, e2e (git dep). `vauchi-protocol` → relay (shared types only). Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides.
 
-## Shell Commands
-
-- Before running commands in sub-repos, always verify the correct working directory. Multi-repo work requires explicit directory management — use `git -C <dir>` or verify `pwd` before executing.
-- Before suggesting tool installations, check what is already installed (e.g., `which <tool>`, `<tool> --version`) and focus on PATH/environment configuration issues first.
-- When asked about pricing, hardware, or real-world information, use web search immediately rather than answering from codebase analysis.
-
-## Rust / Cargo
-
-- When modifying `Cargo.toml`, keep git dependency branch references pointing to `main` unless explicitly told otherwise. Do not change branch refs to feature branches.
-
-## Dependencies
-
-`vauchi-core` → cli, tui, desktop, e2e (git dep). `vauchi-protocol` → relay (git dep, shared types only). Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides.
+Repo layout: `.claude/docs/repo-organization.md`. Drift naming: `.claude/docs/drift-naming.md`.
 
 ## Drift Detection
 
-Use `just drift` to detect cross-layer inconsistencies (missing tests, orphan code, stale docs, naming drift). Run it:
+Run `just drift` after completing features or before MRs. Levels: `high`/`medium`/`low`.
 
-- **After completing a feature** — verify nothing was missed across layers
-- **Before creating an MR** — catch drift before CI does
-- **When investigating test coverage gaps** — find untested code or orphan tests
-- **When refactoring** — ensure renames propagated across all layers
+## GitLab & Git (MANDATORY)
 
-```bash
-just drift                  # Human-readable audit, fail on high severity
-just drift medium           # Stricter: fail on medium+ severity
-just drift-ci               # JSON output (for scripts/CI)
-```
-
-Severity levels: `high` (missing tests for features, orphan code), `medium` (missing docs, naming inconsistencies), `low` (minor gaps).
+All repos have protected `main` — merge via MR only, force push disabled.
+Use `just gitlab mr-create [repo]` for MRs. Use `/create-mr` for multi-repo workflows.
+Commit format and branch naming: `.claude/rules/commit-conventions.md`.
+Contributing guide: `docs/developers/contributing.md`.
 
 ## Exploration
 
-When you need to understand a topic in this codebase, use:
-
-```bash
-just tell-me-about "iOS tests"
-just tell-me-about "recovery feature"
-just tell-me-about "crypto implementation"
-```
-
-This uses a local LLM (ollama + qwen2:0.5b) to generate search terms and summarize findings.
-
-## GitLab Workflows
-
-- Always use `just gitlab mr-create [repo]` for MR creation.
-- Use the `/create-mr` skill for multi-repo MR workflows.
-
-## Git Workflow (MANDATORY)
-
-All repos have protected `main` branches — no direct pushes, merge via MR only, force push disabled.
-
-See `.claude/rules/commit-conventions.md` for commit format, branch naming, and workflow.
-See `docs/developers/contributing.md` for the full contributing guide including MR templates.
+`just tell-me-about "<topic>"` — uses local LLM to search and summarize codebase.

@@ -12,7 +12,6 @@ apply: always
 - **Fast tests**: Unit tests should complete in milliseconds; slow tests go in integration suites
 
 ### Test Coverage
-- **Coverage target**: Aim for 90%+ line coverage on core business logic
 - **Branch coverage**: Test both branches of conditionals
 - **Edge cases**: Test boundary conditions, empty inputs, nulls, and error paths
 - **Happy path + sad path**: Test both successful and failure scenarios
@@ -32,5 +31,4 @@ apply: always
 ### Test Maintenance
 - **DRY in tests (carefully)**: Extract common setup, but keep tests readable
 - **Delete obsolete tests**: Remove tests for deleted features
-- **Update tests with code**: When changing behavior, update tests first (TDD)
 - **Flaky test policy**: Fix or quarantine flaky tests immediately
