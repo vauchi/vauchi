@@ -22,6 +22,11 @@
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gate-push.sh",
             "timeout": 300,
             "statusMessage": "Running pre-push checks..."
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-bash-grep.sh",
+            "timeout": 5
           }
         ]
       }
