@@ -18,10 +18,8 @@ just check    # Run all checks
 - **Principles**: All work must align with [docs/about/principles.md](docs/about/principles.md)
 - **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
-- **Test Quality**: CC-01 through CC-18 in `.claude/rules/test-quality-rules.md`
-- **Test Design**: `.claude/rules/testing-best-practices.md`
-- **Task Tracking**: Use `.plan.md` companion files for task DAGs. See `.claude/rules/markdown-plan.md`
-- **Plan-Code Sync**: Never mark a plan item `[x]` on `main` unless implementing code is also on `main`. Plan and code must land atomically in the same MR.
+- **Test Quality & Design**: CC-01 through CC-18 in `.claude/rules/test-quality-rules.md`
+- **Task Tracking & Plan-Code Sync**: See `.claude/rules/markdown-plan.md`
 - **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 
 ## Tool Usage (MANDATORY)
