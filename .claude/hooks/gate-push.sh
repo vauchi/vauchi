@@ -169,7 +169,7 @@ if [[ -n "$UI_DIR" ]]; then
   # HTMLHint check
   HTMLHINT=$(find_node_bin htmlhint "$UI_DIR")
   if [[ -n "$HTMLHINT" ]]; then
-    HTML_FILES=$(find "$UI_DIR" -maxdepth 2 -name '*.html' ! -path '*/node_modules/*' ! -path '*/dist/*' 2>/dev/null)
+    HTML_FILES=$(find "$UI_DIR" -maxdepth 2 -name '*.html' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/playwright-report/*' ! -path '*/test-results/*' 2>/dev/null)
     if [[ -n "$HTML_FILES" ]]; then
       echo "[gate-push] Running htmlhint ($REPO_NAME)..."
       if ! echo "$HTML_FILES" | xargs "$HTMLHINT" 2>&1; then
