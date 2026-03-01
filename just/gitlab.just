@@ -61,7 +61,7 @@ mr-create repo='' title='':
     if ! git rev-parse --abbrev-ref "@{u}" &>/dev/null; then
         git push -u origin "$branch"
     fi
-    ARGS=(--fill --target-branch main --push -R "vauchi/$r")
+    ARGS=(--fill --yes --target-branch main --push -R "vauchi/$r")
     if [[ -n "{{ title }}" ]]; then
         ARGS+=(--title "{{ title }}")
     fi
