@@ -65,7 +65,7 @@ mr-create repo='' title='':
     if [[ -n "{{ title }}" ]]; then
         ARGS+=(--title "{{ title }}")
     fi
-    glab mr create "${ARGS[@]}"
+    glab mr create --yes "${ARGS[@]}"
 
 # Approve a merge request
 [no-cd]
@@ -85,7 +85,7 @@ mr-merge id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr merge "{{id}}" -R "vauchi/$r"
+    glab mr merge "{{id}}" --yes -R "vauchi/$r"
 
 # Close a merge request
 [no-cd]
@@ -191,7 +191,7 @@ issue-create title repo='' *args='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab issue create --title "{{title}}" --no-editor -R "vauchi/$r" {{args}}
+    glab issue create --title "{{title}}" --no-editor --yes -R "vauchi/$r" {{args}}
 
 # Close an issue
 [no-cd]
