@@ -33,7 +33,7 @@ for test_line in $TEST_LINES; do
     LINE_CONTENT=$(sed -n "${CHECK_LINE}p" "$FILE_PATH")
     if echo "$LINE_CONTENT" | grep -qE '^\s*(pub\s+)?(async\s+)?fn\s+'; then
       FN_LINE=$CHECK_LINE
-      FN_NAME=$(echo "$LINE_CONTENT" | grep -oP 'fn\s+\K\w+')
+      FN_NAME=$(echo "$LINE_CONTENT" | sed -E 's/.*fn[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*).*/\1/')
       break
     fi
   done
