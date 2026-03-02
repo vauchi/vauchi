@@ -482,6 +482,10 @@ help:
       just relay              Start relay server
       just tui                Run TUI
 
+    Housekeeping:
+      just housekeeping       Run all health checks (changes, snapshots, stashes,
+                              branches, merged refs, stale plans, problems, drift)
+
     Extended:
       just test-crate <crate> Test specific crate in core workspace
       just test-file <name> [repo]  Run single test file
@@ -511,6 +515,166 @@ help:
 
     Full list:  just --list --list-submodules
     HELP
+
+# ═══════════════════════════════════════════════════════════════════
+# HOUSEKEEPING
+# ═══════════════════════════════════════════════════════════════════
+
+# Run all non-destructive health checks and print a summary
+[group('daily')]
+[script('bash')]
+housekeeping:
+    set -uo pipefail
+    ISSUES=0
+    SECTION=0
+
+    section() {
+        SECTION=$((SECTION + 1))
+        echo ""
+        echo "═══ [$SECTION] $1 ═══"
+    }
+
+    # 1. Uncommitted changes & untracked files
+    section "Uncommitted changes"
+    dirty=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        status=$(git -C "$gitdir" status --porcelain 2>/dev/null || true)
+        if [[ -n "$status" ]]; then
+            modified=$(echo "$status" | grep -c '^ M\|^M \|^MM' || true)
+            untracked=$(echo "$status" | grep -c '^??' || true)
+            parts=()
+            [[ "$modified" -gt 0 ]] && parts+=("$modified modified")
+            [[ "$untracked" -gt 0 ]] && parts+=("$untracked untracked")
+            detail=$(IFS=', '; echo "${parts[*]}")
+            echo "  $label: $detail"
+            dirty=$((dirty + modified + untracked))
+        fi
+    done
+    if [[ "$dirty" -eq 0 ]]; then
+        echo "  All clean"
+    else
+        ISSUES=$((ISSUES + dirty))
+    fi
+
+    # 2. Unreviewed insta snapshots
+    section "Unreviewed snapshots"
+    snaps=$(find . -name '*.snap.new' -not -path '*/target/*' 2>/dev/null || true)
+    if [[ -n "$snaps" ]]; then
+        count=$(echo "$snaps" | wc -l | tr -d ' ')
+        echo "  $count unreviewed snapshot(s):"
+        echo "$snaps" | sed 's/^/    /'
+        echo "  -> Run: (cd tui && cargo insta review)"
+        ISSUES=$((ISSUES + count))
+    else
+        echo "  None"
+    fi
+
+    # 3. Stashes
+    section "Stashes"
+    stash_total=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        stash_count=$(git -C "$gitdir" stash list 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$stash_count" -gt 0 ]]; then
+            echo "  $label: $stash_count stash(es)"
+            git -C "$gitdir" stash list 2>/dev/null | head -3 | sed 's/^/    /'
+            [[ "$stash_count" -gt 3 ]] && echo "    ... and $((stash_count - 3)) more"
+            stash_total=$((stash_total + stash_count))
+        fi
+    done
+    if [[ "$stash_total" -eq 0 ]]; then
+        echo "  None"
+    else
+        ISSUES=$((ISSUES + stash_total))
+    fi
+
+    # 4. Stale local branches (non-main)
+    section "Stale local branches"
+    stale_branches=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        branches=$(git -C "$gitdir" branch --no-color 2>/dev/null | grep -v '^\* ' | grep -v 'main$' | sed 's/^[[:space:]]*//' || true)
+        if [[ -n "$branches" ]]; then
+            while IFS= read -r br; do
+                echo "  $label: $br"
+                stale_branches=$((stale_branches + 1))
+            done <<< "$branches"
+        fi
+    done
+    if [[ "$stale_branches" -eq 0 ]]; then
+        echo "  None"
+    else
+        echo "  $stale_branches local branch(es) besides main"
+        ISSUES=$((ISSUES + stale_branches))
+    fi
+
+    # 5. Merged remote branches
+    section "Merged remote branches"
+    merged=$(just git cleanup 2>&1 | grep -E '^\s+origin/' || true)
+    if [[ -n "$merged" ]]; then
+        count=$(echo "$merged" | wc -l | tr -d ' ')
+        echo "  $count merged remote ref(s):"
+        echo "$merged" | sed 's/^/  /'
+        echo "  -> Run: just git cleanup run"
+        ISSUES=$((ISSUES + count))
+    else
+        echo "  None"
+    fi
+
+    # 6. Stale plans
+    section "Stale plans (30+ days)"
+    stale_output=$(just plan-stale 2>&1 || true)
+    stale_count=$(echo "$stale_output" | grep -c 'STALE' || true)
+    if [[ "$stale_count" -gt 0 ]]; then
+        echo "$stale_output" | grep 'STALE' | sed 's/^/  /'
+        ISSUES=$((ISSUES + stale_count))
+    else
+        echo "  None"
+    fi
+
+    # 7. Problem records summary
+    section "Problem records"
+    just problem-list 2>&1 | sed 's/^/  /'
+
+    # 8. Drift (high severity only, quick)
+    section "Drift (high severity)"
+    drift_output=$(just drift --limit=5 2>&1 || true)
+    if echo "$drift_output" | grep -q "0 high"; then
+        echo "  No high-severity drift"
+    else
+        echo "$drift_output" | tail -5 | sed 's/^/  /'
+    fi
+
+    # Summary
+    echo ""
+    echo "==========================================="
+    if [[ "$ISSUES" -eq 0 ]]; then
+        echo "Housekeeping: all clear!"
+    else
+        echo "Housekeeping: $ISSUES item(s) need attention"
+    fi
 
 # ═══════════════════════════════════════════════════════════════════
 # CROSS-REPO TOOLS
