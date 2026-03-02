@@ -15,6 +15,7 @@ apply: always
   - `just git branches` — list branches across repos
   - `just git branch <name> [repos]` — create branch across repos
   - `just git push-all` — push repos with commits ahead
+- **Return to workspace root** after every task — `cd` to the directory containing `CLAUDE.md`. Sub-repo `cd` commands drift the working directory — always reset.
 - Fall back to `git -C <dir>` only for single-repo ops not covered by a recipe
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
 - Push upstream repos first (core → cli/tui/desktop/e2e), mark downstream MRs as Draft
