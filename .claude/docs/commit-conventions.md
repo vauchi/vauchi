@@ -12,14 +12,27 @@
 | `tidy/` | Structural-only cleanup (Tidy First) |
 | `investigation/` | Research/exploration |
 
+### Recipes for Branch, Commit, Push, MR
+
+| Action | Recipe |
+|--------|--------|
+| Create branch across repos | `just git branch feature/my-feature [repos]` |
+| Interactive commit (multi-repo) | `just commit` |
+| Non-interactive commit (single repo) | `just commit-repo <repo> <msg>` |
+| Push all repos with commits ahead | `just git push-all` |
+| Push without tests (fmt + clippy only) | `just git push-all skip-tests` |
+| Create MR | `just gitlab mr-create [repo] [title]` |
+| Approve MR | `just gitlab mr-approve <id> [repo]` |
+| Merge MR | `just gitlab mr-merge <id> [repo]` |
+| Pipeline status | `just gitlab pipeline-status [repo]` |
+| Wait for pipeline | `just gitlab pipeline-wait [repo]` |
+
 ### Multi-Repo Branch Sync
 
 When work spans repos, **keep branch names in sync**:
 
 ```bash
-git -C features checkout -b feature/my-feature
-git -C core checkout -b feature/my-feature
-git -C docs checkout -b feature/my-feature
+just git branch feature/my-feature features core docs
 ```
 
 ### MR Description Template

@@ -45,6 +45,10 @@ This reduces token usage, avoids permission prompts, and searches across all rep
 | Raw `git -C <repo>` for multi-repo | `just git status` / `just git main` |
 | `git diff origin/main...HEAD` | `just git diff-main [repo]` |
 | `git log origin/main..HEAD` | `just git log-branch [repo]` |
+| `glab mr approve` / `glab mr merge` | `just gitlab mr-approve <id> [repo]` / `just gitlab mr-merge <id> [repo]` |
+| `git stash list` across repos | `just git stash-list` |
+| `git stash clear` across repos | `just git stash-clear` |
+| Health check / housekeeping | `just housekeeping` |
 
 ### Repo argument rules
 
@@ -67,6 +71,7 @@ just lint [repo]            # Run lints
 just fix [repo]             # Auto-fix formatting + lint
 just commit                 # Interactive commit across repos
 just commit-repo <repo> <msg> # Non-interactive commit (for automation)
+just housekeeping            # Run all health checks (changes, snapshots, stashes, branches, drift)
 
 # Repo targeting
 just test core              # Test core only
@@ -105,9 +110,14 @@ just gitlab mr-status [repo]        # MR status for current branch
 just gitlab pipeline-status [repo]  # Pipeline status
 just gitlab pipeline-list [repo]    # Recent pipelines
 just gitlab pipeline-log <id> [repo] # Job log
+just gitlab pipeline-jobs <id> [repo] # List jobs in a pipeline
 just gitlab pipeline-wait [repo]    # Wait for pipeline to finish
+just gitlab pipeline-cancel <id> [repo] # Cancel running pipeline
+just gitlab pipeline-retry <id> [repo] # Retry failed pipeline
 just gitlab issue-list [repo]       # List issues
+just gitlab issue-view <id> [repo]  # View issue details
 just gitlab issue-create <title> [repo] # Create issue
+just gitlab issue-close <id> [repo] # Close issue
 
 # Git (multi-repo)
 just git sync               # Fetch all + pull where on main
@@ -125,7 +135,10 @@ just git fetch              # Fetch all repos
 just git branches           # Show branches across repos
 just git branch <name> [repos] # Create branch across repos
 just git stash-list         # Show stashes across all repos
+just git stash-clear        # Clear all stashes across all repos
 just git cleanup            # Preview merged branch cleanup
+just git cleanup run        # Delete merged branches + prune refs
+just git checkout-main      # Checkout main in all repos
 
 # Cross-repo tools
 just grep <pattern> [glob]  # Search across all repos
@@ -135,6 +148,10 @@ just check-annotations [repo] # Check @scenario annotation coverage
 just check-lifecycle        # Validate feature lifecycle tags
 just consumers <pattern>    # Find downstream usage of core API
 just reuse [repo]           # REUSE / SPDX license header check
+just lint-docs              # Lint docs: naming, broken links, license text
+just sync-locales           # Validate locale files (missing/extra keys)
+just problem-list [phase]   # List problem records by status
+just task-list              # Show remaining tasks from master plan
 
 # Setup
 just setup                  # Clone all repos, init workspace

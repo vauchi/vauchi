@@ -31,6 +31,11 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 `cargo fmt && clippy && test` → `just check [repo]`, `grep -r` → `just grep <pattern>`,
 `glab mr create` → `just gitlab mr-create [repo]`
 
+**Multi-repo git**: Never write bash loops over repos — use `just git *` recipes.
+`git status` across repos → `just git status`, branches → `just git branch-status`,
+stashes → `just git stash-list`, cleanup → `just git cleanup run`,
+fetch → `just git fetch`, health check → `just housekeeping`
+
 ## Problem Workflow (MANDATORY)
 
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
@@ -45,7 +50,8 @@ Every problem record must have: **status**, **priority**, **owner**, **goals**. 
 
 ## Shell & Cargo Rules
 
-- Verify correct working directory before sub-repo commands. Use `git -C <dir>` for cross-repo ops.
+- Verify correct working directory before sub-repo commands.
+- For multi-repo git ops use `just git *` recipes (see above). Use `git -C <dir>` only for single-repo ops with no recipe.
 - Check what's installed before suggesting tool installations.
 - When asked about pricing/hardware/real-world info, use web search.
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`.
