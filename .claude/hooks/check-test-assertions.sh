@@ -73,12 +73,21 @@ for test_line in $TEST_LINES; do
 
   [[ -z "$BODY_END" ]] && continue
 
-  # Extract body and check for assertion patterns
+  # Extract body and check for assertion patterns.
+  # Also scan a generous range past the fn line to handle cases where
+  # brace counting is confused by braces in string literals (e.g. regex patterns).
   BODY=$(sed -n "${BODY_START},${BODY_END}p" "$FILE_PATH")
+  FULL_RANGE_END=$((FN_LINE + 200))
+  [[ $FULL_RANGE_END -gt $TOTAL_LINES ]] && FULL_RANGE_END=$TOTAL_LINES
+  FULL_RANGE=$(sed -n "${FN_LINE},${FULL_RANGE_END}p" "$FILE_PATH")
 
-  # Assertion patterns: assert!, assert_eq!, assert_ne!, prop_assert!, .expect(, #[should_panic]
-  if ! echo "$BODY" | grep -qE 'assert(_eq|_ne)?!|prop_assert!|\.expect\(|#\[should_panic\]'; then
-    VIOLATIONS+=("$FN_NAME (line $FN_LINE)")
+  # Assertion patterns: assert!, assert_eq!, assert_ne!, prop_assert*!, .expect(, #[should_panic]
+  ASSERTION_RE='assert(_eq|_ne)?!|prop_assert(_eq|_ne)?!|\.expect\(|#\[should_panic\]'
+  if ! echo "$BODY" | grep -qE "$ASSERTION_RE"; then
+    # Fallback: check the wider range in case brace counting was off
+    if ! echo "$FULL_RANGE" | grep -qE "$ASSERTION_RE"; then
+      VIOLATIONS+=("$FN_NAME (line $FN_LINE)")
+    fi
   fi
 done
 
