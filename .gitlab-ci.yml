@@ -16,18 +16,10 @@
 #   - Secret Detection: Prevent accidental credential commits
 #
 # Runner Configuration:
-#   Currently using GitLab shared runners for all jobs.
-#   Self-hosted runner support is prepared but commented out.
-#
-# Self-hosted Runner Tags (when registered):
-#   - linux, rust, node, android: Linux VM (self-hosted)
-#   - macos, ios, xcode: macOS VM (self-hosted)
-#   - dind, docker-build: DinD VM (self-hosted)
-#
-# To enable self-hosted runners:
-#   1. Register runners with the appropriate tags (see _private/infra/runners/)
-#   2. Uncomment the `tags:` sections in job definitions
-#   3. Remove `when: never` from build:ios and build:relay-image
+#   Self-hosted group runners (allyson + nell):
+#   - docker jobs → allyson-docker (tags: docker, self-hosted)
+#   - shell jobs  → allyson-shell / macos (tags: linux/macos, self-hosted)
+#   See _private/infra/runners/ for runner details.
 
 # GitLab Ultimate Templates
 # Security scanning, code quality, and license compliance
@@ -46,6 +38,7 @@ stages:
 # Secret detection (MR + scheduled)
 secret_detection:
   stage: security
+  tags: [docker]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "schedule"
