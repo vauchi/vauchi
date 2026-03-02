@@ -403,6 +403,11 @@ watch:
 metrics *args:
     ./scripts/scripts/engineering-metrics.sh {{args}}
 
+# Push engineering metrics to Prometheus pushgateway
+[group('extended')]
+metrics-push *args:
+    ./scripts/scripts/ci/metrics-push.sh {{args}}
+
 # Run tests with coverage
 [group('extended')]
 [working-directory('core')]
