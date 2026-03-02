@@ -19,6 +19,10 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 - **CC-13 Stateful Property Tests for Lifecycles**: For domain objects with state machines (identity, contacts, exchange, sync, backup), write stateful property tests that verify invariants across random operation sequences.
 - **CC-14 Adversarial Test Data for Security Boundaries**: For functions processing user input or external data, include parameterized tests with adversarial payloads (empty, max-length, unicode, RTL, null bytes, injection payloads, corrupted data, tampered signatures).
 
+## Tidy First (Kent Beck)
+
+- **CC-19 Tidy Before Behavior Change**: Before starting a Red-Green cycle, assess whether a small structural improvement (tidying) would make the change easier. Tidyings are structure-only, never change behavior, and get their own `tidy:` commit. Common tidyings: guard clauses, extract helper, explaining variables, delete dead code, normalize symmetries. If the code is already clean, skip straight to RED.
+
 ## Pre-Push Rules (MANDATORY)
 
 Derived from post-mortem analysis of pipeline history (2026-02-20).

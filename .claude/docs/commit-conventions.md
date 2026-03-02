@@ -9,6 +9,7 @@
 | `feature/` | New functionality |
 | `bugfix/` | Bug fixes |
 | `refactor/` | Code restructuring |
+| `tidy/` | Structural-only cleanup (Tidy First) |
 | `investigation/` | Research/exploration |
 
 ### Multi-Repo Branch Sync
@@ -35,6 +36,7 @@ git -C docs checkout -b feature/my-feature
 - [ ] Manual testing done
 
 ## Checklist
+- [ ] Tidyings in separate `tidy:` commits (if any)
 - [ ] Follows TDD
 - [ ] Documentation updated
 - [ ] Feature file updated (if applicable)

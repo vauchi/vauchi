@@ -6,7 +6,8 @@ apply: always
 
 ## TDD, Code Structure & Crypto (MANDATORY)
 
-- **TDD**: Red→Green→Commit→Refactor→Commit. Test FIRST. Tests trace to `features/*.feature`
+- **TDD**: Tidy→Commit→Red→Green→Commit→Refactor→Commit. Test FIRST. Tests trace to `features/*.feature`
+  - **Tidy First** (optional): small structural-only improvement before starting a cycle — guard clauses, extract helper, rename, delete dead code. Own `tidy:` commit. No behavior change.
   - Commit immediately when tests go green
   - Commit after each refactor if tests still green
 - **Structure**: `src/` = prod, `tests/` = tests (siblings). Never mix. Test helpers in `tests/common/` or `tests/helpers/`

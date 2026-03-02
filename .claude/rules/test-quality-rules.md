@@ -22,6 +22,7 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
 - **CC-15**: Run `just check [repo]` before every push.
 - **CC-17**: Every `#[test]` must contain `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`.
 - **CC-18**: Never retry a failed pipeline without fixing the root cause.
+- **CC-19**: Tidy before behavior change — small structural-only improvement in its own `tidy:` commit before starting RED. Skip if code is already clean.
 
 ### Test Design (from testing-best-practices)
 - **AAA Pattern**: Arrange, Act, Assert. One assertion per concept. Independent tests.
