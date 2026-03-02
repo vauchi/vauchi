@@ -57,3 +57,15 @@ just git branch feature/my-feature features core docs
 
 Each MR must list related MRs in **Related MRs** so reviewers see the full picture.
 Use GitLab reference format: `{group}/{project}!{mr_number}`.
+
+### Avoiding Unwanted Mentions
+
+GitLab interprets `@word` in MR descriptions as user/group mentions — real people get notified.
+Gherkin feature tags like `@duress`, `@hidden`, `@panic` **must** be escaped in MR text:
+
+| Context | Safe? | Example |
+|---------|-------|---------|
+| Source code comments | Yes | `// Feature: foo.feature @duress` |
+| MR description (raw) | **NO** | `@duress @hidden` → mentions users |
+| MR description (backtick) | Yes | `` `@duress` `` `` `@hidden` `` |
+| MR description (no prefix) | Yes | `duress, hidden, panic` |
