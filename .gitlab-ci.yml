@@ -18,7 +18,7 @@
 # Runner Configuration:
 #   Self-hosted group runners (allyson + nell):
 #   - docker jobs → allyson-docker (tags: docker, self-hosted)
-#   - shell jobs  → allyson-shell / macos (tags: linux/macos, self-hosted)
+#   - shell jobs  → allyson-shell / nell-shell (tags: linux/macos, self-hosted)
 #   See _private/infra/runners/ for runner details.
 
 # GitLab Ultimate Templates
