@@ -10,6 +10,7 @@ apply: always
 - **Branches**: `just git branch <name> [repos]` — `feature/`, `bugfix/`, `refactor/`, `tidy/`, `investigation/`
 - **Committing**: `just commit` (interactive, multi-repo) or `just commit-repo <repo> <msg>` (automation)
 - **MRs**: `just gitlab mr-create [repo]` — never raw `glab`. `just gitlab mr-approve`, `just gitlab mr-merge`.
+- **Pre-MR rebase**: Always `git fetch origin main && git rebase origin/main` before creating an MR. GitLab requires fast-forward merges — branches behind main can't merge.
 - **Pushing**: `just git push-all` (runs checks). Never raw `git push` to multiple repos.
 - **No direct push to main**: Merge via MR only. Sync branch names across repos.
 
