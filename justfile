@@ -410,10 +410,57 @@ metrics-push *args:
 
 # Run tests with coverage
 [group('extended')]
-[working-directory('core')]
-coverage:
-    cargo llvm-cov --workspace --html
-    @echo "Report: core/target/llvm-cov/html/index.html"
+[script('bash')]
+coverage *args:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    source scripts/scripts/quiet-runner.sh
+    _qr_parse_args {{args}}
+    for r in $(resolve_repo "${_QR_REPO:-}" "coverage"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        echo "═══ coverage: $r ($tc) ═══"
+        _do_step() {
+            case "$tc" in
+                rust)
+                    (cd "$dir" && cargo llvm-cov --workspace --html 2>&1)
+                    ;;
+                gradle)
+                    (cd "$dir" && ./gradlew jacocoDebugTestReport 2>&1)
+                    ;;
+                npm)
+                    (cd "$dir" && npx vitest run --coverage 2>&1)
+                    ;;
+                xcode)
+                    if [[ "$(uname)" != "Darwin" ]]; then
+                        echo "SKIP: iOS coverage requires macOS" >&2
+                        return 0
+                    fi
+                    rm -rf "$dir/coverage_result.xcresult"
+                    (cd "$dir" && xcodebuild -scheme Vauchi \
+                        -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+                        -enableCodeCoverage YES \
+                        -resultBundlePath "$dir/coverage_result" \
+                        test 2>&1)
+                    xcrun xccov view --report "$dir/coverage_result.xcresult"
+                    ;;
+            esac
+        }
+        run_step "$r" _do_step
+    done
+    print_summary "coverage" || exit 1
+    echo ""
+    echo "Reports:"
+    for r in $(resolve_repo "${_QR_REPO:-}" "coverage"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        case "$tc" in
+            rust)   echo "  $r: $dir/target/llvm-cov/html/index.html" ;;
+            gradle) echo "  $r: $dir/app/build/reports/jacoco/jacocoDebugTestReport/html/index.html" ;;
+            npm)    echo "  $r: $dir/coverage/index.html" ;;
+            xcode)  echo "  $r: $dir/coverage_result.xcresult (open with Xcode)" ;;
+        esac
+    done
 
 # Generate and open Rust docs
 [group('extended')]
