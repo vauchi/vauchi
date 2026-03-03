@@ -95,6 +95,21 @@ monitoring-status:
 monitoring-logs:
     ./_private/infra/scripts/deploy-monitoring.sh --logs
 
+# Re-create relay alias on monitoring network (run after each relay deploy)
+[group('deploy')]
+monitoring-relay-alias:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SSH_TARGET="vauchi@bold-hopper-vps"
+    RELAY=$(ssh "$SSH_TARGET" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}}}' | head -1")
+    if [ -z "$RELAY" ]; then
+        echo "ERROR: No running relay container found"
+        exit 1
+    fi
+    ssh "$SSH_TARGET" "docker network disconnect monitoring_monitoring $RELAY 2>/dev/null || true"
+    ssh "$SSH_TARGET" "docker network connect --alias vauchi-relay-web monitoring_monitoring $RELAY"
+    echo "Connected $RELAY to monitoring network as 'vauchi-relay-web'"
+
 # ═══════════════════════════════════════════════════════════════════
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
