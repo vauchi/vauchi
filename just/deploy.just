@@ -101,7 +101,7 @@ monitoring-relay-alias:
     #!/usr/bin/env bash
     set -euo pipefail
     SSH_TARGET="vauchi@bold-hopper-vps"
-    RELAY=$(ssh "$SSH_TARGET" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}}}' | head -1")
+    RELAY=$(ssh "$SSH_TARGET" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
     if [ -z "$RELAY" ]; then
         echo "ERROR: No running relay container found"
         exit 1
