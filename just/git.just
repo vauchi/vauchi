@@ -5,9 +5,10 @@
 # Multi-repo git commands
 # Usage: just git <recipe>
 
-# Stash changes, checkout main, and pull latest in all repos
-# Usage: just git main          (interactive — prompts before stashing)
+# Save changes, checkout main, and pull latest in all repos
+# Usage: just git main          (interactive — prompts with wip/stash/abort)
 #        just git main yes      (non-interactive — auto-stash without prompting)
+#        just git main wip      (non-interactive — auto-WIP-commit without prompting)
 [no-cd]
 [script('bash')]
 main mode='':
@@ -29,8 +30,9 @@ main mode='':
         fi
     done
 
+    save_mode=""
     if [[ ${#dirty_repos[@]} -gt 0 ]]; then
-        echo "The following repos have uncommitted changes that will be stashed:"
+        echo "Uncommitted changes in:"
         echo ""
         for i in "${!dirty_repos[@]}"; do
             dir="${dirty_repos[$i]}"
@@ -41,26 +43,40 @@ main mode='':
         done
         if [[ "{{ mode }}" == "yes" ]]; then
             echo "(auto-stashing — non-interactive mode)"
+            save_mode="stash"
+        elif [[ "{{ mode }}" == "wip" ]]; then
+            echo "(auto-WIP-commit — non-interactive mode)"
+            save_mode="wip"
         else
-            read -rp "Stash these changes and switch to main? [y/N] " answer
-            if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
-                echo "Aborted."
-                exit 0
-            fi
+            echo "How to save? [w]ip commit (recommended), [s]tash, [a]bort"
+            read -rp "> " answer
+            case "$answer" in
+                w|W|wip) save_mode="wip" ;;
+                s|S|stash) save_mode="stash" ;;
+                *) echo "Aborted."; exit 0 ;;
+            esac
         fi
         echo ""
     fi
 
-    # Second pass: stash, checkout main, and pull
+    # Second pass: save changes, checkout main, and pull
     switch_to_main() {
         local label="$1"
         local dir="$2"
         echo -n "$label: "
         cd "$dir" || return 1
-        # Stash if dirty
+        # Save if dirty
         if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
-            git stash push -m "auto-stash before switching to main" --quiet
-            echo -n "(stashed) "
+            if [[ "$save_mode" == "wip" ]]; then
+                local timestamp
+                timestamp=$(date +%Y%m%d-%H%M%S)
+                git add -A
+                git commit -m "wip: checkpoint $timestamp" --quiet --no-verify
+                echo -n "(wip saved) "
+            else
+                git stash push -m "auto-stash before switching to main" --quiet
+                echo -n "(stashed) "
+            fi
         fi
         # Checkout main and pull
         if git checkout main --quiet 2>/dev/null; then
@@ -367,16 +383,30 @@ push-all mode='full':
         echo ""
     fi
     pushed=()
+    wip_blocked=()
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
             if [[ "$ahead" -gt 0 ]]; then
+                # Block pushing WIP commits
+                head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
+                if [[ "$head_msg" == wip:* ]]; then
+                    echo "SKIPPED ${dir%/}: HEAD is a WIP commit ($head_msg)"
+                    echo "  -> Run: just git wip-undo ${dir%/}"
+                    wip_blocked+=("${dir%/}")
+                    continue
+                fi
                 echo "Pushing ${dir%/} ($ahead commits ahead)"
                 (cd "$dir" && git push)
                 pushed+=("${dir%/}")
             fi
         fi
     done
+    if [[ ${#wip_blocked[@]} -gt 0 ]]; then
+        echo ""
+        echo "WIP-blocked (${#wip_blocked[@]}): ${wip_blocked[*]}"
+        echo "Undo WIP commits first: just git wip-undo"
+    fi
     if [[ ${#pushed[@]} -gt 0 ]]; then
         echo ""
         echo "Verify with: git -C <repo> log --oneline origin/<branch>..<branch>"
@@ -625,6 +655,7 @@ stash-list:
     fi
 
 # Create a branch with the same name across repos
+# If repos have uncommitted changes, prompts to save them first
 # Usage: just git branch feature/my-feature core cli desktop
 #        just git branch feature/my-feature           (all repos)
 [no-cd]
@@ -652,6 +683,45 @@ branch name *repos='':
             [[ -d "${dir}.git" ]] && targets+=("${dir%/}")
         done
     fi
+
+    # Safety check: warn about uncommitted changes before switching
+    dirty=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+            dirty+=("$label")
+        fi
+    done
+    if [[ ${#dirty[@]} -gt 0 ]]; then
+        echo "WARNING: Uncommitted changes in: ${dirty[*]}"
+        if [[ -t 0 ]]; then
+            echo "How to save? [w]ip commit (recommended), [s]kip (keep changes), [a]bort"
+            read -rp "> " answer
+            case "$answer" in
+                w|W|wip)
+                    echo "Saving WIP commits..."
+                    timestamp=$(date +%Y%m%d-%H%M%S)
+                    for dir in "${targets[@]}"; do
+                        if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+                            git -C "$dir" add -A
+                            git -C "$dir" commit -m "wip: checkpoint $timestamp" --quiet --no-verify
+                            label="$dir"
+                            [[ "$dir" == "." ]] && label="vauchi (root)"
+                            echo "  $label: WIP saved"
+                        fi
+                    done
+                    echo ""
+                    ;;
+                s|S|skip) echo "Proceeding without saving..." ;;
+                *) echo "Aborted."; exit 0 ;;
+            esac
+        else
+            echo "Non-interactive shell — save changes first with: just git wip" >&2
+            exit 1
+        fi
+    fi
+
     created=()
     skipped=()
     for dir in "${targets[@]}"; do
@@ -677,3 +747,280 @@ branch name *repos='':
     echo ""
     [[ ${#created[@]} -gt 0 ]] && echo "Branch '{{ name }}' active in: ${created[*]}"
     [[ ${#skipped[@]} -gt 0 ]] && echo "Skipped: ${skipped[*]}"
+    exit 0
+
+# ═══════════════════════════════════════════════════════════════════
+# WIP - Save/restore in-progress work as commits (safer than stash)
+# ═══════════════════════════════════════════════════════════════════
+
+# Save work-in-progress as a commit on the current branch
+# Unlike stash, WIP commits stay on the branch, show in git log, and can't be lost
+# Usage: just git wip                          (all dirty repos, default message)
+#        just git wip "fixing exchange bug"    (all dirty repos, custom message)
+#        just git wip "" core cli              (specific repos, default message)
+#        just git wip "my msg" core cli        (specific repos, custom message)
+[no-cd]
+[script('bash')]
+wip msg='' *repos='':
+    set -uo pipefail
+    targets=()
+    if [[ -n "{{ repos }}" ]]; then
+        for r in {{ repos }}; do
+            if [[ -d "$r/.git" ]]; then
+                targets+=("$r")
+            elif [[ "$r" == "root" || "$r" == "." ]]; then
+                targets+=(".")
+            else
+                echo "WARNING: $r is not a git repo, skipping" >&2
+            fi
+        done
+    else
+        # All repos including root
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                gitdir=".git"
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                gitdir="${dir}.git"
+            fi
+            if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+                if [[ "$dir" == "." ]]; then
+                    targets+=(".")
+                else
+                    targets+=("${dir%/}")
+                fi
+            fi
+        done
+    fi
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        echo "No dirty repos — nothing to save."
+        exit 0
+    fi
+
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    branch=$(git -C "${targets[0]}" branch --show-current 2>/dev/null || echo "unknown")
+    if [[ -n "{{ msg }}" ]]; then
+        commit_msg="wip: {{ msg }}"
+    else
+        commit_msg="wip: checkpoint $timestamp"
+    fi
+
+    saved=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        if [[ -z "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+            continue
+        fi
+        git -C "$dir" add -A
+        git -C "$dir" commit -m "$commit_msg" --quiet --no-verify
+        echo "$label: saved ($commit_msg)"
+        saved+=("$label")
+    done
+    echo ""
+    if [[ ${#saved[@]} -gt 0 ]]; then
+        echo "Saved WIP in ${#saved[@]} repo(s): ${saved[*]}"
+        echo "Undo with: just git wip-undo"
+    fi
+
+# Undo the last WIP commit (soft reset — keeps changes staged)
+# Usage: just git wip-undo              (all repos with WIP commits)
+#        just git wip-undo core cli     (specific repos)
+[no-cd]
+[script('bash')]
+wip-undo *repos='':
+    set -uo pipefail
+    targets=()
+    if [[ -n "{{ repos }}" ]]; then
+        for r in {{ repos }}; do
+            if [[ -d "$r/.git" ]]; then
+                targets+=("$r")
+            elif [[ "$r" == "root" || "$r" == "." ]]; then
+                targets+=(".")
+            else
+                echo "WARNING: $r is not a git repo, skipping" >&2
+            fi
+        done
+    else
+        # All repos — only those whose HEAD is a wip: commit
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                [[ ! -d ".git" ]] && continue
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+            fi
+            d="$dir"
+            [[ "$dir" != "." ]] && d="${dir%/}"
+            last_msg=$(git -C "$d" log -1 --format=%s 2>/dev/null || true)
+            if [[ "$last_msg" == wip:* ]]; then
+                targets+=("$d")
+            fi
+        done
+    fi
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        echo "No WIP commits found."
+        exit 0
+    fi
+
+    undone=()
+    skipped=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        last_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
+        if [[ "$last_msg" != wip:* ]]; then
+            skipped+=("$label (HEAD is not a WIP commit)")
+            continue
+        fi
+        git -C "$dir" reset --soft HEAD~1 --quiet
+        echo "$label: undone WIP commit ($last_msg)"
+        undone+=("$label")
+    done
+    echo ""
+    [[ ${#undone[@]} -gt 0 ]] && echo "Undone in ${#undone[@]} repo(s): ${undone[*]}"
+    [[ ${#skipped[@]} -gt 0 ]] && echo "Skipped: ${skipped[*]}"
+    exit 0
+
+# ═══════════════════════════════════════════════════════════════════
+# RESUME - Return to a branch and undo WIP commits
+# ═══════════════════════════════════════════════════════════════════
+
+# Switch back to a branch and undo any WIP commits left there
+# Usage: just git resume feature/my-feature              (all repos)
+#        just git resume feature/my-feature core cli     (specific repos)
+[no-cd]
+[script('bash')]
+resume name *repos='':
+    set -uo pipefail
+    if [[ -z "{{ name }}" ]]; then
+        echo "Usage: just git resume <branch-name> [repo1 repo2 ...]" >&2
+        exit 1
+    fi
+
+    # First: safety check — refuse if any target repo has uncommitted changes
+    targets=()
+    if [[ -n "{{ repos }}" ]]; then
+        for r in {{ repos }}; do
+            if [[ -d "$r/.git" ]]; then
+                targets+=("$r")
+            elif [[ "$r" == "root" || "$r" == "." ]]; then
+                targets+=(".")
+            else
+                echo "WARNING: $r is not a git repo, skipping" >&2
+            fi
+        done
+    else
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                [[ ! -d ".git" ]] && continue
+                targets+=(".")
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                targets+=("${dir%/}")
+            fi
+        done
+    fi
+
+    dirty=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
+            dirty+=("$label")
+        fi
+    done
+    if [[ ${#dirty[@]} -gt 0 ]]; then
+        echo "ERROR: Uncommitted changes in: ${dirty[*]}" >&2
+        echo "Save first with: just git wip" >&2
+        exit 1
+    fi
+
+    # Switch to the branch
+    switched=()
+    for dir in "${targets[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        current=$(git -C "$dir" branch --show-current 2>/dev/null)
+        if [[ "$current" == "{{ name }}" ]]; then
+            echo "$label: already on {{ name }}"
+            switched+=("$dir")
+            continue
+        fi
+        if git -C "$dir" rev-parse --verify "{{ name }}" &>/dev/null; then
+            git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null
+            echo "$label: switched to {{ name }}"
+            switched+=("$dir")
+        fi
+    done
+
+    # Undo WIP commits in switched repos
+    wip_undone=()
+    for dir in "${switched[@]}"; do
+        label="$dir"
+        [[ "$dir" == "." ]] && label="vauchi (root)"
+        last_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
+        if [[ "$last_msg" == wip:* ]]; then
+            git -C "$dir" reset --soft HEAD~1 --quiet
+            echo "$label: undone WIP commit ($last_msg)"
+            wip_undone+=("$label")
+        fi
+    done
+    echo ""
+    echo "Resumed '{{ name }}' in ${#switched[@]} repo(s)"
+    [[ ${#wip_undone[@]} -gt 0 ]] && echo "Restored WIP changes in: ${wip_undone[*]}"
+    exit 0
+
+# ═══════════════════════════════════════════════════════════════════
+# STALE BRANCHES - Find branches with no recent activity
+# ═══════════════════════════════════════════════════════════════════
+
+# Show branches with no commits in N days (default: 14)
+# Usage: just git stale-branches         (14-day threshold)
+#        just git stale-branches 7       (7-day threshold)
+[no-cd]
+[script('bash')]
+stale-branches days='14':
+    set -uo pipefail
+    threshold="{{ days }}"
+    cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)
+
+    printf "%-20s %-30s %-12s %s\n" "REPO" "BRANCH" "LAST COMMIT" "AGE"
+    printf "%-20s %-30s %-12s %s\n" "----" "------" "-----------" "---"
+
+    total=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="vauchi (root)"
+            d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            d="${dir%/}"
+        fi
+
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | grep -v 'main$' | sed 's/^[* ]*//' || true)
+        [[ -z "$branches" ]] && continue
+
+        while IFS= read -r br; do
+            [[ -z "$br" ]] && continue
+            last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
+            last_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+            if [[ "$last_epoch" -lt "$cutoff" ]]; then
+                now=$(date +%s)
+                age_days=$(( (now - last_epoch) / 86400 ))
+                printf "%-20s %-30s %-12s %s\n" "$label" "$br" "$last_date" "${age_days}d"
+                total=$((total + 1))
+            fi
+        done <<< "$branches"
+    done
+
+    echo ""
+    if [[ "$total" -eq 0 ]]; then
+        echo "No branches older than ${threshold} days."
+    else
+        echo "$total stale branch(es) (no commits in ${threshold}+ days)"
+        echo "Clean up with: just git cleanup run"
+    fi

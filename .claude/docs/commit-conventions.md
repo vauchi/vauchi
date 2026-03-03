@@ -30,12 +30,54 @@
 | Pipeline status | `just gitlab pipeline-status [repo]` |
 | Wait for pipeline | `just gitlab pipeline-wait [repo]` |
 
+### WIP, Resume & Worktree Recipes
+
+| Action | Recipe |
+|--------|--------|
+| Save WIP checkpoint commits | `just git wip [msg] [repos]` |
+| Undo WIP commits (soft reset) | `just git wip-undo [repos]` |
+| Switch to main (with save options) | `just git main` / `just git main wip` |
+| Resume a branch (undo WIP on return) | `just git resume <branch> [repos]` |
+| Show stale branches | `just git stale-branches [days]` |
+| Create parallel worktree | `just worktree create <branch> [repos]` |
+| List worktrees | `just worktree list` |
+| Remove worktree | `just worktree remove <branch>` |
+| Remove worktree (non-interactive) | `just worktree remove-force <branch>` |
+
 ### Multi-Repo Branch Sync
 
 When work spans repos, **keep branch names in sync**:
 
 ```bash
 just git branch feature/my-feature features core docs
+```
+
+### Context Switching Safely
+
+When you need to switch branches mid-work, prefer WIP commits over stashing:
+
+```bash
+# Save current work as WIP commits (safer than stash)
+just git wip "halfway through exchange refactor"
+
+# Switch to main to fix something urgent
+just git main wip        # auto-WIP-commits and switches to main
+
+# Return to your branch — WIP commits are auto-undone
+just git resume feature/exchange-refactor
+```
+
+For truly parallel work (working on two branches at once), use worktrees:
+
+```bash
+# Create a parallel checkout for the bugfix
+just worktree create bugfix/crash-fix core cli
+
+# Work in the worktree (your main checkout is untouched)
+cd .worktrees/bugfix/crash-fix/core && cargo test
+
+# Clean up when done
+just worktree remove bugfix/crash-fix
 ```
 
 ### MR Description Template

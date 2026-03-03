@@ -16,10 +16,10 @@ just check    # Run all checks
 ## MANDATORY
 
 - **Principles**: All work must align with [docs/about/principles.md](docs/docs/about/principles.md)
-- **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
+- **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
-- **Test Quality & Design**: CC-01 through CC-18 in `.claude/rules/test-quality-rules.md`
-- **Task Tracking & Plan-Code Sync**: See `.claude/rules/markdown-plan.md`
+- **Test Quality & Design**: CC-01 through CC-19 in `.claude/rules/test-quality-rules.md`
+- **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 
 ## Tool Usage (MANDATORY)
@@ -31,10 +31,7 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 `cargo fmt && clippy && test` → `just check [repo]`, `grep -r` → `just grep <pattern>`,
 `glab mr create` → `just gitlab mr-create [repo]`
 
-**Multi-repo git**: Never write bash loops over repos — use `just git *` recipes.
-`git status` across repos → `just git status`, branches → `just git branch-status`,
-stashes → `just git stash-list`, cleanup → `just git cleanup run`,
-fetch → `just git fetch`, health check → `just housekeeping`
+**Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
 
 ## Problem Workflow (MANDATORY)
 
@@ -51,10 +48,8 @@ Every problem record must have: **status**, **priority**, **owner**, **goals**. 
 ## Shell & Cargo Rules
 
 - Verify correct working directory before sub-repo commands.
-- For multi-repo git ops use `just git *` recipes (see above). Use `git -C <dir>` only for single-repo ops with no recipe.
 - Check what's installed before suggesting tool installations.
 - When asked about pricing/hardware/real-world info, use web search.
-- Keep `Cargo.toml` git dependency branch refs pointing to `main`.
 
 ## Dependencies & Repo Layout
 
@@ -70,7 +65,6 @@ Run `just drift` after completing features or before MRs. Levels: `high`/`medium
 
 All repos have protected `main` — merge via MR only, force push disabled.
 Use `just gitlab mr-create [repo]` for MRs. Use `/create-mr` for multi-repo workflows.
-Commit format and branch naming: `.claude/rules/commit-conventions.md`.
 Contributing guide: `docs/developers/contributing.md`.
 
 ## Exploration

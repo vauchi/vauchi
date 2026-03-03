@@ -1,3 +1,7 @@
+---
+apply: always
+---
+
 ## Visibility Boundary (CRITICAL)
 
 - **Implementation plans, design docs** → go in `_private/docs/plans/` (standalone) or `_private/docs/problems/YYYY-MM-DD-slug/` (part of a problem record)

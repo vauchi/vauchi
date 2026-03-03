@@ -49,6 +49,11 @@ This reduces token usage, avoids permission prompts, and searches across all rep
 | `git diff origin/main...HEAD` | `just git diff-main [repo]` |
 | `git log origin/main..HEAD` | `just git log-branch [repo]` |
 | `glab mr approve` / `glab mr merge` | `just gitlab mr-approve <id> [repo]` / `just gitlab mr-merge <id> [repo]` |
+| `git stash` (DON'T USE) | `just git wip [msg] [repos]` (WIP commits, safer) |
+| `git stash pop` (DON'T USE) | `just git wip-undo [repos]` |
+| Switch branch mid-work | `just git wip` then `just git branch <name>` |
+| Return to branch + restore | `just git resume <branch> [repos]` |
+| Parallel branch work | `just worktree create <branch> [repos]` |
 | `git stash list` across repos | `just git stash-list` |
 | `git stash clear` across repos | `just git stash-clear` |
 | Health check / housekeeping | `just housekeeping` |
@@ -130,18 +135,29 @@ just git branch-status      # Branch state: ahead/behind/merged
 just git diff-main [repo]   # Diff current branch vs main
 just git log-branch [repo]  # Commits on branch not on main
 just git rebase-main [repo] # Rebase branch on origin/main
-just git main               # Stash → checkout main → pull (all repos)
+just git main               # Save → checkout main → pull (prompts: wip/stash/abort)
+just git main wip           # WIP-commit → checkout main → pull (non-interactive)
+just git wip [msg] [repos]  # Save WIP checkpoint commits (safer than stash)
+just git wip-undo [repos]   # Undo WIP commits (soft reset, keeps changes)
+just git resume <branch> [repos] # Switch to branch + auto-undo WIP commits
+just git stale-branches [days] # Find branches with no recent activity (default: 14d)
 just git pull-all           # Pull latest in all repos
 just git push-all           # Push repos with commits ahead
 just git push-all skip-tests # Push without running tests
 just git fetch              # Fetch all repos
 just git branches           # Show branches across repos
-just git branch <name> [repos] # Create branch across repos
+just git branch <name> [repos] # Create branch across repos (safety gate for dirty repos)
 just git stash-list         # Show stashes across all repos
 just git stash-clear        # Clear all stashes across all repos
 just git cleanup            # Preview merged branch cleanup
 just git cleanup run        # Delete merged branches + prune refs
 just git checkout-main      # Checkout main in all repos
+
+# Worktrees (parallel development)
+just worktree create <branch> [repos] # Create parallel checkout in .worktrees/
+just worktree list          # List all active worktrees
+just worktree remove <branch> # Remove worktree (interactive, warns about dirty)
+just worktree remove-force <branch> # Remove worktree (non-interactive, for Claude)
 
 # Cross-repo tools
 just grep <pattern> [glob]  # Search across all repos

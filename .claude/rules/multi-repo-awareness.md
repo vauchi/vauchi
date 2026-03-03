@@ -2,9 +2,17 @@
 apply: always
 ---
 
-## Multi-Repo Awareness
+## Multi-Repo Awareness & Git Conventions
 
 - This is a **multi-repo project** — each subdirectory is its own git repo
+- **Commit format**: `{type}: {Short description}` — types: `feat`, `fix`, `refactor`, `tidy`, `docs`, `test`, `chore`
+- **Co-author**: Always add `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- **Atomic commits**: One logical change per commit. TDD order: `tidy:` (optional) → `test:` → `feat:`/`fix:`
+- **Branches**: `feature/`, `bugfix/`, `refactor/`, `tidy/`, `investigation/`
+- **Pre-MR rebase**: Always `git fetch origin main && git rebase origin/main` before creating an MR
+- **No direct push to main**: Merge via MR only. Sync branch names across repos.
+- **No `@` in MR descriptions**: Wrap Gherkin tags in backticks (`` `@duress` ``). Source code comments are fine.
+- MR template, multi-repo sync examples: `.claude/docs/commit-conventions.md`
 - **Use `just git *` recipes for all multi-repo git operations** — never write raw bash loops over repos
   - `just git status` — status across all repos
   - `just git branch-status` — branches with ahead/behind info
@@ -15,6 +23,22 @@ apply: always
   - `just git branches` — list branches across repos
   - `just git branch <name> [repos]` — create branch across repos
   - `just git push-all` — push repos with commits ahead
+  - `just git wip [msg] [repos]` — save WIP checkpoint commits (safer than stash)
+  - `just git wip-undo [repos]` — undo WIP commits (soft reset)
+  - `just git resume <branch> [repos]` — switch to branch and undo WIP commits
+  - `just git stale-branches [days]` — find branches with no recent activity
+- **Use `just worktree *` for parallel development** — work on multiple branches simultaneously
+  - `just worktree create <branch> [repos]` — create parallel checkout in `.worktrees/`
+  - `just worktree list` — list all active worktrees
+  - `just worktree remove <branch>` — clean up a worktree (interactive)
+  - `just worktree remove-force <branch>` — clean up a worktree (non-interactive, for Claude)
+- **Prefer WIP commits over stashing** — `just git wip` saves on the branch, `just git wip-undo` restores
+- **Context switching (for Claude agents)**:
+  - Before switching branches: `just git wip` to save, then `just git branch <name>` or `just git main wip`
+  - Returning to a branch: `just git resume <branch>` (auto-undoes WIP commits)
+  - For parallel work in worktrees: `just worktree create <branch> [repos]`, work in `.worktrees/<branch>/<repo>/`, clean up with `just worktree remove-force <branch>`
+  - Never use `git stash` — use `just git wip` instead (stashes get lost across 21 repos)
+  - Non-interactive modes: `just git main wip` (not bare `just git main` which prompts)
 - **Return to workspace root** after every task — `cd` to the directory containing `CLAUDE.md`. Sub-repo `cd` commands drift the working directory — always reset.
 - Fall back to `git -C <dir>` only for single-repo ops not covered by a recipe
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`

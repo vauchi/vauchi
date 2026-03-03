@@ -40,6 +40,9 @@ mod git 'just/git.just'
 [doc('GitLab MR, pipeline, and issue operations')]
 mod gitlab 'just/gitlab.just'
 
+[doc('Git worktree management for parallel development')]
+mod worktree 'just/worktree.just'
+
 import 'just/apps.just'
 import 'just/setup.just'
 import 'just/mobile.just'
@@ -244,6 +247,14 @@ commit-repo repo message:
     if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
         echo "ERROR: $dir is not a git repo" >&2
         exit 1
+    fi
+    # Warn if HEAD is a WIP commit (suggest wip-undo first)
+    head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
+    if [[ "$head_msg" == wip:* ]]; then
+        echo "WARNING: HEAD is a WIP commit: $head_msg"
+        echo "Consider running 'just git wip-undo {{ repo }}' first to restore WIP changes,"
+        echo "then commit properly."
+        echo ""
     fi
     # Check for changes
     if [[ -z "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
@@ -519,9 +530,15 @@ help:
     Git (multi-repo):
       just git sync           Fetch all + pull where on main
       just git main           Stash → checkout main → pull (interactive)
-      just git main yes       Same, non-interactive (auto-stash)
+      just git main           Switch to main (prompts: wip/stash/abort)
+      just git main wip       Switch to main (auto-WIP-commit, non-interactive)
+      just git main yes       Switch to main (auto-stash, non-interactive)
+      just git wip [msg]      Save WIP checkpoint commits (safer than stash)
+      just git wip-undo       Undo WIP commits (soft reset, keeps changes)
+      just git resume <branch> Switch to branch + auto-undo WIP commits
       just git status         Show status across all repos
       just git branch-status  Branch state: ahead/behind/merged
+      just git stale-branches [days]  Find branches with no recent activity
       just git diff-main [r]  Diff current branch vs main
       just git log-branch [r] Commits on branch not on main
       just git rebase-main [r] Rebase branch on origin/main
@@ -534,6 +551,12 @@ help:
       just git stash-list     Show stashes across all repos
       just git cleanup        Preview merged branch cleanup
       just git cleanup run    Delete merged branches + prune refs
+
+    Worktrees (parallel development):
+      just worktree create <branch> [repos]  Create parallel checkout
+      just worktree list      List active worktrees
+      just worktree remove <branch>  Remove worktree (interactive)
+      just worktree remove-force <branch>  Remove worktree (non-interactive)
 
     Apps:
       just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
@@ -661,9 +684,37 @@ housekeeping:
         ISSUES=$((ISSUES + stash_total))
     fi
 
-    # 4. Stale local branches (non-main)
+    # 4. Leftover WIP commits
+    section "WIP commits (unsaved work)"
+    wip_count=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        head_msg=$(git -C "$gitdir" log -1 --format=%s 2>/dev/null || true)
+        if [[ "$head_msg" == wip:* ]]; then
+            branch=$(git -C "$gitdir" branch --show-current 2>/dev/null || echo "detached")
+            echo "  $label ($branch): $head_msg"
+            wip_count=$((wip_count + 1))
+        fi
+    done
+    if [[ "$wip_count" -eq 0 ]]; then
+        echo "  None"
+    else
+        echo "  $wip_count repo(s) with WIP commits at HEAD"
+        echo "  -> Undo with: just git wip-undo"
+        ISSUES=$((ISSUES + wip_count))
+    fi
+
+    # 5. Stale local branches (non-main, with age)
     section "Stale local branches"
     stale_branches=0
+    now_epoch=$(date +%s)
     for dir in . */; do
         if [[ "$dir" == "." ]]; then
             label="vauchi (root)"
@@ -676,7 +727,15 @@ housekeeping:
         branches=$(git -C "$gitdir" branch --no-color 2>/dev/null | grep -v '^\* ' | grep -v 'main$' | sed 's/^[[:space:]]*//' || true)
         if [[ -n "$branches" ]]; then
             while IFS= read -r br; do
-                echo "  $label: $br"
+                [[ -z "$br" ]] && continue
+                last_epoch=$(git -C "$gitdir" log -1 --format=%ct "$br" 2>/dev/null || echo "$now_epoch")
+                age_days=$(( (now_epoch - last_epoch) / 86400 ))
+                if [[ "$age_days" -ge 14 ]]; then
+                    age_label="${age_days}d STALE"
+                else
+                    age_label="${age_days}d"
+                fi
+                echo "  $label: $br ($age_label)"
                 stale_branches=$((stale_branches + 1))
             done <<< "$branches"
         fi
@@ -685,10 +744,11 @@ housekeeping:
         echo "  None"
     else
         echo "  $stale_branches local branch(es) besides main"
+        echo "  -> Detail: just git stale-branches"
         ISSUES=$((ISSUES + stale_branches))
     fi
 
-    # 5. Merged remote branches
+    # 6. Merged remote branches
     section "Merged remote branches"
     merged=$(just git cleanup 2>&1 | grep -E '^\s+origin/' || true)
     if [[ -n "$merged" ]]; then
@@ -701,7 +761,7 @@ housekeeping:
         echo "  None"
     fi
 
-    # 6. Stale plans
+    # 7. Stale plans
     section "Stale plans (30+ days)"
     stale_output=$(just plan-stale 2>&1 || true)
     stale_count=$(echo "$stale_output" | grep -c 'STALE' || true)
@@ -712,11 +772,11 @@ housekeeping:
         echo "  None"
     fi
 
-    # 7. Problem records summary
+    # 8. Problem records summary
     section "Problem records"
     just problem-list 2>&1 | sed 's/^/  /'
 
-    # 8. Drift (high severity only, quick)
+    # 9. Drift (high severity only, quick)
     section "Drift (high severity)"
     drift_output=$(just drift --limit=5 2>&1 || true)
     if echo "$drift_output" | grep -q "0 high"; then
