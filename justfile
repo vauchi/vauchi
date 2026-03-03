@@ -1224,7 +1224,8 @@ vrt-gallery:
 drift *args:
     set -euo pipefail
     cd drift-detector
-    if [[ ! -d dist ]]; then
+    # Rebuild if dist/ missing or any source file is newer than dist/
+    if [[ ! -d dist ]] || [[ -n "$(find src -newer dist/index.js -name '*.ts' 2>/dev/null | head -1)" ]]; then
         echo "Building drift-detector..."
         npm run build --silent
     fi
@@ -1250,7 +1251,8 @@ drift *args:
 drift-ci *args:
     set -euo pipefail
     cd drift-detector
-    if [[ ! -d dist ]]; then
+    # Rebuild if dist/ missing or any source file is newer than dist/
+    if [[ ! -d dist ]] || [[ -n "$(find src -newer dist/index.js -name '*.ts' 2>/dev/null | head -1)" ]]; then
         echo "Building drift-detector..."
         npm run build --silent
     fi
