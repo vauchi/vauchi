@@ -44,6 +44,18 @@ fi
 REPO_DIR=$(cd "$REPO_DIR" 2>/dev/null && pwd) || exit 0
 REPO_NAME=$(basename "$REPO_DIR")
 
+# ── TDD stamp check ──────────────────────────────────────────────────
+# If `just check` already passed for this commit, skip all gate checks.
+STAMP_SH="$REPO_DIR/../scripts/scripts/stamp.sh"
+if [[ -f "$STAMP_SH" ]]; then
+  source "$STAMP_SH"
+  _GATE_STAMP_REPO=$(stamp_repo_from_dir "$REPO_NAME" 2>/dev/null) || _GATE_STAMP_REPO=""
+  if [[ -n "$_GATE_STAMP_REPO" ]] && stamp_valid "$_GATE_STAMP_REPO"; then
+    echo "[gate-push] Stamp valid — skipping checks ($REPO_NAME)"
+    exit 0
+  fi
+fi
+
 # Find a Node tool binary by walking up from a directory to the nearest node_modules/.bin.
 find_node_bin() {
   local tool="$1" dir="$2"
@@ -91,6 +103,10 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
     echo "Push blocked: clippy found issues in $REPO_NAME. Run 'just fix $REPO_NAME' to auto-fix." >&2
     exit 2
   fi
+
+  # Write dedup marker so pre-push hook can skip fmt+clippy
+  _DEDUP_FILE="/tmp/.vauchi-gate-${REPO_NAME}-$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo none)"
+  touch "$_DEDUP_FILE" 2>/dev/null || true
 
 # ── Swift/iOS repo ──────────────────────────────────────────────────
 elif [[ "$REPO_NAME" == "ios" ]]; then

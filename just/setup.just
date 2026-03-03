@@ -90,6 +90,77 @@ install-dev-deps:
     echo ""
     echo "Next: just setup && just check"
 
+# Configure sccache + mold for faster Rust builds (idempotent)
+[group('setup')]
+[script('bash')]
+setup-fast-builds:
+    set -euo pipefail
+
+    CARGO_CONFIG="$HOME/.cargo/config.toml"
+    CHANGED=0
+
+    echo "=== Configuring fast Rust builds ==="
+    echo ""
+
+    # Ensure file exists
+    touch "$CARGO_CONFIG"
+
+    # ── sccache ──────────────────────────────────────────────────────
+    if command -v sccache &>/dev/null; then
+        SCCACHE_PATH=$(command -v sccache)
+        if grep -q 'rustc-wrapper' "$CARGO_CONFIG" 2>/dev/null; then
+            echo "  sccache: already configured"
+        else
+            echo "" >> "$CARGO_CONFIG"
+            echo "[build]" >> "$CARGO_CONFIG"
+            echo "rustc-wrapper = \"$SCCACHE_PATH\"" >> "$CARGO_CONFIG"
+            echo "  sccache: configured ($SCCACHE_PATH)"
+            CHANGED=1
+        fi
+    else
+        echo "  sccache: not installed (install with: cargo install sccache)"
+    fi
+
+    # ── mold linker ──────────────────────────────────────────────────
+    if command -v mold &>/dev/null; then
+        MOLD_PATH=$(command -v mold)
+        case "$(uname -s)-$(uname -m)" in
+            Linux-x86_64)  TARGET_KEY="x86_64-unknown-linux-gnu" ;;
+            Linux-aarch64) TARGET_KEY="aarch64-unknown-linux-gnu" ;;
+            Darwin-arm64)  TARGET_KEY="aarch64-apple-darwin" ;;
+            Darwin-x86_64) TARGET_KEY="x86_64-apple-darwin" ;;
+            *)             TARGET_KEY="" ;;
+        esac
+        if [[ -z "$TARGET_KEY" ]]; then
+            echo "  mold: unsupported platform ($(uname -s)-$(uname -m))"
+        elif grep -q "$TARGET_KEY" "$CARGO_CONFIG" 2>/dev/null; then
+            echo "  mold: already configured ($TARGET_KEY)"
+        else
+            echo "" >> "$CARGO_CONFIG"
+            echo "[target.$TARGET_KEY]" >> "$CARGO_CONFIG"
+            echo "linker = \"clang\"" >> "$CARGO_CONFIG"
+            echo "rustflags = [\"-C\", \"link-arg=-fuse-ld=$MOLD_PATH\"]" >> "$CARGO_CONFIG"
+            echo "  mold: configured for $TARGET_KEY ($MOLD_PATH)"
+            CHANGED=1
+        fi
+    else
+        echo "  mold: not installed"
+        case "$(uname)" in
+            Linux)  echo "         install with: sudo pacman -S mold  (or apt install mold)" ;;
+            Darwin) echo "         install with: brew install mold" ;;
+        esac
+    fi
+
+    echo ""
+    if [[ "$CHANGED" == "1" ]]; then
+        echo "Updated $CARGO_CONFIG"
+        echo ""
+        echo "Current config:"
+        cat "$CARGO_CONFIG"
+    else
+        echo "No changes needed."
+    fi
+
 # Clone all repositories
 [private]
 [script('bash')]

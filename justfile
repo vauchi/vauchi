@@ -74,6 +74,12 @@ check *args:
         just lint ${_QR_REPO:-}
         just test ${_QR_REPO:-}
     fi
+    # Write TDD stamps for repos that passed all checks
+    source scripts/scripts/resolve-repo.sh
+    source scripts/scripts/stamp.sh
+    for r in $(resolve_repo "${_QR_REPO:-}" "test"); do
+        stamp_write "$r" 2>/dev/null || true
+    done
 
 # Build workspace or specific repo
 [group('daily')]
