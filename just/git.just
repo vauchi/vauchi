@@ -366,15 +366,21 @@ push-all mode='full':
         echo "Pushing with SKIP_TESTS=1 (fmt + clippy only)"
         echo ""
     fi
+    pushed=()
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
             if [[ "$ahead" -gt 0 ]]; then
                 echo "Pushing ${dir%/} ($ahead commits ahead)"
                 (cd "$dir" && git push)
+                pushed+=("${dir%/}")
             fi
         fi
     done
+    if [[ ${#pushed[@]} -gt 0 ]]; then
+        echo ""
+        echo "Verify with: git -C <repo> log --oneline origin/<branch>..<branch>"
+    fi
 
 # Show diff of current branch vs origin/main
 # Usage: just git diff-main [repo]   (omit repo to diff all repos with branches)
