@@ -479,6 +479,24 @@ coverage *args:
         esac
     done
 
+# Run Criterion benchmarks
+[group('extended')]
+[script('bash')]
+bench *args:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    source scripts/scripts/quiet-runner.sh
+    _qr_parse_args {{args}}
+    for r in $(resolve_repo "${_QR_REPO:-}" "bench"); do
+        dir=$(repo_dir "$r")
+        echo "═══ bench: $r ═══"
+        _do_step() {
+            (cd "$dir" && cargo bench 2>&1)
+        }
+        run_step "$r" _do_step
+    done
+    print_summary "bench" || exit 1
+
 # Generate and open Rust docs
 [group('extended')]
 [working-directory('core')]

@@ -92,6 +92,7 @@ just test-file <name> [repo] # Run single test file
 just test-name <pattern> [repo] # Run tests matching name pattern
 just audit [repo]           # Security audit (Rust repos)
 just coverage               # Coverage report (core)
+just bench [repo]           # Run Criterion benchmarks (core, relay)
 just watch                  # Watch + test (core)
 just build-release          # Release build (core)
 
