@@ -15,7 +15,7 @@ just check    # Run all checks
 
 ## MANDATORY
 
-- **Principles**: All work must align with [docs/about/principles.md](docs/about/principles.md)
+- **Principles**: All work must align with [docs/about/principles.md](docs/docs/about/principles.md)
 - **Visibility**: Follow `VISIBILITY_POLICY.md` for public vs private content
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
 - **Test Quality & Design**: CC-01 through CC-18 in `.claude/rules/test-quality-rules.md`
