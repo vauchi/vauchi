@@ -437,7 +437,7 @@ release-rc version="":
 release-prod:
     set -euo pipefail
     VERSION=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/')
-    if echo "$VERSION" | grep -qE '-(dev|rc)\.'; then
+    if echo "$VERSION" | grep -qE -- '-(dev|rc)\.'; then
         echo "ERROR: Cargo.toml has pre-release version $VERSION"
         echo "  Update Cargo.toml to a clean version (e.g., 0.2.3) before PROD release"
         exit 1
