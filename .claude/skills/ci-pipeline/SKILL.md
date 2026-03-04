@@ -184,6 +184,39 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | `.timeout-long` | 1 hour | Coverage, cross-compile |
 | `.timeout-extended` | 2 hours | iOS/Android multi-arch |
 
+## Version Tagging Tiers
+
+| Tier | Tag Format | Pipeline | Publishes? | Triggers Mobile? |
+|------|-----------|----------|------------|-----------------|
+| Dev  | `v0.2.3-dev.N` | lint + test | No | No |
+| RC   | `v0.2.3-rc.N`  | lint + test + coverage + mutation + bench + security | No | No |
+| PROD | `v0.2.3`       | Full release pipeline (build + package + publish + deploy) | Yes | Yes |
+
+### Workflow
+
+```bash
+just release-dev      # Fast feedback (creates v0.2.3-dev.1)
+just release-rc       # Full quality gate (creates v0.2.3-rc.1)
+just release-prod     # Full release + publish (creates v0.2.3)
+just release-history  # Show promotion chain
+```
+
+### Tag Regex Rules (in shared templates)
+
+| Template | Regex | Used For |
+|----------|-------|----------|
+| `.release-only` | `/^v\d+\.\d+\.\d+$/` | PROD-only jobs (publish, deploy, trigger) |
+| `.dev-tag-only` | `/^v\d+\.\d+\.\d+-dev\.\d+$/` | Dev-tier jobs |
+| `.rc-tag-only` | `/^v\d+\.\d+\.\d+-rc\.\d+$/` | RC-tier jobs |
+| `.prerelease-tag-only` | `/^v\d+\.\d+\.\d+-(dev\|rc)\.\d+$/` | Jobs on both dev and RC |
+
+### Safety Guards
+
+- `auto-tag:version` rejects pre-release versions (won't auto-create dev/rc tags)
+- `publish-packages.sh`, `package-xcframework.sh`, `package-android.sh` reject pre-release versions
+- `update:version` (vauchi-mobile-swift) and `update:bindings` (vauchi-mobile-android) reject pre-release versions
+- Tag regex `$` anchor on all PROD jobs prevents dev/rc tags from triggering release pipeline
+
 ## Key Settings
 
 - All jobs: `interruptible: true` (auto-cancel on new commits)
