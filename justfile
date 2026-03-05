@@ -362,18 +362,28 @@ build-release:
     cargo build --workspace --release
 
 # Create a dev tag for fast CI feedback (lint + test only)
-# Usage: just release-dev [version]
-# If no version given, reads from core/Cargo.toml and increments dev counter
+# Usage: just release-dev [repo] [version]
+# If no version given, reads from <repo>/Cargo.toml and increments dev counter
 [group('extended')]
 [script('bash')]
-release-dev version="":
+release-dev repo="core" version="":
     set -euo pipefail
+    REPO="{{ repo }}"
+    if [[ "$REPO" == "desktop" ]]; then
+        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
+    else
+        CARGO_TOML="$REPO/Cargo.toml"
+    fi
     if [[ -n "{{ version }}" ]]; then
         TAG="v{{ version }}"
     else
-        BASE=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+        if [[ "$REPO" == "core" ]]; then
+            BASE=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+        else
+            BASE=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/')
+        fi
         BASE=$(echo "$BASE" | sed 's/-.*//')
-        LAST=$(git -C core tag -l "v${BASE}-dev.*" | sort -V | tail -1 || true)
+        LAST=$(git -C "$REPO" tag -l "v${BASE}-dev.*" | sort -V | tail -1 || true)
         if [[ -n "$LAST" ]]; then
             N=$(echo "$LAST" | grep -oE '[0-9]+$')
             N=$((N + 1))
@@ -382,31 +392,41 @@ release-dev version="":
         fi
         TAG="v${BASE}-dev.${N}"
     fi
-    echo "Creating dev tag: $TAG"
+    echo "Creating dev tag for $REPO: $TAG"
     echo "  This will trigger a lightweight pipeline (lint + test only)"
     echo ""
-    BRANCH=$(git -C core rev-parse --abbrev-ref HEAD)
+    BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
     if [[ "$BRANCH" != "main" ]]; then
         echo "ERROR: Must be on main branch (currently on $BRANCH)"
         exit 1
     fi
-    git -C core tag -a "$TAG" -m "Dev release $TAG"
-    git -C core push origin "$TAG"
+    git -C "$REPO" tag -a "$TAG" -m "Dev release $TAG"
+    git -C "$REPO" push origin "$TAG"
     echo "Created and pushed $TAG"
-    echo "  Pipeline: https://gitlab.com/vauchi/core/-/pipelines"
+    echo "  Pipeline: https://gitlab.com/vauchi/$REPO/-/pipelines"
 
 # Create an RC tag for full quality gate (coverage, mutation, bench)
-# Usage: just release-rc [version]
+# Usage: just release-rc [repo] [version]
 [group('extended')]
 [script('bash')]
-release-rc version="":
+release-rc repo="core" version="":
     set -euo pipefail
+    REPO="{{ repo }}"
+    if [[ "$REPO" == "desktop" ]]; then
+        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
+    else
+        CARGO_TOML="$REPO/Cargo.toml"
+    fi
     if [[ -n "{{ version }}" ]]; then
         TAG="v{{ version }}"
     else
-        BASE=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+        if [[ "$REPO" == "core" ]]; then
+            BASE=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+        else
+            BASE=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/')
+        fi
         BASE=$(echo "$BASE" | sed 's/-.*//')
-        LAST=$(git -C core tag -l "v${BASE}-rc.*" | sort -V | tail -1 || true)
+        LAST=$(git -C "$REPO" tag -l "v${BASE}-rc.*" | sort -V | tail -1 || true)
         if [[ -n "$LAST" ]]; then
             N=$(echo "$LAST" | grep -oE '[0-9]+$')
             N=$((N + 1))
@@ -415,44 +435,56 @@ release-rc version="":
         fi
         TAG="v${BASE}-rc.${N}"
     fi
-    echo "Creating RC tag: $TAG"
+    echo "Creating RC tag for $REPO: $TAG"
     echo "  This will trigger a full quality gate (coverage, mutation, bench, security)"
     echo "  NO publish, deploy, or mobile binding trigger"
     echo ""
-    BRANCH=$(git -C core rev-parse --abbrev-ref HEAD)
+    BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
     if [[ "$BRANCH" != "main" ]]; then
         echo "ERROR: Must be on main branch (currently on $BRANCH)"
         exit 1
     fi
-    git -C core tag -a "$TAG" -m "Release candidate $TAG"
-    git -C core push origin "$TAG"
+    git -C "$REPO" tag -a "$TAG" -m "Release candidate $TAG"
+    git -C "$REPO" push origin "$TAG"
     echo "Created and pushed $TAG"
-    echo "  Pipeline: https://gitlab.com/vauchi/core/-/pipelines"
+    echo "  Pipeline: https://gitlab.com/vauchi/$REPO/-/pipelines"
 
 # Create a PROD release tag (full pipeline + publish + deploy + mobile triggers)
-# Usage: just release-prod
-# Reads version from core/Cargo.toml — must be a clean version (no -dev/-rc suffix)
+# Usage: just release-prod [repo]
+# Reads version from <repo>/Cargo.toml — must be a clean version (no -dev/-rc suffix)
 [group('extended')]
 [script('bash')]
-release-prod:
+release-prod repo="core":
     set -euo pipefail
-    VERSION=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+    REPO="{{ repo }}"
+    if [[ "$REPO" == "desktop" ]]; then
+        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
+    else
+        CARGO_TOML="$REPO/Cargo.toml"
+    fi
+    if [[ "$REPO" == "core" ]]; then
+        VERSION=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/')
+    else
+        VERSION=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/')
+    fi
     if echo "$VERSION" | grep -qE -- '-(dev|rc)\.'; then
         echo "ERROR: Cargo.toml has pre-release version $VERSION"
         echo "  Update Cargo.toml to a clean version (e.g., 0.2.3) before PROD release"
         exit 1
     fi
     TAG="v${VERSION}"
-    echo "Creating PROD tag: $TAG"
+    echo "Creating PROD tag for $REPO: $TAG"
     echo "  This will trigger the FULL release pipeline:"
     echo "    - Build + test + coverage + mutation"
     echo "    - Package iOS/Android bindings"
     echo "    - Publish to GitLab package registry"
     echo "    - Create GitLab release"
-    echo "    - Trigger mobile binding repos -> iOS/Android apps"
+    if [[ "$REPO" == "core" ]]; then
+        echo "    - Trigger mobile binding repos -> iOS/Android apps"
+    fi
     echo ""
     echo "  Promotion chain for this version:"
-    git -C core tag -l "v${VERSION}*" 2>/dev/null | sort -V | sed 's/^/    /' || true
+    git -C "$REPO" tag -l "v${VERSION}*" 2>/dev/null | sort -V | sed 's/^/    /' || true
     echo "    $TAG  <- YOU ARE HERE"
     echo ""
     read -p "Proceed? [y/N] " -n 1 -r
@@ -461,29 +493,40 @@ release-prod:
         echo "Aborted"
         exit 1
     fi
-    BRANCH=$(git -C core rev-parse --abbrev-ref HEAD)
+    BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
     if [[ "$BRANCH" != "main" ]]; then
         echo "ERROR: Must be on main branch (currently on $BRANCH)"
         exit 1
     fi
-    git -C core tag -a "$TAG" -m "Release $TAG"
-    git -C core push origin "$TAG"
+    git -C "$REPO" tag -a "$TAG" -m "Release $TAG"
+    git -C "$REPO" push origin "$TAG"
     echo "Created and pushed $TAG"
 
 # Show version promotion history for a given base version
+# Usage: just release-history [repo] [version]
 [group('extended')]
 [script('bash')]
-release-history version="":
+release-history repo="core" version="":
     set -euo pipefail
+    REPO="{{ repo }}"
+    if [[ "$REPO" == "desktop" ]]; then
+        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
+    else
+        CARGO_TOML="$REPO/Cargo.toml"
+    fi
     if [[ -n "{{ version }}" ]]; then
         BASE="{{ version }}"
     else
-        BASE=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/' | sed 's/-.*//')
+        if [[ "$REPO" == "core" ]]; then
+            BASE=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/' | sed 's/-.*//')
+        else
+            BASE=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/' | sed 's/-.*//')
+        fi
     fi
-    echo "Version promotion history for v${BASE}:"
+    echo "Version promotion history for $REPO v${BASE}:"
     echo ""
-    git -C core tag -l "v${BASE}*" | sort -V | while read -r tag; do
-        DATE=$(git -C core log -1 --format=%ci "$tag" 2>/dev/null | cut -d' ' -f1)
+    git -C "$REPO" tag -l "v${BASE}*" | sort -V | while read -r tag; do
+        DATE=$(git -C "$REPO" log -1 --format=%ci "$tag" 2>/dev/null | cut -d' ' -f1)
         if echo "$tag" | grep -q "dev"; then
             echo "  $tag  ($DATE)  [dev]"
         elif echo "$tag" | grep -q "rc"; then
@@ -725,10 +768,10 @@ help:
       just coverage           Coverage report (core)
       just watch              Watch + test (core)
       just build-release      Release build (core)
-      just release-dev        Create dev tag (fast pipeline)
-      just release-rc         Create RC tag (full quality gate)
-      just release-prod       Create PROD tag (full release)
-      just release-history    Show version promotion chain
+      just release-dev [repo] [version]    Create dev tag (fast pipeline)
+      just release-rc [repo] [version]     Create RC tag (full quality gate)
+      just release-prod [repo]             Create PROD tag (full release)
+      just release-history [repo] [ver]    Show version promotion chain
 
     Setup:
       just setup              Clone all repos, init workspace
