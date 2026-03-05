@@ -756,6 +756,10 @@ help:
       just relay              Start relay server
       just tui                Run TUI
 
+    Deploy:
+      just deploy             Deploy relay + landing (Kamal)
+      just deploy-check       Check deployed versions vs origin/main
+
     Housekeeping:
       just housekeeping       Run all health checks (changes, snapshots, stashes,
                               branches, merged refs, stale plans, problems, drift)

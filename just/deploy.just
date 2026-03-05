@@ -15,6 +15,65 @@ validate *FLAGS:
     ./_private/infra/scripts/validate.sh {{FLAGS}}
 
 # ═══════════════════════════════════════════════════════════════════
+# STATUS
+# ═══════════════════════════════════════════════════════════════════
+
+# Check deployed versions against source
+[group('deploy')]
+deploy-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Checking deployed service versions..."
+    echo ""
+
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    NC='\033[0m'
+
+    check_service() {
+        local name="$1" url="$2" repo="$3"
+        local deployed_sha deployed_time status
+
+        local info
+        info=$(curl -sf --max-time 5 "$url" 2>/dev/null) || {
+            printf "  %-12s ${YELLOW}%-10s${NC}  %s\n" "$name" "UNKNOWN" "Could not fetch $url"
+            return
+        }
+
+        deployed_sha=$(echo "$info" | jq -r '.sha // "unknown"')
+        deployed_time=$(echo "$info" | jq -r '.built // "unknown"')
+        local short_sha="${deployed_sha:0:8}"
+
+        # Get local main HEAD
+        local main_sha
+        main_sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "unknown")
+        local main_short="${main_sha:0:8}"
+
+        if [ "$deployed_sha" = "$main_sha" ]; then
+            status="${GREEN}UP TO DATE${NC}"
+        else
+            # Check how far behind
+            local behind
+            behind=$(git -C "{{justfile_directory()}}/$repo" rev-list "$deployed_sha..origin/main" --count 2>/dev/null || echo "?")
+            status="${RED}STALE (${behind} commits behind)${NC}"
+        fi
+
+        printf "  %-12s %b  deployed=%-10s main=%-10s  %s\n" "$name" "$status" "$short_sha" "$main_short" "$deployed_time"
+    }
+
+    printf "  %-12s %-10s  %-22s %-22s  %s\n" "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
+    printf "  %-12s %-10s  %-22s %-22s  %s\n" "-------" "------" "--------" "----" "-----"
+
+    check_service "relay"   "https://relay.vauchi.app/build-info" "relay"
+    check_service "website" "https://vauchi.app/build-info.json"  "website"
+    check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
+
+    echo ""
+    echo "Fetch latest: just git fetch"
+
+# ═══════════════════════════════════════════════════════════════════
 # KAMAL DEPLOYMENT (relay + landing)
 # ═══════════════════════════════════════════════════════════════════
 
