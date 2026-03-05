@@ -210,6 +210,26 @@ just release-history  # Show promotion chain
 | `.rc-tag-only` | `/^v\d+\.\d+\.\d+-rc\.\d+$/` | RC-tier jobs |
 | `.prerelease-tag-only` | `/^v\d+\.\d+\.\d+-(dev\|rc)\.\d+$/` | Jobs on both dev and RC |
 
+### Per-Repo Release Support
+
+| Repo | auto-tag | Dev/RC | Justfile | Freshness Check |
+|------|----------|--------|----------|-----------------|
+| core | yes | yes | `just release-dev` | N/A (is upstream) |
+| cli | yes | yes | `just release-dev cli` | yes |
+| tui | yes | yes | `just release-dev tui` | yes |
+| desktop | yes | yes | `just release-dev desktop` | yes |
+| relay | yes | yes | `just release-dev relay` | N/A (no core dep) |
+
+### Core Dev/RC Downstream Triggers
+
+When core gets a dev or RC tag, it triggers cli/tui/desktop to run `verify:upstream-prerelease` — verifying compatibility before committing to a PROD release.
+
+| Core Tag | Downstream Action |
+|----------|-------------------|
+| `v*-dev.N` | Trigger cli/tui/desktop: lint + test |
+| `v*-rc.N` | Trigger cli/tui/desktop: lint + test |
+| `v*.*.*` (PROD) | Existing: mobile binding chain + downstream verify |
+
 ### Safety Guards
 
 - `auto-tag:version` rejects pre-release versions (won't auto-create dev/rc tags)
