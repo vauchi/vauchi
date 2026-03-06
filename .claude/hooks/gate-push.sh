@@ -145,8 +145,14 @@ elif [[ "$REPO_NAME" == "android" ]]; then
   cd "$REPO_DIR"
 
   if [[ -x "$REPO_DIR/gradlew" ]]; then
+    # Use -PlocalBindings when local bindings are present (new types not yet in Maven AAR)
+    GRADLE_ARGS=""
+    if [[ -d "$REPO_DIR/app/src/local-bindings/kotlin/uniffi" ]]; then
+      GRADLE_ARGS="-PlocalBindings"
+      echo "[gate-push] Local bindings detected, using -PlocalBindings"
+    fi
     echo "[gate-push] Compiling Kotlin ($REPO_NAME)..."
-    if ! ./gradlew compileDebugKotlin --quiet 2>&1; then
+    if ! ./gradlew compileDebugKotlin $GRADLE_ARGS --quiet 2>&1; then
       echo "" >&2
       echo "Push blocked: Kotlin compilation failed. Fix errors before pushing." >&2
       exit 2
