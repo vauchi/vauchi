@@ -105,3 +105,9 @@ Android needs no revert — just omit `-PlocalBindings`.
   fixes this. A proper fix should go into `build-bindings.sh`.
 - **XCFramework slices**: `just bindings` only builds device + simulator libs.
   The local XCFramework must have matching slices in its `Info.plist`.
+- **xcodegen and local files**: `build-bindings.sh` copies `.a` files to
+  `ios/Vauchi/Libs/` and Swift bindings to `ios/Vauchi/Generated/`. Both
+  directories are excluded in `project.yml` so xcodegen produces the same
+  output locally and on CI. If you add new local-only directories under
+  `Vauchi/`, add them to `project.yml`'s `excludes` list or CI's
+  `lint:xcodegen` will fail.
