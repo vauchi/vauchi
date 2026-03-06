@@ -119,6 +119,16 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
 elif [[ "$REPO_NAME" == "ios" ]]; then
   cd "$REPO_DIR"
 
+  if command -v xcodegen &>/dev/null; then
+    echo "[gate-push] Regenerating Xcode project ($REPO_NAME)..."
+    xcodegen generate 2>&1
+    if ! git diff --quiet Vauchi.xcodeproj/; then
+      echo "" >&2
+      echo "Push blocked: Xcode project is out of date. Run 'xcodegen generate' and commit." >&2
+      exit 2
+    fi
+  fi
+
   if command -v swiftformat &>/dev/null; then
     echo "[gate-push] Checking Swift formatting ($REPO_NAME)..."
     if ! swiftformat --lint . 2>&1; then
