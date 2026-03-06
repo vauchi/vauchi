@@ -29,6 +29,16 @@ build-ios mode="debug":
 bindings:
     ./core/scripts/build-bindings.sh
 
+# Generate bindings AND wire them into local platform builds
+[group('mobile')]
+bindings-local: bindings
+    ./scripts/wire-bindings-local.sh
+
+# Revert to published (remote) bindings
+[group('mobile')]
+bindings-remote:
+    ./scripts/wire-bindings-remote.sh
+
 # ═══════════════════════════════════════════════════════════════════
 # MOBILE CHECKS (pre-MR validation)
 # ═══════════════════════════════════════════════════════════════════
