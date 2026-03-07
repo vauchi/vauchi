@@ -439,3 +439,15 @@ e2e-relay:
 [group('e2e')]
 e2e-relay-setup:
     ./scripts/scripts/e2e/orchestrate.sh relay-setup
+
+# ─── Website E2E ──────────────────────────────────────────────────
+
+# Run website Playwright tests locally (theme toggle + language switching)
+[group('e2e')]
+e2e-website:
+    cd website && npm test
+
+# Run website Playwright tests against deployed site
+[group('e2e')]
+e2e-website-deployed:
+    cd website && BASE_URL=https://vauchi.app npm test
