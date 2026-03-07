@@ -98,6 +98,23 @@ just bindings-remote
 This removes the iOS workspace and restores `Package.swift` from git.
 Android needs no revert — just omit `-PlocalBindings`.
 
+## Dev vs Release Workflow
+
+### During development
+
+1. Work on core — changes are instantly available to Rust consumers via path overrides
+2. For mobile testing: `just bindings-local` wires local bindings into iOS/Android
+3. Dev tags (`v0.4.0-dev.0`) only run lint+test+downstream Rust verification — no binding builds
+4. Check status: `just core-freshness`
+
+### For releases
+
+1. Bump version in `core/Cargo.toml` (remove `-dev.N` suffix for stable)
+2. Merge to main — auto-tags and triggers:
+   - **Stable tag**: full binding build+package+publish, triggers mobile repos, creates app bump MRs
+   - **RC tag**: same as stable (for pre-release testing)
+3. App repos get auto-merge MRs bumping SPM/Maven dependency
+
 ## Known Issues
 
 - **modulemap mismatch**: UniFFI generates `module vauchi_mobileFFI` but the
