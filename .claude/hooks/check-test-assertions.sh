@@ -81,8 +81,8 @@ for test_line in $TEST_LINES; do
   [[ $FULL_RANGE_END -gt $TOTAL_LINES ]] && FULL_RANGE_END=$TOTAL_LINES
   FULL_RANGE=$(sed -n "${FN_LINE},${FULL_RANGE_END}p" "$FILE_PATH")
 
-  # Assertion patterns: assert!, assert_eq!, assert_ne!, prop_assert*!, .expect(, #[should_panic]
-  ASSERTION_RE='assert(_eq|_ne)?!|prop_assert(_eq|_ne)?!|\.expect\(|#\[should_panic\]'
+  # Assertion patterns: assert*!, prop_assert*!, insta::assert_snapshot/debug_snapshot!, .expect(, #[should_panic]
+  ASSERTION_RE='assert(_eq|_ne)?!|assert_(snapshot|debug_snapshot|compact_snapshot|json_snapshot|yaml_snapshot|toml_snapshot|csv_snapshot|compact_json_snapshot|redaction_snapshot)!|prop_assert(_eq|_ne)?!|\.expect\(|#\[should_panic\]'
   if ! echo "$BODY" | grep -qE "$ASSERTION_RE"; then
     # Fallback: check the wider range in case brace counting was off
     if ! echo "$FULL_RANGE" | grep -qE "$ASSERTION_RE"; then
