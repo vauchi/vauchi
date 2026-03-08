@@ -46,6 +46,15 @@ e2e-checklist *args:
     ./scripts/scripts/dev/e2e-test-checklist.sh {{ args }}
 
 # ═══════════════════════════════════════════════════════════════════
+# SCHEMA CHECK
+# ═══════════════════════════════════════════════════════════════════
+
+# Verify JSON schemas are up to date with core UI types
+[group('dev')]
+schema-check:
+    cd core && cargo test --features schema-gen -p vauchi-core --test schema_gen
+
+# ═══════════════════════════════════════════════════════════════════
 # CORE FRESHNESS
 # ═══════════════════════════════════════════════════════════════════
 

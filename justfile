@@ -760,6 +760,7 @@ help:
       just deploy             Deploy relay + landing (Kamal)
       just deploy-check       Check deployed versions vs origin/main
       just core-freshness     Check if bindings/consumers are up to date with core
+      just schema-check       Verify JSON schemas match core UI types
 
     Housekeeping:
       just housekeeping       Run all health checks (changes, snapshots, stashes,
