@@ -962,7 +962,42 @@ housekeeping:
     section "Problem records"
     just problem-list 2>&1 | sed 's/^/  /'
 
-    # 9. Drift (high severity only, quick)
+    # 9. Stale local binding artifacts
+    section "Stale local binding artifacts"
+    stale_bindings=0
+    # Android: .so files in jniLibs without -PlocalBindings flag
+    android_jniLibs="android/app/src/main/jniLibs"
+    if [[ -d "$android_jniLibs" ]]; then
+        so_count=$(find "$android_jniLibs" -name '*.so' 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$so_count" -gt 0 ]]; then
+            echo "  android: $so_count stale .so file(s) in app/src/main/jniLibs/"
+            echo "  -> These shadow the Maven AAR and cause runtime crashes!"
+            echo "  -> Fix: rm -rf android/app/src/main/jniLibs/*/"
+            stale_bindings=$((stale_bindings + so_count))
+        fi
+    fi
+    # Android: local Kotlin bindings
+    android_local_kt="android/app/src/local-bindings/kotlin"
+    if [[ -d "$android_local_kt" ]]; then
+        kt_count=$(find "$android_local_kt" -name '*.kt' 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$kt_count" -gt 0 ]]; then
+            echo "  android: $kt_count local Kotlin binding file(s) in src/local-bindings/"
+            stale_bindings=$((stale_bindings + 1))
+        fi
+    fi
+    # iOS: check for stale .spm-packages or DerivedData
+    ios_spm="ios/.spm-packages"
+    if [[ -d "$ios_spm" ]]; then
+        echo "  ios: .spm-packages/ exists (can cause stale resolution)"
+        stale_bindings=$((stale_bindings + 1))
+    fi
+    if [[ "$stale_bindings" -eq 0 ]]; then
+        echo "  None"
+    else
+        ISSUES=$((ISSUES + stale_bindings))
+    fi
+
+    # 10. Drift (high severity only, quick)
     section "Drift (high severity)"
     drift_output=$(just drift --limit=5 2>&1 || true)
     if echo "$drift_output" | grep -q "0 high"; then
