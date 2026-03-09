@@ -543,7 +543,7 @@ audit repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     # Only Rust repos support cargo audit
-    RUST_REPOS="core cli relay tui e2e desktop-rust"
+    RUST_REPOS="core cli relay tui e2e desktop-rust linux-gtk"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
@@ -1141,11 +1141,11 @@ concept name:
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
     echo "=== Tests ==="
-    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ desktop/src-tauri/src/ \
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ desktop/src-tauri/src/ linux-gtk/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "=== Source ==="
-    rg -i "$pattern" core/vauchi-core/src/ relay/src/ \
+    rg -i "$pattern" core/vauchi-core/src/ relay/src/ linux-gtk/src/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "=== Docs ==="
@@ -1265,7 +1265,7 @@ consumers pattern:
     set -uo pipefail
     echo "Searching for '{{ pattern }}' across downstream repos..."
     echo ""
-    DOWNSTREAM_DIRS=(cli tui desktop/src-tauri e2e relay)
+    DOWNSTREAM_DIRS=(cli tui desktop/src-tauri e2e relay linux-gtk)
     for dir in "${DOWNSTREAM_DIRS[@]}"; do
         [[ ! -d "$dir" ]] && continue
         label=$(basename "$dir")
@@ -1335,7 +1335,7 @@ lint-docs:
         echo "$dirname" | grep -q "/\." && continue
 
         # Skip non-doc repos (code repos and assets have their own conventions)
-        echo "$file" | grep -qE "^\./?(core|relay|cli|tui|desktop|android|ios|e2e|features|assets)/" && continue
+        echo "$file" | grep -qE "^\./?(core|relay|cli|tui|desktop|android|ios|e2e|features|assets|macos|windows|linux-gtk|linux-qt|web-demo)/" && continue
 
         if ! echo "$filename" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-'; then
           echo "  FAIL: $file (missing date prefix)"
