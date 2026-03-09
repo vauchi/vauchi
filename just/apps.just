@@ -4,7 +4,7 @@
 
 # Application running recipes
 
-# Run an application: just run [cli|tui|desktop|android|ios|relay]
+# Run an application: just run [cli|tui|android|ios|relay]
 [group('apps')]
 [script('bash')]
 run platform="" *args:
@@ -15,17 +15,6 @@ run platform="" *args:
             ;;
         tui)
             cd tui && cargo run -- {{args}}
-            ;;
-        desktop|gui)
-            # Build with Tauri CLI (embeds frontend assets)
-            if [[ ! -f desktop/src-tauri/target/release/vauchi-desktop ]] || [[ ! -s desktop/ui/dist/index.html ]]; then
-                echo "Building desktop app..."
-                cd desktop/src-tauri && cargo tauri build
-            fi
-            desktop/src-tauri/target/release/vauchi-desktop {{args}}
-            ;;
-        desktop-dev)
-            cd desktop && cargo tauri dev
             ;;
         android)
             just build-android release
@@ -44,13 +33,11 @@ run platform="" *args:
             cd relay && cargo run -- {{args}}
             ;;
         *)
-            echo "Usage: just run [cli|tui|desktop|android|ios|relay]"
+            echo "Usage: just run [cli|tui|android|ios|relay]"
             echo ""
             echo "Platforms:"
             echo "  cli         Run CLI (pass args after platform)"
             echo "  tui         Run TUI terminal interface"
-            echo "  desktop     Run desktop app (release build)"
-            echo "  desktop-dev Run desktop in dev mode (hot reload)"
             echo "  android     Build and install on Android emulator"
             echo "  ios         Build and install on iOS simulator"
             echo "  relay       Start relay server"
@@ -58,7 +45,6 @@ run platform="" *args:
             echo "Examples:"
             echo "  just run cli init Alice"
             echo "  just run tui"
-            echo "  just run desktop"
             echo "  just run relay --port 8080"
             exit 1
             ;;
@@ -76,8 +62,3 @@ relay:
 tui:
     cargo run
 
-# Run desktop in dev mode
-[group('apps')]
-[working-directory('desktop')]
-desktop-dev:
-    cargo tauri dev

@@ -369,11 +369,7 @@ build-release:
 release-dev repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
-    if [[ "$REPO" == "desktop" ]]; then
-        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
-    else
-        CARGO_TOML="$REPO/Cargo.toml"
-    fi
+    CARGO_TOML="$REPO/Cargo.toml"
     if [[ -n "{{ version }}" ]]; then
         TAG="v{{ version }}"
     else
@@ -412,11 +408,7 @@ release-dev repo="core" version="":
 release-rc repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
-    if [[ "$REPO" == "desktop" ]]; then
-        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
-    else
-        CARGO_TOML="$REPO/Cargo.toml"
-    fi
+    CARGO_TOML="$REPO/Cargo.toml"
     if [[ -n "{{ version }}" ]]; then
         TAG="v{{ version }}"
     else
@@ -457,11 +449,7 @@ release-rc repo="core" version="":
 release-prod repo="core":
     set -euo pipefail
     REPO="{{ repo }}"
-    if [[ "$REPO" == "desktop" ]]; then
-        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
-    else
-        CARGO_TOML="$REPO/Cargo.toml"
-    fi
+    CARGO_TOML="$REPO/Cargo.toml"
     if [[ "$REPO" == "core" ]]; then
         VERSION=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/')
     else
@@ -509,11 +497,7 @@ release-prod repo="core":
 release-history repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
-    if [[ "$REPO" == "desktop" ]]; then
-        CARGO_TOML="$REPO/src-tauri/Cargo.toml"
-    else
-        CARGO_TOML="$REPO/Cargo.toml"
-    fi
+    CARGO_TOML="$REPO/Cargo.toml"
     if [[ -n "{{ version }}" ]]; then
         BASE="{{ version }}"
     else
@@ -543,13 +527,11 @@ audit repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     # Only Rust repos support cargo audit
-    RUST_REPOS="core cli relay tui e2e desktop-rust linux-gtk"
+    RUST_REPOS="core cli relay tui e2e linux-gtk"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
         repos="$RUST_REPOS"
-    elif [[ "{{repo}}" == "desktop" ]]; then
-        repos="desktop-rust"
     else
         repos="{{repo}}"
     fi
@@ -702,9 +684,10 @@ help:
       just commit-repo <r> <msg>  Non-interactive commit (for automation)
 
       Repo argument: omit = auto-detect from pwd (or all from workspace root)
-      Examples: just test core, just lint cli, just check desktop
-      Valid repos: core cli relay tui e2e desktop android ios docs
+      Examples: just test core, just lint cli, just check ios
+      Valid repos: core cli relay tui e2e android ios docs
                    locales themes features website scripts
+                   macos windows linux-gtk linux-qt web-demo
 
     GitLab:
       just gitlab mr-list [repo]            List open MRs
@@ -752,7 +735,7 @@ help:
       just worktree remove-force <branch>  Remove worktree (non-interactive)
 
     Apps:
-      just run <platform>     Run app (cli|tui|desktop|relay|android|ios)
+      just run <platform>     Run app (cli|tui|relay|android|ios)
       just relay              Start relay server
       just tui                Run TUI
 
@@ -1141,7 +1124,7 @@ concept name:
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
     echo "=== Tests ==="
-    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ desktop/src-tauri/src/ linux-gtk/tests/ \
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ linux-gtk/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "=== Source ==="
@@ -1265,11 +1248,10 @@ consumers pattern:
     set -uo pipefail
     echo "Searching for '{{ pattern }}' across downstream repos..."
     echo ""
-    DOWNSTREAM_DIRS=(cli tui desktop/src-tauri e2e relay linux-gtk)
+    DOWNSTREAM_DIRS=(cli tui e2e relay linux-gtk)
     for dir in "${DOWNSTREAM_DIRS[@]}"; do
         [[ ! -d "$dir" ]] && continue
         label=$(basename "$dir")
-        [[ "$dir" == "desktop/src-tauri" ]] && label="desktop"
         results=$(rg "{{ pattern }}" "$dir" \
             --glob '*.rs' --glob '*.ts' --glob '*.tsx' \
             --glob '!target/' --glob '!node_modules/' --glob '!dist/' \

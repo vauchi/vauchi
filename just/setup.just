@@ -232,7 +232,7 @@ clean:
     echo "Cleaning build artifacts..."
 
     # Rust targets
-    for dir in core relay cli tui desktop/src-tauri e2e; do
+    for dir in core relay cli tui e2e linux-gtk web-demo/wasm; do
         if [[ -d "$dir/target" ]]; then
             echo "  Cleaning $dir/target"
             rm -rf "$dir/target"
@@ -240,7 +240,7 @@ clean:
     done
 
     # Node modules and build outputs
-    for dir in desktop/ui _private/website; do
+    for dir in _private/website web-demo; do
         if [[ -d "$dir/node_modules" ]]; then
             echo "  Cleaning $dir/node_modules"
             rm -rf "$dir/node_modules"
@@ -274,7 +274,7 @@ clean:
 [script('bash')]
 clean-rust:
     echo "Cleaning Rust targets..."
-    for dir in core relay cli tui desktop/src-tauri e2e; do
+    for dir in core relay cli tui e2e linux-gtk web-demo/wasm; do
         if [[ -d "$dir/target" ]]; then
             echo "  $dir/target"
             rm -rf "$dir/target"

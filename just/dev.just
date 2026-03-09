@@ -98,11 +98,10 @@ core-freshness:
 
     # Rust consumers (path-overridden locally)
     echo "=== Rust Consumers (path-overridden locally) ==="
-    for repo in cli tui desktop; do
+    for repo in cli tui; do
         DIR="$ROOT/$repo"
         [ -d "$DIR" ] || continue
         CARGO_CONFIG="$DIR/.cargo/config.toml"
-        [ "$repo" = "desktop" ] && CARGO_CONFIG="$DIR/src-tauri/.cargo/config.toml"
         if [ -f "$CARGO_CONFIG" ] && grep -q 'vauchi-core.*path' "$CARGO_CONFIG" 2>/dev/null; then
             printf "  %-10s ${GREEN}path override active${NC} (always uses core HEAD)\n" "$repo:"
         else
