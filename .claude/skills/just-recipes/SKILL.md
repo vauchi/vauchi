@@ -16,18 +16,15 @@ Aliases: `b` = build, `t` = test, `c` = check, `f` = fmt
 All daily commands accept an optional `[repo]` argument:
 
 - **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
-- **Explicit name** → `just test core`, `just lint relay`, `just check desktop`
+- **Explicit name** → `just test core`, `just lint relay`, `just check linux-gtk`
 - **`all`** → `just test all` runs across all applicable repos
-- **`desktop`** → expands to both `desktop-rust` and `desktop-ui`
-
-**Valid repo names:** `core`, `cli`, `relay`, `tui`, `e2e`, `desktop` (or `desktop-rust`/`desktop-ui`), `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`
+**Valid repo names:** `core`, `cli`, `relay`, `tui`, `e2e`, `linux-gtk`, `android`, `ios`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`
 
 **Toolchain dispatch per repo:**
 
 | Repo | Toolchain | build | test | fmt | lint | fix |
 |------|-----------|-------|------|-----|------|-----|
-| core, cli, relay, tui, e2e, desktop-rust | rust | cargo build | cargo nextest | cargo fmt | cargo clippy | cargo fmt + clippy --fix |
-| desktop-ui | npm | npm run build | playwright | prettier | eslint + stylelint | prettier |
+| core, cli, relay, tui, e2e, linux-gtk | rust | cargo build | cargo nextest | cargo fmt | cargo clippy | cargo fmt + clippy --fix |
 | android | gradle | gradlew assembleDebug | gradlew test | — | gradlew lint | — |
 | ios | xcode | xcodebuild build | xcodebuild test | swiftformat | swiftlint + swiftformat --lint | swiftformat + swiftlint --fix |
 | docs | mkdocs | mkdocs build --strict | mkdocs build --strict | — | markdownlint | — |
@@ -117,14 +114,11 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 |--------|---------|
 | `just run cli <args>` | Run CLI |
 | `just run tui` | Run TUI |
-| `just run desktop` | Run desktop (release) |
-| `just run desktop-dev` | Run desktop dev mode |
 | `just run relay` | Run relay server |
 | `just run android` | Build + install Android |
 | `just run ios` | Build + install iOS |
 | `just relay` | `cd relay && cargo run` |
 | `just tui` | `cd tui && cargo run` |
-| `just desktop-dev` | `cd desktop && cargo tauri dev` |
 
 ## Setup
 
@@ -189,9 +183,6 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 | `just e2e-cli-test [alice] [bob]` | CLI exchange test |
 | `just e2e-tui <instance>` | Launch TUI instance |
 | `just e2e-tui-multi [instances]` | Launch multiple TUIs |
-| `just e2e-desktop [instance]` | Launch desktop instance |
-| `just e2e-desktop-dev [instance]` | Desktop dev mode |
-| `just e2e-desktop-build` | Build desktop release |
 | `just e2e-relay` | Start local TLS relay |
 | `just e2e-relay-setup` | Setup local CA |
 | `just e2e-deploy` | Deploy to all mobile devices |

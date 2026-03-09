@@ -1,6 +1,6 @@
 ---
 name: rust-patterns
-description: Vauchi Rust conventions, crate structure, ring crypto rules, UniFFI binding patterns, error handling, and test layout. Use when writing or modifying Rust code in core/.
+description: Vauchi Rust conventions, crate structure, aws-lc-rs crypto rules, UniFFI binding patterns, error handling, and test layout. Use when writing or modifying Rust code in core/.
 model: haiku
 ---
 
@@ -18,7 +18,7 @@ core/
 │   ├── src/
 │   │   ├── lib.rs          # Module exports and public API
 │   │   ├── api/            # High-level orchestration (feature-gated: network)
-│   │   ├── crypto/         # ring + documented exceptions
+│   │   ├── crypto/         # aws-lc-rs + documented exceptions
 │   │   ├── exchange/       # X3DH, QR, proximity, BLE (NFC Active + NFC Dead Drop planned)
 │   │   ├── contact/        # Contact model + visibility
 │   │   ├── contact_card/   # Shareable card fields
@@ -54,11 +54,11 @@ testing           # Expose internals for integration tests
 
 ## Crypto Rules (MANDATORY)
 
-**Primary: `ring` only.** Documented exceptions:
+**Primary: `aws-lc-rs` only.** Documented exceptions:
 
 | Crate | Reason |
 |-------|--------|
-| `ring 0.17` | HMAC, Ed25519, AES-256-GCM, HKDF (audited) |
+| `aws-lc-rs` | HMAC, Ed25519, AES-256-GCM, HKDF (FIPS-validated, ring-compatible API) |
 | `x25519-dalek 2.0` | X25519 DH (spec-mandated) |
 | `chacha20poly1305 0.10` | XChaCha20-Poly1305 (spec-mandated cipher) |
 | `argon2 0.5` | Argon2id KDF (spec-mandated for backup) |
@@ -84,7 +84,7 @@ pub struct DoubleRatchetState { root_key, our_dh_secret, their_dh, chains, skipp
 pub struct X3DHKeyPair { secret: StaticSecret, public: PublicKey }
 ```
 
-**Memory safety**: All crypto types `Zeroize` on `Drop`. `SymmetricKey::Debug` shows `[REDACTED]`. All randomness via `ring::rand::SystemRandom`.
+**Memory safety**: All crypto types `Zeroize` on `Drop`. `SymmetricKey::Debug` shows `[REDACTED]`. All randomness via `aws_lc_rs::rand::SystemRandom`.
 
 ## Module Visibility Pattern
 

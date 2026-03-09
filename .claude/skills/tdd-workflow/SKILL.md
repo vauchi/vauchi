@@ -106,7 +106,6 @@ tests/
 | `cli/` | `tests/` | `cli_integration_tests.rs` with `CliTestContext` helper |
 | `tui/` | `tests/` | `ui_interaction_tests.rs`, `snapshot_tests.rs` |
 | `e2e/` | `tests/` | Async tokio tests with `Orchestrator` |
-| `desktop/` | `ui/e2e/tests/` | Playwright + axe-core accessibility |
 
 ## Test Helpers (core)
 

@@ -1,6 +1,6 @@
 ---
 name: dependent-mrs
-description: Create tiered merge requests respecting the dependency graph (Tier 0 before Tier 1), or unblock downstream Draft MRs after upstream merges. Use instead of /create-mr when repos have dependency ordering (e.g. core before cli/desktop).
+description: Create tiered merge requests respecting the dependency graph (Tier 0 before Tier 1), or unblock downstream Draft MRs after upstream merges. Use instead of /create-mr when repos have dependency ordering (e.g. core before cli/linux-gtk).
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
@@ -15,7 +15,7 @@ Two modes: **create** (make MRs in order) and **unblock** (check upstream, un-dr
 
 ```
 Tier 0 (no deps):     core, relay, _private, features, docs, scripts, locales
-Tier 1 (needs core):  cli, tui, desktop, e2e
+Tier 1 (needs core):  cli, tui, linux-gtk, e2e
 Tier 2 (auto — skip): ios, android (handled by CI trigger chain after core merge)
 ```
 
@@ -24,14 +24,14 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
 
 ## Mode: Create
 
-`$ARGUMENTS`: list of repo names, e.g. `core cli desktop`
+`$ARGUMENTS`: list of repo names, e.g. `core cli linux-gtk`
 
 ### Steps
 
 1. **Parse repos** from arguments. If empty, auto-detect repos with branches ahead of main:
    ```bash
    WORKSPACE="$CLAUDE_PROJECT_DIR"
-   for dir in core relay cli tui desktop e2e features docs scripts _private locales; do
+   for dir in core relay cli tui linux-gtk e2e features docs scripts _private locales; do
      BRANCH=$(git -C "$WORKSPACE/$dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
      if [ "$BRANCH" != "main" ] && [ -n "$BRANCH" ]; then
        AHEAD=$(git -C "$WORKSPACE/$dir" rev-list origin/main..HEAD --count 2>/dev/null)
@@ -88,7 +88,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
 
    ## Merge Order
    1. vauchi/core!XX (merge first)
-   2. vauchi/cli!XX, vauchi/desktop!XX (after core merges to main)
+   2. vauchi/cli!XX, vauchi/linux-gtk!XX (after core merges to main)
    3. iOS/Android (automated by CI trigger chain)
 
    ## Test Plan
@@ -106,7 +106,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
    |------|---------|-------------|---------------------|--------|
    | 0    | core    | feature/foo | vauchi/core!42      | Ready  |
    | 1    | cli     | feature/foo | vauchi/cli!15       | Draft  |
-   | 1    | desktop | feature/foo | vauchi/desktop!28   | Draft  |
+   | 1    | linux-gtk | feature/foo | vauchi/linux-gtk!28 | Draft  |
    ```
 
    Then print:
@@ -130,7 +130,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
    GITLAB_TOKEN="${GITLAB_TOKEN:-$(git config --global gitlab.token)}"
    BRANCH="<branch-name>"
 
-   for project in core relay cli tui desktop e2e; do
+   for project in core relay cli tui linux-gtk e2e; do
      ENCODED=$(echo "vauchi/$project" | sed 's|/|%2F|g')
      curl -s --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
        "https://gitlab.com/api/v4/projects/$ENCODED/merge_requests?source_branch=$BRANCH&state=opened" \
@@ -170,7 +170,7 @@ binding distribution repos, which auto-create version-bump MRs with auto-merge.
    |---------|-------------------|----------|-----------------|
    | core    | vauchi/core!42    | N/A      | MERGED          |
    | cli     | vauchi/cli!15     | core: OK | Un-drafted      |
-   | desktop | vauchi/desktop!28 | core: OK | Un-drafted      |
+   | linux-gtk | vauchi/linux-gtk!28 | core: OK | Un-drafted    |
 
    All downstream MRs are now ready for review and merge.
    ```

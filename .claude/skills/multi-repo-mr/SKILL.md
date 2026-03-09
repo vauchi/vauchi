@@ -21,7 +21,7 @@ Push branches and create merge requests across multiple vauchi repositories. $AR
 1. **Detect repos with work to push** — For each sub-repo directory under the workspace root:
    ```bash
    WORKSPACE="$CLAUDE_PROJECT_DIR"
-   for dir in core relay cli tui desktop android ios e2e features docs scripts; do
+   for dir in core relay cli tui linux-gtk android ios e2e features docs scripts; do
      git -C "$WORKSPACE/$dir" rev-parse --abbrev-ref HEAD 2>/dev/null
      git -C "$WORKSPACE/$dir" log origin/main..HEAD --oneline 2>/dev/null
    done

@@ -12,7 +12,7 @@ Check git status across all vauchi sub-repositories. For each repo that has chan
 ## Steps
 
 1. Loop through all known sub-repo directories:
-   `android core relay cli tui desktop e2e features ios docs website scripts assets themes locales _private vauchi-mobile-android vauchi-mobile-swift`
+   `android core relay cli tui macos windows linux-gtk linux-qt web-demo e2e features ios docs website scripts assets themes locales _private vauchi-mobile-android vauchi-mobile-swift`
 
 2. For each directory that exists and has a `.git/`:
    - Show current branch: `git -C <dir> branch --show-current`

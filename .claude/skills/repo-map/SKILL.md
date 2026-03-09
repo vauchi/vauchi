@@ -25,7 +25,12 @@ Every sub-directory is its own git repo. Always use `git -C <dir>` to target the
 | Relay server | `relay/` | `vauchi/relay` |
 | CLI app | `cli/` | `vauchi/cli` |
 | TUI app | `tui/` | `vauchi/tui` |
-| Desktop (Tauri + SolidJS) | `desktop/` | `vauchi/desktop` |
+| Desktop (Tauri + SolidJS) — **ARCHIVED** | `desktop/` | `vauchi/desktop` |
+| macOS app (native Swift) | `macos/` | `vauchi/macos` |
+| Windows app (native) | `windows/` | `vauchi/windows` |
+| Linux GTK app (Rust) | `linux-gtk/` | `vauchi/linux-gtk` |
+| Linux Qt app | `linux-qt/` | `vauchi/linux-qt` |
+| Web demo | `web-demo/` | `vauchi/web-demo` |
 | iOS app | `ios/` | `vauchi/ios` |
 | Android app | `android/` | `vauchi/android` |
 | E2E tests | `e2e/` | `vauchi/e2e` |

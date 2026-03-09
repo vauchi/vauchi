@@ -54,13 +54,17 @@ The relay sees only encrypted blobs. It cannot read contact names, phone numbers
 
 | Repository | Description |
 |------------|-------------|
-| [core/](core/) | Core library (`vauchi-core`) + mobile bindings (`vauchi-mobile`) |
+| [core/](core/) | Core library (`vauchi-core`) + mobile bindings (`vauchi-mobile`) + C ABI (`vauchi-cabi`) |
 | [relay/](relay/) | WebSocket relay server for message routing |
 | [cli/](cli/) | Command-line interface |
 | [tui/](tui/) | Terminal user interface |
-| [desktop/](desktop/) | Desktop app (Tauri + SolidJS) |
+| [macos/](macos/) | Native macOS app (SwiftUI) |
+| [windows/](windows/) | Native Windows app (WinUI 3 / C#) |
+| [linux-gtk/](linux-gtk/) | Native Linux app (GTK4 + libadwaita) |
+| [linux-qt/](linux-qt/) | Native Linux app (Qt variant) |
 | [android/](android/) | Android app (Kotlin/Compose) |
 | [ios/](ios/) | iOS app (SwiftUI) |
+| [web-demo/](web-demo/) | WASM-based web demo |
 | [e2e/](e2e/) | End-to-end tests |
 | [website/](website/) | Project website |
 
@@ -99,9 +103,9 @@ just help     # Show all available commands
 Vauchi uses:
 - **X3DH** key agreement (Signal protocol)
 - **Double Ratchet** for forward secrecy
-- **AES-256-GCM** for symmetric encryption
+- **XChaCha20-Poly1305** for symmetric encryption
 - **Ed25519** for signatures
-- **ring** crypto library (no OpenSSL)
+- **aws-lc-rs** crypto library (FIPS 140-3 Level 1)
 
 All cryptographic operations are in `core/vauchi-core/src/crypto/`.
 

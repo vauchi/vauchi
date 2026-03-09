@@ -98,11 +98,8 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 - Standard trio: `lint:format`, `lint:clippy`, `test:unit`, `security:audit`
 - Minimal pipelines
 
-### Desktop (`desktop/.gitlab-ci.yml`)
-- Hybrid Node/Rust pipeline
-- `build:frontend-dist` (Vite) needed before Clippy (Tauri's `generate_context!`)
-- `test:visual-regression` with Playwright (allow_failure)
-- `security:npm-audit` for frontend deps
+### Desktop (ARCHIVED)
+The Tauri desktop app (`desktop/`) has been archived and replaced by native platform frontends (macos, windows, linux-gtk, linux-qt, web-demo). Its CI pipeline is no longer active.
 
 ### Android (`android/.gitlab-ci.yml`)
 - Gradle-based: `lint`, `build:debug/release`, `test:unit`
@@ -157,7 +154,7 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | `vauchi-mobile-android` | `core`, `android`, `vauchi-mobile-android` |
 | `ios` | `ios`, `vauchi-mobile-swift` |
 | `android` | `android`, `vauchi-mobile-android` |
-| `desktop` | `vauchi` (root), `core`, `desktop` |
+| `desktop` | `vauchi` (root), `core`, `desktop` | **(ARCHIVED)** |
 | `cli` | `vauchi` (root), `core`, `cli` |
 | `tui` | `vauchi` (root), `core`, `tui` |
 
@@ -168,7 +165,7 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | Cold Cargo rebuild (15-25 min) | Cargo.lock changed, cache miss | Fallback cache keys handle this |
 | sccache missing | Linux runner without sccache | Auto-installs via cargo-binstall |
 | Clippy fails on git dep | Core version ahead of downstream | `allow_failure: true` + manual retry |
-| `build:frontend-dist` missing | Tauri clippy needs built frontend | Job dependency via `needs:` |
+| `build:frontend-dist` missing | Tauri clippy needs built frontend (desktop — ARCHIVED) | Job dependency via `needs:` |
 | macOS no iOS runtime | Xcode not updated on runner | `before_script` checks + error message |
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
@@ -217,17 +214,17 @@ just release-history  # Show promotion chain
 | core | yes | yes | `just release-dev` | N/A (is upstream) |
 | cli | yes | yes | `just release-dev cli` | yes |
 | tui | yes | yes | `just release-dev tui` | yes |
-| desktop | yes | yes | `just release-dev desktop` | yes |
+| desktop | yes | yes | `just release-dev desktop` | yes | **(ARCHIVED)** |
 | relay | yes | yes | `just release-dev relay` | N/A (no core dep) |
 
 ### Core Dev/RC Downstream Triggers
 
-When core gets a dev or RC tag, it triggers cli/tui/desktop to run `verify:upstream-prerelease` — verifying compatibility before committing to a PROD release.
+When core gets a dev or RC tag, it triggers cli/tui to run `verify:upstream-prerelease` — verifying compatibility before committing to a PROD release.
 
 | Core Tag | Downstream Action |
 |----------|-------------------|
-| `v*-dev.N` | Trigger cli/tui/desktop: lint + test |
-| `v*-rc.N` | Trigger cli/tui/desktop: lint + test |
+| `v*-dev.N` | Trigger cli/tui: lint + test |
+| `v*-rc.N` | Trigger cli/tui: lint + test |
 | `v*.*.*` (PROD) | Existing: mobile binding chain + downstream verify |
 
 ### Safety Guards

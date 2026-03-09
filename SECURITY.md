@@ -39,8 +39,9 @@ We will not take legal action against researchers who:
 - `vauchi-core` library
 - Relay server (`relay/`)
 - Mobile apps (Android, iOS)
-- Desktop app
+- Native desktop apps (macOS, Windows, Linux)
 - CLI/TUI
+- Web demo (WASM)
 
 ### Out of Scope
 
@@ -57,8 +58,8 @@ We will not take legal action against researchers who:
 |-----------|-----------|---------|
 | Key exchange | X25519 / X3DH | `x25519-dalek` |
 | Message encryption | Double Ratchet + XChaCha20-Poly1305 | `chacha20poly1305` |
-| Signatures | Ed25519 | `ring` |
-| Key derivation | HKDF-SHA256 | `ring` |
+| Signatures | Ed25519 | `aws-lc-rs` |
+| Key derivation | HKDF-SHA256 | `aws-lc-rs` |
 | Password KDF | Argon2id | `argon2` |
 
 ### Trust Model

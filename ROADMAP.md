@@ -23,8 +23,8 @@ All features must be production-ready with real implementations before real devi
 
 | Component | Status | Evidence |
 |-----------|--------|----------|
-| Core crypto (ring) | Done | 13 ring imports, Double Ratchet, X3DH |
-| E2E encryption | Done | AES-256-GCM, forward secrecy |
+| Core crypto (aws-lc-rs) | Done | FIPS 140-3, Double Ratchet, X3DH |
+| E2E encryption | Done | XChaCha20-Poly1305, forward secrecy |
 | Contact exchange (QR) | Done | QR exchange working, audio proximity |
 | Recovery system | Done | 28k lines in recovery/mod.rs |
 | Visibility labels | Done | labels.rs implemented, storage, API |
@@ -40,7 +40,7 @@ All features must be production-ready with real implementations before real devi
 | No unsafe code | Done | 0 unsafe blocks in vauchi-core |
 | No unwraps in crypto | Done | 0 production unwraps |
 | Accessibility (Code remediation) | Done | iOS ~367 a11y refs, Android ~152 refs, Desktop ~373 aria- refs. Formal audit (VoiceOver/TalkBack) NOT done |
-| Phase 2 Security Hardening | Done | Desktop key storage fixed, cert pinning implemented, scans clean |
+| Phase 2 Security Hardening | Done | Key storage fixed, cert pinning implemented, scans clean |
 | Security scan | Done | cargo-audit: 0 vulns (2026-02-02, all repos). Note: 4 P0 security GAPS still open (see below) |
 
 ---
@@ -51,7 +51,7 @@ All features must be production-ready with real implementations before real devi
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Phase 2 Security Hardening | Done | Scans clean, key storage fixed, cert pinning (275 lines), desktop keychain (707 lines) |
+| Phase 2 Security Hardening | Done | Scans clean, key storage fixed, cert pinning (275 lines) |
 | Android KeyStore Auth | Done | Biometric-gated key access, 300s timeout, 166 lines |
 | Crypto-Shredding | Done | SMK hierarchy (192 lines), CEK (66 lines), ShredManager (937 lines, 3-phase protocol) |
 | GDPR Compliance | Done | DPIA v1.2, data export, deletion, consent — all platforms wired |
@@ -101,7 +101,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Duress PIN | ~80% | Core+storage+CLI+mobile UI done (51+98+119 LOC). Missing: locales, auth→decoy flow, TUI, desktop dialog |
+| Duress PIN | ~80% | Core+storage+CLI+mobile UI done (51+98+119 LOC). Missing: locales, auth→decoy flow, TUI |
 | Panic Widget / Emergency Shred | ~75% | ShredManager done (1,075 LOC), iOS `panicShred()` done. Missing: Android widget, locales |
 | Hidden Contact UI | Done | All platforms |
 | Tor Mode Completion | Core done | Circuit isolation remaining |
@@ -122,7 +122,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 ### Social Network Integration (v1.0)
 
-Core `SocialNetworkRegistry` + `ContentManager` + bundled networks.json exist. Remote update via CDN with SHA-256 + Ed25519. **No platform UI wired** — no social network picker on any platform. Desktop `get_social_networks()` Tauri command exists but is never called.
+Core `SocialNetworkRegistry` + `ContentManager` + bundled networks.json exist. Remote update via CDN with SHA-256 + Ed25519. **No platform UI wired** — no social network picker on any platform.
 
 ### Security Gaps (Found in 2026-02-06 Code Audit)
 
@@ -140,8 +140,8 @@ Problem records created 2026-02-26. All must close before release.
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| Visual Regression Testing | Testing | ~95 baselines across 4 platforms (23 iOS, 14 Android, 34 Desktop, 24 TUI). CI stabilization remaining |
-| E2E on simulators/emulators | Pending | Full test suite on iOS Simulator, Android Emulator, desktop dev builds |
+| Visual Regression Testing | Testing | ~95 baselines across platforms (23 iOS, 14 Android, 24 TUI). CI stabilization remaining |
+| E2E on simulators/emulators | Pending | Full test suite on iOS Simulator, Android Emulator |
 | Relay on VPS | Done | Production relay deployment verified |
 | Full regression green | Pending | All features passing, no regressions |
 
@@ -159,8 +159,7 @@ Problem records created 2026-02-26. All must close before release.
 |---------|--------|-------|
 | NFC Dead Drop Exchange | Planning | Passive NFC tag as physical dead drop |
 | Facilitated Introductions | Investigating | Principle-compliant mutual introduction. Depends on Trust Metrics |
-| Demo Web App | Planning | WASM-based web demo |
-| Windows Release | Conditional | Ship if code signing cert obtained |
+| Demo Web App | In progress | WASM-based web demo (`web-demo/` repo created) |
 
 ---
 

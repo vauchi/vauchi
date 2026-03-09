@@ -16,7 +16,7 @@ vauchi-core (standalone, no workspace deps)
     ↑ git dep (branch = "main")
     ├── cli/
     ├── tui/
-    └── desktop/  (+ features = ["content-updates"])
+    └── linux-gtk/
 
 vauchi-core (path dep)
     ↑
@@ -38,7 +38,7 @@ vauchi-core = { git = "https://gitlab.com/vauchi/core.git", branch = "main" }
 |------|-----------|----------|
 | `cli/` | vauchi-core | (default) |
 | `tui/` | vauchi-core | (default) |
-| `desktop/src-tauri/` | vauchi-core | `content-updates` |
+| `linux-gtk/` | vauchi-core | (default) |
 | `e2e/` | vauchi-core (path), vauchi-relay (path) | — |
 | `relay/` | **Nothing** (independent) | — |
 
@@ -57,12 +57,10 @@ vauchi-core = { path = "../core/vauchi-core" }
 | Repo | Config Location | Path to Core |
 |------|----------------|-------------|
 | `tui/` | `tui/.cargo/config.toml` | `../core/vauchi-core` |
-| `desktop/` | `desktop/src-tauri/.cargo/config.toml` | `../../core/vauchi-core` |
+| `linux-gtk/` | `linux-gtk/.cargo/config.toml` | `../core/vauchi-core` |
 | `e2e/` | `e2e/.cargo/config.toml` | `../core/vauchi-core` + `../relay` |
 | `cli/` | **None** — no local override | Uses git dep directly |
 | `core/` | Build flags only (mold, NDK) | N/A (workspace member) |
-
-**PITFALL**: Desktop config is nested at `src-tauri/.cargo/` — needs `../../` for relative path.
 
 ## Core Workspace Internal
 
@@ -114,25 +112,6 @@ Published to GitLab Maven registry. JNA runtime required:
 implementation("net.java.dev.jna:jna:5.14.0@aar")
 ```
 
-## Desktop Frontend (npm)
-
-```json
-// desktop/ui/package.json
-{
-  "dependencies": {
-    "solid-js": "^1.8.0",
-    "qrcode": "^1.5.3"
-  },
-  "devDependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "vite": "^5.0.0",
-    "typescript": "^5.0.0"
-  }
-}
-```
-
-Caret ranges (`^`) — allows minor/patch updates.
-
 ## Shared Locales
 
 **Location**: `locales/` (own repo: `vauchi/locales`, cloned by `just setup`)
@@ -144,7 +123,7 @@ Key format: `section.element` (e.g., `contacts.empty`, `action.save`)
 Runtime loading: `i18n::init(resource_dir)` loads from JSON files at startup. `load_locale_from_bytes()` for CDN hot-reload.
 
 Consumed by:
-- **Desktop**: Bundled as Tauri resources (`desktop/src-tauri/resources/locales/`), loaded via `i18n::init()`
+- **Native desktop frontends**: Loaded via `i18n::init()` (linux-gtk) or platform-native mechanisms (macos, windows)
 - **iOS/Android**: Via `init_locales(resource_dir)` UniFFI export + `get_available_locales()`
 - **Core tests**: Uses `core/vauchi-core/locales/` copy
 
@@ -165,8 +144,6 @@ Validate: `just sync-locales`
 ## Common Pitfalls
 
 1. **Editing `cli/Cargo.toml`** without a `.cargo/config.toml` — CI uses the git dep, local builds fetch from GitLab (no path override)
-2. **Desktop path depth** — `src-tauri/.cargo/config.toml` needs `../../core/vauchi-core` (two levels up)
-3. **Feature mismatch** — desktop enables `content-updates`, others don't. Don't assume it's available everywhere
-4. **vauchi-mobile forces rustls** — if you add a dependency that pulls in OpenSSL, Android/iOS builds break
-5. **E2E uses path deps** — unlike other repos, e2e directly references siblings. No git fetching
-6. **Relay is independent** — don't try to add vauchi-core as a dependency to relay
+2. **vauchi-mobile forces rustls** — if you add a dependency that pulls in OpenSSL, Android/iOS builds break
+3. **E2E uses path deps** — unlike other repos, e2e directly references siblings. No git fetching
+4. **Relay is independent** — don't try to add vauchi-core as a dependency to relay
