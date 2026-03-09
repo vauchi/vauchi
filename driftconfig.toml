@@ -32,8 +32,8 @@ ignore = [
   "**/_private/strategy/**",
   "**/drift-detector/**",
   "**/builds/**",
-  "**/vauchi-mobile-android/vauchi-mobile-android-*/**",
-  "**/vauchi-mobile-swift/VauchiMobile*/**",
+  "**/vauchi-platform-kotlin/vauchi-mobile-android-*/**",
+  "**/vauchi-platform-swift/VauchiPlatform*/**",
 ]
 
 # ─── Concept Aliases ─────────────────────────────────────
@@ -410,8 +410,8 @@ pattern = "device.?sync|inter.?device"
 tag = "device-sync"
 
 [[tags.name_patterns.rust]]
-pattern = "uniffi|mobile.?bind|^Mobile[A-Z]|^VauchiMobile$|^PlatformAudio|^MobileProximity|^MobilePlatform"
-tag = "mobile-bindings"
+pattern = "uniffi|platform.?bind|^Platform[A-Z]|^VauchiPlatform$|^PlatformAudio|^PlatformProximity"
+tag = "platform-bindings"
 
 [[tags.name_patterns.rust]]
 pattern = "duress|decoy"

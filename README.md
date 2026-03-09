@@ -54,7 +54,7 @@ The relay sees only encrypted blobs. It cannot read contact names, phone numbers
 
 | Repository | Description |
 |------------|-------------|
-| [core/](core/) | Core library (`vauchi-core`) + mobile bindings (`vauchi-mobile`) + C ABI (`vauchi-cabi`) |
+| [core/](core/) | Core library (`vauchi-core`) + platform bindings (`vauchi-platform`) + C ABI (`vauchi-cabi`) |
 | [relay/](relay/) | WebSocket relay server for message routing |
 | [cli/](cli/) | Command-line interface |
 | [tui/](tui/) | Terminal user interface |
