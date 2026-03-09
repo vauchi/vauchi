@@ -114,6 +114,8 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 |--------|---------|
 | `just run cli <args>` | Run CLI |
 | `just run tui` | Run TUI |
+| `just run linux-gtk` | Run Linux GTK4 app |
+| `just run linux-qt` | Run Linux Qt6 app (auto-builds vauchi-cabi) |
 | `just run relay` | Run relay server |
 | `just run android` | Build + install Android |
 | `just run ios` | Build + install iOS |

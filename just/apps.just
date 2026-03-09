@@ -4,7 +4,7 @@
 
 # Application running recipes
 
-# Run an application: just run [cli|tui|android|ios|relay]
+# Run an application: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]
 [group('apps')]
 [script('bash')]
 run platform="" *args:
@@ -15,6 +15,24 @@ run platform="" *args:
             ;;
         tui)
             cd tui && cargo run -- {{args}}
+            ;;
+        linux-gtk)
+            cd linux-gtk && cargo run -- {{args}}
+            ;;
+        linux-qt)
+            # Build vauchi-cabi if needed
+            CABI_LIB="core/target/release/libvauchi_cabi.so"
+            if [ ! -f "$CABI_LIB" ]; then
+                echo "Building vauchi-cabi..."
+                cd core && cargo build --release -p vauchi-cabi && cd ..
+            fi
+            # Build Qt app
+            mkdir -p linux-qt/build
+            cd linux-qt/build
+            cmake .. -DVAUCHI_CABI_DIR="$(pwd)/../../core/target/release"
+            cmake --build . --parallel
+            # Run
+            LD_LIBRARY_PATH="$(pwd)/../../core/target/release:$LD_LIBRARY_PATH" ./vauchi-qt {{args}}
             ;;
         android)
             just build-android release
@@ -33,11 +51,13 @@ run platform="" *args:
             cd relay && cargo run -- {{args}}
             ;;
         *)
-            echo "Usage: just run [cli|tui|android|ios|relay]"
+            echo "Usage: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]"
             echo ""
             echo "Platforms:"
             echo "  cli         Run CLI (pass args after platform)"
             echo "  tui         Run TUI terminal interface"
+            echo "  linux-gtk   Run Linux GTK4 app"
+            echo "  linux-qt    Run Linux Qt6 app (builds vauchi-cabi if needed)"
             echo "  android     Build and install on Android emulator"
             echo "  ios         Build and install on iOS simulator"
             echo "  relay       Start relay server"
@@ -45,6 +65,8 @@ run platform="" *args:
             echo "Examples:"
             echo "  just run cli init Alice"
             echo "  just run tui"
+            echo "  just run linux-gtk"
+            echo "  just run linux-qt"
             echo "  just run relay --port 8080"
             exit 1
             ;;
