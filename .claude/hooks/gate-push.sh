@@ -82,7 +82,6 @@ find_node_bin() {
 
 # ── Rust repos ──────────────────────────────────────────────────────
 WORK_DIR="$REPO_DIR"
-[[ "$REPO_NAME" == "desktop" ]] && WORK_DIR="$REPO_DIR/src-tauri"
 
 if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   cd "$WORK_DIR"
@@ -101,9 +100,6 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
 
   echo "[gate-push] Running clippy ($REPO_NAME)..."
   CLIPPY_EXTRA=()
-  case "$REPO_NAME" in
-    desktop) CLIPPY_EXTRA=(--no-default-features --features custom-protocol) ;;
-  esac
 
   if ! cargo clippy --all-targets "${CLIPPY_EXTRA[@]}" -- -D warnings 2>&1; then
     echo "" >&2
@@ -171,11 +167,8 @@ elif [[ "$REPO_NAME" == "android" ]]; then
 fi
 
 # ── Web checks (repos with web source) ─────────────────────────────
-# Runs for desktop/ui and other repos that have prettier as a dependency.
 UI_DIR=""
-if [[ "$REPO_NAME" == "desktop" && -f "$REPO_DIR/ui/package.json" ]]; then
-  UI_DIR="$REPO_DIR/ui"
-elif [[ -f "$REPO_DIR/package.json" ]] && grep -q '"prettier"' "$REPO_DIR/package.json" 2>/dev/null; then
+if [[ -f "$REPO_DIR/package.json" ]] && grep -q '"prettier"' "$REPO_DIR/package.json" 2>/dev/null; then
   UI_DIR="$REPO_DIR"
 fi
 

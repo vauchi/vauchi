@@ -1317,7 +1317,7 @@ lint-docs:
         echo "$dirname" | grep -q "/\." && continue
 
         # Skip non-doc repos (code repos and assets have their own conventions)
-        echo "$file" | grep -qE "^\./?(core|relay|cli|tui|desktop|android|ios|e2e|features|assets|macos|windows|linux-gtk|linux-qt|web-demo)/" && continue
+        echo "$file" | grep -qE "^\./?(core|relay|cli|tui|android|ios|e2e|features|assets|macos|windows|linux-gtk|linux-qt|web-demo)/" && continue
 
         if ! echo "$filename" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-'; then
           echo "  FAIL: $file (missing date prefix)"

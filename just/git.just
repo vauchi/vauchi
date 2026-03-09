@@ -421,7 +421,6 @@ diff-main repo='':
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
         [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
-        [[ "$dir" == "desktop" ]] && dir="desktop"
         if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
             echo "ERROR: $dir is not a git repo" >&2
             exit 1

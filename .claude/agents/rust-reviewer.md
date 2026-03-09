@@ -13,7 +13,7 @@ When invoked, analyze recent changes and provide actionable feedback.
 ## Review Checklist
 
 ### Crypto Rules (CRITICAL)
-- `ring` is the primary crypto library. Only `chacha20poly1305` and `argon2` are allowed exceptions (spec-mandated)
+- `aws-lc-rs` is the primary crypto library (FIPS 140-3). Only `chacha20poly1305`, `argon2`, and `x25519-dalek` are allowed exceptions (spec-mandated)
 - Crypto operations are NEVER mocked in tests
 - Key material is zeroized after use
 - No hardcoded secrets or keys
@@ -30,7 +30,7 @@ When invoked, analyze recent changes and provide actionable feedback.
 - Every `#[test]` has at least one `assert*!` or `#[should_panic]`
 
 ### UniFFI / Cross-boundary
-- When modifying UniFFI-exported functions, list all consumers (iOS, Android, desktop, CLI)
+- When modifying UniFFI-exported functions, list all consumers (iOS, Android, CLI, native frontends)
 - Verify `Cargo.toml` branch refs point to `main`
 
 ## Output Format

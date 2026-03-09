@@ -58,11 +58,9 @@ install-dev-deps:
 
     # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
-    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov tauri-cli)
+    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov)
     for tool in "${cargo_tools[@]}"; do
         bin_name="$tool"
-        # tauri-cli installs as "cargo-tauri"
-        [[ "$tool" == "tauri-cli" ]] && bin_name="cargo-tauri"
         if cargo install --list | grep -q "^${tool} "; then
             echo "  $tool (already installed)"
         else

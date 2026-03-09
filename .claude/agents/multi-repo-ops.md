@@ -27,7 +27,7 @@ The workspace contains 20+ sub-repos as sibling directories under the workspace 
 
 ### Dependency Awareness
 Use the preloaded dependency-map and repo-map skills to:
-- Respect the tier ordering (Tier 0: core, relay → Tier 1: cli, tui, desktop, e2e)
+- Respect the tier ordering (Tier 0: core, relay → Tier 1: cli, tui, e2e, native frontends)
 - Warn if pushing downstream before upstream
 - Check `Cargo.toml` branch refs stay on `main`
 
@@ -37,4 +37,4 @@ Always use `git -C "$CLAUDE_PROJECT_DIR/<repo>"` for git commands — never `cd`
 
 ## Sub-repo Names
 
-core, relay, cli, tui, desktop, android, ios, e2e, features, docs, website, scripts, locales, themes, assets, _private, drift-detector, vauchi-mobile-android, vauchi-mobile-swift, gitlab-profile
+core, relay, cli, tui, android, ios, macos, windows, linux-gtk, linux-qt, web-demo, e2e, features, docs, website, scripts, locales, themes, assets, _private, drift-detector, vauchi-mobile-android, vauchi-mobile-swift, gitlab-profile

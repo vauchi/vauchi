@@ -37,10 +37,10 @@ apply: always
   - Before switching branches: `just git wip` to save, then `just git branch <name>` or `just git main wip`
   - Returning to a branch: `just git resume <branch>` (auto-undoes WIP commits)
   - For parallel work in worktrees: `just worktree create <branch> [repos]`, work in `.worktrees/<branch>/<repo>/`, clean up with `just worktree remove-force <branch>`
-  - Never use `git stash` — use `just git wip` instead (stashes get lost across 21 repos)
+  - Never use `git stash` — use `just git wip` instead (stashes get lost across multiple repos)
   - Non-interactive modes: `just git main wip` (not bare `just git main` which prompts)
 - **Return to workspace root** after every task — `cd` to the directory containing `CLAUDE.md`. Sub-repo `cd` commands drift the working directory — always reset.
 - Fall back to `git -C <dir>` only for single-repo ops not covered by a recipe
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
-- Push upstream repos first (core → cli/tui/desktop/e2e), mark downstream MRs as Draft
+- Push upstream repos first (core → cli/tui/e2e and other downstream), mark downstream MRs as Draft
 - iOS/Android binding repos are auto-generated — never edit manually
