@@ -12,7 +12,6 @@ repos = [
   { name = "relay", path = "relay/" },
   { name = "cli", path = "cli/" },
   { name = "tui", path = "tui/" },
-  { name = "desktop", path = "desktop/" },
   { name = "android", path = "android/" },
   { name = "ios", path = "ios/" },
   { name = "e2e", path = "e2e/" },
@@ -329,7 +328,6 @@ ignore = [
 # Repo-level tags
 "/cli/" = "cli"
 "/tui/" = "tui"
-"/desktop/" = "desktop"
 
 [tags.path.typescript]
 "/components/" = "ui"
@@ -344,7 +342,6 @@ ignore = [
 "/contacts/" = "contacts"
 "/exchange/" = "exchange"
 "/qr/" = "qr-code"
-"/desktop/" = "desktop"
 
 [tags.path.markdown]
 "/docs/" = "documentation"

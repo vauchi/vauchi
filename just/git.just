@@ -655,7 +655,7 @@ stash-list:
 
 # Create a branch with the same name across repos
 # If repos have uncommitted changes, prompts to save them first
-# Usage: just git branch feature/my-feature core cli desktop
+# Usage: just git branch feature/my-feature core cli linux-gtk
 #        just git branch feature/my-feature           (all repos)
 [no-cd]
 [script('bash')]

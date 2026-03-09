@@ -15,7 +15,7 @@ Closes #
 <!-- Remove this section if this is a single-repo change -->
 
 - vauchi/core!XX - Description
-- vauchi/desktop!XX - Description
+- vauchi/cli!XX - Description
 
 ## Merge Order
 
