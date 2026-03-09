@@ -12,6 +12,11 @@
 /tui/
 /desktop/
 /e2e/
+/linux-gtk/
+/linux-qt/
+/macos/
+/windows/
+/web-demo/
 /features/
 /ios/
 /locales/
@@ -44,8 +49,8 @@
 # ===========================================
 /_VMs/
 /github-profile/
-/vauchi-mobile-android/
-/vauchi-mobile-swift/
+/vauchi-platform-kotlin/
+/vauchi-platform-swift/
 
 
 
@@ -97,6 +102,9 @@ vauchi.code-workspace
 
 
 /markdown-plan/
+
+# Device testing screenshots
+screenshot-*.png
 
 # macOS
 .DS_Store
