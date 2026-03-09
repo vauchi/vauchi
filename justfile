@@ -17,7 +17,7 @@ set shell := ["bash", "-cu"]
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e features android ios docs locales themes website vauchi-mobile-swift vauchi-mobile-android macos windows linux-gtk linux-qt web-demo"
+public_repos := "gitlab-profile scripts assets core relay cli tui desktop e2e features android ios docs locales themes website vauchi-platform-swift vauchi-platform-android macos windows linux-gtk linux-qt web-demo"
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
@@ -1159,7 +1159,7 @@ concept name:
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
     echo "=== Tests ==="
-    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-mobile/tests/ e2e/ cli/ tui/ relay/ linux-gtk/tests/ \
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli/ tui/ relay/ linux-gtk/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "=== Source ==="
@@ -1178,12 +1178,12 @@ concept name:
 check-annotations repo='core':
     set -uo pipefail
     case "{{ repo }}" in
-        core) dirs="core/vauchi-core/tests core/vauchi-mobile/tests" ;;
+        core) dirs="core/vauchi-core/tests core/vauchi-platform/tests" ;;
         e2e)  dirs="e2e/tests" ;;
         relay) dirs="relay/tests" ;;
         cli)  dirs="cli/tests" ;;
         tui)  dirs="tui/tests" ;;
-        all)  dirs="core/vauchi-core/tests core/vauchi-mobile/tests e2e/tests relay/tests cli/tests tui/tests" ;;
+        all)  dirs="core/vauchi-core/tests core/vauchi-platform/tests e2e/tests relay/tests cli/tests tui/tests" ;;
         *)    echo "Unknown repo: {{ repo }}"; exit 1 ;;
     esac
     total=0
@@ -1324,7 +1324,7 @@ lint-docs:
     set -euo pipefail
     ERRORS=0
 
-    # Only scan repos we author (not generated repos like vauchi-mobile-*)
+    # Only scan repos we author (not generated repos like vauchi-platform-*)
     # Note: docs/ is now a mkdocs site without date-prefix convention
     REPOS=("." "_private" "scripts" "assets")
 

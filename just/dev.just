@@ -110,11 +110,11 @@ core-freshness:
     done
     echo ""
 
-    # Mobile bindings
-    echo "=== Mobile Bindings ==="
+    # Platform bindings
+    echo "=== Platform Bindings ==="
 
     # iOS — check Package.swift version
-    IOS_PKG="$ROOT/vauchi-mobile-swift/Package.swift"
+    IOS_PKG="$ROOT/vauchi-platform-swift/Package.swift"
     if [ -f "$IOS_PKG" ]; then
         IOS_VER=$(sed -n 's/^let version = "\(.*\)"/\1/p' "$IOS_PKG")
         if [ "$LATEST_TAG" != "none" ] && [ "v$IOS_VER" = "$LATEST_TAG" ]; then
@@ -127,7 +127,7 @@ core-freshness:
     # Android — check build.gradle.kts dependency version
     ANDROID_GRADLE="$ROOT/android/app/build.gradle.kts"
     if [ -f "$ANDROID_GRADLE" ]; then
-        ANDROID_VER=$(sed -n 's/.*com\.vauchi:vauchi-mobile:\(.*\)".*/\1/p' "$ANDROID_GRADLE")
+        ANDROID_VER=$(sed -n 's/.*com\.vauchi:vauchi-platform:\(.*\)".*/\1/p' "$ANDROID_GRADLE")
         if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
             printf "  %-10s ${GREEN}v%s (matches latest tag)${NC}\n" "Android:" "$ANDROID_VER"
         else
