@@ -14,7 +14,7 @@ The goal is to **make MRs pass CI on the first try** by catching every issue loc
 ## Step 1: Detect Repos to Check
 
 If no repos specified:
-- Scan all sub-repos: `core relay cli tui desktop android ios e2e features docs website scripts assets themes locales _private vauchi-mobile-android vauchi-mobile-swift`
+- Scan all sub-repos: `core relay cli tui android ios macos windows linux-gtk linux-qt web-demo e2e features docs website scripts assets themes locales _private vauchi-mobile-android vauchi-mobile-swift`
 - Include the root repo (current directory)
 - For each, check if the current branch is not `main` and has commits ahead of `origin/main`
 
@@ -56,13 +56,6 @@ Detect the repo type from project files and run the appropriate checks:
    - Pay attention to: unused imports, dead code in test modules, unnecessary `mut`, `type_complexity`, `manual_div_ceil`, and other common issues
 2. **Security** (if Cargo.toml/Cargo.lock changed):
    - `just audit <repo>` (if available)
-
----
-
-#### Desktop (`desktop/`): Tauri + SolidJS
-
-1. **All-in-one**: `just check desktop` (runs frontend build + fmt + lint + test for both Rust and UI)
-2. **Security** (if dependencies changed): `just audit desktop`
 
 ---
 
@@ -112,7 +105,7 @@ Repo        | Rebase | REUSE | Format | Lint | Tests | Security
 ------------|--------|-------|--------|------|-------|--------
 core/       |   OK   |  OK   |   OK   |  OK  |  OK   | OK
 relay/      |   OK   |  OK   |   OK   | WARN |  OK   | SKIP
-desktop/    |   OK   |  OK   |   OK   |  OK  |  OK   | WARN
+linux-gtk/  |   OK   |  OK   |   OK   |  OK  |  OK   | WARN
 ...
 
 PASS: Ready to create MR

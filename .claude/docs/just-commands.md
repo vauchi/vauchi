@@ -82,7 +82,7 @@ just housekeeping            # Run all health checks (changes, snapshots, stashe
 
 # Repo targeting
 just test core              # Test core only
-just lint desktop           # Lint desktop (Rust + frontend)
+just lint linux-gtk         # Lint linux-gtk only
 just check                  # Check all (from workspace root)
 
 # Extended
