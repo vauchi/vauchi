@@ -3,17 +3,60 @@
     {
       "path": ".",
       "name": "vauchi (root)"
+    },
+    {
+      "path": "core",
+      "name": "core"
+    },
+    {
+      "path": "cli",
+      "name": "cli"
+    },
+    {
+      "path": "tui",
+      "name": "tui"
+    },
+    {
+      "path": "relay",
+      "name": "relay"
+    },
+    {
+      "path": "desktop",
+      "name": "desktop"
+    },
+    {
+      "path": "e2e",
+      "name": "e2e"
+    },
+    {
+      "path": "docs",
+      "name": "docs"
+    },
+    {
+      "path": "website",
+      "name": "website"
     }
   ],
   "settings": {
     "files.exclude": {
       "**/.git": true,
       "**/node_modules": true,
-      "**/target": true
+      "**/target": true,
+      "**/.DS_Store": true,
+      "**/*.snap.new": true
+    },
+    "files.associations": {
+      "*.feature": "gherkin"
     },
     "search.exclude": {
       "**/target": true,
-      "**/node_modules": true
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.worktrees": true,
+      "**/tmp": true,
+      "**/cache": true,
+      "LICENSES/**": true,
+      "**/coverage": true
     },
 
     "editor.formatOnSave": true,
@@ -31,8 +74,8 @@
     "editor.lineNumbers": "relative",
 
     "breadcrumbs.enabled": true,
-    "workbench.editor.showTabs": "single",
-    "workbench.activityBar.location": "top",
+    "workbench.editor.showTabs": "multiple",
+    "workbench.activityBar.location": "bottom",
 
     "errorLens.delay": 500,
     "errorLens.fontStyleItalic": true,
@@ -54,7 +97,8 @@
       "relay/Cargo.toml",
       "cli/Cargo.toml",
       "tui/Cargo.toml",
-      "e2e/Cargo.toml"
+      "e2e/Cargo.toml",
+      "desktop/src-tauri/Cargo.toml"
     ],
     "rust-analyzer.rustfmt.enableRangeFormatting": true,
     "rust-analyzer.check.command": "clippy",
@@ -180,11 +224,7 @@
     "cucumberautocomplete.strictGherkinCompletion": true,
 
     "testing.automaticallyOpenPeekView": "failureVisible",
-    "testing.defaultGutterClickAction": "run",
-    "swift.path": "/home/megloff1/.local/share/swiftly/toolchains/6.2.3/usr/bin",
-    "swift.swiftEnvironmentVariables": {
-      "DEVELOPER_DIR": "public"
-    }
+    "testing.defaultGutterClickAction": "run"
   },
   "extensions": {
     "recommendations": [
@@ -200,7 +240,6 @@
       "redhat.vscode-yaml",
       "alexkrechik.cucumberautocomplete",
       "usernamehw.errorlens",
-      "eamodio.gitlens",
       "gruntfuggly.todo-tree",
       "christian-kohler.path-intellisense",
       "bierner.markdown-mermaid"
