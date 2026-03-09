@@ -3,7 +3,7 @@
 
 # Local vs Remote UniFFI Bindings
 
-When developing new Rust types in `vauchi-mobile`, the published SPM/Maven
+When developing new Rust types in `vauchi-platform`, the published SPM/Maven
 packages don't include them yet. Use local bindings to test on-device before
 publishing.
 
@@ -19,8 +19,8 @@ just bindings-remote   # Revert to published packages
 ### Normal (remote) flow
 
 ```
-vauchi-mobile-swift (SPM, GitLab) ──→ ios/Vauchi.xcodeproj
-vauchi-mobile-android (Maven, GitLab) ──→ android/build.gradle.kts
+vauchi-platform-swift (SPM, GitLab) ──→ ios/Vauchi.xcodeproj
+vauchi-platform-kotlin (Maven, GitLab) ──→ android/build.gradle.kts
 ```
 
 Both packages are published by CI on `core` tags. Platform apps consume them
@@ -36,7 +36,7 @@ core/ ──build-bindings.sh──→ ios/Vauchi/Generated/ + Libs/
          wire-bindings-local.sh ────┘
                     │
                     ├─ iOS: creates Vauchi.xcworkspace pointing to
-                    │       local vauchi-mobile-swift with local XCFramework
+                    │       local vauchi-platform-swift with local XCFramework
                     │
                     └─ Android: build.gradle.kts uses -PlocalBindings flag
                                 to swap Maven dep for local JNA + jniLibs,
@@ -49,9 +49,9 @@ core/ ──build-bindings.sh──→ ios/Vauchi/Generated/ + Libs/
 
 `just bindings-local` performs these steps:
 
-1. Copies `vauchi_mobile.swift` → `vauchi-mobile-swift/Sources/VauchiMobile/`
-2. Copies static libs + headers → `VauchiMobileFFI.xcframework/` slices
-3. Fixes modulemap (UniFFI generates lowercase, framework needs `VauchiMobileFFI`)
+1. Copies `vauchi_platform.swift` → `vauchi-platform-swift/Sources/VauchiPlatform/`
+2. Copies static libs + headers → `VauchiPlatformFFI.xcframework/` slices
+3. Fixes modulemap (UniFFI generates lowercase, framework needs `VauchiPlatformFFI`)
 4. Switches `Package.swift` binaryTarget from URL to local path
 5. Creates `ios/Vauchi.xcworkspace` that includes the local SPM package
 
@@ -117,8 +117,8 @@ Android needs no revert — just omit `-PlocalBindings`.
 
 ## Known Issues
 
-- **modulemap mismatch**: UniFFI generates `module vauchi_mobileFFI` but the
-  framework expects `framework module VauchiMobileFFI`. The local wiring script
+- **modulemap mismatch**: UniFFI generates `module vauchi_platformFFI` but the
+  framework expects `framework module VauchiPlatformFFI`. The local wiring script
   fixes this. A proper fix should go into `build-bindings.sh`.
 - **XCFramework slices**: `just bindings` only builds device + simulator libs.
   The local XCFramework must have matching slices in its `Info.plist`.

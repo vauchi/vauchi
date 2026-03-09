@@ -177,7 +177,7 @@ just check                         # fmt + lint + test
 
 # Specific crate
 just test-crate vauchi-core        # Single crate
-just test-crate vauchi-mobile      # Mobile bindings
+just test-crate vauchi-platform      # Mobile bindings
 
 # Watch mode
 just watch                         # Watch + auto-test (core)

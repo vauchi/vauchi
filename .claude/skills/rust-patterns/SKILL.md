@@ -30,7 +30,7 @@ core/
 │   │   ├── social/         # Social network validation
 │   │   └── content/        # Remote content updates
 │   └── tests/              # Integration + property tests
-└── vauchi-mobile/          # UniFFI bindings for iOS/Android
+└── vauchi-platform/          # UniFFI bindings for iOS/Android
     └── src/
         ├── lib.rs           # uniffi::setup_scaffolding!()
         ├── types.rs         # Mobile* wrapper types
@@ -43,14 +43,14 @@ core/
 # vauchi-core features
 network           # (default) WebSocket transport
 network-native-tls # tungstenite + native-tls (default with network)
-network-rustls    # Pure Rust TLS (used by vauchi-mobile)
+network-rustls    # Pure Rust TLS (used by vauchi-platform)
 secure-storage    # Platform keychain (keyring)
 audio-cpal        # Audio proximity verification
 content-updates   # Remote content (reqwest + tokio)
 testing           # Expose internals for integration tests
 ```
 
-**vauchi-mobile forces `network-rustls`** — no OpenSSL for cross-compilation.
+**vauchi-platform forces `network-rustls`** — no OpenSSL for cross-compilation.
 
 ## Crypto Rules (MANDATORY)
 
@@ -150,7 +150,7 @@ pub enum VauchiError {
 ## UniFFI Binding Pattern
 
 ```rust
-// vauchi-mobile/src/types.rs — wrapper with From/Into
+// vauchi-platform/src/types.rs — wrapper with From/Into
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct MobileContactField {
     pub id: String,
@@ -162,7 +162,7 @@ pub struct MobileContactField {
 impl From<&ContactField> for MobileContactField { /* field accessors */ }
 impl From<MobileContactField> for FieldType { /* reverse */ }
 
-// vauchi-mobile/src/error.rs
+// vauchi-platform/src/error.rs
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MobileError {
     #[error("Library not initialized")]

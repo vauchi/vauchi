@@ -12,7 +12,7 @@ This is a **multi-repo project** under the [`vauchi` GitLab group](https://gitla
 ```
 vauchi/                          ← root repo (this file, justfile, CI config)
 │
-│── core/                        ← Rust workspace: vauchi-core + vauchi-mobile + vauchi-protocol
+│── core/                        ← Rust workspace: vauchi-core + vauchi-platform + vauchi-protocol
 │── relay/                       ← WebSocket relay server (uses vauchi-protocol)
 │── cli/                         ← Command-line interface
 │── tui/                         ← Terminal user interface
@@ -25,8 +25,8 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 ├── linux-gtk/                   ← Native GTK4-rs Linux app
 ├── linux-qt/                    ← Native Qt6/C++ Linux app
 ├── web-demo/                    ← SolidJS + WASM web demo
-├── vauchi-mobile-android/       ← Generated Kotlin bindings + JNI libs (Gradle distribution)
-├── vauchi-mobile-swift/         ← Generated Swift bindings + XCFramework (SPM distribution)
+├── vauchi-platform-kotlin/       ← Generated Kotlin bindings + JNI libs (Gradle distribution)
+├── vauchi-platform-swift/         ← Generated Swift bindings + XCFramework (SPM distribution)
 │
 ├── e2e/                         ← End-to-end tests
 ├── features/                    ← Gherkin specs (shared across all platforms)
@@ -50,7 +50,7 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
 | Repo | Purpose |
 |------|---------|
-| `core/` | Rust workspace containing `vauchi-core` (crypto, storage, protocol), `vauchi-mobile` (UniFFI bindings), and `vauchi-protocol` (shared message types) |
+| `core/` | Rust workspace containing `vauchi-core` (crypto, storage, protocol), `vauchi-platform` (UniFFI bindings), and `vauchi-protocol` (shared message types) |
 | `relay/` | WebSocket relay server (uses `vauchi-protocol` for shared types) |
 
 **Clients** — platform apps:
@@ -72,8 +72,8 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
 | Repo | Purpose |
 |------|---------|
-| `vauchi-mobile-swift/` | Swift bindings + XCFramework (consumed by `ios/` via SPM) |
-| `vauchi-mobile-android/` | Kotlin bindings + JNI libs (consumed by `android/` via Gradle) |
+| `vauchi-platform-swift/` | Swift bindings + XCFramework (consumed by `ios/` via SPM) |
+| `vauchi-platform-kotlin/` | Kotlin bindings + JNI libs (consumed by `android/` via Gradle) |
 
 These repos are **not manually edited**. `core/` CI builds UniFFI bindings for all targets and pushes the artifacts to these repos when merging to `main`.
 

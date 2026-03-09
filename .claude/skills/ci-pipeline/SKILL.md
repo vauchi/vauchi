@@ -111,8 +111,8 @@ The Tauri desktop app (`desktop/`) has been archived and replaced by native plat
 - `update:bindings-version` — triggered by upstream, creates MR with auto-merge
 
 ### Distribution Repos
-**vauchi-mobile-swift**: `validate:package` → `update:version` (triggered) → `notify:ios-app`
-**vauchi-mobile-android**: `build:aar` → `update:bindings` (triggered) → `notify:android-app`
+**vauchi-platform-swift**: `validate:package` → `update:version` (triggered) → `notify:ios-app`
+**vauchi-platform-kotlin**: `build:aar` → `update:bindings` (triggered) → `notify:android-app`
 
 ## Mobile Distribution Flow
 
@@ -120,7 +120,7 @@ The Tauri desktop app (`desktop/`) has been archived and replaced by native plat
 core tag v*.*.* →
   build iOS/Android bindings →
     publish to GitLab packages →
-      trigger vauchi-mobile-swift + vauchi-mobile-android →
+      trigger vauchi-platform-swift + vauchi-platform-kotlin →
         download + update + commit + tag →
           trigger ios + android apps →
             auto-create MR to bump dependency
@@ -136,8 +136,8 @@ All repos inherit a group-level rule: **push = No one**, merge = Maintainers, fo
 
 | Repo | Push | Force Push | Reason |
 |------|------|------------|--------|
-| `vauchi-mobile-swift` | Maintainers | **true** | CI force-pushes bindings |
-| `vauchi-mobile-android` | Maintainers | false | CI pushes bindings |
+| `vauchi-platform-swift` | Maintainers | **true** | CI force-pushes bindings |
+| `vauchi-platform-kotlin` | Maintainers | false | CI pushes bindings |
 | All other repos | No one | false | MR-only (inherited) |
 
 **Do not remove** the project-level rules on binding repos — the release pipeline will break.
@@ -150,10 +150,10 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 
 | Repo | Allows Triggers From |
 |------|---------------------|
-| `vauchi-mobile-swift` | `core`, `ios`, `vauchi-mobile-swift` |
-| `vauchi-mobile-android` | `core`, `android`, `vauchi-mobile-android` |
-| `ios` | `ios`, `vauchi-mobile-swift` |
-| `android` | `android`, `vauchi-mobile-android` |
+| `vauchi-platform-swift` | `core`, `ios`, `vauchi-platform-swift` |
+| `vauchi-platform-kotlin` | `core`, `android`, `vauchi-platform-kotlin` |
+| `ios` | `ios`, `vauchi-platform-swift` |
+| `android` | `android`, `vauchi-platform-kotlin` |
 | `desktop` | `vauchi` (root), `core`, `desktop` | **(ARCHIVED)** |
 | `cli` | `vauchi` (root), `core`, `cli` |
 | `tui` | `vauchi` (root), `core`, `tui` |
@@ -231,7 +231,7 @@ When core gets a dev or RC tag, it triggers cli/tui to run `verify:upstream-prer
 
 - `auto-tag:version` rejects pre-release versions (won't auto-create dev/rc tags)
 - `publish-packages.sh`, `package-xcframework.sh`, `package-android.sh` reject pre-release versions
-- `update:version` (vauchi-mobile-swift) and `update:bindings` (vauchi-mobile-android) reject pre-release versions
+- `update:version` (vauchi-platform-swift) and `update:bindings` (vauchi-platform-kotlin) reject pre-release versions
 - Tag regex `$` anchor on all PROD jobs prevents dev/rc tags from triggering release pipeline
 
 ## Key Settings

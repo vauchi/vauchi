@@ -1,42 +1,42 @@
 ---
-name: mobile-bindings
-description: UniFFI binding generation, packaging, CI-driven distribution to iOS (SPM) and Android (Maven), and consumer integration. Use when modifying mobile bindings or debugging mobile build issues.
+name: platform-bindings
+description: UniFFI binding generation, packaging, CI-driven distribution to iOS (SPM) and Android (Maven), and consumer integration. Use when modifying platform bindings or debugging platform build issues.
 model: haiku
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-# Vauchi Mobile Bindings
+# Vauchi Platform Bindings
 
 ## Overview
 
 ```
-core/vauchi-mobile (UniFFI crate)
+core/vauchi-platform (UniFFI crate)
     ↓ CI builds on tag v*.*.*
     ├── iOS: XCFramework + Swift bindings
     │   ↓ published to GitLab packages
-    │   vauchi-mobile-swift (SPM distribution)
+    │   vauchi-platform-swift (SPM distribution)
     │       ↓ triggers
     │       ios/ (consumer app, auto-MR)
     │
     └── Android: JNI .so + Kotlin bindings
         ↓ published to GitLab packages
-        vauchi-mobile-android (Maven distribution)
+        vauchi-platform-kotlin (Maven distribution)
             ↓ triggers
             android/ (consumer app, auto-MR)
 ```
 
 **Distribution repos are NOT manually edited.** CI generates and pushes everything.
 
-## vauchi-mobile Crate
+## vauchi-platform Crate
 
-**Location**: `core/vauchi-mobile/`
+**Location**: `core/vauchi-platform/`
 
 ```toml
 [lib]
 crate-type = ["cdylib", "staticlib", "lib"]
-name = "vauchi_mobile"
+name = "vauchi_platform"
 
 [[bin]]
 name = "uniffi-bindgen"
@@ -49,7 +49,7 @@ path = "uniffi-bindgen.rs"  # Calls uniffi::uniffi_bindgen_main()
 
 ```
 src/
-├── lib.rs        # uniffi::setup_scaffolding!(), exported functions + VauchiMobile object
+├── lib.rs        # uniffi::setup_scaffolding!(), exported functions + VauchiPlatform object
 ├── types.rs      # Mobile* wrapper types with From/Into conversions
 ├── error.rs      # MobileError (uniffi::Error)
 ├── protocol.rs   # Re-exports from vauchi-core
@@ -93,19 +93,19 @@ aarch64-apple-ios-sim      # Simulator ARM64 (Apple Silicon)
 x86_64-apple-ios           # Simulator Intel
 
 # Build each
-cargo build -p vauchi-mobile --target aarch64-apple-ios --release
+cargo build -p vauchi-platform --target aarch64-apple-ios --release
 # ... repeat for each
 
 # Generate Swift bindings from device library
-cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
-  --library target/aarch64-apple-ios/release/libvauchi_mobile.a \
+cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
+  --library target/aarch64-apple-ios/release/libvauchi_platform.a \
   --language swift --out-dir target/bindings/ios/generated
 
 # Create universal simulator library
-lipo -create sim-arm64.a sim-x86_64.a -output libvauchi_mobile_sim.a
+lipo -create sim-arm64.a sim-x86_64.a -output libvauchi_platform_sim.a
 ```
 
-Output: `vauchi_mobile.swift` + `vauchi_mobileFFI.h`
+Output: `vauchi_platform.swift` + `vauchi_platformFFI.h`
 
 ### Android Targets
 
@@ -116,20 +116,20 @@ x86_64-linux-android       # x86_64 emulator
 
 # NDK toolchain setup: CC_*, AR_*, CARGO_TARGET_*_LINKER env vars
 # Build each
-cargo build -p vauchi-mobile --target aarch64-linux-android --release
+cargo build -p vauchi-platform --target aarch64-linux-android --release
 
 # CRITICAL: Build native lib WITHOUT stripping for metadata
-RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
 
 # Generate Kotlin bindings
-cargo run -p vauchi-mobile --bin uniffi-bindgen --release -- generate \
-  --library target/release/libvauchi_mobile.so \
+cargo run -p vauchi-platform --bin uniffi-bindgen --release -- generate \
+  --library target/release/libvauchi_platform.so \
   --language kotlin --out-dir target/bindings/android/kotlin
 ```
 
 **PITFALL**: Symbol stripping removes UniFFI metadata. Always build with `-Cstrip=none` before generating Kotlin bindings.
 
-Output: `uniffi/vauchi_mobile/vauchi_mobile.kt`
+Output: `uniffi/vauchi_platform/vauchi_platform.kt`
 
 ## Packaging
 
@@ -137,23 +137,23 @@ Output: `uniffi/vauchi_mobile/vauchi_mobile.kt`
 
 ```bash
 xcodebuild -create-xcframework \
-  -framework device/VauchiMobileFFI.framework \
-  -framework simulator/VauchiMobileFFI.framework \
-  -output VauchiMobileFFI.xcframework
+  -framework device/VauchiPlatformFFI.framework \
+  -framework simulator/VauchiPlatformFFI.framework \
+  -output VauchiPlatformFFI.xcframework
 ```
 
 Produces:
-- `VauchiMobileFFI.xcframework.zip` (binary for SPM)
-- `VauchiMobile-{version}.zip` (framework + Swift bindings)
+- `VauchiPlatformFFI.xcframework.zip` (binary for SPM)
+- `VauchiPlatform-{version}.zip` (framework + Swift bindings)
 - SHA256 checksums
 
 ### Android: `package-android.sh`
 
 Produces:
-- `vauchi-mobile-android-{version}.zip` containing:
-  - `jniLibs/arm64-v8a/libvauchi_mobile.so`
-  - `jniLibs/x86_64/libvauchi_mobile.so`
-  - `kotlin/uniffi/vauchi_mobile/vauchi_mobile.kt`
+- `vauchi-platform-kotlin-{version}.zip` containing:
+  - `jniLibs/arm64-v8a/libvauchi_platform.so`
+  - `jniLibs/x86_64/libvauchi_platform.so`
+  - `kotlin/uniffi/vauchi_platform/vauchi_platform.kt`
 
 ## CI Release Flow (core/.gitlab-ci.yml)
 
@@ -174,7 +174,7 @@ On tag `v*.*.*`:
 
 ## Distribution Repos
 
-### vauchi-mobile-swift
+### vauchi-platform-swift
 
 **Package.swift**:
 ```swift
@@ -183,21 +183,21 @@ let checksum = "319802bc..."
 
 // Binary target from GitLab packages
 .binaryTarget(
-    name: "VauchiMobileFFI",
-    url: "https://gitlab.com/api/v4/projects/vauchi%2Fcore/packages/generic/vauchi-mobile/{version}/VauchiMobileFFI.xcframework.zip",
+    name: "VauchiPlatformFFI",
+    url: "https://gitlab.com/api/v4/projects/vauchi%2Fcore/packages/generic/vauchi-platform/{version}/VauchiPlatformFFI.xcframework.zip",
     checksum: checksum
 )
 ```
 
 **CI `update:version` job** (triggered by core):
 1. Downloads checksum from core packages
-2. Downloads Swift bindings from `VauchiMobile-{VERSION}.zip`
+2. Downloads Swift bindings from `VauchiPlatform-{VERSION}.zip`
 3. Updates `Package.swift` (version + checksum)
-4. Updates `Sources/VauchiMobile/vauchi_mobile.swift`
+4. Updates `Sources/VauchiPlatform/vauchi_platform.swift`
 5. Commits, tags, force-pushes to main
 6. Triggers `vauchi/ios` → auto-MR with auto-merge
 
-### vauchi-mobile-android
+### vauchi-platform-kotlin
 
 **build.gradle.kts**:
 ```kotlin
@@ -207,7 +207,7 @@ dependencies {
 }
 publishing {
     // Publishes to GitLab Maven registry
-    groupId = "com.vauchi"; artifactId = "vauchi-mobile"
+    groupId = "com.vauchi"; artifactId = "vauchi-platform"
 }
 ```
 
@@ -224,11 +224,11 @@ publishing {
 
 ```swift
 // Package.swift or Xcode SPM
-.package(url: "https://gitlab.com/vauchi/vauchi-mobile-swift.git", from: "0.1.0")
+.package(url: "https://gitlab.com/vauchi/vauchi-platform-swift.git", from: "0.1.0")
 
 // Usage
-import VauchiMobile
-let vauchi = try VauchiMobile(storagePath: "...")
+import VauchiPlatform
+let vauchi = try VauchiPlatform(storagePath: "...")
 ```
 
 Version pinned in `Package.resolved` with commit SHA + checksum.
@@ -240,11 +240,11 @@ Version pinned in `Package.resolved` with commit SHA + checksum.
 maven { url = uri("https://gitlab.com/api/v4/projects/77955319/packages/maven") }
 
 // app/build.gradle.kts
-implementation("com.vauchi:vauchi-mobile:0.1.2")
+implementation("com.vauchi:vauchi-platform:0.1.2")
 
 // Usage
-import uniffi.vauchi_mobile.VauchiMobile
-val vauchi = VauchiMobile(storagePath = filesDir.resolve("vauchi.db").absolutePath)
+import uniffi.vauchi_platform.VauchiPlatform
+val vauchi = VauchiPlatform(storagePath = filesDir.resolve("vauchi.db").absolutePath)
 ```
 
 ## Local Development
@@ -263,7 +263,7 @@ just check-mobile       # Both
 ## Gotchas
 
 1. **Never strip symbols** before Kotlin binding generation (`RUSTFLAGS="-Cstrip=none"`)
-2. **vauchi-mobile-swift/android are auto-generated** — don't edit manually
+2. **vauchi-platform-swift/android are auto-generated** — don't edit manually
 3. **rustls required** — adding OpenSSL deps breaks Android/iOS builds
 4. **XCFramework needs macOS** — iOS packaging can't run on Linux
 5. **Native `trigger:` keyword** used to pass UPSTREAM_VERSION (CI_JOB_TOKEN lacks `api` scope for Pipeline API)

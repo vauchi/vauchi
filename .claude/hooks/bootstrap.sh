@@ -44,7 +44,7 @@ else
 fi
 
 # ---------- 2. Expected repos present ----------
-REPOS=(core cli tui relay e2e features docs scripts _private locales themes assets website android ios macos windows linux-gtk linux-qt web-demo vauchi-mobile-android vauchi-mobile-swift drift-detector gitlab-profile markdown-plan)
+REPOS=(core cli tui relay e2e features docs scripts _private locales themes assets website android ios macos windows linux-gtk linux-qt web-demo vauchi-platform-kotlin vauchi-platform-swift drift-detector gitlab-profile markdown-plan)
 MISSING_REPOS=()
 
 for repo in "${REPOS[@]}"; do

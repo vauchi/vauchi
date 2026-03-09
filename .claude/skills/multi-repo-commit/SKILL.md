@@ -12,7 +12,7 @@ Commit staged and unstaged changes across multiple vauchi sub-repositories. $ARG
 ## Steps
 
 1. **Detect changes** — Run `git -C <dir> status --short` for all sub-repos:
-   `android core relay cli tui e2e features ios macos windows linux-gtk linux-qt web-demo docs website scripts assets themes locales _private vauchi-mobile-android vauchi-mobile-swift`
+   `android core relay cli tui e2e features ios macos windows linux-gtk linux-qt web-demo docs website scripts assets themes locales _private vauchi-platform-kotlin vauchi-platform-swift`
    Include the root repo (current directory) as well.
 
 2. **Show summary** — Present what will be committed per repo. Ask the user to confirm before proceeding.

@@ -20,7 +20,7 @@ vauchi-core (standalone, no workspace deps)
 
 vauchi-core (path dep)
     ↑
-    ├── vauchi-mobile  (sibling in core/ workspace, forces network-rustls)
+    ├── vauchi-platform  (sibling in core/ workspace, forces network-rustls)
     └── e2e/           (path deps to both core and relay)
 
 relay/ — INDEPENDENT (no vauchi-core dependency)
@@ -67,32 +67,32 @@ vauchi-core = { path = "../core/vauchi-core" }
 ```toml
 # core/Cargo.toml
 [workspace]
-members = ["vauchi-core", "vauchi-mobile"]
+members = ["vauchi-core", "vauchi-platform"]
 
-# core/vauchi-mobile/Cargo.toml
+# core/vauchi-platform/Cargo.toml
 vauchi-core = { path = "../vauchi-core", version = "0.1.0", default-features = false, features = ["network-rustls"] }
 ```
 
-vauchi-mobile forces `network-rustls` (no OpenSSL for iOS/Android cross-compilation).
+vauchi-platform forces `network-rustls` (no OpenSSL for iOS/Android cross-compilation).
 
 ## Mobile Bindings Consumption
 
 ### iOS (SPM)
 
 ```swift
-// ios/ depends on vauchi-mobile-swift via Swift Package Manager
+// ios/ depends on vauchi-platform-swift via Swift Package Manager
 // Package.resolved pins:
 //   version: "0.1.5"
 //   revision: "249089a01daa..."
-//   repository: "https://gitlab.com/vauchi/vauchi-mobile-swift.git"
+//   repository: "https://gitlab.com/vauchi/vauchi-platform-swift.git"
 ```
 
-vauchi-mobile-swift's Package.swift downloads pre-built XCFramework:
+vauchi-platform-swift's Package.swift downloads pre-built XCFramework:
 
 ```swift
 .binaryTarget(
-    name: "VauchiMobileFFI",
-    url: "https://gitlab.com/api/v4/projects/vauchi%2Fcore/packages/generic/vauchi-mobile/{version}/VauchiMobileFFI.xcframework.zip",
+    name: "VauchiPlatformFFI",
+    url: "https://gitlab.com/api/v4/projects/vauchi%2Fcore/packages/generic/vauchi-platform/{version}/VauchiPlatformFFI.xcframework.zip",
     checksum: checksum
 )
 ```
@@ -102,7 +102,7 @@ vauchi-mobile-swift's Package.swift downloads pre-built XCFramework:
 ```kotlin
 // android/app/build.gradle.kts
 dependencies {
-    implementation("com.vauchi:vauchi-mobile:0.1.2")
+    implementation("com.vauchi:vauchi-platform:0.1.2")
 }
 ```
 
@@ -134,7 +134,7 @@ Validate: `just sync-locales`
 | Repo Type | Strategy | Details |
 |-----------|----------|---------|
 | Rust downstream | `branch = "main"` | Always latest, no tag pinning |
-| vauchi-mobile (internal) | `path = "../vauchi-core"` | Workspace sibling |
+| vauchi-platform (internal) | `path = "../vauchi-core"` | Workspace sibling |
 | iOS app | SPM version pin | `"0.1.5"` + commit SHA + checksum |
 | Android app | Maven version pin | `"0.1.2"` |
 | Distribution repos | Auto-updated by CI | Version injected via pipeline trigger |
@@ -144,6 +144,6 @@ Validate: `just sync-locales`
 ## Common Pitfalls
 
 1. **Editing `cli/Cargo.toml`** without a `.cargo/config.toml` — CI uses the git dep, local builds fetch from GitLab (no path override)
-2. **vauchi-mobile forces rustls** — if you add a dependency that pulls in OpenSSL, Android/iOS builds break
+2. **vauchi-platform forces rustls** — if you add a dependency that pulls in OpenSSL, Android/iOS builds break
 3. **E2E uses path deps** — unlike other repos, e2e directly references siblings. No git fetching
 4. **Relay is independent** — don't try to add vauchi-core as a dependency to relay
