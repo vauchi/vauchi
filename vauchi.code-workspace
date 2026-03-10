@@ -21,10 +21,6 @@
       "name": "relay"
     },
     {
-      "path": "desktop",
-      "name": "desktop"
-    },
-    {
       "path": "e2e",
       "name": "e2e"
     },
