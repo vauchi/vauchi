@@ -239,6 +239,23 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 | `just dev-tui <instance>` | TUI with isolated data |
 | `just dev-clean` | Clean test data |
 
+## Build Performance (`just perf-...`)
+
+See also: `just setup-fast-builds` (configures sccache + mold)
+
+| Recipe | Purpose |
+|--------|---------|
+| `just perf-build [repo]` | Measure cold + warm build time |
+| `just perf-test [repo]` | Measure test time |
+| `just perf-duplicates [repo]` | Find duplicate dependencies |
+| `just perf-bloat [repo]` | Analyze binary bloat (top 20 by size) |
+| `just perf-report [repo]` | Full report (duplicates + build time + binary size) |
+| `just perf-compare [repo]` | A/B build time comparison (first run = baseline, second = compare) |
+| `just perf-baseline-reset [repo]` | Reset comparison baseline |
+| `just perf-sccache-stats` | Show sccache hit/miss rates |
+| `just perf-sccache-config` | Show sccache configuration |
+| `just perf-cold-cache [repo]` | Clear sccache + rebuild (cold cache measurement) |
+
 ## Tools
 
 | Recipe | Purpose |

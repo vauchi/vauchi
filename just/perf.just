@@ -3,46 +3,45 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Build performance measurement and optimization recipes
+# See also: just setup-fast-builds (configures sccache + mold)
 
 # Measure build time for a repo (baseline benchmark)
 [group('perf')]
 @perf-build repo='core':
     echo "=== Build Time Benchmark ({{repo}}) ==="
     echo "Clean build (cold cache):"
-    /usr/bin/time -p cargo -C {{repo}} build 2>&1 | grep real
+    /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real
     echo ""
     echo "Incremental build (warm cache):"
-    /usr/bin/time -p cargo -C {{repo}} build 2>&1 | grep real
+    /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real
 
 # Measure test time for a repo
 [group('perf')]
 @perf-test repo='core':
     echo "=== Test Time Benchmark ({{repo}}) ==="
-    /usr/bin/time -p cargo -C {{repo}} test --lib 2>&1 | grep real
+    /usr/bin/time -p cargo test --manifest-path {{repo}}/Cargo.toml --lib 2>&1 | grep real
 
 # Check for duplicate dependencies in repo dependency graph
 [group('perf')]
 @perf-duplicates repo='core':
+    #!/bin/bash
     echo "=== Duplicate Dependencies ({{repo}}) ==="
-    cargo -C {{repo}} duplicates || echo "No duplicates or cargo-duplicates not installed"
+    if command -v cargo-duplicates &>/dev/null; then
+        cd {{repo}} && cargo duplicates || echo "   (no duplicates)"
+    else
+        echo "   cargo-duplicates not installed. Run: just install-dev-deps"
+    fi
 
 # Analyze binary bloat and find largest dependencies
 [group('perf')]
-@perf-bloat repo='core' binary='vauchi-core':
+@perf-bloat repo='core':
     #!/bin/bash
     echo "=== Binary Bloat Analysis ({{repo}}) ==="
-    # Build in release mode if not already built
-    if ! [[ -f "{{repo}}/target/release/{{binary}}" ]]; then
-        echo "Building release binary..."
-        cargo -C {{repo}} build --release
-    fi
-
-    if command -v cargo-bloat &>/dev/null; then
-        cargo -C {{repo}} bloat --release -n 20
-    else
-        echo "cargo-bloat not installed. Install with: cargo install cargo-bloat"
+    if ! command -v cargo-bloat &>/dev/null; then
+        echo "cargo-bloat not installed. Run: just install-dev-deps"
         exit 1
     fi
+    cd {{repo}} && cargo bloat --release -n 20
 
 # Show sccache statistics (hit/miss rates)
 [group('perf')]
@@ -52,8 +51,7 @@
         echo "=== Sccache Statistics ==="
         sccache --show-stats
     else
-        echo "sccache not installed. Install with: cargo install sccache"
-        exit 1
+        echo "sccache not installed. Run: just install-dev-deps"
     fi
 
 # Clear sccache and rebuild to measure cold-cache performance
@@ -67,7 +65,7 @@
         echo ""
     fi
     echo "Clean rebuild (no cache):"
-    /usr/bin/time -p cargo -C {{repo}} build --release 2>&1 | grep real
+    /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml --release 2>&1 | grep real
 
 # Show current sccache configuration
 [group('perf')]
@@ -77,8 +75,7 @@
         echo "=== Sccache Configuration ==="
         sccache --show-config
     else
-        echo "sccache not installed. Install with: cargo install sccache"
-        exit 1
+        echo "sccache not installed. Run: just install-dev-deps"
     fi
 
 # Full build performance report (duplicates + bloat + build time)
@@ -87,16 +84,16 @@
     #!/bin/bash
     set -e
 
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║ Build Performance Report for {{repo}}              ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║  Build Performance Report: {{repo}}"
+    echo "╚══════════════════════════════════════════════════════════╝"
     echo ""
 
     # Duplicates
     echo "1. Duplicate Dependencies"
     echo "──────────────────────────"
     if command -v cargo-duplicates &>/dev/null; then
-        cargo -C {{repo}} duplicates 2>/dev/null | head -20 || echo "   (no duplicates)"
+        (cd {{repo}} && cargo duplicates 2>/dev/null | head -20) || echo "   (no duplicates)"
     else
         echo "   (cargo-duplicates not installed)"
     fi
@@ -105,7 +102,7 @@
     # Build time (warm cache)
     echo "2. Build Time (warm cache)"
     echo "──────────────────────────"
-    /usr/bin/time -p cargo -C {{repo}} build 2>&1 | grep real
+    /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real
     echo ""
 
     # sccache stats
@@ -117,24 +114,24 @@
     fi
 
     # Binary size (release)
-    echo "4. Binary Size Analysis"
+    echo "4. Release Binary Size"
     echo "──────────────────────"
-    if [[ -f "{{repo}}/target/release/{{repo}}" ]]; then
-        ls -lh "{{repo}}/target/release/{{repo}}"
-    elif [[ -f "{{repo}}/target/release/vauchi-core" ]]; then
-        ls -lh "{{repo}}/target/release/vauchi-core"
-    else
-        echo "   (release binary not built yet)"
+    found=false
+    for bin in {{repo}}/target/release/*; do
+        if [[ -f "$bin" && -x "$bin" && ! "$bin" =~ \.(d|o|rmeta)$ && ! "$bin" =~ /build/ ]]; then
+            ls -lh "$bin" 2>/dev/null && found=true
+        fi
+    done
+    if ! $found; then
+        echo "   (no release binary found — run: cargo build --manifest-path {{repo}}/Cargo.toml --release)"
     fi
     echo ""
 
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║ Tips for optimization:                                         ║"
-    echo "║ • Use 'just perf-sccache-config' to verify sccache is enabled  ║"
-    echo "║ • Use 'just perf-bloat core' to analyze release binary         ║"
-    echo "║ • Use 'just perf-cold-cache' to test with empty cache         ║"
-    echo "║ • Check Cargo.toml for unused dependencies with 'cargo tree'  ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo "Tips:"
+    echo "  just perf-sccache-config    — verify sccache is enabled"
+    echo "  just perf-bloat {{repo}}       — analyze release binary size"
+    echo "  just perf-cold-cache {{repo}}  — test with empty cache"
+    echo "  just perf-compare {{repo}}     — A/B build time comparison"
 
 # Compare build time before and after a change (baseline vs current)
 [group('perf')]
@@ -142,40 +139,39 @@
     #!/bin/bash
     set -e
 
-    BASELINE_FILE="cache/perf-baseline-{{repo}}.txt"
-    CURRENT_FILE="cache/perf-current-{{repo}}.txt"
+    BASELINE_FILE=".cache/perf-baseline-{{repo}}.txt"
+    CURRENT_FILE=".cache/perf-current-{{repo}}.txt"
 
-    mkdir -p cache
+    mkdir -p .cache
 
     if [[ ! -f "$BASELINE_FILE" ]]; then
         echo "Recording baseline build time..."
-        /usr/bin/time -p cargo -C {{repo}} build 2>&1 | grep real > "$BASELINE_FILE"
-        echo "Baseline saved. Run again to compare."
+        /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real > "$BASELINE_FILE"
+        echo "Baseline saved. Make your changes and run again to compare."
         cat "$BASELINE_FILE"
     else
         echo "=== Build Time Comparison ({{repo}}) ==="
         echo "Measuring current build time..."
-        /usr/bin/time -p cargo -C {{repo}} build 2>&1 | grep real > "$CURRENT_FILE"
+        /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real > "$CURRENT_FILE"
 
         echo ""
-        echo "Baseline: $(cat $BASELINE_FILE | awk '{print $2}')"
-        echo "Current:  $(cat $CURRENT_FILE | awk '{print $2}')"
+        echo "Baseline: $(awk '{print $2}' "$BASELINE_FILE")"
+        echo "Current:  $(awk '{print $2}' "$CURRENT_FILE")"
         echo ""
 
-        baseline=$(cat "$BASELINE_FILE" | awk '{print $2}' | sed 's/s//')
-        current=$(cat "$CURRENT_FILE" | awk '{print $2}' | sed 's/s//')
+        baseline=$(awk '{print $2}' "$BASELINE_FILE")
+        current=$(awk '{print $2}' "$CURRENT_FILE")
 
         if (( $(echo "$current < $baseline" | bc -l) )); then
-            improvement=$(echo "scale=2; ($baseline - $current) / $baseline * 100" | bc)
-            echo "✓ Improved by ${improvement}%"
+            improvement=$(echo "scale=1; ($baseline - $current) / $baseline * 100" | bc)
+            echo "Improved by ${improvement}%"
         elif (( $(echo "$current > $baseline" | bc -l) )); then
-            regression=$(echo "scale=2; ($current - $baseline) / $baseline * 100" | bc)
-            echo "✗ Regressed by ${regression}%"
+            regression=$(echo "scale=1; ($current - $baseline) / $baseline * 100" | bc)
+            echo "Regressed by ${regression}%"
         else
-            echo "≈ No significant change"
+            echo "No significant change"
         fi
 
-        # Clean up for next run
         rm "$CURRENT_FILE"
     fi
 
@@ -183,7 +179,7 @@
 [group('perf')]
 @perf-baseline-reset repo='core':
     #!/bin/bash
-    BASELINE_FILE="cache/perf-baseline-{{repo}}.txt"
+    BASELINE_FILE=".cache/perf-baseline-{{repo}}.txt"
     if [[ -f "$BASELINE_FILE" ]]; then
         rm "$BASELINE_FILE"
         echo "Baseline reset. Run 'just perf-compare {{repo}}' to record new baseline."
