@@ -44,6 +44,8 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 
 Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
+**Name exceptions**: The local directory `_private/` maps to GitLab project `vauchi/private` (not `vauchi/_private`). The root directory maps to `vauchi/vauchi`. All other directories use identity mapping. See `scripts/scripts/resolve-repo.sh:_dir_to_gitlab_name()` for the authoritative mapping.
+
 ### Repo Categories
 
 **Core & Servers** — Rust crates:
