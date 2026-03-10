@@ -58,7 +58,7 @@ install-dev-deps:
 
     # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
-    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov)
+    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat)
     for tool in "${cargo_tools[@]}"; do
         bin_name="$tool"
         if cargo install --list | grep -q "^${tool} "; then

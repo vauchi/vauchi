@@ -51,6 +51,7 @@ import 'just/deploy.just'
 import 'just/runners.just'
 import 'just/dev.just'
 import 'just/plan.just'
+import 'just/perf.just'
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
