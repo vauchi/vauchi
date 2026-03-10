@@ -110,7 +110,7 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 
 ### GUI Guideline Compliance (v1.0)
 
-65 violations of `gui-guidelines.md` across 3 platforms. Zero infrastructure exists (no undo toast, inline confirm, click-to-edit).
+65 violations of `gui-guidelines.md` across 3 audited platforms. Zero infrastructure exists (no undo toast, inline confirm, click-to-edit). New native desktop platforms (GTK4, Qt, WinUI3) and expanded targets (smartwatches, KaiOS) must be built compliant from scratch.
 
 | Rule | Desktop | Android | iOS | Total |
 |------|---------|---------|-----|-------|
@@ -119,6 +119,15 @@ Core Rust modules done and tested for all 6 features. Remaining work is platform
 | UI-03: Inline over overlay | 10 | 13 | 2 | 25 |
 | UI-04–08: Other rules | 8 | 6 | 4 | 18 |
 | **Total** | **24** | **28** | **13** | **65** |
+
+### UX Guideline Compliance (v1.0)
+
+`ux-guidelines.md` adopted 2026-03-10. Not yet audited against existing platforms. Key rules requiring validation:
+
+- UX-01: Physical device first (QR/NFC/BLE over copy-paste) — exchange flows need audit
+- UX-04: One happy path — onboarding and exchange flows need audit
+- UX-06: Transitions are earned — screen transition frequency needs audit
+- UX-08: Offline and in-person first — all local operations must work without network
 
 ### Social Network Integration (v1.0)
 
@@ -188,6 +197,7 @@ Problem records created 2026-02-26. All must close before release.
 | Key fingerprint verification UI | **Not done** | Must display during exchange confirmation |
 | Resistance features complete | ~65-75% | Duress, emergency, shred, mesh — locale keys + platform gaps remaining |
 | GUI guidelines compliant | **Not done** | 65 violations across 3 platforms |
+| UX guidelines compliant | **Not done** | Adopted 2026-03-10, not yet audited |
 | Social network picker | **Not done** | Core registry exists, platform UIs not wired |
 | Trust Metrics | ~95% | Needs v19 migration |
 | Birthday field | **Not done** | Needs FieldType::Birthday with date validation |
@@ -230,6 +240,7 @@ curl https://relay.vauchi.app/health
 | Account deletion silent failure | Medium | High | Contacts not notified on deletion. Wire relay revocation sending |
 | BLE/NFC platform differences | High | Medium | Test on both iOS and Android early |
 | GUI guideline debt | High | Medium | 65 violations cause dialog fatigue. Fix before beta |
+| UX guideline debt | Medium | Medium | New rules (2026-03-10) not yet audited. Audit existing flows before beta |
 | Social network picker missing | Medium | Medium | Core ready, UIs not wired. Wire before beta |
 | Tor integration complexity | Medium | Medium | Prototype with arti crate first |
 | Real device issues | Medium | High | Validate on simulators/emulators first, then physical devices |
