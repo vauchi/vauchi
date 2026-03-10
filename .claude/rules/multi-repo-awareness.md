@@ -39,7 +39,8 @@ apply: always
   - For parallel work in worktrees: `just worktree create <branch> [repos]`, work in `.worktrees/<branch>/<repo>/`, clean up with `just worktree remove-force <branch>`
   - Never use `git stash` — use `just git wip` instead (stashes get lost across multiple repos)
   - Non-interactive modes: `just git main wip` (not bare `just git main` which prompts)
-- **Return to workspace root** after every task — `cd` to the directory containing `CLAUDE.md`. Sub-repo `cd` commands drift the working directory — always reset.
+- **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git commands and `just <recipe> [repo]` for everything else. `cd` drifts the working directory and causes wrong-repo commits/pushes. If you must `cd` (e.g., for a non-git tool), always `cd` back to workspace root immediately after.
+- **Stay at workspace root** — the directory containing `CLAUDE.md`. All `just` recipes work from here.
 - **Use `just gitlab *` recipes for all GitLab operations** — never use raw `glab` commands
   - `just gitlab mr-create [repo]` — create MR from current branch
   - `just gitlab mr-list [repo]` — list open MRs
@@ -48,7 +49,7 @@ apply: always
   - `just gitlab pipeline-retry <id> [repo]` — retry failed pipeline
   - The `[repo]` arg uses local directory names (e.g., `_private`, `core`, `docs`); the recipe handles the GitLab name mapping automatically (e.g., `_private` → `vauchi/private`)
   - Omit `[repo]` when already `cd`'d into the repo directory
-- Fall back to `git -C <dir>` only for single-repo ops not covered by a recipe
+- **Single-repo git ops**: Always use `git -C <dir>` (e.g., `git -C core status`, `git -C _private log`). Never `cd` into the repo first — this avoids working directory drift that causes wrong-repo operations.
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
 - Push upstream repos first (core → cli/tui/e2e and other downstream), mark downstream MRs as Draft
 - iOS/Android binding repos are auto-generated — never edit manually
