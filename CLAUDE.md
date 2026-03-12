@@ -76,8 +76,7 @@ Contributing guide: `docs/developers/contributing.md`.
 | `device-testing` | Physical device GUI testing (ADB, WDA, screenshots, onboarding/exchange flows) |
 | `rust-patterns` | Writing/modifying Rust code in core/ |
 | `tdd-workflow` | Implementing features or bugfixes with TDD |
-| `mobile-bindings` | UniFFI binding generation, SPM/Maven packaging |
-| `desktop-stack` | Tauri + SolidJS desktop app work |
+| `platform-bindings` | UniFFI binding generation, SPM/Maven packaging |
 | `ci-pipeline` | Investigating CI failures or modifying pipelines |
 | `dependency-map` | Modifying Cargo.toml or debugging build issues |
 | `repo-map` | Locating files or running git commands across repos |
