@@ -133,9 +133,9 @@ case "$FILE_PATH" in
   # ── Swift ─────────────────────────────────────────────────────────
   *.swift)
     if command -v swiftformat &>/dev/null; then
-      BEFORE=$(md5sum "$FILE_PATH" 2>/dev/null)
+      BEFORE=$(shasum -a 256 "$FILE_PATH" 2>/dev/null)
       swiftformat "$FILE_PATH" 2>/dev/null
-      AFTER=$(md5sum "$FILE_PATH" 2>/dev/null)
+      AFTER=$(shasum -a 256 "$FILE_PATH" 2>/dev/null)
       if [[ "$BEFORE" != "$AFTER" ]]; then
         echo "Auto-formatted $FILE_PATH with swiftformat. Re-read before editing again."
       fi
@@ -145,9 +145,9 @@ case "$FILE_PATH" in
   # ── Kotlin ────────────────────────────────────────────────────────
   *.kt)
     if command -v ktlint &>/dev/null; then
-      BEFORE=$(md5sum "$FILE_PATH" 2>/dev/null)
+      BEFORE=$(shasum -a 256 "$FILE_PATH" 2>/dev/null)
       ktlint -F "$FILE_PATH" 2>/dev/null || true
-      AFTER=$(md5sum "$FILE_PATH" 2>/dev/null)
+      AFTER=$(shasum -a 256 "$FILE_PATH" 2>/dev/null)
       if [[ "$BEFORE" != "$AFTER" ]]; then
         echo "Auto-formatted $FILE_PATH with ktlint. Re-read before editing again."
       fi

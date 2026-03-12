@@ -23,13 +23,6 @@ if echo "$COMMAND" | grep -qF -- '--delete'; then
   exit 0
 fi
 
-# Block pushing WIP checkpoint commits (created by `just git wip`)
-HEAD_MSG="$(git -C "$REPO_DIR" log -1 --format=%s 2>/dev/null || true)"
-if [[ "$HEAD_MSG" == wip:* ]]; then
-  echo "Push blocked: HEAD is a WIP checkpoint commit ($HEAD_MSG). Run 'just git wip-undo' first." >&2
-  exit 2
-fi
-
 # Block --no-verify (prevents bypassing pre-push hooks)
 if echo "$COMMAND" | grep -qF -- '--no-verify'; then
   echo "--no-verify is blocked. Pre-push hooks exist to prevent CI failures. Fix the issues instead of bypassing." >&2
@@ -50,6 +43,13 @@ fi
 # Resolve to absolute path
 REPO_DIR=$(cd "$REPO_DIR" 2>/dev/null && pwd) || exit 0
 REPO_NAME=$(basename "$REPO_DIR")
+
+# Block pushing WIP checkpoint commits (created by `just git wip`)
+HEAD_MSG="$(git -C "$REPO_DIR" log -1 --format=%s 2>/dev/null || true)"
+if [[ "$HEAD_MSG" == wip:* ]]; then
+  echo "Push blocked: HEAD is a WIP checkpoint commit ($HEAD_MSG). Run 'just git wip-undo' first." >&2
+  exit 2
+fi
 
 # ── TDD stamp check ──────────────────────────────────────────────────
 # If `just check` already passed for this commit, skip all gate checks.

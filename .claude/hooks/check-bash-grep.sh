@@ -16,6 +16,9 @@ fi
 if echo "$COMMAND" | grep -qE '^\s*just\s'; then
   exit 0
 fi
+if echo "$COMMAND" | grep -qE '^\s*glab\s'; then
+  exit 0
+fi
 
 # Only check commands that contain grep
 if ! echo "$COMMAND" | grep -q 'grep'; then
