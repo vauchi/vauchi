@@ -37,31 +37,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/auto-format.sh",
-            "statusMessage": "Auto-formatting..."
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-rust.sh"
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-cargo-toml.sh"
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-test-assertions.sh",
-            "statusMessage": "Checking test assertions..."
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-css.sh",
-            "statusMessage": "Linting CSS..."
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-html.sh",
-            "statusMessage": "Linting HTML..."
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "statusMessage": "Checking & formatting..."
           }
         ]
       }
@@ -70,9 +47,40 @@
   "enabledPlugins": {
     "code-review@claude-plugins-official": true
   },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7"
+  ],
   "permissions": {
     "allow": [
-      "Bash(git -C:*)"
+      "Bash(git :*)",
+      "Bash(cargo :*)",
+      "Bash(just :*)",
+      "Bash(just)",
+      "Bash(glab :*)",
+      "Bash(ls :*)",
+      "Bash(ls)",
+      "Bash(find :*)",
+      "Bash(grep :*)",
+      "Bash(wc :*)",
+      "Bash(head :*)",
+      "Bash(tail :*)",
+      "Bash(sort :*)",
+      "Bash(diff :*)",
+      "Bash(cat :*)",
+      "Bash(echo :*)",
+      "Bash(chmod :*)",
+      "Bash(mkdir :*)",
+      "Bash(cd :*)",
+      "Bash(xargs :*)",
+      "Bash(which :*)",
+      "Bash(command :*)",
+      "Bash(env)",
+      "Bash(npm :*)",
+      "Bash(npx :*)",
+      "Bash(./gradlew:*)",
+      "Read(/tmp/**)",
+      "WebSearch"
     ]
   }
 }

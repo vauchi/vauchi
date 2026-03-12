@@ -11,45 +11,19 @@ apply: always
 - **Branches**: `feature/`, `bugfix/`, `refactor/`, `tidy/`, `investigation/`
 - **Pre-MR rebase**: Always `git fetch origin main && git rebase origin/main` before creating an MR
 - **No direct push to main**: Merge via MR only. Sync branch names across repos.
-- **No `@` in MR descriptions**: Wrap Gherkin tags in backticks (`` `@duress` ``). Source code comments are fine.
-- MR template, multi-repo sync examples: `.claude/docs/commit-conventions.md`
-- **Use `just git *` recipes for all multi-repo git operations** — never write raw bash loops over repos
-  - `just git status` — status across all repos
-  - `just git branch-status` — branches with ahead/behind info
-  - `just git stash-list` — stashes across repos
-  - `just git stash-clear` — drop all stashes
-  - `just git cleanup` / `just git cleanup run` — prune merged branches
-  - `just git fetch` / `just git sync` — fetch/pull all repos
-  - `just git branches` — list branches across repos
-  - `just git branch <name> [repos]` — create branch across repos
-  - `just git push-all` — push repos with commits ahead
-  - `just git wip [msg] [repos]` — save WIP checkpoint commits (safer than stash)
-  - `just git wip-undo [repos]` — undo WIP commits (soft reset)
-  - `just git resume <branch> [repos]` — switch to branch and undo WIP commits
-  - `just git stale-branches [days]` — find branches with no recent activity
-- **Use `just worktree *` for parallel development** — work on multiple branches simultaneously
-  - `just worktree create <branch> [repos]` — create parallel checkout in `.worktrees/`
-  - `just worktree list` — list all active worktrees
-  - `just worktree remove <branch>` — clean up a worktree (interactive)
-  - `just worktree remove-force <branch>` — clean up a worktree (non-interactive, for Claude)
-- **Prefer WIP commits over stashing** — `just git wip` saves on the branch, `just git wip-undo` restores
-- **Context switching (for Claude agents)**:
-  - Before switching branches: `just git wip` to save, then `just git branch <name>` or `just git main wip`
-  - Returning to a branch: `just git resume <branch>` (auto-undoes WIP commits)
-  - For parallel work in worktrees: `just worktree create <branch> [repos]`, work in `.worktrees/<branch>/<repo>/`, clean up with `just worktree remove-force <branch>`
-  - Never use `git stash` — use `just git wip` instead (stashes get lost across multiple repos)
-  - Non-interactive modes: `just git main wip` (not bare `just git main` which prompts)
-- **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git commands and `just <recipe> [repo]` for everything else. `cd` drifts the working directory and causes wrong-repo commits/pushes. If you must `cd` (e.g., for a non-git tool), always `cd` back to workspace root immediately after.
+- **No `@` in MR descriptions**: Wrap Gherkin tags in backticks (`` `@duress` ``).
+- **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git commands and `just <recipe> [repo]` for everything else. `cd` drifts the working directory and causes wrong-repo commits/pushes.
 - **Stay at workspace root** — the directory containing `CLAUDE.md`. All `just` recipes work from here.
-- **Use `just gitlab *` recipes for all GitLab operations** — never use raw `glab` commands
-  - `just gitlab mr-create [repo]` — create MR from current branch
-  - `just gitlab mr-list [repo]` — list open MRs
-  - `just gitlab pipeline-status [repo]` — pipeline status
-  - `just gitlab pipeline-log <id> [repo]` — job log
-  - `just gitlab pipeline-retry <id> [repo]` — retry failed pipeline
-  - The `[repo]` arg uses local directory names (e.g., `_private`, `core`, `docs`); the recipe handles the GitLab name mapping automatically (e.g., `_private` → `vauchi/private`)
-  - Omit `[repo]` when already `cd`'d into the repo directory
-- **Single-repo git ops**: Always use `git -C <dir>` (e.g., `git -C core status`, `git -C _private log`). Never `cd` into the repo first — this avoids working directory drift that causes wrong-repo operations.
+- **Use `just git *` recipes for all multi-repo git operations** — never write raw bash loops over repos
+  - Key recipes: `status`, `branch <name>`, `push-all`, `wip [msg]`, `wip-undo`, `resume <branch>`, `fetch`, `sync`, `cleanup`
+  - Non-interactive: `just git main wip` (not bare `just git main` which prompts)
+- **Use `just worktree *` for parallel development** — `create <branch>`, `list`, `remove-force <branch>`
+- **Use `just gitlab *` for all GitLab operations** — never use raw `glab` commands
+  - Key recipes: `mr-create [repo]`, `mr-list [repo]`, `pipeline-status [repo]`, `pipeline-retry <id> [repo]`
+- **Prefer WIP commits over stashing** — `just git wip` saves on the branch, `just git wip-undo` restores
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
 - Push upstream repos first (core → cli/tui/e2e and other downstream), mark downstream MRs as Draft
 - iOS/Android binding repos are auto-generated — never edit manually
+
+Full recipe reference: `.claude/docs/just-commands.md`
+MR template, multi-repo examples: `.claude/docs/commit-conventions.md`
