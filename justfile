@@ -1007,6 +1007,118 @@ housekeeping:
         echo "$drift_output" | tail -5 | sed 's/^/  /'
     fi
 
+    # 11. Unpushed commits
+    section "Unpushed commits"
+    unpushed=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        ahead=$(git -C "$gitdir" rev-list --count @{upstream}..HEAD 2>/dev/null || echo "0")
+        if [[ "$ahead" -gt 0 ]]; then
+            echo "  $label: $ahead commit(s) ahead of origin"
+            unpushed=$((unpushed + ahead))
+        fi
+    done
+    if [[ "$unpushed" -eq 0 ]]; then
+        echo "  All repos up to date with origin"
+    else
+        echo "  -> Push with: just git push-all"
+        ISSUES=$((ISSUES + unpushed))
+    fi
+
+    # 12. Unreviewed proposals
+    section "Unreviewed proposals"
+    proposals_dir="_private/docs/planning/proposals"
+    if [[ -d "$proposals_dir" ]]; then
+        prop_count=$(find "$proposals_dir" -name '*.md' -not -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$prop_count" -ge 5 ]]; then
+            echo "  ALERT: $prop_count unreviewed proposal(s) (threshold: 5)"
+            find "$proposals_dir" -name '*.md' -not -name 'README.md' -printf '    %f\n' 2>/dev/null
+            ISSUES=$((ISSUES + prop_count))
+        elif [[ "$prop_count" -gt 0 ]]; then
+            echo "  $prop_count proposal(s)"
+        else
+            echo "  None"
+        fi
+    else
+        echo "  None"
+    fi
+
+    # 13. Stale problem records (14d intake, 30d other phases)
+    section "Stale problem records"
+    stale_problems=0
+    now_epoch=$(date +%s)
+    for dir in _private/docs/problems/*/; do
+        [[ ! -f "${dir}README.md" ]] && continue
+        dirname=$(basename "$dir")
+        [[ "$dirname" == "done" ]] && continue
+        # Extract status from first 20 lines using sed
+        status=$(head -20 "${dir}README.md" | sed -n 's/.*\*\*Status\*\*[[:space:]]*[|:][[:space:]]*`\?\([a-zA-Z]*\).*/\1/p' | head -1 || true)
+        status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
+        # Extract date from dirname (YYYY-MM-DD prefix)
+        date_prefix=$(echo "$dirname" | sed -n 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/p')
+        [[ -z "$date_prefix" ]] && continue
+        dir_epoch=$(date -d "$date_prefix" +%s 2>/dev/null || continue)
+        age_days=$(( (now_epoch - dir_epoch) / 86400 ))
+        threshold=30
+        [[ "$status" == "intake" ]] && threshold=14
+        if [[ "$age_days" -ge "$threshold" && "$status" != "done" && "$status" != "archived" && "$status" != "complete" ]]; then
+            echo "  $dirname (${status:-unknown}, ${age_days}d old, threshold: ${threshold}d)"
+            stale_problems=$((stale_problems + 1))
+        fi
+    done
+    if [[ "$stale_problems" -eq 0 ]]; then
+        echo "  None"
+    else
+        ISSUES=$((ISSUES + stale_problems))
+    fi
+
+    # 14. Orphaned worktrees
+    section "Orphaned worktrees"
+    if [[ -d ".worktrees" ]]; then
+        wt_count=$(ls -d .worktrees/*/ 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$wt_count" -gt 0 ]]; then
+            echo "  $wt_count active worktree(s):"
+            ls -d .worktrees/*/ 2>/dev/null | sed 's|.worktrees/||;s|/||;s/^/    /'
+            echo "  -> Remove with: just worktree remove-force <branch>"
+            ISSUES=$((ISSUES + wt_count))
+        else
+            echo "  None"
+        fi
+    else
+        echo "  None"
+    fi
+
+    # 15. Orphaned /tmp agent dirs
+    section "Orphaned /tmp dirs"
+    tmp_count=$(find /tmp -maxdepth 1 -user "$(whoami)" -name '.tmp*' -type d 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$tmp_count" -gt 10 ]]; then
+        echo "  $tmp_count orphaned .tmp* dirs in /tmp"
+        echo "  -> Clean with: rm -rf /tmp/.tmp*"
+        ISSUES=$((ISSUES + 1))
+    elif [[ "$tmp_count" -gt 0 ]]; then
+        echo "  $tmp_count .tmp* dir(s) (below threshold)"
+    else
+        echo "  None"
+    fi
+
+    # 16. Cargo.toml ref check (branch = "main")
+    section "Cargo.toml branch refs"
+    ref_output=$(just check-refs 2>&1 || true)
+    if echo "$ref_output" | grep -q "not pointing to main"; then
+        echo "$ref_output" | grep "not pointing to main" | sed 's/^/  /'
+        bad_refs=$(echo "$ref_output" | grep -c "not pointing to main" || true)
+        ISSUES=$((ISSUES + bad_refs))
+    else
+        echo "  All refs point to main"
+    fi
+
     # Summary
     echo ""
     echo "==========================================="
