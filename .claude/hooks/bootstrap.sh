@@ -84,7 +84,7 @@ for repo in "${REPOS[@]}"; do
   # Stale lock files (auto-heal if older than 1 hour)
   LOCK_FILE="$REPO_DIR/.git/index.lock"
   if [[ -f "$LOCK_FILE" ]]; then
-    LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo "0") ))
+    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo "0") ))
     if [[ $LOCK_AGE -gt 3600 ]]; then
       rm -f "$LOCK_FILE"
       GIT_ISSUES+=("${repo}/ had stale index.lock (auto-removed, was ${LOCK_AGE}s old)")
@@ -116,23 +116,18 @@ if [[ ! -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
   MCP_ISSUES+=("drift-detector/dist/index.js not found — run \`cd drift-detector && npm run build\`")
 fi
 
-# Check GitLab token
-if [[ -z "${GITLAB_PERSONAL_ACCESS_TOKEN:-}" ]]; then
-  MCP_ISSUES+=("GITLAB_PERSONAL_ACCESS_TOKEN not set")
-fi
-
 if [[ ${#MCP_ISSUES[@]} -gt 0 ]]; then
   for issue in "${MCP_ISSUES[@]}"; do
     echo "[FAIL] MCP: ${issue}"
   done
   ISSUES=$((ISSUES + ${#MCP_ISSUES[@]}))
 else
-  echo "[PASS] MCP: drift-detector built, GitLab token set"
+  echo "[PASS] MCP: drift-detector built"
 fi
 
 # ---------- 5. GitLab auth ----------
 if command -v glab &>/dev/null; then
-  GLAB_USER=$(glab auth status 2>&1 | grep -oP 'Logged in to .* as \K\S+' || echo "")
+  GLAB_USER=$(glab auth status 2>&1 | sed -n 's/.*Logged in to .* as \([^ ]*\).*/\1/p' | head -1)
   if [[ -n "$GLAB_USER" ]]; then
     echo "[PASS] GitLab: authenticated as ${GLAB_USER}"
   else
