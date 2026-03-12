@@ -802,6 +802,43 @@ housekeeping:
         echo "═══ [$SECTION] $1 ═══"
     }
 
+    # 0. Fetch remotes, fast-forward main, rebase local branches
+    section "Sync with remotes"
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            label="vauchi (root)"
+            gitdir="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"
+            gitdir="${dir%/}"
+        fi
+        git -C "$gitdir" fetch origin --prune --quiet 2>/dev/null || { echo "  $label: fetch failed"; continue; }
+        branch=$(git -C "$gitdir" branch --show-current 2>/dev/null || echo "")
+        [[ -z "$branch" ]] && continue
+        if [[ "$branch" == "main" ]]; then
+            # Fast-forward main if clean
+            if git -C "$gitdir" diff --quiet 2>/dev/null && git -C "$gitdir" diff --cached --quiet 2>/dev/null; then
+                behind=$(git -C "$gitdir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+                if [[ "$behind" -gt 0 ]]; then
+                    git -C "$gitdir" merge --ff-only origin/main --quiet 2>/dev/null \
+                        && echo "  $label: fast-forwarded main ($behind commit(s))" \
+                        || echo "  $label: main diverged, cannot fast-forward"
+                fi
+            fi
+        else
+            # Rebase feature branch onto latest origin/main
+            if git -C "$gitdir" diff --quiet 2>/dev/null && git -C "$gitdir" diff --cached --quiet 2>/dev/null; then
+                rebase_output=$(git -C "$gitdir" rebase origin/main 2>&1) \
+                    && { echo "$rebase_output" | grep -q "up to date" || echo "  $label: rebased $branch onto origin/main"; } \
+                    || { echo "  $label: rebase failed on $branch — resolve manually"; git -C "$gitdir" rebase --abort 2>/dev/null; ISSUES=$((ISSUES + 1)); }
+            else
+                echo "  $label: skipped rebase (dirty working tree on $branch)"
+            fi
+        fi
+    done
+    echo "  Sync complete"
+
     # 1. Uncommitted changes & untracked files
     section "Uncommitted changes"
     dirty=0
