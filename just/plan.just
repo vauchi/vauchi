@@ -274,3 +274,15 @@ plan-stale days='30':
     done < <(find _private/docs -name "*.plan.md" -print0)
     echo ""
     echo "$STALE stale plan(s) found."
+
+# Dry-run plan sync — show what CI would update
+[group('tools')]
+[script('bash')]
+plan-sync *FLAGS:
+    set -euo pipefail
+    SINCE="${PLAN_SYNC_SINCE:-$(git log --all --format=%H --grep='chore: sync plans' -1 2>/dev/null || git rev-list --max-parents=0 HEAD)}"
+    cd drift-detector && node dist/index.js sync --since "$SINCE" {{FLAGS}}
+
+# Apply plan sync changes to working tree (no commit)
+plan-sync-apply:
+    just plan-sync --apply
