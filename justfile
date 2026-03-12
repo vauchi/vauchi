@@ -745,6 +745,7 @@ help:
       just deploy-check       Check deployed versions vs origin/main
       just core-freshness     Check if bindings/consumers are up to date with core
       just schema-check       Verify JSON schemas match core UI types
+      just design-check       Validate design docs (YAML, coverage, cross-refs)
 
     Housekeeping:
       just housekeeping       Run all health checks (changes, snapshots, stashes,
@@ -1581,6 +1582,16 @@ sync-locales-strict:
 [group('tools')]
 vrt-gallery:
     ./scripts/scripts/vrt-gallery.sh
+
+# ═══════════════════════════════════════════════════════════════════
+# DESIGN DOCS VALIDATION
+# ═══════════════════════════════════════════════════════════════════
+
+# Validate design docs: YAML syntax, component types, screen/component coverage, nav consistency
+# Usage: just design-check [--verbose]
+[group('tools')]
+design-check *args:
+    python3 _private/scripts/design-check.py {{ args }}
 
 # ═══════════════════════════════════════════════════════════════════
 # DRIFT DETECTION
