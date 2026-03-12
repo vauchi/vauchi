@@ -114,3 +114,43 @@ Gherkin feature tags like `@duress`, `@hidden`, `@panic` **must** be escaped in 
 | MR description (raw) | **NO** | `@duress @hidden` → mentions users |
 | MR description (backtick) | Yes | `` `@duress` `` `` `@hidden` `` |
 | MR description (no prefix) | Yes | `duress, hidden, panic` |
+
+### Plan-Task Trailers
+
+Standard git trailers that link commits to plan tasks and problem records.
+
+**Format:**
+
+```
+Plan-Task: <slug>#<task-number>
+Problem: <slug>
+```
+
+**Rules:**
+
+- `Plan-Task:` is a standard git trailer — one per line, multiple allowed
+- Slug matches plan filenames by substring (date prefix stripped): `2026-02-26-sp24-desktop-phone-exchange.plan.md` → slug `sp24-desktop-exchange`
+- `#N` references the task number (list item order in `.plan.md`)
+- Optional `Problem:` trailer for direct problem record references
+- Trailers are **advisory, not enforced** — missing trailers don't block merge or push
+- Pre-push hook shows a soft warning on `feature/*` branches for commits without trailers
+
+**How CI uses trailers:**
+
+- After merge to main, CI parses `Plan-Task:` trailers and creates an MR updating referenced plan tasks to `[x]`
+- drift-detector inference fills gaps for commits without trailers
+- All updates go through MR review — never direct to main
+
+**Example:**
+
+```
+feat: implement BLE transport for desktop exchange
+
+Implement connection handling and data transfer for
+desktop-phone exchange over BLE.
+
+Plan-Task: sp24-desktop-exchange#4
+Plan-Task: sp24-desktop-exchange#5
+Problem: sp24-desktop-exchange
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+```
