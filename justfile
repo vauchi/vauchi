@@ -521,6 +521,98 @@ release-history repo="core" version="":
         fi
     done
 
+# Show full release chain status across all repos (core → swift/kotlin → ios/android)
+# Usage: just release-chain-status [version]
+#   just release-chain-status          # auto-detect from core/Cargo.toml
+#   just release-chain-status 0.3.1    # specific version
+[group('extended')]
+[script('bash')]
+release-chain-status version="":
+    set -euo pipefail
+
+    # Resolve version
+    if [[ -n "{{ version }}" ]]; then
+        BASE="{{ version }}"
+    else
+        BASE=$(grep -A5 '^\[workspace\.package\]' core/Cargo.toml | grep '^version' | sed 's/.*"\(.*\)"/\1/' | sed 's/-.*//')
+    fi
+
+    echo "═══ Release Chain Status for v${BASE} ═══"
+    echo ""
+
+    # 1. Core tags
+    echo "── Core Tags ──"
+    TAGS=$(git -C core tag -l "v${BASE}*" 2>/dev/null | sort -V)
+    if [[ -z "$TAGS" ]]; then
+        echo "  No tags for v${BASE}"
+    else
+        echo "$TAGS" | while read -r tag; do
+            DATE=$(git -C core log -1 --format=%ci "$tag" 2>/dev/null | cut -d' ' -f1)
+            if echo "$tag" | grep -q "dev"; then
+                echo "  $tag  ($DATE)  [dev]"
+            elif echo "$tag" | grep -q "rc"; then
+                echo "  $tag  ($DATE)  [RC]"
+            else
+                echo "  $tag  ($DATE)  [PROD]"
+            fi
+        done
+    fi
+    LATEST_TAG=$(echo "$TAGS" | tail -1)
+    echo ""
+
+    # 2. Core pipeline status for latest tag
+    if [[ -n "$LATEST_TAG" ]]; then
+        echo "── Core Pipeline (${LATEST_TAG}) ──"
+        if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+            glab ci list -R vauchi/core 2>/dev/null | grep -E "${LATEST_TAG}|${BASE}" | head -3 || echo "  No pipeline found"
+        else
+            echo "  (glab not authenticated — run 'glab auth login')"
+        fi
+        echo ""
+    fi
+
+    # 3. Distribution repo status
+    for dist_repo in vauchi-platform-swift vauchi-platform-kotlin; do
+        echo "── ${dist_repo} ──"
+        if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+            # Check for open MRs mentioning this version
+            MRS=$(glab mr list -R "vauchi/${dist_repo}" --state opened 2>/dev/null | grep -i "${BASE}" || true)
+            if [[ -n "$MRS" ]]; then
+                echo "  Open MRs:"
+                echo "$MRS" | sed 's/^/    /'
+            else
+                echo "  No open MRs for v${BASE}"
+            fi
+            # Show latest pipeline (just the first result line, skip header)
+            LATEST=$(glab ci list -R "vauchi/${dist_repo}" 2>/dev/null | head -2 | tail -1)
+            if [[ -n "$LATEST" ]]; then
+                echo "  Latest pipeline: $LATEST"
+            fi
+        else
+            echo "  (glab not authenticated)"
+        fi
+        echo ""
+    done
+
+    # 4. App repo status
+    for app_repo in ios android; do
+        echo "── ${app_repo} ──"
+        if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+            MRS=$(glab mr list -R "vauchi/${app_repo}" --state opened 2>/dev/null | grep -i "${BASE}" || true)
+            if [[ -n "$MRS" ]]; then
+                echo "  Open MRs:"
+                echo "$MRS" | sed 's/^/    /'
+            else
+                echo "  No open MRs for v${BASE}"
+            fi
+        else
+            echo "  (glab not authenticated)"
+        fi
+        echo ""
+    done
+
+    echo "═══ End ═══"
+
 # Run security audit
 [group('extended')]
 [script('bash')]
