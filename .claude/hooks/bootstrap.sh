@@ -111,9 +111,23 @@ fi
 # ---------- 4. MCP config ----------
 MCP_ISSUES=()
 
-# Check drift-detector is built
+# Check drift-detector is built — auto-fix if missing
 if [[ ! -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
-  MCP_ISSUES+=("drift-detector/dist/index.js not found — run \`cd drift-detector && npm run build\`")
+  if [[ -f "$PROJECT_DIR/drift-detector/package.json" ]]; then
+    echo "[FIX ] MCP: drift-detector not built — auto-building..."
+    (
+      cd "$PROJECT_DIR/drift-detector"
+      [[ ! -d node_modules ]] && npm install --silent 2>/dev/null
+      ./node_modules/.bin/tsc 2>/dev/null
+    )
+    if [[ -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
+      echo "[FIX ] MCP: drift-detector built successfully"
+    else
+      MCP_ISSUES+=("drift-detector auto-build failed — run \`cd drift-detector && npm install && npx tsc\`")
+    fi
+  else
+    MCP_ISSUES+=("drift-detector/package.json not found — repo may be missing")
+  fi
 fi
 
 if [[ ${#MCP_ISSUES[@]} -gt 0 ]]; then
