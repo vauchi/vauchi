@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 ---
 name: ios-device-automation
 description: Automate iOS physical device operations — launch apps with arguments, retrieve files, capture logs, take screenshots, and tap/swipe UI via WDA. Use when automating iOS device testing or retrieving data from the iPhone.

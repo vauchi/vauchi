@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 ---
 name: android-device-automation
 description: Automate Android physical device operations — launch activities with intent extras, capture logcat, take screenshots, tap/swipe UI, and stream logs. Use when automating Android device testing or retrieving data from Android devices.
