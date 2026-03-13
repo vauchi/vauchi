@@ -810,6 +810,32 @@ tmp-clean:
     done < <(find /tmp -maxdepth 2 -user "$me" -name 'vauchi.db' -path '/tmp/.tmp*' -mmin +5 2>/dev/null)
     echo "Cleaned $cleaned test temp dir(s), skipped $skipped (in use)"
 
+# Remove stale cargo artifacts older than N days (default: 30) across all Rust repos
+[group('daily')]
+[script('bash')]
+sweep days="30":
+    set -euo pipefail
+    if ! command -v cargo-sweep &>/dev/null; then
+        echo "cargo-sweep not installed. Run: cargo install cargo-sweep"
+        exit 1
+    fi
+    rust_dirs=(core cli relay tui e2e linux-gtk)
+    total_before=0
+    total_after=0
+    for dir in "${rust_dirs[@]}"; do
+        target="$dir/target"
+        [[ -d "$target" ]] || continue
+        before=$(du -sm "$target" 2>/dev/null | cut -f1)
+        total_before=$((total_before + before))
+        cargo sweep --time {{days}} "$dir" 2>/dev/null
+        after=$(du -sm "$target" 2>/dev/null | cut -f1)
+        total_after=$((total_after + after))
+        freed=$((before - after))
+        [[ $freed -gt 0 ]] && echo "  $dir: freed ${freed} MB (${before} → ${after} MB)"
+    done
+    total_freed=$((total_before - total_after))
+    echo "Total: freed ${total_freed} MB (${total_before} → ${total_after} MB)"
+
 # Run all non-destructive health checks and print a summary
 [group('daily')]
 [script('bash')]
@@ -1174,7 +1200,29 @@ housekeeping:
         echo "  None"
     fi
 
-    # 16. Cargo.toml ref check (branch = "main")
+    # 16. Cargo target sizes
+    section "Cargo target sizes"
+    total_mb=0
+    for dir in core cli relay tui e2e linux-gtk; do
+        target="$dir/target"
+        [[ -d "$target" ]] || continue
+        size_mb=$(du -sm "$target" 2>/dev/null | cut -f1)
+        total_mb=$((total_mb + size_mb))
+        if [[ "$size_mb" -gt 1024 ]]; then
+            echo "  $dir: $((size_mb / 1024)) GB"
+        else
+            echo "  $dir: ${size_mb} MB"
+        fi
+    done
+    if [[ "$total_mb" -gt 0 ]]; then
+        echo "  Total: $((total_mb / 1024)) GB"
+        echo "  -> just sweep          (clean artifacts older than 30 days)"
+        echo "  -> just sweep 7        (clean artifacts older than 7 days)"
+    else
+        echo "  No target dirs"
+    fi
+
+    # 17. Cargo.toml ref check (branch = "main")
     section "Cargo.toml branch refs"
     ref_output=$(just check-refs 2>&1 || true)
     if echo "$ref_output" | grep -q "not pointing to main"; then
