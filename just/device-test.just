@@ -1,0 +1,742 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Device testing preparation recipes (physical iPhone + Android device)
+
+# ═══════════════════════════════════════════════════════════════════
+# DEVICE TESTING (physical device workflow)
+# ═══════════════════════════════════════════════════════════════════
+
+# Build, package, and install both apps on physical devices
+[group('device-test')]
+[script('bash')]
+prepare-device-test core_dir="":
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
+    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║     Prepare Device Test — Full Pipeline       ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "Core directory: $CORE_DIR"
+    echo ""
+
+    dt_check_prerequisites
+
+    TOTAL_START=$SECONDS
+
+    echo ""
+    echo -e "${BLUE}[1/6] Building mobile libraries...${NC}"
+    just _dt-build-mobile-libs "$CORE_DIR"
+
+    echo ""
+    echo -e "${BLUE}[2/6] Generating UniFFI bindings...${NC}"
+    just _dt-generate-bindings "$CORE_DIR"
+
+    echo ""
+    echo -e "${BLUE}[3/6] Packaging iOS bindings...${NC}"
+    just _dt-package-ios "$CORE_DIR"
+
+    echo ""
+    echo -e "${BLUE}[4/6] Packaging Android bindings...${NC}"
+    just _dt-package-android "$CORE_DIR"
+
+    echo ""
+    echo -e "${BLUE}[5/6] Building apps...${NC}"
+    just _dt-build-ios
+    just _dt-build-android
+
+    echo ""
+    echo -e "${BLUE}[6/6] Installing apps on devices...${NC}"
+    just _dt-install-ios
+    just _dt-install-android
+
+    ELAPSED=$((SECONDS - TOTAL_START))
+    echo ""
+    echo -e "${GREEN}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║     Device Test Preparation Complete           ║${NC}"
+    echo -e "${GREEN}║     Total time: ${ELAPSED}s                            ${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "Both apps installed and ready for testing."
+
+# Rebuild + install iOS only (skip Android)
+[group('device-test')]
+[script('bash')]
+rebuild-ios core_dir="":
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
+    echo -e "${YELLOW}═══ Rebuild iOS (device) ═══${NC}"
+    echo "Core directory: $CORE_DIR"
+    echo ""
+
+    dt_check_prerequisites_ios
+
+    just _dt-build-mobile-libs-ios "$CORE_DIR"
+    just _dt-generate-bindings-swift "$CORE_DIR"
+    just _dt-package-ios "$CORE_DIR"
+    just _dt-build-ios
+    just _dt-install-ios
+
+    echo ""
+    echo -e "${GREEN}iOS app installed and ready for testing.${NC}"
+
+# Rebuild + install Android only (skip iOS)
+[group('device-test')]
+[script('bash')]
+rebuild-android core_dir="":
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
+    echo -e "${YELLOW}═══ Rebuild Android (device) ═══${NC}"
+    echo "Core directory: $CORE_DIR"
+    echo ""
+
+    dt_check_prerequisites_android
+
+    just _dt-build-mobile-libs-android "$CORE_DIR"
+    just _dt-generate-bindings-kotlin "$CORE_DIR"
+    just _dt-package-android "$CORE_DIR"
+    just _dt-build-android
+    just _dt-install-android
+
+    echo ""
+    echo -e "${GREEN}Android app installed and ready for testing.${NC}"
+
+# ─── Internal sub-recipes ────────────────────────────────────────
+
+# Build vauchi-mobile for iOS device target (aarch64-apple-ios)
+[group('device-test')]
+[script('bash')]
+_dt-build-mobile-libs-ios core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    echo -e "${YELLOW}Building vauchi-mobile for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-mobile --target aarch64-apple-ios --release
+    echo -e "${GREEN}  iOS device library built${NC}"
+
+# Build vauchi-mobile for Android device target (aarch64-linux-android)
+[group('device-test')]
+[script('bash')]
+_dt-build-mobile-libs-android core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    dt_setup_android_ndk
+    echo -e "${YELLOW}Building vauchi-mobile for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-mobile --target aarch64-linux-android --release
+    echo -e "${GREEN}  Android device library built${NC}"
+
+# Build vauchi-mobile for both device targets + native (for Kotlin bindgen)
+[group('device-test')]
+[script('bash')]
+_dt-build-mobile-libs core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    # iOS device
+    echo -e "${YELLOW}Building vauchi-mobile for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-mobile --target aarch64-apple-ios --release
+    echo -e "${GREEN}  iOS device library built${NC}"
+
+    # Android device
+    dt_setup_android_ndk
+    echo -e "${YELLOW}Building vauchi-mobile for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-mobile --target aarch64-linux-android --release
+    echo -e "${GREEN}  Android device library built${NC}"
+
+    # Native macOS (needed for Kotlin binding generation)
+    echo -e "${YELLOW}Building vauchi-mobile native (for Kotlin bindgen)...${NC}"
+    RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    echo -e "${GREEN}  Native macOS library built${NC}"
+
+# Generate Swift bindings from iOS .a
+[group('device-test')]
+[script('bash')]
+_dt-generate-bindings-swift core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    echo -e "${YELLOW}Generating Swift bindings...${NC}"
+    BINDINGS_OUT="target/bindings/ios/generated"
+    mkdir -p "$BINDINGS_OUT"
+    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
+        --library target/aarch64-apple-ios/release/libvauchi_mobile.a \
+        --language swift \
+        --out-dir "$BINDINGS_OUT"
+    echo -e "${GREEN}  Swift bindings generated at $BINDINGS_OUT${NC}"
+
+# Generate Kotlin bindings from native macOS .dylib
+[group('device-test')]
+[script('bash')]
+_dt-generate-bindings-kotlin core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    # Build native library if not already built (needed for metadata extraction)
+    if [[ ! -f "target/release/libvauchi_mobile.dylib" ]]; then
+        echo -e "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
+        RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    fi
+
+    echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
+    BINDINGS_OUT="target/bindings/android/kotlin"
+    mkdir -p "$BINDINGS_OUT"
+    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
+        --library target/release/libvauchi_mobile.dylib \
+        --language kotlin \
+        --out-dir "$BINDINGS_OUT"
+    echo -e "${GREEN}  Kotlin bindings generated at $BINDINGS_OUT${NC}"
+
+# Generate both Swift and Kotlin bindings
+[group('device-test')]
+[script('bash')]
+_dt-generate-bindings core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    cd "{{core_dir}}"
+    unset RUSTC_WRAPPER
+
+    # Swift bindings from iOS .a
+    echo -e "${YELLOW}Generating Swift bindings...${NC}"
+    SWIFT_OUT="target/bindings/ios/generated"
+    mkdir -p "$SWIFT_OUT"
+    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
+        --library target/aarch64-apple-ios/release/libvauchi_mobile.a \
+        --language swift \
+        --out-dir "$SWIFT_OUT"
+    echo -e "${GREEN}  Swift bindings generated${NC}"
+
+    # Kotlin bindings from macOS .dylib
+    echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
+    KOTLIN_OUT="target/bindings/android/kotlin"
+    mkdir -p "$KOTLIN_OUT"
+    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
+        --library target/release/libvauchi_mobile.dylib \
+        --language kotlin \
+        --out-dir "$KOTLIN_OUT"
+    echo -e "${GREEN}  Kotlin bindings generated${NC}"
+
+# Package iOS: copy .a, Swift bindings, header, modulemap into xcframework
+[group('device-test')]
+[script('bash')]
+_dt-package-ios core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    CORE_DIR="{{core_dir}}"
+    WORKSPACE_ROOT="$(pwd)"
+
+    BINDINGS_DIR="$CORE_DIR/target/bindings/ios/generated"
+    DEVICE_LIB="$CORE_DIR/target/aarch64-apple-ios/release/libvauchi_mobile.a"
+    XCFW_DIR="$CORE_DIR/target/xcframework-build/VauchiMobileFFI.xcframework"
+    SPM_DIR="$WORKSPACE_ROOT/vauchi-mobile-swift"
+
+    # Extract version from workspace Cargo.toml
+    VERSION=$(grep '^version' "$CORE_DIR/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    echo "  Core version: $VERSION"
+
+    # Verify source artifacts exist
+    if [[ ! -f "$DEVICE_LIB" ]]; then
+        echo -e "${RED}ERROR: iOS device library not found: $DEVICE_LIB${NC}"
+        echo "Run: just _dt-build-mobile-libs-ios $CORE_DIR"
+        exit 1
+    fi
+    if [[ ! -f "$BINDINGS_DIR/vauchi_mobile.swift" ]]; then
+        echo -e "${RED}ERROR: Swift bindings not found: $BINDINGS_DIR/vauchi_mobile.swift${NC}"
+        echo "Run: just _dt-generate-bindings-swift $CORE_DIR"
+        exit 1
+    fi
+
+    # Ensure xcframework directory structure exists
+    echo -e "${YELLOW}Packaging iOS xcframework...${NC}"
+    DEVICE_FW="$XCFW_DIR/ios-arm64/VauchiMobileFFI.framework"
+    SIM_FW="$XCFW_DIR/ios-arm64_x86_64-simulator/VauchiMobileFFI.framework"
+
+    # Create xcframework structure if it doesn't exist yet
+    if [[ ! -d "$XCFW_DIR" ]]; then
+        echo -e "${YELLOW}  Creating xcframework structure from scratch...${NC}"
+        mkdir -p "$DEVICE_FW/Headers" "$DEVICE_FW/Modules"
+        mkdir -p "$SIM_FW/Headers" "$SIM_FW/Modules"
+    fi
+
+    # Copy device .a as framework binary
+    echo "  Copying device .a to xcframework..."
+    cp "$DEVICE_LIB" "$DEVICE_FW/VauchiMobileFFI"
+
+    # Copy header to both slices
+    echo "  Copying header to xcframework slices..."
+    if [[ -f "$BINDINGS_DIR/vauchi_mobileFFI.h" ]]; then
+        cp "$BINDINGS_DIR/vauchi_mobileFFI.h" "$DEVICE_FW/Headers/vauchi_mobileFFI.h"
+        cp "$BINDINGS_DIR/vauchi_mobileFFI.h" "$SIM_FW/Headers/vauchi_mobileFFI.h"
+    fi
+
+    # Ensure modulemap says "framework module VauchiMobileFFI" (not "module vauchi_mobileFFI")
+    MODULEMAP_CONTENT='framework module VauchiMobileFFI {
+        umbrella header "vauchi_mobileFFI.h"
+        export *
+        module * { export * }
+        link "vauchi_mobile"
+    }'
+    echo "$MODULEMAP_CONTENT" > "$DEVICE_FW/Headers/module.modulemap"
+    echo "$MODULEMAP_CONTENT" > "$DEVICE_FW/Modules/module.modulemap"
+    echo "$MODULEMAP_CONTENT" > "$SIM_FW/Headers/module.modulemap"
+    echo "$MODULEMAP_CONTENT" > "$SIM_FW/Modules/module.modulemap"
+
+    # Generate Info.plist for device framework slice (required by SPM)
+    echo "  Generating Info.plist for device framework..."
+    /usr/libexec/PlistBuddy -c "Clear dict" "$DEVICE_FW/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy \
+        -c "Add :CFBundleExecutable string VauchiMobileFFI" \
+        -c "Add :CFBundleIdentifier string app.vauchi.VauchiMobileFFI" \
+        -c "Add :CFBundleName string VauchiMobileFFI" \
+        -c "Add :CFBundlePackageType string FMWK" \
+        -c "Add :CFBundleVersion string 1" \
+        -c "Add :CFBundleShortVersionString string $VERSION" \
+        "$DEVICE_FW/Info.plist"
+
+    # Generate Info.plist for simulator framework slice
+    echo "  Generating Info.plist for simulator framework..."
+    cp "$DEVICE_FW/Info.plist" "$SIM_FW/Info.plist"
+
+    # Generate root xcframework Info.plist with AvailableLibraries
+    echo "  Generating root xcframework Info.plist..."
+    XCFW_PLIST="$XCFW_DIR/Info.plist"
+    rm -f "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Save" "$XCFW_PLIST" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string XFWK" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :XCFrameworkFormatVersion string 1.0" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries array" "$XCFW_PLIST"
+    # Device slice
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0 dict" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:LibraryIdentifier string ios-arm64" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:LibraryPath string VauchiMobileFFI.framework" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedArchitectures array" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedArchitectures:0 string arm64" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedPlatform string ios" "$XCFW_PLIST"
+    # Simulator slice
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1 dict" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:LibraryIdentifier string ios-arm64_x86_64-simulator" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:LibraryPath string VauchiMobileFFI.framework" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures array" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures:0 string arm64" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures:1 string x86_64" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedPlatform string ios" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedPlatformVariant string simulator" "$XCFW_PLIST"
+
+    # Copy Swift bindings to SPM package
+    echo "  Copying Swift bindings to vauchi-mobile-swift..."
+    cp "$BINDINGS_DIR/vauchi_mobile.swift" "$SPM_DIR/Sources/VauchiMobile/vauchi_mobile.swift"
+
+    # Sync xcframework into SPM package (supports both symlink and real directory)
+    SPM_XCFW="$SPM_DIR/VauchiMobileFFI.xcframework"
+    if [[ -L "$SPM_XCFW" ]]; then
+        # Already a symlink — update if pointing to wrong place
+        SYMLINK_TARGET=$(readlink "$SPM_XCFW")
+        if [[ "$SYMLINK_TARGET" != *"$CORE_DIR"* && "$SYMLINK_TARGET" != "$XCFW_DIR" ]]; then
+            echo -e "${YELLOW}  Updating SPM symlink...${NC}"
+            rm -f "$SPM_XCFW"
+            ln -s "$XCFW_DIR" "$SPM_XCFW"
+        fi
+    elif [[ -d "$SPM_XCFW" ]]; then
+        # Real directory — copy artifacts into it
+        echo "  Copying xcframework artifacts into SPM package..."
+        cp -R "$XCFW_DIR/" "$SPM_XCFW/"
+    else
+        # Neither — create symlink
+        echo -e "${YELLOW}  Creating SPM symlink to xcframework...${NC}"
+        ln -s "$XCFW_DIR" "$SPM_XCFW"
+    fi
+
+    echo -e "${GREEN}  iOS packaging complete${NC}"
+    echo "  XCFramework: $XCFW_DIR"
+    echo "  SPM package: $SPM_XCFW"
+    echo "  Info.plist files: 3 (device + simulator + root)"
+    ls -lh "$DEVICE_FW/VauchiMobileFFI"
+
+# Package Android: copy .so and Kotlin bindings to android repo
+[group('device-test')]
+[script('bash')]
+_dt-package-android core_dir:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    CORE_DIR="{{core_dir}}"
+    WORKSPACE_ROOT="$(pwd)"
+
+    ANDROID_SO="$CORE_DIR/target/aarch64-linux-android/release/libvauchi_mobile.so"
+    KOTLIN_DIR="$CORE_DIR/target/bindings/android/kotlin"
+    ANDROID_DIR="$WORKSPACE_ROOT/android"
+
+    if [[ ! -f "$ANDROID_SO" ]]; then
+        echo -e "${RED}ERROR: Android .so not found: $ANDROID_SO${NC}"
+        echo "Run: just _dt-build-mobile-libs-android $CORE_DIR"
+        exit 1
+    fi
+
+    echo -e "${YELLOW}Packaging Android bindings...${NC}"
+
+    # Copy .so to jniLibs
+    echo "  Copying .so to android/app/src/main/jniLibs/arm64-v8a/..."
+    mkdir -p "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a"
+    cp "$ANDROID_SO" "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_mobile.so"
+
+    # Copy Kotlin bindings to local-bindings source set (only compiled with -PlocalBindings)
+    if [[ -f "$KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt" ]]; then
+        echo "  Copying Kotlin bindings to android/app/src/local-bindings/kotlin/uniffi/..."
+        mkdir -p "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_mobile"
+        cp "$KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt" \
+           "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_mobile/vauchi_mobile.kt"
+        # Remove stale bindings from default source set if present
+        rm -f "$ANDROID_DIR/app/src/main/kotlin/uniffi/vauchi_mobile/vauchi_mobile.kt"
+    else
+        echo -e "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}  Android packaging complete${NC}"
+    ls -lh "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_mobile.so"
+
+# Build iOS app for physical device
+[group('device-test')]
+[script('bash')]
+_dt-build-ios:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    IOS_DEVICE_ID=$(dt_detect_ios_device)
+    echo -e "${YELLOW}Building iOS app for device $IOS_DEVICE_ID...${NC}"
+
+    cd ios
+    xcodebuild -project Vauchi.xcodeproj \
+        -scheme Vauchi \
+        -configuration Debug \
+        -destination "id=$IOS_DEVICE_ID" \
+        -derivedDataPath build \
+        -allowProvisioningUpdates \
+        -clonedSourcePackagesDirPath .spm-packages \
+        clean build 2>&1 | tail -20
+
+    echo -e "${GREEN}  iOS build complete${NC}"
+
+# Build Android APK
+[group('device-test')]
+[script('bash')]
+_dt-build-android:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    echo -e "${YELLOW}Building Android APK (assembleDebug -PlocalBindings)...${NC}"
+    cd android
+    ./gradlew assembleDebug -PlocalBindings 2>&1 | tail -10
+    echo -e "${GREEN}  Android build complete${NC}"
+    ls -lh app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || true
+
+# Install iOS app on connected device
+[group('device-test')]
+[script('bash')]
+_dt-install-ios:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    IOS_DEVICE_ID=$(dt_detect_ios_device)
+    echo -e "${YELLOW}Installing iOS app on device $IOS_DEVICE_ID...${NC}"
+
+    # Find the built .app bundle
+    APP_PATH=$(find ios/build -name "Vauchi.app" -path "*/Debug-iphoneos/*" 2>/dev/null | head -1)
+    if [[ -z "$APP_PATH" ]]; then
+        # Try DerivedData location
+        APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Vauchi.app" -path "*/Debug-iphoneos/*" 2>/dev/null | sort -t/ -k8 -r | head -1)
+    fi
+
+    if [[ -z "$APP_PATH" ]]; then
+        echo -e "${RED}ERROR: Could not find built Vauchi.app${NC}"
+        echo "The xcodebuild step may have failed. Check build output above."
+        exit 1
+    fi
+
+    echo "  App bundle: $APP_PATH"
+    xcrun devicectl device install app --device "$IOS_DEVICE_ID" "$APP_PATH"
+    echo -e "${GREEN}  iOS app installed${NC}"
+
+# Install Android APK on connected device
+[group('device-test')]
+[script('bash')]
+_dt-install-android:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+    if [[ ! -f "$APK_PATH" ]]; then
+        echo -e "${RED}ERROR: APK not found: $APK_PATH${NC}"
+        echo "Run: just _dt-build-android"
+        exit 1
+    fi
+
+    echo -e "${YELLOW}Installing Android APK via adb...${NC}"
+    ANDROID_SERIAL=$(dt_detect_android_device)
+    echo "  Device: $ANDROID_SERIAL"
+    adb -s "$ANDROID_SERIAL" install -r "$APK_PATH"
+    echo -e "${GREEN}  Android app installed${NC}"
+
+# ─── Diagnostics & log capture ────────────────────────────────────
+
+# Capture Android logs (Vauchi + exchange tags). Auto-selects device if multiple connected.
+[group('device-test')]
+[script('bash')]
+dt-logs-android:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    SERIAL=$(dt_detect_android_device)
+    adb -s "$SERIAL" logcat -d -s "Exchange:*" "Vauchi:*" "QrAnalyzer:*" "FaceToFace:*"
+
+# Clear and stream Android logs. Auto-selects device if multiple connected.
+[group('device-test')]
+[script('bash')]
+dt-logs-android-stream:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    SERIAL=$(dt_detect_android_device)
+    adb -s "$SERIAL" logcat -c
+    adb -s "$SERIAL" logcat -s "Exchange:*" "Vauchi:*" "QrAnalyzer:*" "FaceToFace:*"
+
+# Stream iOS logs via idevicesyslog (captures NSLog from app process).
+# Falls back to pymobiledevice3 if idevicesyslog is not installed.
+[group('device-test')]
+[script('bash')]
+dt-logs-ios:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    UDID=$(dt_detect_ios_device)
+    echo "Streaming iOS logs (Vauchi)... Press Ctrl+C to stop."
+    if command -v idevicesyslog &>/dev/null; then
+        # idevicesyslog with --syslog-relay captures NSLog from app processes.
+        # pymobiledevice3 syslog uses unified logging which misses app-level NSLog.
+        # Filter to Vauchi process logs (format: "Vauchi(subsystem)[pid]") and our NSLog tags.
+        idevicesyslog -u "$UDID" --syslog-relay 2>&1 | grep --line-buffered -E "^ *Vauchi\(|\[Vauchi\]|\[Exchange\]|\[MultiStage\]"
+    elif command -v pymobiledevice3 &>/dev/null; then
+        echo "(Using pymobiledevice3 fallback — app NSLog may not appear)"
+        echo "(Install libimobiledevice for reliable capture: brew install libimobiledevice)"
+        pymobiledevice3 syslog live --match Vauchi 2>&1
+    else
+        echo "ERROR: No iOS log tool found."
+        echo "Install: brew install libimobiledevice (preferred) or pip install pymobiledevice3"
+        exit 1
+    fi
+
+# Verify installed build versions on connected devices
+[group('device-test')]
+[script('bash')]
+dt-verify-builds:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    echo -e "${BLUE}=== Build Verification ===${NC}"
+
+    # Android — check all connected devices
+    DEVICES=$(adb devices 2>/dev/null | grep -w "device$" | awk '{print $1}')
+    if [[ -n "$DEVICES" ]]; then
+        for SERIAL in $DEVICES; do
+            MODEL=$(adb -s "$SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+            echo ""
+            echo -e "${YELLOW}Android ($MODEL — $SERIAL):${NC}"
+            adb -s "$SERIAL" shell dumpsys package com.vauchi 2>/dev/null | grep -E "versionName|versionCode" | head -2 || echo "  App not installed"
+            echo "  Core version (from logcat):"
+            adb -s "$SERIAL" logcat -d -s "Vauchi:I" 2>/dev/null | grep "Build:" | tail -1 || echo "  No build log found — launch app first"
+        done
+    else
+        echo -e "${YELLOW}Android: no device connected${NC}"
+    fi
+
+    # iOS — capture build version via idevicesyslog (falls back to pymobiledevice3)
+    echo ""
+    echo -e "${YELLOW}iOS:${NC}"
+    if command -v idevicesyslog &>/dev/null; then
+        UDID=$(dt_detect_ios_device 2>/dev/null || true)
+        if [[ -n "$UDID" ]]; then
+            # Kill existing app so relaunch produces a fresh startup NSLog
+            APP_PID=$(idevicesyslog -u "$UDID" pidlist 2>/dev/null | grep "Vauchi" | awk '{print $1}')
+            if [[ -n "$APP_PID" ]]; then
+                xcrun devicectl device process terminate --device "$UDID" --pid "$APP_PID" 2>/dev/null || true
+                sleep 1
+            fi
+            # Capture logs to temp file, relaunch, then read
+            LOGFILE="/tmp/vauchi-ios-verify-$$.log"
+            idevicesyslog -u "$UDID" --syslog-relay -o "$LOGFILE" &
+            LOG_PID=$!
+            sleep 0.5
+            xcrun devicectl device process launch --device "$UDID" app.vauchi.ios 2>/dev/null || true
+            sleep 3
+            kill $LOG_PID 2>/dev/null || true
+            wait $LOG_PID 2>/dev/null || true
+            grep "\[Vauchi\]" "$LOGFILE" 2>/dev/null | head -3 || echo "  No [Vauchi] logs captured"
+            rm -f "$LOGFILE"
+        else
+            echo "  No iOS device detected"
+        fi
+    elif command -v pymobiledevice3 &>/dev/null; then
+        echo "  (pymobiledevice3 may miss app NSLog — install libimobiledevice for reliable capture)"
+        pymobiledevice3 syslog live --match "Build:" 2>/dev/null | head -5 &
+        PID=$!
+        sleep 3
+        kill $PID 2>/dev/null || true
+    else
+        echo "  Install libimobiledevice (brew install libimobiledevice) for iOS log capture"
+    fi
+
+# Take a screenshot from connected Android device. Auto-selects device if multiple connected.
+[group('device-test')]
+[script('bash')]
+dt-screenshot-android file="screenshot.png":
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    SERIAL=$(dt_detect_android_device)
+    adb -s "$SERIAL" exec-out screencap -p > "{{file}}"
+    echo "Screenshot saved to {{file}} (device: $SERIAL)"
+
+# Take a screenshot from connected iOS device (requires pymobiledevice3)
+[group('device-test')]
+[script('bash')]
+dt-screenshot-ios file="screenshot.png":
+    if ! command -v pymobiledevice3 &>/dev/null; then
+        echo "ERROR: pymobiledevice3 not installed. Install: pip install pymobiledevice3"
+        exit 1
+    fi
+    pymobiledevice3 developer dvt screenshot "{{file}}"
+    echo "Screenshot saved to {{file}}"
+
+# ─── App lifecycle (kill / launch) ────────────────────────────────
+
+# Kill and relaunch iOS app
+[group('device-test')]
+[script('bash')]
+dt-relaunch-ios:
+    set -euo pipefail
+    echo "Killing and relaunching Vauchi on iOS..."
+    pymobiledevice3 developer dvt kill app.vauchi.ios 2>/dev/null || true
+    sleep 1
+    pymobiledevice3 developer dvt launch app.vauchi.ios 2>&1 | head -2
+    echo "iOS app relaunched."
+
+# Kill and relaunch Android app. Auto-selects device if multiple connected.
+[group('device-test')]
+[script('bash')]
+dt-relaunch-android:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    SERIAL=$(dt_detect_android_device)
+    echo "Killing and relaunching Vauchi on Android ($SERIAL)..."
+    adb -s "$SERIAL" shell am force-stop com.vauchi
+    sleep 1
+    adb -s "$SERIAL" shell am start -n com.vauchi/.MainActivity
+    echo "Android app relaunched."
+
+# Install + relaunch iOS (convenience: build already done, just install and restart)
+[group('device-test')]
+[script('bash')]
+dt-deploy-ios:
+    set -euo pipefail
+    just _dt-install-ios
+    just dt-relaunch-ios
+
+# Install + relaunch Android (convenience: build already done, just install and restart)
+[group('device-test')]
+[script('bash')]
+dt-deploy-android:
+    set -euo pipefail
+    just _dt-install-android
+    just dt-relaunch-android
+
+# ─── iOS UI Automation (WebDriverAgent) ──────────────────────────
+
+# Start WebDriverAgent on connected iPhone (builds if needed)
+[group('device-test')]
+[script('bash')]
+dt-wda-start:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    WDA_DIR="/tmp/WebDriverAgent"
+
+    if [[ ! -d "$WDA_DIR" ]]; then
+        echo -e "${YELLOW}Cloning WebDriverAgent...${NC}"
+        git clone https://github.com/appium/WebDriverAgent.git "$WDA_DIR"
+    fi
+
+    UDID=$(dt_detect_ios_device)
+    TEAM_ID="L2853TNSJ4"
+
+    echo -e "${YELLOW}Starting WebDriverAgent on device $UDID...${NC}"
+    echo "First run requires Touch ID / passcode on device ('Enable UI Automation')"
+    echo ""
+    cd "$WDA_DIR"
+    xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
+        -destination "id=$UDID" \
+        DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
+        -allowProvisioningUpdates test-without-building 2>&1 \
+        | grep --line-buffered -E "ServerURLHere|Test Suite|error:"
+
+# Tap iOS screen at coordinates via WebDriverAgent
+[group('device-test')]
+[script('bash')]
+dt-ios-tap x y wda_url="http://192.168.1.215:8100":
+    set -euo pipefail
+    WDA="{{wda_url}}"
+
+    # Get or create session
+    SID=$(curl -s "$WDA/status" | python3 -c "
+    import sys, json
+    data = json.load(sys.stdin)
+    sid = data.get('sessionId') or ''
+    print(sid)
+    " 2>/dev/null)
+
+    if [[ -z "$SID" ]]; then
+        SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
+            -d '{"capabilities":{}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+    fi
+
+    echo "Tapping ({{x}}, {{y}}) via WDA session $SID..."
+    curl -s -X POST "$WDA/session/$SID/actions" -H 'Content-Type: application/json' \
+        -d "{\"actions\":[{\"type\":\"pointer\",\"id\":\"finger1\",\"parameters\":{\"pointerType\":\"touch\"},\"actions\":[{\"type\":\"pointerMove\",\"duration\":0,\"x\":{{x}},\"y\":{{y}}},{\"type\":\"pointerDown\",\"button\":0},{\"type\":\"pause\",\"duration\":50},{\"type\":\"pointerUp\",\"button\":0}]}]}" > /dev/null
+    echo "Done."
+
+# Take iOS screenshot via WebDriverAgent (returns PNG)
+[group('device-test')]
+[script('bash')]
+dt-wda-screenshot file="screenshot-ios.png" wda_url="http://192.168.1.215:8100":
+    set -euo pipefail
+    WDA="{{wda_url}}"
+
+    SID=$(curl -s "$WDA/status" | python3 -c "
+    import sys, json
+    data = json.load(sys.stdin)
+    sid = data.get('sessionId') or ''
+    print(sid)
+    " 2>/dev/null)
+
+    if [[ -z "$SID" ]]; then
+        SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
+            -d '{"capabilities":{}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+    fi
+
+    curl -s "$WDA/session/$SID/screenshot" | python3 -c "
+    import sys, json, base64
+    data = json.load(sys.stdin)
+    img = base64.b64decode(data['value'])
+    sys.stdout.buffer.write(img)
+    " > "{{file}}"
+    echo "Screenshot saved to {{file}}"
