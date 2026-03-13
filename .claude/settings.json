@@ -1,4 +1,38 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git :*)",
+      "Bash(cargo :*)",
+      "Bash(just :*)",
+      "Bash(just)",
+      "Bash(glab :*)",
+      "Bash(ls :*)",
+      "Bash(ls)",
+      "Bash(find :*)",
+      "Bash(grep :*)",
+      "Bash(wc :*)",
+      "Bash(head :*)",
+      "Bash(tail :*)",
+      "Bash(sort :*)",
+      "Bash(diff :*)",
+      "Bash(cat :*)",
+      "Bash(echo :*)",
+      "Bash(chmod :*)",
+      "Bash(mkdir :*)",
+      "Bash(cd :*)",
+      "Bash(xargs :*)",
+      "Bash(which :*)",
+      "Bash(command :*)",
+      "Bash(env)",
+      "Bash(npm :*)",
+      "Bash(npx :*)",
+      "Bash(./gradlew:*)",
+      "Read(/tmp/**)",
+      "WebSearch"
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
   "hooks": {
     "SessionStart": [
       {
@@ -50,42 +84,20 @@
     ]
   },
   "enabledPlugins": {
-    "code-review@claude-plugins-official": true
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "context7"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(git :*)",
-      "Bash(cargo :*)",
-      "Bash(just :*)",
-      "Bash(just)",
-      "Bash(glab :*)",
-      "Bash(ls :*)",
-      "Bash(ls)",
-      "Bash(find :*)",
-      "Bash(grep :*)",
-      "Bash(wc :*)",
-      "Bash(head :*)",
-      "Bash(tail :*)",
-      "Bash(sort :*)",
-      "Bash(diff :*)",
-      "Bash(cat :*)",
-      "Bash(echo :*)",
-      "Bash(chmod :*)",
-      "Bash(mkdir :*)",
-      "Bash(cd :*)",
-      "Bash(xargs :*)",
-      "Bash(which :*)",
-      "Bash(command :*)",
-      "Bash(env)",
-      "Bash(npm :*)",
-      "Bash(npx :*)",
-      "Bash(./gradlew:*)",
-      "Read(/tmp/**)",
-      "WebSearch"
-    ]
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": false,
+    "commit-commands@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "kotlin-lsp@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "agent-sdk-dev@claude-plugins-official": true
   }
 }
