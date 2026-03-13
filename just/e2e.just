@@ -237,7 +237,7 @@ e2e-all: build-cli build-relay
 e2e-deploy:
     ./scripts/scripts/e2e/orchestrate.sh deploy
 
-# Deploy iOS app to macOS VM simulator
+# Deploy iOS app to macOS simulator
 [group('e2e')]
 e2e-deploy-ios:
     ./scripts/scripts/e2e/orchestrate.sh deploy-ios

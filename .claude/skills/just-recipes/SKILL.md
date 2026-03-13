@@ -221,12 +221,10 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 
 | Recipe | Purpose |
 |--------|---------|
-| `just runners-start` | Start all (Linux VM + macOS VM + docker-local) |
-| `just runners-stop` | Stop all runners |
-| `just runners-status` | Show status |
-| `just vm-linux-start/stop/ssh` | Linux VM lifecycle |
-| `just vm-macos-start/stop/ssh` | macOS VM lifecycle |
-| `just docker-runner-start/stop/status/logs/restart` | Docker runner |
+| `just runners-start` | Start docker-local runner |
+| `just runners-stop` | Stop docker-local runner |
+| `just runners-status` | Show runner status |
+| `just docker-runner-start/stop/status/logs/restart` | Docker runner lifecycle |
 
 ## Dev (Multi-Instance)
 

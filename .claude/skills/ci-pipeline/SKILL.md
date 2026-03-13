@@ -63,8 +63,8 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 
 | Template | Runner | Resources |
 |----------|--------|-----------|
-| `.linux-runner` | Self-hosted QEMU VM | 4 CPU, 8GB RAM, 150GB |
-| `.macos-runner` | Self-hosted QEMU VM | 8 CPU, 16GB RAM |
+| `.linux-runner` | Self-hosted shell executor | 4 CPU, 8GB RAM, 150GB |
+| `.macos-runner` | Self-hosted shell executor | 8 CPU, 16GB RAM |
 | `.docker-runner` | Docker executor | Shared |
 | `.self-hosted` | Base: sccache + git HTTPS | CI_JOB_TOKEN auth |
 
