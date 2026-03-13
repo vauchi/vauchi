@@ -789,6 +789,27 @@ help:
 # HOUSEKEEPING
 # ═══════════════════════════════════════════════════════════════════
 
+# Safely clean orphaned vauchi test temp dirs (skips Claude session data)
+[group('daily')]
+[script('bash')]
+tmp-clean:
+    set -uo pipefail
+    me=$(whoami)
+    cleaned=0
+    skipped=0
+    # Only target .tmp* dirs containing vauchi.db, older than 5 minutes, with no open handles
+    while IFS= read -r dbfile; do
+        dir=$(dirname "$dbfile")
+        # Skip if any process has files open in this dir
+        if lsof +D "$dir" &>/dev/null; then
+            skipped=$((skipped + 1))
+            continue
+        fi
+        rm -rf "$dir"
+        cleaned=$((cleaned + 1))
+    done < <(find /tmp -maxdepth 2 -user "$me" -name 'vauchi.db' -path '/tmp/.tmp*' -mmin +5 2>/dev/null)
+    echo "Cleaned $cleaned test temp dir(s), skipped $skipped (in use)"
+
 # Run all non-destructive health checks and print a summary
 [group('daily')]
 [script('bash')]
@@ -1133,15 +1154,22 @@ housekeeping:
         echo "  None"
     fi
 
-    # 15. Orphaned /tmp agent dirs
-    section "Orphaned /tmp dirs"
-    tmp_count=$(find /tmp -maxdepth 1 -user "$(whoami)" -name '.tmp*' -type d 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "$tmp_count" -gt 10 ]]; then
-        echo "  $tmp_count orphaned .tmp* dirs in /tmp"
-        echo "  -> Clean with: rm -rf /tmp/.tmp*"
-        ISSUES=$((ISSUES + 1))
-    elif [[ "$tmp_count" -gt 0 ]]; then
-        echo "  $tmp_count .tmp* dir(s) (below threshold)"
+    # 15. Orphaned test temp dirs (vauchi-core tests leak TempDir on SIGKILL)
+    section "Orphaned test temp dirs"
+    # Only count .tmp* dirs containing vauchi.db (test databases), skip others
+    test_tmp_count=$(find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' 2>/dev/null | wc -l | tr -d ' ')
+    tmp_total=$(find /tmp -maxdepth 1 -user "$(whoami)" -name '.tmp*' -type d 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$test_tmp_count" -gt 0 ]]; then
+        # Only clean dirs with no open file handles (safe)
+        stale=$(find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' -mmin +5 2>/dev/null | wc -l | tr -d ' ')
+        echo "  $test_tmp_count test temp dir(s) ($tmp_total total .tmp* dirs)"
+        if [[ "$stale" -gt 0 ]]; then
+            echo "  $stale older than 5min — safe to clean:"
+            echo "  -> just tmp-clean"
+        fi
+        ISSUES=$((ISSUES + test_tmp_count))
+    elif [[ "$tmp_total" -gt 0 ]]; then
+        echo "  $tmp_total .tmp* dir(s) (not test databases)"
     else
         echo "  None"
     fi
