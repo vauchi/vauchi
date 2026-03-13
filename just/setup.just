@@ -10,6 +10,97 @@ setup: clone-repos && install-hooks install-mdplan setup-path-overrides
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
+# Sync shared infrastructure and hooks before a work session
+[group('setup')]
+[script('bash')]
+session-init:
+    set -euo pipefail
+
+    echo "=== Session init ==="
+    WARN=0
+
+    # Pull scripts repo (hooks, CI templates)
+    echo ""
+    echo "── scripts ──"
+    if git -C scripts fetch origin main --quiet 2>/dev/null; then
+        LOCAL=$(git -C scripts rev-parse HEAD 2>/dev/null)
+        REMOTE=$(git -C scripts rev-parse origin/main 2>/dev/null)
+        if [[ "$LOCAL" != "$REMOTE" ]]; then
+            if git -C scripts merge-base --is-ancestor "$LOCAL" "$REMOTE" 2>/dev/null; then
+                git -C scripts pull --ff-only origin main --quiet
+                echo "  Updated to $(git -C scripts log --oneline -1)"
+            else
+                echo "  WARNING: scripts has local changes — skipping pull"
+                WARN=1
+            fi
+        else
+            echo "  Up to date"
+        fi
+    else
+        echo "  WARNING: could not fetch scripts (offline?)"
+        WARN=1
+    fi
+
+    # Pull root repo
+    echo ""
+    echo "── root ──"
+    if git fetch origin main --quiet 2>/dev/null; then
+        LOCAL=$(git rev-parse HEAD 2>/dev/null)
+        REMOTE=$(git rev-parse origin/main 2>/dev/null)
+        BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$BRANCH" == "main" && "$LOCAL" != "$REMOTE" ]]; then
+            if git merge-base --is-ancestor "$LOCAL" "$REMOTE" 2>/dev/null; then
+                git pull --ff-only origin main --quiet
+                echo "  Updated to $(git log --oneline -1)"
+            else
+                echo "  WARNING: root has local changes — skipping pull"
+                WARN=1
+            fi
+        elif [[ "$BRANCH" != "main" ]]; then
+            echo "  On branch $BRANCH (not main — skipping pull)"
+        else
+            echo "  Up to date"
+        fi
+    else
+        echo "  WARNING: could not fetch root (offline?)"
+        WARN=1
+    fi
+
+    # Reinstall hooks
+    echo ""
+    echo "── hooks ──"
+    bash scripts/install-hooks.sh 2>&1 | tail -1
+
+    # Check for stale local branches with merged MRs
+    if command -v glab &>/dev/null; then
+        echo ""
+        echo "── stale branches ──"
+        STALE=0
+        for repo in . core cli tui relay e2e ios android macos linux-gtk linux-qt windows web-demo docs scripts; do
+            [[ -d "$repo/.git" ]] || continue
+            NAME=$(basename "$repo")
+            [[ "$NAME" == "." ]] && NAME="root"
+            BRANCH=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
+            [[ "$BRANCH" == "main" ]] && continue
+            # Check if this branch has a merged MR
+            MERGED=$(cd "$repo" && glab mr list --source-branch="$BRANCH" --state=merged 2>/dev/null) || MERGED=""
+            if [[ -n "$MERGED" ]]; then
+                echo "  $NAME ($BRANCH): has merged MR — consider switching to main"
+                STALE=1
+            fi
+        done
+        if [[ "$STALE" == "0" ]]; then
+            echo "  No stale branches"
+        fi
+    fi
+
+    echo ""
+    if [[ "$WARN" == "0" ]]; then
+        echo "=== Session ready ==="
+    else
+        echo "=== Session ready (with warnings) ==="
+    fi
+
 # Install development dependencies (macOS via Homebrew + Cargo)
 [group('setup')]
 [script('bash')]

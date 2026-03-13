@@ -8,7 +8,8 @@ Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, d
 ## Quick Start
 
 ```bash
-just setup    # Clone all repos
+just setup    # Clone all repos (first time only)
+just session-init  # Sync scripts, hooks, check for stale branches (every session)
 just build    # Build Rust workspace
 just check    # Run all checks
 ```
