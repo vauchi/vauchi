@@ -97,8 +97,8 @@ mr-close id repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     glab mr close "{{id}}" -R "vauchi/$r"
 
-# Create MRs for all repos on the same feature branch
-# Rebases each on origin/main, pushes, and creates MR server-side.
+# Create or update MRs for all repos on the same feature branch
+# Idempotent: creates MR if none exists, rebases + force-pushes if one does.
 # Usage: just gitlab mr-create-all                    # auto-fill title from commits
 #        just gitlab mr-create-all "feat: my feature" # custom title
 [no-cd]
@@ -108,7 +108,8 @@ mr-create-all title='':
     set -euo pipefail
 
     created=()
-    skipped=()
+    updated=()
+    uptodate=()
     failed=()
 
     for dir in */; do
@@ -129,15 +130,12 @@ mr-create-all title='':
         source scripts/scripts/resolve-repo.sh
         gl_name=$(_dir_to_gitlab_name "$label")
         existing=$(glab mr list -R "vauchi/$gl_name" --source-branch "$branch" --json url 2>/dev/null | grep -c "url" || true)
-        if [[ "$existing" -gt 0 ]]; then
-            echo "  MR already exists — skipping"
-            skipped+=("$label")
-            continue
-        fi
+        has_mr=$([[ "$existing" -gt 0 ]] && echo "yes" || echo "no")
 
         # Rebase on origin/main
         git -C "$dir" fetch origin main --quiet 2>/dev/null
         behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+        rebased=no
         if [[ "$behind" -gt 0 ]]; then
             echo "  $behind commits behind — rebasing..."
             if ! git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
@@ -146,40 +144,57 @@ mr-create-all title='':
                 failed+=("$label")
                 continue
             fi
+            rebased=yes
         fi
 
-        # Build push args
-        PUSH_OPTS=(-u origin "$branch")
-        PUSH_OPTS+=(-o merge_request.create)
-        PUSH_OPTS+=(-o merge_request.target=main)
-        PUSH_OPTS+=(-o merge_request.remove_source_branch)
-
-        if [[ -n "{{ title }}" ]]; then
-            PUSH_OPTS+=(-o "merge_request.title={{ title }}")
-        else
-            # Use first commit subject as title
-            first_subject=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
-            PUSH_OPTS+=(-o "merge_request.title=$first_subject")
-        fi
-
-        # Push with MR creation (skip pre-push tests — CI runs them)
-        echo "  Pushing and creating MR..."
         export SKIP_TESTS=1
-        if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
-            created+=("$label")
+
+        if [[ "$has_mr" == "yes" ]]; then
+            # MR exists — force-push if rebased, otherwise up-to-date
+            if [[ "$rebased" == "yes" ]]; then
+                echo "  MR exists — force-pushing rebased branch..."
+                if git -C "$dir" push --force-with-lease origin "$branch" 2>&1 | sed 's/^/  /'; then
+                    updated+=("$label")
+                else
+                    echo "  Force-push failed"
+                    failed+=("$label")
+                fi
+            else
+                echo "  MR exists, already up to date"
+                uptodate+=("$label")
+            fi
         else
-            echo "  Push failed"
-            failed+=("$label")
+            # No MR — create one via push options
+            PUSH_OPTS=(-u origin "$branch")
+            PUSH_OPTS+=(-o merge_request.create)
+            PUSH_OPTS+=(-o merge_request.target=main)
+            PUSH_OPTS+=(-o merge_request.remove_source_branch)
+
+            if [[ -n "{{ title }}" ]]; then
+                PUSH_OPTS+=(-o "merge_request.title={{ title }}")
+            else
+                first_subject=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+                PUSH_OPTS+=(-o "merge_request.title=$first_subject")
+            fi
+
+            echo "  Pushing and creating MR..."
+            if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
+                created+=("$label")
+            else
+                echo "  Push failed"
+                failed+=("$label")
+            fi
         fi
         echo ""
     done
 
     echo ""
     echo "=== Summary ==="
-    [[ ${#created[@]} -gt 0 ]] && echo "Created (${#created[@]}): ${created[*]}"
-    [[ ${#skipped[@]} -gt 0 ]] && echo "Skipped (${#skipped[@]}): ${skipped[*]}"
-    [[ ${#failed[@]}  -gt 0 ]] && echo "Failed  (${#failed[@]}):  ${failed[*]}"
-    [[ ${#failed[@]}  -gt 0 ]] && exit 1 || true
+    [[ ${#created[@]}  -gt 0 ]] && echo "Created  (${#created[@]}):  ${created[*]}"
+    [[ ${#updated[@]}  -gt 0 ]] && echo "Updated  (${#updated[@]}):  ${updated[*]}"
+    [[ ${#uptodate[@]} -gt 0 ]] && echo "Up-to-date (${#uptodate[@]}): ${uptodate[*]}"
+    [[ ${#failed[@]}   -gt 0 ]] && echo "Failed   (${#failed[@]}):   ${failed[*]}"
+    [[ ${#failed[@]}   -gt 0 ]] && exit 1 || true
 
 # ── Pipeline Operations ────────────────────────────────────────────
 
