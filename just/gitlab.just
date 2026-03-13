@@ -97,6 +97,90 @@ mr-close id repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     glab mr close "{{id}}" -R "vauchi/$r"
 
+# Create MRs for all repos on the same feature branch
+# Rebases each on origin/main, pushes, and creates MR server-side.
+# Usage: just gitlab mr-create-all                    # auto-fill title from commits
+#        just gitlab mr-create-all "feat: my feature" # custom title
+[no-cd]
+[script('bash')]
+mr-create-all title='':
+    just gitlab _check-auth
+    set -euo pipefail
+
+    created=()
+    skipped=()
+    failed=()
+
+    for dir in */; do
+        [[ -d "${dir}.git" ]] || continue
+        label="${dir%/}"
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+
+        # Skip repos on main or detached HEAD
+        [[ "$branch" == "main" || -z "$branch" ]] && continue
+
+        # Skip repos with no commits ahead
+        ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+        [[ "$ahead" -eq 0 ]] && continue
+
+        echo "=== $label ($branch, $ahead commits) ==="
+
+        # Check for existing MR
+        source scripts/scripts/resolve-repo.sh
+        gl_name=$(_dir_to_gitlab_name "$label")
+        existing=$(glab mr list -R "vauchi/$gl_name" --source-branch "$branch" --json url 2>/dev/null | grep -c "url" || true)
+        if [[ "$existing" -gt 0 ]]; then
+            echo "  MR already exists — skipping"
+            skipped+=("$label")
+            continue
+        fi
+
+        # Rebase on origin/main
+        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+        if [[ "$behind" -gt 0 ]]; then
+            echo "  $behind commits behind — rebasing..."
+            if ! git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
+                echo "  CONFLICT — skipping (resolve manually)"
+                git -C "$dir" rebase --abort 2>/dev/null
+                failed+=("$label")
+                continue
+            fi
+        fi
+
+        # Build push args
+        PUSH_OPTS=(-u origin "$branch")
+        PUSH_OPTS+=(-o merge_request.create)
+        PUSH_OPTS+=(-o merge_request.target=main)
+        PUSH_OPTS+=(-o merge_request.remove_source_branch)
+
+        if [[ -n "{{ title }}" ]]; then
+            PUSH_OPTS+=(-o "merge_request.title={{ title }}")
+        else
+            # Use first commit subject as title
+            first_subject=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+            PUSH_OPTS+=(-o "merge_request.title=$first_subject")
+        fi
+
+        # Push with MR creation (skip pre-push tests — CI runs them)
+        echo "  Pushing and creating MR..."
+        export SKIP_TESTS=1
+        if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
+            created+=("$label")
+        else
+            echo "  Push failed"
+            failed+=("$label")
+        fi
+        echo ""
+    done
+
+    echo ""
+    echo "=== Summary ==="
+    [[ ${#created[@]} -gt 0 ]] && echo "Created (${#created[@]}): ${created[*]}"
+    [[ ${#skipped[@]} -gt 0 ]] && echo "Skipped (${#skipped[@]}): ${skipped[*]}"
+    [[ ${#failed[@]}  -gt 0 ]] && echo "Failed  (${#failed[@]}):  ${failed[*]}"
+    [[ ${#failed[@]}  -gt 0 ]] && exit 1 || true
+
 # ── Pipeline Operations ────────────────────────────────────────────
 
 # Show pipeline status for current branch
