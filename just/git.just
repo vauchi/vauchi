@@ -105,13 +105,27 @@ main mode='':
     cleanup_merged() {
         local label="$1" dir="$2"
         local merged
-        merged=$(git -C "$dir" branch --merged main 2>/dev/null \
+        # Check against origin/main (local main may be stale after ff merge)
+        merged=$(git -C "$dir" branch --merged origin/main 2>/dev/null \
             | grep -vE '^\*|^[[:space:]]+main$' \
             | sed 's/^[[:space:]]*//' || true)
+        # Fallback: detect branches whose content is in main even if
+        # git ancestry doesn't show it (e.g. rebased before ff merge)
+        local all_local
+        all_local=$(git -C "$dir" branch --no-color 2>/dev/null \
+            | grep -vE '^\*|^[[:space:]]+main$' \
+            | sed 's/^[[:space:]]*//' || true)
+        for candidate in $all_local; do
+            echo "$merged" | grep -qxF "$candidate" && continue
+            if git -C "$dir" diff --quiet origin/main..."$candidate" -- 2>/dev/null; then
+                merged=$(printf '%s\n%s' "$merged" "$candidate")
+            fi
+        done
+        merged=$(echo "$merged" | sed '/^$/d' || true)
         [[ -z "$merged" ]] && return 0
         while IFS= read -r b; do
             [[ -z "$b" ]] && continue
-            if git -C "$dir" branch -d "$b" &>/dev/null; then
+            if git -C "$dir" branch -D "$b" &>/dev/null; then
                 echo "  $label: deleted merged branch '$b'"
                 cleaned=$((cleaned + 1))
             fi
@@ -224,13 +238,29 @@ cleanup mode='dry-run':
 
         local local_branches remote_branches stale_refs
 
-        # Local branches merged into main (exclude current branch and main itself)
-        local_branches=$(git -C "$dir" branch --merged main 2>/dev/null \
+        # Local branches merged into origin/main (exclude current branch and main itself)
+        # Uses origin/main (not local main) because fetch runs first but doesn't
+        # update local main — so local main can be stale after ff merges.
+        local_branches=$(git -C "$dir" branch --merged origin/main 2>/dev/null \
             | grep -vE '^\*|^[[:space:]]+main$' \
             | sed 's/^[[:space:]]*//' || true)
 
-        # Remote branches merged into main (exclude main and HEAD pointer)
-        remote_branches=$(git -C "$dir" branch -r --merged main 2>/dev/null \
+        # Fallback: detect branches whose content is already in origin/main
+        # even if git ancestry doesn't show it (e.g. after interactive rebase
+        # rewrote commits before the ff merge, or rare squash merges).
+        all_local=$(git -C "$dir" branch --no-color 2>/dev/null \
+            | grep -vE '^\*|^[[:space:]]+main$' \
+            | sed 's/^[[:space:]]*//' || true)
+        for candidate in $all_local; do
+            echo "$local_branches" | grep -qxF "$candidate" && continue
+            if git -C "$dir" diff --quiet origin/main..."$candidate" -- 2>/dev/null; then
+                local_branches=$(printf '%s\n%s' "$local_branches" "$candidate")
+            fi
+        done
+        local_branches=$(echo "$local_branches" | sed '/^$/d' || true)
+
+        # Remote branches merged into origin/main (exclude main and HEAD pointer)
+        remote_branches=$(git -C "$dir" branch -r --merged origin/main 2>/dev/null \
             | grep -E '^[[:space:]]+origin/' \
             | grep -vE 'origin/main$|origin/HEAD' \
             | sed 's|^[[:space:]]*origin/||' || true)
@@ -255,10 +285,12 @@ cleanup mode='dry-run':
             while IFS= read -r b; do
                 [[ -z "$b" ]] && continue
                 if [[ "$MODE" == "run" ]]; then
-                    if git -C "$dir" branch -d "$b" &>/dev/null; then
+                    # Use -D: we've already verified content is in main
+                    # (via --merged or diff check), but -d fails on squash merges
+                    if git -C "$dir" branch -D "$b" &>/dev/null; then
                         echo "    deleted  $b"
                     else
-                        echo "    FAILED   $b (checked out or not fully merged)"
+                        echo "    FAILED   $b (currently checked out?)"
                     fi
                 else
                     echo "    $b"
@@ -985,10 +1017,18 @@ stale-branches days='14':
     threshold="{{ days }}"
     cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)
 
-    printf "%-20s %-30s %-12s %s\n" "REPO" "BRANCH" "LAST COMMIT" "AGE"
-    printf "%-20s %-30s %-12s %s\n" "----" "------" "-----------" "---"
+    # Fetch so origin/main is current for status checks
+    for dir in . */; do
+        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
+        [[ -d "$gitdir" ]] && git -C "$dir" fetch origin main --quiet 2>/dev/null &
+    done
+    wait
+
+    printf "%-20s %-30s %-12s %-6s %s\n" "REPO" "BRANCH" "LAST COMMIT" "AGE" "STATUS"
+    printf "%-20s %-30s %-12s %-6s %s\n" "----" "------" "-----------" "---" "------"
 
     total=0
+    deletable=0
     for dir in . */; do
         if [[ "$dir" == "." ]]; then
             [[ ! -d ".git" ]] && continue
@@ -1010,7 +1050,17 @@ stale-branches days='14':
             if [[ "$last_epoch" -lt "$cutoff" ]]; then
                 now=$(date +%s)
                 age_days=$(( (now - last_epoch) / 86400 ))
-                printf "%-20s %-30s %-12s %s\n" "$label" "$br" "$last_date" "${age_days}d"
+                # Check if content is already in main (merged or squash-merged)
+                status="unmerged"
+                if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
+                    status="merged"
+                elif git -C "$d" diff --quiet origin/main..."$br" -- 2>/dev/null; then
+                    status="in-main"
+                fi
+                if [[ "$status" != "unmerged" ]]; then
+                    deletable=$((deletable + 1))
+                fi
+                printf "%-20s %-30s %-12s %-6s %s\n" "$label" "$br" "$last_date" "${age_days}d" "$status"
                 total=$((total + 1))
             fi
         done <<< "$branches"
@@ -1021,5 +1071,8 @@ stale-branches days='14':
         echo "No branches older than ${threshold} days."
     else
         echo "$total stale branch(es) (no commits in ${threshold}+ days)"
+        if [[ "$deletable" -gt 0 ]]; then
+            echo "$deletable already in main — safe to delete"
+        fi
         echo "Clean up with: just git cleanup run"
     fi
