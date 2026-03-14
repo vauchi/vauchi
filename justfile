@@ -52,6 +52,7 @@ import 'just/runners.just'
 import 'just/dev.just'
 import 'just/plan.just'
 import 'just/perf.just'
+import 'just/device-test.just'
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
