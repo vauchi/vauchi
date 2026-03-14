@@ -18,7 +18,7 @@ e2e:
 
 # Run E2E test(s) - use 'all' to run everything
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-run name: build build-cli build-relay
     if [[ "{{name}}" == "all" ]]; then
         cd e2e && cargo test -- --ignored --nocapture
@@ -28,7 +28,7 @@ e2e-run name: build build-cli build-relay
 
 # Run E2E smoke tests (fast, for every push)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-smoke: build-cli build-relay
     echo "Running E2E smoke tests..."
     cd e2e && cargo test smoke_ -- --ignored --nocapture
@@ -37,7 +37,7 @@ e2e-smoke: build-cli build-relay
 
 # Run E2E release tests (full validation)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-release: build-cli build-relay
     echo "Running full E2E test suite for release validation..."
     cd e2e && cargo test -- --ignored --nocapture
@@ -46,7 +46,7 @@ e2e-release: build-cli build-relay
 
 # Run E2E integration tests only (excludes smoke)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-integration: build-cli build-relay
     echo "Running E2E integration tests..."
     cd e2e && cargo test integration_ -- --ignored --nocapture
@@ -55,13 +55,13 @@ e2e-integration: build-cli build-relay
 
 # Run a YAML scenario by name
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-yaml name:
     cd e2e && cargo run --example yaml_runner -- "{{name}}"
 
 # List available YAML scenarios
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-yaml-list:
     echo "Available YAML scenarios:"
     find e2e/scenarios -name "*.yaml" -o -name "*.yml" 2>/dev/null | while read f; do
@@ -72,13 +72,13 @@ e2e-yaml-list:
 
 # Show manual instructions for a YAML scenario
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-yaml-manual name:
     cd e2e && cargo run --example yaml_runner -- "{{name}}" --manual
 
 # Show E2E test coverage against Gherkin features
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-coverage:
     echo "E2E Test Coverage Report"
     echo "========================"
@@ -213,7 +213,7 @@ e2e-desktop-build:
 
 # Run mobile E2E tests (requires booted simulator/emulator + Maestro)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-mobile: build-cli build-relay
     echo "Running mobile E2E tests..."
     cd e2e && cargo test test_ios_simulator_exchange -- --ignored --nocapture
@@ -223,7 +223,7 @@ e2e-mobile: build-cli build-relay
 
 # Run all E2E tests (CLI + Desktop + Mobile)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-all: build-cli build-relay
     echo "Running full E2E suite (all platforms)..."
     cd e2e && cargo test -- --ignored --nocapture
@@ -271,7 +271,7 @@ e2e-logs:
 
 # Verify Maestro CLI is installed and environment is ready
 [group('e2e')]
-[script('bash')]
+[script]
 maestro-setup:
     set -euo pipefail
     echo "═══ Maestro Environment Check ═══"
@@ -348,7 +348,7 @@ maestro-setup:
 
 # Run Maestro iOS flows (requires booted simulator)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-ios flow="create_identity":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then
@@ -369,7 +369,7 @@ e2e-ios flow="create_identity":
 
 # Run Maestro Android flows (requires running emulator)
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-android flow="create_identity":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then
@@ -390,7 +390,7 @@ e2e-android flow="create_identity":
 
 # Run all Maestro flows on both platforms
 [group('e2e')]
-[script('bash')]
+[script]
 e2e-maestro platform="all":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then

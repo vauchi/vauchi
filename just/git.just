@@ -10,7 +10,7 @@
 #        just git main yes      (non-interactive — auto-stash without prompting)
 #        just git main wip      (non-interactive — auto-WIP-commit without prompting)
 [no-cd]
-[script('bash')]
+[script]
 main mode='':
     # First pass: collect dirty repos and show changes
     dirty_repos=()
@@ -142,7 +142,7 @@ main mode='':
 # Show git status for all repos
 [no-cd]
 [default]
-[script('bash')]
+[script]
 status:
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
@@ -164,7 +164,7 @@ status:
 
 # Checkout main branch in all repos
 [no-cd]
-[script('bash')]
+[script]
 checkout-main:
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
@@ -175,7 +175,7 @@ checkout-main:
 
 # Fetch all repos
 [no-cd]
-[script('bash')]
+[script]
 fetch:
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
@@ -186,7 +186,7 @@ fetch:
 
 # Show branches across all repos
 [no-cd]
-[script('bash')]
+[script]
 branches:
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
@@ -200,7 +200,7 @@ branches:
 # Usage: just git cleanup          (dry run — preview only)
 #        just git cleanup run      (delete branches and prune refs)
 [no-cd]
-[script('bash')]
+[script]
 cleanup mode='dry-run':
     set -uo pipefail
 
@@ -358,7 +358,7 @@ cleanup mode='dry-run':
 
 # Clear all stashes across all repos
 [no-cd]
-[script('bash')]
+[script]
 stash-clear:
     echo "Clearing git stash in all repos..."
     echo ""
@@ -394,7 +394,7 @@ stash-clear:
 
 # Pull latest changes from all repos
 [no-cd]
-[script('bash')]
+[script]
 pull-all:
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
@@ -407,7 +407,7 @@ pull-all:
 # Usage: just git push-all              (fmt + clippy + tests per repo)
 #        just git push-all skip-tests   (fmt + clippy only, skip tests)
 [no-cd]
-[script('bash')]
+[script]
 push-all mode='full':
     if [[ "{{ mode }}" == "skip-tests" ]]; then
         export SKIP_TESTS=1
@@ -447,7 +447,7 @@ push-all mode='full':
 # Show diff of current branch vs origin/main
 # Usage: just git diff-main [repo]   (omit repo to diff all repos with branches)
 [no-cd]
-[script('bash')]
+[script]
 diff-main repo='':
     set -uo pipefail
     if [[ -n "{{ repo }}" ]]; then
@@ -487,7 +487,7 @@ diff-main repo='':
 # Rebase current branch on origin/main
 # Usage: just git rebase-main [repo]   (omit repo to rebase all feature branches)
 [no-cd]
-[script('bash')]
+[script]
 rebase-main repo='':
     set -euo pipefail
     rebase_repo() {
@@ -550,7 +550,7 @@ rebase-main repo='':
 # Show commits on current branch not on main
 # Usage: just git log-branch [repo]   (omit repo to show all feature branches)
 [no-cd]
-[script('bash')]
+[script]
 log-branch repo='':
     set -uo pipefail
     log_repo() {
@@ -591,7 +591,7 @@ log-branch repo='':
 
 # Fetch all repos and pull where on main (combines fetch + pull)
 [no-cd]
-[script('bash')]
+[script]
 sync:
     set -uo pipefail
     sync_repo() {
@@ -624,7 +624,7 @@ sync:
 
 # Show branch status for all repos (branch, ahead/behind, merged)
 [no-cd]
-[script('bash')]
+[script]
 branch-status:
     set -uo pipefail
     printf "%-20s %-30s %8s %8s %s\n" "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
@@ -656,7 +656,7 @@ branch-status:
 
 # Show stashes across all repos
 [no-cd]
-[script('bash')]
+[script]
 stash-list:
     found=0
     # Root repo
@@ -690,7 +690,7 @@ stash-list:
 # Usage: just git branch feature/my-feature core cli linux-gtk
 #        just git branch feature/my-feature           (all repos)
 [no-cd]
-[script('bash')]
+[script]
 branch name *repos='':
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -791,7 +791,7 @@ branch name *repos='':
 #        just git wip "" core cli              (specific repos, default message)
 #        just git wip "my msg" core cli        (specific repos, custom message)
 [no-cd]
-[script('bash')]
+[script]
 wip msg='' *repos='':
     set -uo pipefail
     targets=()
@@ -859,7 +859,7 @@ wip msg='' *repos='':
 # Usage: just git wip-undo              (all repos with WIP commits)
 #        just git wip-undo core cli     (specific repos)
 [no-cd]
-[script('bash')]
+[script]
 wip-undo *repos='':
     set -uo pipefail
     targets=()
@@ -922,7 +922,7 @@ wip-undo *repos='':
 # Usage: just git resume feature/my-feature              (all repos)
 #        just git resume feature/my-feature core cli     (specific repos)
 [no-cd]
-[script('bash')]
+[script]
 resume name *repos='':
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -1011,7 +1011,7 @@ resume name *repos='':
 # Usage: just git stale-branches         (14-day threshold)
 #        just git stale-branches 7       (7-day threshold)
 [no-cd]
-[script('bash')]
+[script]
 stale-branches days='14':
     set -uo pipefail
     threshold="{{ days }}"

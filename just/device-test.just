@@ -10,7 +10,7 @@
 
 # Build, package, and install both apps on physical devices
 [group('device-test')]
-[script('bash')]
+[script]
 prepare-device-test core_dir="":
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -64,7 +64,7 @@ prepare-device-test core_dir="":
 
 # Rebuild + install iOS only (skip Android)
 [group('device-test')]
-[script('bash')]
+[script]
 rebuild-ios core_dir="":
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -87,7 +87,7 @@ rebuild-ios core_dir="":
 
 # Rebuild + install Android only (skip iOS)
 [group('device-test')]
-[script('bash')]
+[script]
 rebuild-android core_dir="":
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -112,7 +112,7 @@ rebuild-android core_dir="":
 
 # Build vauchi-mobile for iOS device target (aarch64-apple-ios)
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-build-mobile-libs-ios core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -125,7 +125,7 @@ _dt-build-mobile-libs-ios core_dir:
 
 # Build vauchi-mobile for Android device target (aarch64-linux-android)
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-build-mobile-libs-android core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -139,7 +139,7 @@ _dt-build-mobile-libs-android core_dir:
 
 # Build vauchi-mobile for both device targets + native (for Kotlin bindgen)
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-build-mobile-libs core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -164,7 +164,7 @@ _dt-build-mobile-libs core_dir:
 
 # Generate Swift bindings from iOS .a
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-generate-bindings-swift core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -182,7 +182,7 @@ _dt-generate-bindings-swift core_dir:
 
 # Generate Kotlin bindings from native macOS .dylib
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-generate-bindings-kotlin core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -206,7 +206,7 @@ _dt-generate-bindings-kotlin core_dir:
 
 # Generate both Swift and Kotlin bindings
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-generate-bindings core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -235,7 +235,7 @@ _dt-generate-bindings core_dir:
 
 # Package iOS: copy .a, Swift bindings, header, modulemap into xcframework
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-package-ios core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -371,7 +371,7 @@ _dt-package-ios core_dir:
 
 # Package Android: copy .so and Kotlin bindings to android repo
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-package-android core_dir:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -413,7 +413,7 @@ _dt-package-android core_dir:
 
 # Build iOS app for physical device
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-build-ios:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -435,7 +435,7 @@ _dt-build-ios:
 
 # Build Android APK
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-build-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -448,7 +448,7 @@ _dt-build-android:
 
 # Install iOS app on connected device
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-install-ios:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -475,7 +475,7 @@ _dt-install-ios:
 
 # Install Android APK on connected device
 [group('device-test')]
-[script('bash')]
+[script]
 _dt-install-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -497,7 +497,7 @@ _dt-install-android:
 
 # Capture Android logs (Vauchi + exchange tags). Auto-selects device if multiple connected.
 [group('device-test')]
-[script('bash')]
+[script]
 dt-logs-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -506,7 +506,7 @@ dt-logs-android:
 
 # Clear and stream Android logs. Auto-selects device if multiple connected.
 [group('device-test')]
-[script('bash')]
+[script]
 dt-logs-android-stream:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -517,7 +517,7 @@ dt-logs-android-stream:
 # Stream iOS logs via idevicesyslog (captures NSLog from app process).
 # Falls back to pymobiledevice3 if idevicesyslog is not installed.
 [group('device-test')]
-[script('bash')]
+[script]
 dt-logs-ios:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -540,7 +540,7 @@ dt-logs-ios:
 
 # Verify installed build versions on connected devices
 [group('device-test')]
-[script('bash')]
+[script]
 dt-verify-builds:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -600,7 +600,7 @@ dt-verify-builds:
 
 # Take a screenshot from connected Android device. Auto-selects device if multiple connected.
 [group('device-test')]
-[script('bash')]
+[script]
 dt-screenshot-android file="screenshot.png":
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -610,7 +610,7 @@ dt-screenshot-android file="screenshot.png":
 
 # Take a screenshot from connected iOS device (requires pymobiledevice3)
 [group('device-test')]
-[script('bash')]
+[script]
 dt-screenshot-ios file="screenshot.png":
     if ! command -v pymobiledevice3 &>/dev/null; then
         echo "ERROR: pymobiledevice3 not installed. Install: pip install pymobiledevice3"
@@ -623,7 +623,7 @@ dt-screenshot-ios file="screenshot.png":
 
 # Kill and relaunch iOS app
 [group('device-test')]
-[script('bash')]
+[script]
 dt-relaunch-ios:
     set -euo pipefail
     echo "Killing and relaunching Vauchi on iOS..."
@@ -634,7 +634,7 @@ dt-relaunch-ios:
 
 # Kill and relaunch Android app. Auto-selects device if multiple connected.
 [group('device-test')]
-[script('bash')]
+[script]
 dt-relaunch-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -647,7 +647,7 @@ dt-relaunch-android:
 
 # Install + relaunch iOS (convenience: build already done, just install and restart)
 [group('device-test')]
-[script('bash')]
+[script]
 dt-deploy-ios:
     set -euo pipefail
     just _dt-install-ios
@@ -655,7 +655,7 @@ dt-deploy-ios:
 
 # Install + relaunch Android (convenience: build already done, just install and restart)
 [group('device-test')]
-[script('bash')]
+[script]
 dt-deploy-android:
     set -euo pipefail
     just _dt-install-android
@@ -665,7 +665,7 @@ dt-deploy-android:
 
 # Start WebDriverAgent on connected iPhone (builds if needed)
 [group('device-test')]
-[script('bash')]
+[script]
 dt-wda-start:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
@@ -691,7 +691,7 @@ dt-wda-start:
 
 # Tap iOS screen at coordinates via WebDriverAgent
 [group('device-test')]
-[script('bash')]
+[script]
 dt-ios-tap x y wda_url="http://192.168.1.215:8100":
     set -euo pipefail
     WDA="{{wda_url}}"
@@ -716,7 +716,7 @@ dt-ios-tap x y wda_url="http://192.168.1.215:8100":
 
 # Take iOS screenshot via WebDriverAgent (returns PNG)
 [group('device-test')]
-[script('bash')]
+[script]
 dt-wda-screenshot file="screenshot-ios.png" wda_url="http://192.168.1.215:8100":
     set -euo pipefail
     WDA="{{wda_url}}"

@@ -6,7 +6,7 @@
 
 # Validate .plan.md files (single file or directory)
 [group('tools')]
-[script('bash')]
+[script]
 plan-validate target='':
     set -euo pipefail
     TARGET="{{target}}"
@@ -77,7 +77,7 @@ plan-validate target='':
 
 # Show task history as JSON (requires git history)
 [group('tools')]
-[script('bash')]
+[script]
 plan-history file:
     set -euo pipefail
     if ! command -v mdplan &>/dev/null; then
@@ -88,7 +88,7 @@ plan-history file:
 
 # Open burn-up chart in browser (requires git history)
 [group('tools')]
-[script('bash')]
+[script]
 plan-plot file:
     set -euo pipefail
     if ! command -v mdplan &>/dev/null; then
@@ -99,7 +99,7 @@ plan-plot file:
 
 # List all .plan.md files with task counts
 [group('tools')]
-[script('bash')]
+[script]
 plan-list dir='_private/docs':
     set -euo pipefail
     WORKSPACE_ROOT="$(pwd)"
@@ -128,7 +128,7 @@ plan-list dir='_private/docs':
 
 # Show remaining tasks from master plan
 [group('tools')]
-[script('bash')]
+[script]
 task-list:
     set -euo pipefail
     WORKSPACE_ROOT="$(pwd)"
@@ -179,7 +179,7 @@ task-list:
 
 # List problem records by status
 [group('tools')]
-[script('bash')]
+[script]
 problem-list phase='':
     set -euo pipefail
     PROBLEMS="_private/docs/problems"
@@ -254,7 +254,7 @@ problem-list phase='':
 
 # Show .plan.md files with no git changes in N days
 [group('tools')]
-[script('bash')]
+[script]
 plan-stale days='30':
     set -euo pipefail
     NOW=$(date +%s)
@@ -277,7 +277,7 @@ plan-stale days='30':
 
 # Dry-run plan sync — show what CI would update
 [group('tools')]
-[script('bash')]
+[script]
 plan-sync *FLAGS:
     set -euo pipefail
     SINCE="${PLAN_SYNC_SINCE:-$(git log --all --format=%H --grep='chore: sync plans' -1 2>/dev/null || git rev-list --max-parents=0 HEAD)}"

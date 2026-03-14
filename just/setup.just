@@ -4,15 +4,20 @@
 
 # Setup & maintenance recipes
 
+# Check that required tools are installed before setup
+[group('setup')]
+check-prerequisites:
+    @source scripts/check-prerequisites.sh
+
 # Clone all repos and set up workspace (run first after cloning meta-repo)
 [group('setup')]
-setup: clone-repos && install-hooks install-mdplan setup-path-overrides
+setup: check-prerequisites clone-repos && install-hooks install-mdplan setup-path-overrides
     mkdir -p tmp cache
     @echo "Workspace ready! Run: just check"
 
 # Sync shared infrastructure and hooks before a work session
 [group('setup')]
-[script('bash')]
+[script]
 session-init:
     set -euo pipefail
 
@@ -103,7 +108,7 @@ session-init:
 
 # Install development dependencies (macOS via Homebrew + Cargo)
 [group('setup')]
-[script('bash')]
+[script]
 install-dev-deps:
     set -e
 
@@ -181,7 +186,7 @@ install-dev-deps:
 
 # Configure sccache + mold for faster Rust builds (idempotent)
 [group('setup')]
-[script('bash')]
+[script]
 setup-fast-builds:
     set -euo pipefail
 
@@ -254,7 +259,7 @@ setup-fast-builds:
 # These files are gitignored — CI resolves git deps from the remote.
 # Run after `just setup` or when switching branches that changed core APIs.
 [group('setup')]
-[script('bash')]
+[script]
 setup-path-overrides:
     set -euo pipefail
 
@@ -307,7 +312,7 @@ setup-path-overrides:
 
 # Clone all repositories
 [private]
-[script('bash')]
+[script]
 clone-repos:
     set -e
     echo "Cloning public repositories..."
@@ -349,7 +354,7 @@ clone-repos:
 
 # Install markdown-plan CLI tool
 [private]
-[script('bash')]
+[script]
 install-mdplan:
     set -e
     if command -v mdplan &>/dev/null; then
@@ -371,7 +376,7 @@ install-mdplan:
 # Clean all build artifacts
 [group('setup')]
 [confirm('This will remove all build artifacts, node_modules, and caches. Continue?')]
-[script('bash')]
+[script]
 clean:
     echo "Cleaning build artifacts..."
 
@@ -415,7 +420,7 @@ clean:
 # Clean only Rust targets (faster)
 [group('setup')]
 [confirm('This will remove all Rust target directories. Continue?')]
-[script('bash')]
+[script]
 clean-rust:
     echo "Cleaning Rust targets..."
     for dir in core relay cli tui e2e linux-gtk web-demo/wasm; do

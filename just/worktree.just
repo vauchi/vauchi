@@ -14,7 +14,7 @@
 # Usage: just worktree create bugfix/crash-fix              (all repos)
 #        just worktree create bugfix/crash-fix core cli      (specific repos)
 [no-cd]
-[script('bash')]
+[script]
 create name *repos='':
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -95,7 +95,7 @@ create name *repos='':
 
 # List all worktrees across repos
 [no-cd]
-[script('bash')]
+[script]
 list:
     set -uo pipefail
     wt_base=".worktrees"
@@ -152,7 +152,7 @@ list:
 # Remove a worktree and clean up
 # Usage: just worktree remove bugfix/crash-fix
 [no-cd]
-[script('bash')]
+[script]
 remove name:
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -244,7 +244,7 @@ remove name:
 # Remove a worktree non-interactively (for automation/Claude)
 # Usage: just worktree remove-force bugfix/crash-fix
 [no-cd]
-[script('bash')]
+[script]
 remove-force name:
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then

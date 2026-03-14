@@ -6,7 +6,7 @@
 
 # Run an application: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]
 [group('apps')]
-[script('bash')]
+[script]
 run platform="" *args:
     set -e
     case "{{platform}}" in

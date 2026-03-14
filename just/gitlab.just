@@ -9,7 +9,7 @@
 
 [private]
 [no-cd]
-[script('bash')]
+[script]
 _check-auth:
     if ! glab auth status &>/dev/null; then
         echo "ERROR: glab not authenticated — run 'glab auth login'"
@@ -20,7 +20,7 @@ _check-auth:
 
 # List open merge requests
 [no-cd]
-[script('bash')]
+[script]
 mr-list repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -30,7 +30,7 @@ mr-list repo='':
 
 # View merge request details
 [no-cd]
-[script('bash')]
+[script]
 mr-view id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -43,7 +43,7 @@ mr-view id repo='':
 #   just gitlab mr-create core                    # auto-title from first commit
 #   just gitlab mr-create core "feat: my feature" # custom title
 [no-cd]
-[script('bash')]
+[script]
 mr-create repo='' title='':
     just gitlab _check-auth
     set -euo pipefail
@@ -83,7 +83,7 @@ mr-create repo='' title='':
 
 # Approve a merge request
 [no-cd]
-[script('bash')]
+[script]
 mr-approve id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -93,7 +93,7 @@ mr-approve id repo='':
 
 # Merge a merge request
 [no-cd]
-[script('bash')]
+[script]
 mr-merge id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -103,7 +103,7 @@ mr-merge id repo='':
 
 # Close a merge request
 [no-cd]
-[script('bash')]
+[script]
 mr-close id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -116,7 +116,7 @@ mr-close id repo='':
 # Usage: just gitlab mr-create-all                    # auto-fill title from commits
 #        just gitlab mr-create-all "feat: my feature" # custom title
 [no-cd]
-[script('bash')]
+[script]
 mr-create-all title='':
     just gitlab _check-auth
     set -euo pipefail
@@ -227,7 +227,7 @@ mr-create-all title='':
 
 # Show pipeline status for current branch
 [no-cd]
-[script('bash')]
+[script]
 pipeline-status repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -239,7 +239,7 @@ pipeline-status repo='':
 
 # List recent pipelines
 [no-cd]
-[script('bash')]
+[script]
 pipeline-list repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -249,7 +249,7 @@ pipeline-list repo='':
 
 # List jobs in a pipeline
 [no-cd]
-[script('bash')]
+[script]
 pipeline-jobs id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -259,7 +259,7 @@ pipeline-jobs id repo='':
 
 # View job log output
 [no-cd]
-[script('bash')]
+[script]
 pipeline-log job_id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -269,7 +269,7 @@ pipeline-log job_id repo='':
 
 # Retry a failed pipeline
 [no-cd]
-[script('bash')]
+[script]
 pipeline-retry id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -279,7 +279,7 @@ pipeline-retry id repo='':
 
 # Cancel a running pipeline
 [no-cd]
-[script('bash')]
+[script]
 pipeline-cancel id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -291,7 +291,7 @@ pipeline-cancel id repo='':
 
 # List open issues
 [no-cd]
-[script('bash')]
+[script]
 issue-list repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -301,7 +301,7 @@ issue-list repo='':
 
 # View issue details
 [no-cd]
-[script('bash')]
+[script]
 issue-view id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -311,7 +311,7 @@ issue-view id repo='':
 
 # Create an issue
 [no-cd]
-[script('bash')]
+[script]
 issue-create title repo='' *args='':
     just gitlab _check-auth
     set -euo pipefail
@@ -321,7 +321,7 @@ issue-create title repo='' *args='':
 
 # Close an issue
 [no-cd]
-[script('bash')]
+[script]
 issue-close id repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -333,7 +333,7 @@ issue-close id repo='':
 
 # Show MR status for current branch
 [no-cd]
-[script('bash')]
+[script]
 mr-status repo='':
     just gitlab _check-auth
     set -euo pipefail
@@ -361,7 +361,7 @@ mr-status repo='':
 # Usage: just gitlab pipeline-wait [repo]
 #   Polls every 30s until pipeline finishes (passed/failed/canceled)
 [no-cd]
-[script('bash')]
+[script]
 pipeline-wait repo='':
     just gitlab _check-auth
     set -euo pipefail

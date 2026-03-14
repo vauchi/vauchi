@@ -60,7 +60,7 @@ schema-check:
 
 # Check if mobile bindings and Rust consumers are up to date with core
 [group('dev')]
-[script('bash')]
+[script]
 core-freshness:
     set -euo pipefail
 

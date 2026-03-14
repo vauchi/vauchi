@@ -45,7 +45,7 @@ bindings-remote:
 
 # Run iOS checks (lint, build, test) — mirrors CI pipeline
 [group('mobile')]
-[script('bash')]
+[script]
 check-ios:
     set -e
     cd ios
@@ -66,7 +66,7 @@ check-ios:
 
 # Run Android checks (lint, build, test) — mirrors CI pipeline
 [group('mobile')]
-[script('bash')]
+[script]
 check-android:
     set -e
     cd android

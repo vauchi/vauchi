@@ -12,6 +12,11 @@
 
 set dotenv-load := true
 set shell := ["bash", "-cu"]
+set windows-shell := ["C:/Program Files/Git/usr/bin/bash.exe", "-cu"]
+
+# Windows: [script] recipes use 'sh' which isn't in Windows PATH by default.
+# Prepend Git's usr/bin so sh/bash are found for script recipes.
+export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env("PATH") } else { env("PATH") }
 
 # GitLab base URL
 gitlab_base := "git@gitlab.com:vauchi"
@@ -60,7 +65,7 @@ import 'just/device-test.just'
 
 # Run all checks: format-check → lint → test
 [group('daily')]
-[script('bash')]
+[script]
 check *args:
     set -euo pipefail
     source scripts/scripts/quiet-runner.sh
@@ -88,7 +93,7 @@ check *args:
 
 # Build workspace or specific repo
 [group('daily')]
-[script('bash')]
+[script]
 build *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -114,7 +119,7 @@ build *args:
 
 # Run tests
 [group('daily')]
-[script('bash')]
+[script]
 test *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -146,7 +151,7 @@ test *args:
 
 # Format code
 [group('daily')]
-[script('bash')]
+[script]
 fmt *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -170,7 +175,7 @@ fmt *args:
 
 # Check formatting (no changes)
 [group('daily')]
-[script('bash')]
+[script]
 fmt-check *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -194,7 +199,7 @@ fmt-check *args:
 
 # Run lints
 [group('daily')]
-[script('bash')]
+[script]
 lint *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -236,7 +241,7 @@ commit:
 #        just commit-repo . "chore: update justfile"   (root repo)
 [group('daily')]
 [no-cd]
-[script('bash')]
+[script]
 commit-repo repo message:
     set -euo pipefail
     dir="{{ repo }}"
@@ -298,7 +303,7 @@ test-crate crate:
 #        just test-file exchange_test relay      (searches relay/)
 [group('extended')]
 [no-cd]
-[script('bash')]
+[script]
 test-file name repo='core':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -330,7 +335,7 @@ test-file name repo='core':
 #        just test-name relay_failover e2e           (searches e2e/)
 [group('extended')]
 [no-cd]
-[script('bash')]
+[script]
 test-name pattern repo='core':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -367,7 +372,7 @@ build-release:
 # Usage: just release-dev [repo] [version]
 # If no version given, reads from <repo>/Cargo.toml and increments dev counter
 [group('extended')]
-[script('bash')]
+[script]
 release-dev repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
@@ -406,7 +411,7 @@ release-dev repo="core" version="":
 # Create an RC tag for full quality gate (coverage, mutation, bench)
 # Usage: just release-rc [repo] [version]
 [group('extended')]
-[script('bash')]
+[script]
 release-rc repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
@@ -447,7 +452,7 @@ release-rc repo="core" version="":
 # Usage: just release-prod [repo]
 # Reads version from <repo>/Cargo.toml — must be a clean version (no -dev/-rc suffix)
 [group('extended')]
-[script('bash')]
+[script]
 release-prod repo="core":
     set -euo pipefail
     REPO="{{ repo }}"
@@ -495,7 +500,7 @@ release-prod repo="core":
 # Show version promotion history for a given base version
 # Usage: just release-history [repo] [version]
 [group('extended')]
-[script('bash')]
+[script]
 release-history repo="core" version="":
     set -euo pipefail
     REPO="{{ repo }}"
@@ -527,7 +532,7 @@ release-history repo="core" version="":
 #   just release-chain-status          # auto-detect from core/Cargo.toml
 #   just release-chain-status 0.3.1    # specific version
 [group('extended')]
-[script('bash')]
+[script]
 release-chain-status version="":
     set -euo pipefail
 
@@ -616,7 +621,7 @@ release-chain-status version="":
 
 # Run security audit
 [group('extended')]
-[script('bash')]
+[script]
 audit repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -638,7 +643,7 @@ audit repo='':
 
 # Auto-fix lint issues
 [group('extended')]
-[script('bash')]
+[script]
 fix repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -678,7 +683,7 @@ metrics-push *args:
 
 # Run tests with coverage
 [group('extended')]
-[script('bash')]
+[script]
 coverage *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -732,7 +737,7 @@ coverage *args:
 
 # Run Criterion benchmarks
 [group('extended')]
-[script('bash')]
+[script]
 bench *args:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -761,7 +766,7 @@ install-hooks:
 
 # Show quick reference
 [group('tools')]
-[script('bash')]
+[script]
 help:
     cat <<'HELP'
     Vauchi Development Commands
@@ -884,7 +889,7 @@ help:
 
 # Safely clean orphaned vauchi test temp dirs (skips Claude session data)
 [group('daily')]
-[script('bash')]
+[script]
 tmp-clean:
     set -uo pipefail
     me=$(whoami)
@@ -905,7 +910,7 @@ tmp-clean:
 
 # Remove stale cargo artifacts older than N days (default: 30) across all Rust repos
 [group('daily')]
-[script('bash')]
+[script]
 sweep days="30":
     set -euo pipefail
     if ! command -v cargo-sweep &>/dev/null; then
@@ -931,7 +936,7 @@ sweep days="30":
 
 # Run all non-destructive health checks and print a summary
 [group('daily')]
-[script('bash')]
+[script]
 housekeeping:
     set -uo pipefail
     ISSUES=0
@@ -1344,7 +1349,7 @@ housekeeping:
 #        just grep "vauchi_core" "*.toml"
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 grep pattern glob='':
     set -uo pipefail
     GLOB_ARGS=()
@@ -1377,7 +1382,7 @@ grep pattern glob='':
 # Usage: just check-refs
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 check-refs:
     set -euo pipefail
     echo "Checking Cargo.toml git dependency branch refs..."
@@ -1406,7 +1411,7 @@ check-refs:
 # Usage: just reuse [repo]   (omit for all repos)
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 reuse repo='':
     if ! command -v reuse &>/dev/null; then
         echo "WARNING: reuse not installed (pip install reuse)" >&2
@@ -1438,7 +1443,7 @@ reuse repo='':
 #        just concept security     (finds security + auth + attacks + spoofing + passwords)
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 concept name:
     set -euo pipefail
     CONFIG="driftconfig.toml"
@@ -1494,7 +1499,7 @@ concept name:
 # Usage: just check-annotations [repo]
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 check-annotations repo='core':
     set -uo pipefail
     case "{{ repo }}" in
@@ -1548,7 +1553,7 @@ check-annotations repo='core':
 # Every Scenario and Scenario Outline must have exactly one lifecycle tag
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 check-lifecycle:
     set -uo pipefail
     echo "Checking feature lifecycle tags..."
@@ -1598,7 +1603,7 @@ check-lifecycle:
 #        just consumers "fn get_card"
 [group('tools')]
 [no-cd]
-[script('bash')]
+[script]
 consumers pattern:
     set -uo pipefail
     echo "Searching for '{{ pattern }}' across downstream repos..."
@@ -1639,7 +1644,7 @@ consumers pattern:
 
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
-[script('bash')]
+[script]
 lint-docs:
     set -euo pipefail
     ERRORS=0
@@ -1770,7 +1775,7 @@ design-check *args:
 # Usage: just drift [--severity=high] [--group-by=category] [--limit=50] [--verbose]
 # Backward compat: just drift medium  (sets --fail-on=medium)
 [group('tools')]
-[script('bash')]
+[script]
 drift *args:
     set -euo pipefail
     cd drift-detector
@@ -1797,7 +1802,7 @@ drift *args:
 # Run drift audit with JSON output (for CI pipelines)
 # Usage: just drift-ci [--severity=high] [--category=missing_test] [--limit=100]
 [group('tools')]
-[script('bash')]
+[script]
 drift-ci *args:
     set -euo pipefail
     cd drift-detector
