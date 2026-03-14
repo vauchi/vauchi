@@ -185,15 +185,28 @@ mr-create-all title='':
             PUSH_OPTS+=(-o merge_request.remove_source_branch)
 
             if [[ -n "{{ title }}" ]]; then
-                PUSH_OPTS+=(-o "merge_request.title={{ title }}")
+                mr_title="{{ title }}"
             else
-                first_subject=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
-                PUSH_OPTS+=(-o "merge_request.title=$first_subject")
+                mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
             fi
+            PUSH_OPTS+=(-o "merge_request.title=$mr_title")
 
             echo "  Pushing and creating MR..."
             if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
                 created+=("$label")
+
+                # Update MR description via API (push options don't support multiline)
+                mr_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+                  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
+                if [[ -n "$mr_iid" ]]; then
+                    # Generate description from commits and changed files
+                    commits=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s")
+                    files=$(git -C "$dir" diff --stat origin/main..HEAD | tail -1 | sed 's/^ //')
+                    desc="## Summary\n\n${commits}\n\n---\n_${files}_"
+                    glab api -X PUT "projects/vauchi%2F${gl_name}/merge_requests/${mr_iid}" \
+                      -f "description=${desc}" >/dev/null 2>&1 || true
+                    echo "  Updated MR !${mr_iid} description"
+                fi
             else
                 echo "  Push failed"
                 failed+=("$label")
