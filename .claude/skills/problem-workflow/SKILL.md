@@ -29,7 +29,7 @@ intake → investigating → planning → implementing → testing → done (or 
    |-------|-------|
    | **Status** | intake |
    | **Priority** | critical / high / medium / low |
-   | **Owner** | <person or team> |
+   | **Owner** | <resolve from `git config user.name`, e.g. "Mattia Egloff"> |
    | **Created** | YYYY-MM-DD |
    | **Last Updated** | YYYY-MM-DD |
 

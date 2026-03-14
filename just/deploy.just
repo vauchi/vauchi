@@ -102,6 +102,30 @@ test-website-image:
 relay-logs:
     kamal app logs -f -c _private/infra/config/deploy.combined.yml
 
+# Rollback to previous deployment version
+[group('deploy')]
+[confirm('This will roll back to the previous deployment. Continue?')]
+deploy-rollback:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CONFIG="_private/infra/config/deploy.combined.yml"
+    if [[ ! -f "$CONFIG" ]]; then
+        echo "ERROR: Deploy config not found at $CONFIG"
+        exit 1
+    fi
+
+    echo "=== Current deployment ==="
+    kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not fetch current version)"
+    echo ""
+
+    echo "=== Rolling back ==="
+    kamal rollback -c "$CONFIG"
+
+    echo ""
+    echo "=== Rollback complete — verifying ==="
+    kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not verify — check manually)"
+
 # ═══════════════════════════════════════════════════════════════════
 # MAIL DEPLOYMENT
 # ═══════════════════════════════════════════════════════════════════
