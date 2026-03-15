@@ -48,6 +48,7 @@ main mode='':
         elif [[ "{{ mode }}" == "wip" ]]; then
             echo "(auto-WIP-commit — non-interactive mode)"
             save_mode="wip"
+<<<<<<< HEAD
         elif [[ "{{ mode }}" == "discard" ]]; then
             echo "(discarding all uncommitted changes — non-interactive mode)"
             save_mode="discard"
@@ -58,6 +59,14 @@ main mode='':
                 w|W|wip) save_mode="wip" ;;
                 s|S|stash) save_mode="stash" ;;
                 d|D|discard) save_mode="discard" ;;
+=======
+        else
+            echo "How to save? [w]ip commit (recommended), [s]tash, [a]bort"
+            read -rp "> " answer
+            case "$answer" in
+                w|W|wip) save_mode="wip" ;;
+                s|S|stash) save_mode="stash" ;;
+>>>>>>> 616bdcd (chore: remove agent-memory files)
                 *) echo "Aborted."; exit 0 ;;
             esac
         fi
@@ -78,10 +87,13 @@ main mode='':
                 git add -A
                 git commit -m "wip: checkpoint $timestamp" --quiet --no-verify
                 echo -n "(wip saved) "
+<<<<<<< HEAD
             elif [[ "$save_mode" == "discard" ]]; then
                 git checkout -- . 2>/dev/null || true
                 git clean -fd --quiet 2>/dev/null || true
                 echo -n "(discarded) "
+=======
+>>>>>>> 616bdcd (chore: remove agent-memory files)
             else
                 git stash push -m "auto-stash before switching to main" --quiet
                 echo -n "(stashed) "
