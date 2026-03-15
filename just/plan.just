@@ -105,8 +105,14 @@ plan-list dir='_private/docs':
     WORKSPACE_ROOT="$(pwd)"
     echo "Plan files in {{dir}}:"
     echo ""
-    printf "%-60s %s\n" "FILE" "STATUS"
-    printf "%-60s %s\n" "----" "------"
+    _PL_COL=60
+    _pl_row() {
+        local c1="$1" c2="$2"
+        local _p=$(( _PL_COL - ${#c1} )); [[ $_p -lt 1 ]] && _p=1
+        printf "%s%*s %s\n" "$c1" "$_p" "" "$c2"
+    }
+    _pl_row "FILE" "STATUS"
+    printf "%s\n" "$(printf '%*s' $(( _PL_COL + 20 )) '' | tr ' ' '-')"
     while IFS= read -r -d '' file; do
         relpath="${file#$WORKSPACE_ROOT/}"
         stats=$(python3 << PYEOF
@@ -123,7 +129,7 @@ plan-list dir='_private/docs':
     print(f'{done}/{total} done ({pct}%)')
     PYEOF
         ) 2>/dev/null || echo "parse error"
-        printf "%-60s %s\n" "$relpath" "$stats"
+        _pl_row "$relpath" "$stats"
     done < <(find "{{dir}}" -name "*.plan.md" -print0 | sort -z)
 
 # Show remaining tasks from master plan

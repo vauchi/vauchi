@@ -91,6 +91,13 @@ core-freshness:
     printf "  Latest tag: %s (%b)\n" "$LATEST_TAG" "$TAG_STATUS"
     echo ""
 
+    _DEV_COL=12  # label column for dev status
+    _dev_status() {
+        local label="$1" color="$2" msg="$3"
+        local _p=$(( _DEV_COL - ${#label} )); [[ $_p -lt 1 ]] && _p=1
+        printf "  %s%*s %s%s%s\n" "$label" "$_p" "" "$color" "$msg" "$NC"
+    }
+
     # Rust consumers (path-overridden locally)
     echo "── Rust Consumers (path-overridden locally) ──"
     for repo in cli tui; do
@@ -98,9 +105,9 @@ core-freshness:
         [ -d "$DIR" ] || continue
         CARGO_CONFIG="$DIR/.cargo/config.toml"
         if [ -f "$CARGO_CONFIG" ] && grep -q 'vauchi-core.*path' "$CARGO_CONFIG" 2>/dev/null; then
-            printf "  %-10s ${GREEN}path override active${NC} (always uses core HEAD)\n" "$repo:"
+            _dev_status "$repo:" "$GREEN" "path override active (always uses core HEAD)"
         else
-            printf "  %-10s ${YELLOW}using git dep${NC} (run: cargo update -p vauchi-core)\n" "$repo:"
+            _dev_status "$repo:" "$YELLOW" "using git dep (run: cargo update -p vauchi-core)"
         fi
     done
     echo ""
@@ -113,9 +120,9 @@ core-freshness:
     if [ -f "$IOS_PKG" ]; then
         IOS_VER=$(sed -n 's/^let version = "\(.*\)"/\1/p' "$IOS_PKG")
         if [ "$LATEST_TAG" != "none" ] && [ "v$IOS_VER" = "$LATEST_TAG" ]; then
-            printf "  %-10s ${GREEN}v%s (matches latest tag)${NC}\n" "iOS:" "$IOS_VER"
+            _dev_status "iOS:" "$GREEN" "v$IOS_VER (matches latest tag)"
         else
-            printf "  %-10s ${YELLOW}v%s (latest core tag: %s)${NC}\n" "iOS:" "$IOS_VER" "$LATEST_TAG"
+            _dev_status "iOS:" "$YELLOW" "v$IOS_VER (latest core tag: $LATEST_TAG)"
         fi
     fi
 
@@ -124,9 +131,9 @@ core-freshness:
     if [ -f "$ANDROID_GRADLE" ]; then
         ANDROID_VER=$(sed -n 's/.*com\.vauchi:vauchi-platform:\(.*\)".*/\1/p' "$ANDROID_GRADLE")
         if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
-            printf "  %-10s ${GREEN}v%s (matches latest tag)${NC}\n" "Android:" "$ANDROID_VER"
+            _dev_status "Android:" "$GREEN" "v$ANDROID_VER (matches latest tag)"
         else
-            printf "  %-10s ${YELLOW}v%s (latest core tag: %s)${NC}\n" "Android:" "$ANDROID_VER" "$LATEST_TAG"
+            _dev_status "Android:" "$YELLOW" "v$ANDROID_VER (latest core tag: $LATEST_TAG)"
         fi
     fi
 
@@ -136,14 +143,14 @@ core-freshness:
     IOS_LOCAL="$ROOT/ios/Vauchi/Generated"
     ANDROID_LOCAL="$ROOT/android/app/src/local-bindings"
     if [ -d "$IOS_LOCAL" ] && [ "$(ls -A "$IOS_LOCAL" 2>/dev/null)" ]; then
-        printf "  %-10s ${GREEN}wired${NC}\n" "iOS:"
+        _dev_status "iOS:" "$GREEN" "wired"
     else
-        printf "  %-10s ${DIM}not wired${NC} (run: just bindings-local)\n" "iOS:"
+        _dev_status "iOS:" "$DIM" "not wired (run: just bindings-local)"
     fi
     if [ -d "$ANDROID_LOCAL" ] && [ "$(ls -A "$ANDROID_LOCAL" 2>/dev/null)" ]; then
-        printf "  %-10s ${GREEN}wired${NC}\n" "Android:"
+        _dev_status "Android:" "$GREEN" "wired"
     else
-        printf "  %-10s ${DIM}not wired${NC} (run: just bindings-local)\n" "Android:"
+        _dev_status "Android:" "$DIM" "not wired (run: just bindings-local)"
     fi
 
     # Summary

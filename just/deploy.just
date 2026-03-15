@@ -69,7 +69,13 @@ deploy-check:
             "$name" "$_p" "" "$status_text" "$_p2" "" "$short_sha" "$main_short" "$deployed_time"
     }
 
-    printf "  %-${_DS_C1}s %-${_DS_C2}s %-22s %-22s  %s\n" "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
+    _ds_hdr() {
+        local c1="$1" c2="$2" c3="$3" c4="$4" c5="$5"
+        local _p1=$(( _DS_C1 - ${#c1} )); [[ $_p1 -lt 1 ]] && _p1=1
+        local _p2=$(( _DS_C2 - ${#c2} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s %s%*s %-22s %-22s  %s\n" "$c1" "$_p1" "" "$c2" "$_p2" "" "$c3" "$c4" "$c5"
+    }
+    _ds_hdr "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
     printf "  ${DIM}%s${NC}\n" "$(printf '%*s' $(( _DS_C1 + _DS_C2 + 48 )) '' | tr ' ' '-')"
 
     check_service "relay"   "https://relay.vauchi.app/build-info" "relay"

@@ -361,17 +361,17 @@ cleanup mode='dry-run':
         echo ""
         echo "── $label ──"
 
+        _BS=30  # branch name column width for cleanup
         if [[ -n "$local_branches" ]]; then
             echo "  Local merged ($lc):"
             while IFS= read -r b; do
                 [[ -z "$b" ]] && continue
+                local _p=$(( _BS - ${#b} )); [[ $_p -lt 1 ]] && _p=1
                 if [[ "$MODE" == "run" ]]; then
-                    # Use -D: we've already verified content is in main
-                    # (via --merged or diff check), but -d fails on squash merges
                     if git -C "$dir" branch -D "$b" &>/dev/null; then
-                        printf "    ${GREEN}✓${NC} %-30s deleted\n" "$b"
+                        printf "    ${GREEN}✓${NC} %s%*s deleted\n" "$b" "$_p" ""
                     else
-                        printf "    ${RED}✗${NC} %-30s FAILED (currently checked out?)\n" "$b"
+                        printf "    ${RED}✗${NC} %s%*s FAILED (currently checked out?)\n" "$b" "$_p" ""
                     fi
                 else
                     printf "    · %s\n" "$b"
@@ -383,14 +383,16 @@ cleanup mode='dry-run':
             echo "  Remote merged ($rc):"
             while IFS= read -r b; do
                 [[ -z "$b" ]] && continue
+                local _ob="origin/$b"
+                local _p=$(( _BS - ${#_ob} )); [[ $_p -lt 1 ]] && _p=1
                 if [[ "$MODE" == "run" ]]; then
                     if git -C "$dir" push origin --delete "$b" 2>/dev/null; then
-                        printf "    ${GREEN}✓${NC} %-30s deleted\n" "origin/$b"
+                        printf "    ${GREEN}✓${NC} %s%*s deleted\n" "$_ob" "$_p" ""
                     else
-                        printf "    ${RED}✗${NC} %-30s FAILED (already gone or protected)\n" "origin/$b"
+                        printf "    ${RED}✗${NC} %s%*s FAILED (already gone or protected)\n" "$_ob" "$_p" ""
                     fi
                 else
-                    printf "    · %s\n" "origin/$b"
+                    printf "    · %s\n" "$_ob"
                 fi
             done <<< "$remote_branches"
         fi
@@ -550,8 +552,8 @@ push-all mode='full':
         status_ok "all repos" "nothing to push"
     fi
     if [[ ${#wip_blocked[@]} -gt 0 ]]; then
-        printf "\n${YELLOW}WIP-blocked (${#wip_blocked[@]}): ${wip_blocked[*]}${NC}\n"
-        printf "${DIM}Undo WIP commits first: just git wip-undo${NC}\n"
+        printf "\n%sWIP-blocked (%d): %s%s\n" "$YELLOW" "${#wip_blocked[@]}" "${wip_blocked[*]}" "$NC"
+        printf "%sUndo WIP commits first: just git wip-undo%s\n" "$DIM" "$NC"
     fi
     if [[ ${#pushed[@]} -gt 0 || ${#wip_blocked[@]} -gt 0 ]]; then
         summary_mix "${#pushed[@]}" "${#wip_blocked[@]}" "$elapsed"
@@ -1184,9 +1186,17 @@ branch-health mode='audit':
 
     cutoff_14d=$(date -v-14d +%s 2>/dev/null || date -d "14 days ago" +%s 2>/dev/null)
 
+    _BH_C1=18  # repo column
+    _BH_C2=32  # branch column
+    _bh_row() {
+        local c1="$1" c2="$2" c3="$3" c4="$4" c5="$5"
+        local _p1=$(( _BH_C1 - ${#c1} )); [[ $_p1 -lt 1 ]] && _p1=1
+        local _p2=$(( _BH_C2 - ${#c2} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "%s%*s %s%*s %8s %-12s %s\n" "$c1" "$_p1" "" "$c2" "$_p2" "" "$c3" "$c4" "$c5"
+    }
     echo ""
-    printf "%-16s %-30s %-8s %-12s %s\n" "REPO" "BRANCH" "AGE" "STATUS" "ACTION"
-    printf "%-16s %-30s %-8s %-12s %s\n" "----" "------" "---" "------" "------"
+    _bh_row "REPO" "BRANCH" "AGE" "STATUS" "ACTION"
+    printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _BH_C1 + _BH_C2 + 24 )) '' | tr ' ' '-')"
 
     for dir in . */; do
         if [[ "$dir" == "." ]]; then
@@ -1231,7 +1241,20 @@ branch-health mode='audit':
                 fi
             fi
 
-            printf "%-16s %-30s %-8s %-12s %s\n" "$label" "$br" "${age_days}d" "$status" "$action"
+            local _sc=""
+            case "$status" in
+                merged|in-main) _sc="$GREEN" ;;
+                stale) _sc="$YELLOW" ;;
+            esac
+            local _ac=""
+            case "$action" in
+                DELETE|DELETED) _ac="$RED" ;;
+                REVIEW) _ac="$YELLOW" ;;
+            esac
+            local _p1=$(( _BH_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+            local _p2=$(( _BH_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
+            printf "%s%*s %s%*s %8s ${_sc}%-12s${NC} ${_ac}%s${NC}\n" \
+                "$label" "$_p1" "" "$br" "$_p2" "" "${age_days}d" "$status" "$action"
         done <<< "$branches"
     done
 
@@ -1271,8 +1294,14 @@ branch-inspect name:
     with_commits=0
     empty=0
 
-    printf "%-24s %8s %8s %8s %-12s %s\n" "REPO" "AHEAD" "BEHIND" "AGE" "STATUS" "LAST COMMIT"
-    printf "%-24s %8s %8s %8s %-12s %s\n" "----" "-----" "------" "---" "------" "-----------"
+    _BI_C1=24  # repo column
+    _bi_row() {
+        local c1="$1"; shift
+        local _p=$(( _BI_C1 - ${#c1} )); [[ $_p -lt 1 ]] && _p=1
+        printf "%s%*s %8s %8s %8s %-12s %s\n" "$c1" "$_p" "" "$@"
+    }
+    _bi_row "REPO" "AHEAD" "BEHIND" "AGE" "STATUS" "LAST COMMIT"
+    printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _BI_C1 + 52 )) '' | tr ' ' '-')"
 
     for dir in . */; do
         if [[ "$dir" == "." ]]; then
@@ -1311,7 +1340,13 @@ branch-inspect name:
             with_commits=$((with_commits + 1))
         fi
 
-        printf "%-24s %8s %8s %6sd %-12s %s\n" "$label" "$ahead" "$behind" "$age_days" "$status" "$last_msg"
+        local _sc=""
+        case "$status" in
+            merged|in-main|empty) _sc="$DIM" ;;
+            active) _sc="$GREEN" ;;
+        esac
+        local _p=$(( _BI_C1 - ${#label} )); [[ $_p -lt 1 ]] && _p=1
+        printf "%s%*s %8s %8s %7sd ${_sc}%-12s${NC} %s\n" "$label" "$_p" "" "$ahead" "$behind" "$age_days" "$status" "$last_msg"
     done
 
     echo ""
@@ -1339,8 +1374,16 @@ stale-branches days='14':
     done
     wait
 
-    printf "%-20s %-30s %-12s %-6s %s\n" "REPO" "BRANCH" "LAST COMMIT" "AGE" "STATUS"
-    printf "%-20s %-30s %-12s %-6s %s\n" "----" "------" "-----------" "---" "------"
+    _SB_C1=20  # repo column
+    _SB_C2=30  # branch column
+    _sb_row() {
+        local c1="$1" c2="$2" c3="$3" c4="$4" c5="$5"
+        local _p1=$(( _SB_C1 - ${#c1} )); [[ $_p1 -lt 1 ]] && _p1=1
+        local _p2=$(( _SB_C2 - ${#c2} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "%s%*s %s%*s %-12s %-6s %s\n" "$c1" "$_p1" "" "$c2" "$_p2" "" "$c3" "$c4" "$c5"
+    }
+    _sb_row "REPO" "BRANCH" "LAST COMMIT" "AGE" "STATUS"
+    printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _SB_C1 + _SB_C2 + 22 )) '' | tr ' ' '-')"
 
     total=0
     deletable=0
@@ -1375,7 +1418,14 @@ stale-branches days='14':
                 if [[ "$status" != "unmerged" ]]; then
                     deletable=$((deletable + 1))
                 fi
-                printf "%-20s %-30s %-12s %-6s %s\n" "$label" "$br" "$last_date" "${age_days}d" "$status"
+                local _sc=""
+                case "$status" in
+                    merged|in-main) _sc="$GREEN" ;;
+                    unmerged) _sc="$YELLOW" ;;
+                esac
+                local _p1=$(( _SB_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+                local _p2=$(( _SB_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
+                printf "%s%*s %s%*s %-12s %-6s ${_sc}%s${NC}\n" "$label" "$_p1" "" "$br" "$_p2" "" "$last_date" "${age_days}d" "$status"
                 total=$((total + 1))
             fi
         done <<< "$branches"
