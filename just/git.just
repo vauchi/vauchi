@@ -176,23 +176,27 @@ main mode='':
 status:
     source scripts/scripts/output-helpers.sh
     shown=0
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            status=$(cd "$dir" && git status --porcelain 2>/dev/null)
-            branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
-            ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "?")
-            behind=$(cd "$dir" && git rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
+    show_repo_status() {
+        local label="$1" dir="$2"
+        local status branch ahead behind
+        status=$(git -C "$dir" status --porcelain 2>/dev/null)
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "?")
+        behind=$(git -C "$dir" rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
 
-            if [[ -n "$status" ]] || [[ "$branch" != "main" ]] || [[ "$ahead" != "0" ]] || [[ "$behind" != "0" ]]; then
-                echo ""
-                echo "── ${dir%/} (${branch:-detached}) ──"
-                [[ "$ahead" != "0" && "$ahead" != "?" ]] && printf "  ${GREEN}↑${NC} %s ahead\n" "$ahead"
-                [[ "$behind" != "0" && "$behind" != "?" ]] && printf "  ${YELLOW}↓${NC} %s behind\n" "$behind"
-                [[ -n "$status" ]] && echo "$status" | sed 's/^/  /'
-                echo ""
-                shown=$((shown + 1))
-            fi
+        if [[ -n "$status" ]] || [[ "$branch" != "main" ]] || [[ "$ahead" != "0" ]] || [[ "$behind" != "0" ]]; then
+            echo ""
+            echo "── $label (${branch:-detached}) ──"
+            [[ "$ahead" != "0" && "$ahead" != "?" ]] && printf "  ${GREEN}↑${NC} %s ahead\n" "$ahead"
+            [[ "$behind" != "0" && "$behind" != "?" ]] && printf "  ${YELLOW}↓${NC} %s behind\n" "$behind"
+            [[ -n "$status" ]] && echo "$status" | sed 's/^/  /'
+            echo ""
+            shown=$((shown + 1))
         fi
+    }
+    show_repo_status "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && show_repo_status "${dir%/}" "$dir"
     done
     if [[ "$shown" -eq 0 ]]; then
         status_ok "all repos" "clean, on main"
@@ -206,18 +210,21 @@ status:
 checkout-main:
     source scripts/scripts/output-helpers.sh
     out_begin
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            label="${dir%/}"
-            output=$( (cd "$dir" && git checkout main 2>&1) )
-            if echo "$output" | grep -q "Already on"; then
-                out_ok "$label" "already on main"
-            elif echo "$output" | grep -q "Switched to"; then
-                out_ok "$label" "switched to main"
-            else
-                out_fail "$label" "$(echo "$output" | tail -1)"
-            fi
+    checkout_repo() {
+        local label="$1" dir="$2"
+        local output
+        output=$(git -C "$dir" checkout main 2>&1)
+        if echo "$output" | grep -q "Already on"; then
+            out_ok "$label" "already on main"
+        elif echo "$output" | grep -q "Switched to"; then
+            out_ok "$label" "switched to main"
+        else
+            out_fail "$label" "$(echo "$output" | tail -1)"
         fi
+    }
+    checkout_repo "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && checkout_repo "${dir%/}" "$dir"
     done
     out_end
 
@@ -228,17 +235,20 @@ fetch:
     source scripts/scripts/output-helpers.sh
     timer_start
     out_begin
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            label="${dir%/}"
-            output=$( (cd "$dir" && git fetch --all 2>&1) )
-            fetched=$(echo "$output" | grep -E "^Fetching|^error:|^fatal:" || true)
-            if [[ -n "$fetched" ]] && echo "$fetched" | grep -qE "^(error|fatal):"; then
-                out_fail "$label" "$fetched"
-            else
-                out_ok "$label" "up to date"
-            fi
+    fetch_repo() {
+        local label="$1" dir="$2"
+        local output fetched
+        output=$(git -C "$dir" fetch --all 2>&1)
+        fetched=$(echo "$output" | grep -E "^Fetching|^error:|^fatal:" || true)
+        if [[ -n "$fetched" ]] && echo "$fetched" | grep -qE "^(error|fatal):"; then
+            out_fail "$label" "$fetched"
+        else
+            out_ok "$label" "up to date"
         fi
+    }
+    fetch_repo "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && fetch_repo "${dir%/}" "$dir"
     done
     out_end "$(timer_elapsed)"
 
@@ -247,18 +257,22 @@ fetch:
 [script]
 branches:
     source scripts/scripts/output-helpers.sh
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
-            branches=$(cd "$dir" && git branch --list 2>/dev/null | wc -l | tr -d ' ')
-            if [[ "$branch" == "main" && "$branches" -le 1 ]]; then
-                status_ok "${dir%/}" "main"
-            elif [[ "$branch" == "main" ]]; then
-                status_info "${dir%/}" "main ($branches branches)"
-            else
-                status_info "${dir%/}" "${branch:-detached} ($branches branches)"
-            fi
+    show_branch() {
+        local label="$1" dir="$2"
+        local branch count
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        count=$(git -C "$dir" branch --list 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$branch" == "main" && "$count" -le 1 ]]; then
+            status_ok "$label" "main"
+        elif [[ "$branch" == "main" ]]; then
+            status_info "$label" "main ($count branches)"
+        else
+            status_info "$label" "${branch:-detached} ($count branches)"
         fi
+    }
+    show_branch "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && show_branch "${dir%/}" "$dir"
     done
 
 # Branch cleanup: merged local/remote branches + stale tracking refs
@@ -463,18 +477,21 @@ pull-all:
     source scripts/scripts/output-helpers.sh
     timer_start
     out_begin
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            label="${dir%/}"
-            output=$( (cd "$dir" && git pull --rebase 2>&1) || (cd "$dir" && git pull 2>&1) ) || output="FAILED"
-            if echo "$output" | grep -qE "Already up to date|is up to date"; then
-                out_ok "$label" "up to date"
-            elif echo "$output" | grep -qE "^(error|fatal):|FAILED"; then
-                out_fail "$label" "$(echo "$output" | tail -1)"
-            else
-                out_ok "$label" "$(echo "$output" | tail -1)"
-            fi
+    pull_repo() {
+        local label="$1" dir="$2"
+        local output
+        output=$(git -C "$dir" pull --rebase 2>&1 || git -C "$dir" pull 2>&1) || output="FAILED"
+        if echo "$output" | grep -qE "Already up to date|is up to date"; then
+            out_ok "$label" "up to date"
+        elif echo "$output" | grep -qE "^(error|fatal):|FAILED"; then
+            out_fail "$label" "$(echo "$output" | tail -1)"
+        else
+            out_ok "$label" "$(echo "$output" | tail -1)"
         fi
+    }
+    pull_repo "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && pull_repo "${dir%/}" "$dir"
     done
     out_end "$(timer_elapsed)"
 
@@ -725,32 +742,35 @@ sync:
 [no-cd]
 [script]
 branch-status:
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
-    printf "%-20s %-30s %8s %8s %s\n" "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
-    printf "%-20s %-30s %8s %8s %s\n" "----" "------" "-----" "------" "-------"
+    printf "  %-20s %-30s %8s %8s %s\n" "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
+    printf "  ${DIM}%-20s %-30s %8s %8s %s${NC}\n" "----" "------" "-----" "------" "-------"
     check_repo() {
         local label="$1" dir="$2"
         local branch ahead behind merged
         branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "detached")
         if [[ "$branch" == "main" ]]; then
             behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
-            printf "%-20s %-30s %8s %8s %s\n" "$label" "main" "-" "$behind" "-"
+            if [[ "$behind" == "0" || "$behind" == "?" ]]; then
+                printf "  ${GREEN}%-20s${NC} %-30s %8s %8s %s\n" "$label" "main" "-" "$behind" "-"
+            else
+                printf "  ${YELLOW}%-20s${NC} %-30s %8s ${YELLOW}%8s${NC} %s\n" "$label" "main" "-" "$behind" "-"
+            fi
             return
         fi
         ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
         behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
         if git -C "$dir" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
-            merged="yes"
+            merged="${GREEN}yes${NC}"
         else
             merged="no"
         fi
-        printf "%-20s %-30s %8s %8s %s\n" "$label" "$branch" "$ahead" "$behind" "$merged"
+        printf "  %-20s ${BLUE}%-30s${NC} %8s %8s %b\n" "$label" "$branch" "$ahead" "$behind" "$merged"
     }
     check_repo "vauchi (root)" "."
     for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            check_repo "${dir%/}" "$dir"
-        fi
+        [[ -d "${dir}.git" ]] && check_repo "${dir%/}" "$dir"
     done
 
 # Show stashes across all repos
