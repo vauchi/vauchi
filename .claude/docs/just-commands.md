@@ -136,7 +136,6 @@ just git sync               # Fetch all + pull where on main
 just git main yes           # Checkout main + pull (non-interactive)
 just git status             # Status across all repos
 just git branch-status      # Branch state: ahead/behind/merged
-just git branch-inspect <name> # Inspect a specific branch across ALL repos (ahead/behind/age/status)
 just git diff-main [repo]   # Diff current branch vs main
 just git log-branch [repo]  # Commits on branch not on main
 just git rebase-main [repo] # Rebase branch on origin/main
@@ -176,6 +175,8 @@ just consumers <pattern>    # Find downstream usage of core API
 just reuse [repo]           # REUSE / SPDX license header check
 just lint-docs              # Lint docs: naming, broken links, license text
 just sync-locales           # Validate locale files (missing/extra keys)
+just lint-file-size [repo]  # Check file sizes against thresholds (src: 500/1000, test: 800/1200)
+just churn [repo]           # File churn + size correlation (highest-risk files)
 just problem-list [phase]   # List problem records by status
 just task-list              # Show remaining tasks from master plan
 

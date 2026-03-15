@@ -22,6 +22,7 @@ just check    # Run all checks
 - **Test Quality & Design**: CC-01 through CC-19 in `.claude/rules/test-quality-rules.md`
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md` — `session-init` at start, `session-end` before ending, always push before switching machines
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
+- **File Size**: See `.claude/rules/file-size.md` — src <1000, test <1200, functions <100 lines
 - **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 
 ## Tool Usage (MANDATORY)

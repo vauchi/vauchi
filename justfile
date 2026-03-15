@@ -765,6 +765,57 @@ docs:
 install-hooks:
     bash scripts/install-hooks.sh
 
+# Check file sizes against thresholds (src: 500/1000, test: 800/1200)
+[group('tools')]
+[script]
+lint-file-size repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    RUST_REPOS="core cli relay tui e2e linux-gtk"
+    if [[ -z "{{repo}}" ]]; then
+        repos="$RUST_REPOS"
+    elif [[ "{{repo}}" == "all" ]]; then
+        repos="$RUST_REPOS"
+    else
+        repos="{{repo}}"
+    fi
+    FAILED=0
+    for r in $repos; do
+        dir=$(repo_dir "$r")
+        if [[ ! -d "$dir" ]]; then continue; fi
+        echo "═══ file-size: $r ═══"
+        scripts/scripts/check-file-size.sh "$dir" || FAILED=1
+    done
+    if [[ $FAILED -ne 0 ]]; then exit 1; fi
+
+# Show file churn + size correlation (highest-risk files)
+[group('tools')]
+[script]
+churn repo='core':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    dir=$(repo_dir "{{repo}}")
+    echo "═══ File Churn + Size: {{repo}} (last 3 months) ═══"
+    echo ""
+    echo "Commits  Lines  File"
+    echo "───────  ─────  ────"
+    git -C "$dir" log --format='%H' --since='3 months ago' \
+        | xargs -I{} git -C "$dir" diff-tree --no-commit-id --name-only -r {} \
+        | sort | uniq -c | sort -rn | head -30 \
+        | while read -r count file; do
+            filepath="$dir/$file"
+            if [[ -f "$filepath" && "$file" == *.rs ]]; then
+                lines=$(wc -l < "$filepath" | tr -d ' ')
+                if [[ $lines -gt 500 ]]; then
+                    printf "%7d  %5d  %s  ← LARGE\n" "$count" "$lines" "$file"
+                else
+                    printf "%7d  %5d  %s\n" "$count" "$lines" "$file"
+                fi
+            fi
+        done
+    echo ""
+    echo "Files marked ← LARGE exceed 500 lines and are high-churn: prioritize splitting."
+
 # Show quick reference
 [group('tools')]
 [script]
@@ -872,6 +923,8 @@ help:
       just grep <pattern> [glob]  Search across all repos
       just concept <name>     Search by drift concept + aliases
       just consumers <pattern> Find downstream usage of core API
+      just lint-file-size [repo]  Check file sizes against thresholds
+      just churn [repo]       File churn + size correlation (risk)
       just check-refs         Verify Cargo.toml branch refs → main
       just check-annotations [repo]  Check @scenario coverage
       just check-lifecycle    Validate feature lifecycle tags
