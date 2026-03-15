@@ -1241,18 +1241,18 @@ branch-health mode='audit':
                 fi
             fi
 
-            local _sc=""
+            _sc=""
             case "$status" in
                 merged|in-main) _sc="$GREEN" ;;
                 stale) _sc="$YELLOW" ;;
             esac
-            local _ac=""
+            _ac=""
             case "$action" in
                 DELETE|DELETED) _ac="$RED" ;;
                 REVIEW) _ac="$YELLOW" ;;
             esac
-            local _p1=$(( _BH_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
-            local _p2=$(( _BH_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
+            _p1=$(( _BH_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+            _p2=$(( _BH_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
             printf "%s%*s %s%*s %8s ${_sc}%-12s${NC} ${_ac}%s${NC}\n" \
                 "$label" "$_p1" "" "$br" "$_p2" "" "${age_days}d" "$status" "$action"
         done <<< "$branches"
@@ -1340,12 +1340,12 @@ branch-inspect name:
             with_commits=$((with_commits + 1))
         fi
 
-        local _sc=""
+        _sc=""
         case "$status" in
             merged|in-main|empty) _sc="$DIM" ;;
             active) _sc="$GREEN" ;;
         esac
-        local _p=$(( _BI_C1 - ${#label} )); [[ $_p -lt 1 ]] && _p=1
+        _p=$(( _BI_C1 - ${#label} )); [[ $_p -lt 1 ]] && _p=1
         printf "%s%*s %8s %8s %7sd ${_sc}%-12s${NC} %s\n" "$label" "$_p" "" "$ahead" "$behind" "$age_days" "$status" "$last_msg"
     done
 
@@ -1418,13 +1418,13 @@ stale-branches days='14':
                 if [[ "$status" != "unmerged" ]]; then
                     deletable=$((deletable + 1))
                 fi
-                local _sc=""
+                _sc=""
                 case "$status" in
                     merged|in-main) _sc="$GREEN" ;;
                     unmerged) _sc="$YELLOW" ;;
                 esac
-                local _p1=$(( _SB_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
-                local _p2=$(( _SB_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
+                _p1=$(( _SB_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+                _p2=$(( _SB_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
                 printf "%s%*s %s%*s %-12s %-6s ${_sc}%s${NC}\n" "$label" "$_p1" "" "$br" "$_p2" "" "$last_date" "${age_days}d" "$status"
                 total=$((total + 1))
             fi
