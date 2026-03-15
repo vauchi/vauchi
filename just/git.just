@@ -9,6 +9,7 @@
 # Usage: just git main          (interactive — prompts with wip/stash/abort)
 #        just git main yes      (non-interactive — auto-stash without prompting)
 #        just git main wip      (non-interactive — auto-WIP-commit without prompting)
+#        just git main discard  (non-interactive — discard all uncommitted changes)
 [no-cd]
 [script]
 main mode='':
@@ -47,12 +48,16 @@ main mode='':
         elif [[ "{{ mode }}" == "wip" ]]; then
             echo "(auto-WIP-commit — non-interactive mode)"
             save_mode="wip"
+        elif [[ "{{ mode }}" == "discard" ]]; then
+            echo "(discarding all uncommitted changes — non-interactive mode)"
+            save_mode="discard"
         else
-            echo "How to save? [w]ip commit (recommended), [s]tash, [a]bort"
-            read -rp "> " answer
+            echo "How to save? [w]ip commit (recommended), [s]tash, [d]iscard, [a]bort"
+            read -rp "> " answer </dev/tty
             case "$answer" in
                 w|W|wip) save_mode="wip" ;;
                 s|S|stash) save_mode="stash" ;;
+                d|D|discard) save_mode="discard" ;;
                 *) echo "Aborted."; exit 0 ;;
             esac
         fi
@@ -73,6 +78,10 @@ main mode='':
                 git add -A
                 git commit -m "wip: checkpoint $timestamp" --quiet --no-verify
                 echo -n "(wip saved) "
+            elif [[ "$save_mode" == "discard" ]]; then
+                git checkout -- . 2>/dev/null || true
+                git clean -fd --quiet 2>/dev/null || true
+                echo -n "(discarded) "
             else
                 git stash push -m "auto-stash before switching to main" --quiet
                 echo -n "(stashed) "
