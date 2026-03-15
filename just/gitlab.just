@@ -40,7 +40,7 @@ mr-view id repo='':
 
 # Create merge request from current branch
 # Usage: just gitlab mr-create [repo] [title]
-#   just gitlab mr-create core                    # auto-title from first commit
+#   just gitlab mr-create core                    # auto-fill from commits
 #   just gitlab mr-create core "feat: my feature" # custom title
 [no-cd]
 [script]
@@ -61,25 +61,11 @@ mr-create repo='' title='':
     if ! git rev-parse --abbrev-ref "@{u}" &>/dev/null; then
         git push -u origin "$branch"
     fi
-    # Build title from first new commit if not provided
+    ARGS=(--fill --yes --target-branch main --push -R "vauchi/$r")
     if [[ -n "{{ title }}" ]]; then
-        mr_title="{{ title }}"
-    else
-        mr_title=$(git log origin/main..HEAD --reverse --format=%s | head -1)
-        [[ -z "$mr_title" ]] && mr_title="$branch"
+        ARGS+=(--title "{{ title }}")
     fi
-    # Build description from commit subjects (only new commits vs main)
-    commit_count=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
-    if [[ "$commit_count" -le 1 ]]; then
-        # Single commit — use commit body as description
-        mr_body=$(git log -1 --format=%b HEAD | sed '/^Co-Authored-By:/d' | sed '/^$/d')
-    else
-        # Multiple commits — list subjects as bullet points
-        mr_body=$(git log origin/main..HEAD --reverse --format="- %s")
-    fi
-    glab mr create --yes --target-branch main --push -R "vauchi/$r" \
-        --title "$mr_title" \
-        --description "$mr_body"
+    glab mr create "${ARGS[@]}"
 
 # Approve a merge request
 [no-cd]
