@@ -1007,6 +1007,86 @@ resume name *repos='':
 # STALE BRANCHES - Find branches with no recent activity
 # ═══════════════════════════════════════════════════════════════════
 
+# Comprehensive branch health audit across all repos
+# Usage: just git branch-health          (audit only)
+#        just git branch-health cleanup  (audit + delete merged/in-main branches)
+[no-cd]
+[script]
+branch-health mode='audit':
+    set -uo pipefail
+
+    echo "=== Branch Health Audit ==="
+    echo ""
+    echo "Fetching..."
+    for dir in . */; do
+        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
+        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
+    done
+    wait
+
+    merged=0
+    stale=0
+    active=0
+
+    cutoff_14d=$(date -v-14d +%s 2>/dev/null || date -d "14 days ago" +%s 2>/dev/null)
+
+    echo ""
+    printf "%-16s %-30s %-8s %-12s %s\n" "REPO" "BRANCH" "AGE" "STATUS" "ACTION"
+    printf "%-16s %-30s %-8s %-12s %s\n" "----" "------" "---" "------" "------"
+
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
+        [[ -z "$branches" ]] && continue
+
+        while IFS= read -r br; do
+            [[ -z "$br" ]] && continue
+
+            last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
+            now=$(date +%s)
+            age_days=$(( (now - last_epoch) / 86400 ))
+
+            status="active"
+            action="-"
+            if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
+                status="merged"
+                action="DELETE"
+                merged=$((merged + 1))
+            elif git -C "$d" diff --quiet origin/main..."$br" -- 2>/dev/null; then
+                status="in-main"
+                action="DELETE"
+                merged=$((merged + 1))
+            elif [[ "$last_epoch" -lt "$cutoff_14d" ]]; then
+                status="stale"
+                action="REVIEW"
+                stale=$((stale + 1))
+            else
+                active=$((active + 1))
+            fi
+
+            if [[ "{{ mode }}" == "cleanup" && "$action" == "DELETE" ]]; then
+                if git -C "$d" branch -D "$br" &>/dev/null; then
+                    action="DELETED"
+                fi
+            fi
+
+            printf "%-16s %-30s %-8s %-12s %s\n" "$label" "$br" "${age_days}d" "$status" "$action"
+        done <<< "$branches"
+    done
+
+    echo ""
+    echo "Summary: $merged merged/in-main, $stale stale (>14d), $active active"
+    if [[ "$merged" -gt 0 && "{{ mode }}" != "cleanup" ]]; then
+        echo "Run 'just git branch-health cleanup' to delete merged branches"
+    fi
+
 # Show branches with no commits in N days (default: 14)
 # Usage: just git stale-branches         (14-day threshold)
 #        just git stale-branches 7       (7-day threshold)

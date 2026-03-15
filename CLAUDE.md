@@ -9,7 +9,7 @@ Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, d
 
 ```bash
 just setup    # Clone all repos (first time only)
-just session-init  # Sync scripts, hooks, check for stale branches (every session)
+just session-init  # Sync, fetch, show MR/branch/uncommitted dashboard (every session)
 just build    # Build Rust workspace
 just check    # Run all checks
 ```
@@ -20,6 +20,7 @@ just check    # Run all checks
 - **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
 - **Test Quality & Design**: CC-01 through CC-19 in `.claude/rules/test-quality-rules.md`
+- **Session Hygiene**: See `.claude/rules/session-hygiene.md` — `session-init` at start, `session-end` before ending, always push before switching machines
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 

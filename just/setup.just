@@ -76,34 +76,220 @@ session-init:
     echo "── hooks ──"
     bash scripts/install-hooks.sh 2>&1 | tail -1
 
-    # Check for stale local branches with merged MRs
-    if command -v glab &>/dev/null; then
-        echo ""
-        echo "── stale branches ──"
-        STALE=0
-        for repo in . core cli tui relay e2e ios android macos linux-gtk linux-qt windows web-demo docs scripts; do
-            [[ -d "$repo/.git" ]] || continue
-            NAME=$(basename "$repo")
-            [[ "$NAME" == "." ]] && NAME="root"
-            BRANCH=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
-            [[ "$BRANCH" == "main" ]] && continue
-            # Check if this branch has a merged MR
-            MERGED=$(cd "$repo" && glab mr list --source-branch="$BRANCH" --state=merged 2>/dev/null) || MERGED=""
-            if [[ -n "$MERGED" ]]; then
-                echo "  $NAME ($BRANCH): has merged MR — consider switching to main"
-                STALE=1
-            fi
+    # Fetch all repos in parallel + prune stale refs
+    echo ""
+    echo "── fetch ──"
+    for dir in . */; do
+        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
+        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
+    done
+    wait
+    echo "  All repos fetched + pruned"
+
+    # ── Dashboard ──
+    SI_TMP=$(mktemp -d)
+    trap 'rm -rf "$SI_TMP"' EXIT
+
+    # Open MRs (parallelize glab API calls)
+    if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+        source scripts/scripts/resolve-repo.sh
+        for dir in */; do
+            [[ -d "${dir}.git" ]] || continue
+            label="${dir%/}"
+            (
+                gl_name=$(_dir_to_gitlab_name "$label")
+                mrs=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&per_page=20" 2>/dev/null || true)
+                count=$(echo "$mrs" | jq 'length' 2>/dev/null || echo "0")
+                if [[ "$count" -gt 0 ]]; then
+                    echo "$mrs" | jq -r '.[] | (.iid | tostring) + "\t" + .title' 2>/dev/null \
+                        | while IFS=$'\t' read -r iid title; do
+                            echo "  $label !${iid}  ${title}" >> "$SI_TMP/mrs.txt"
+                        done
+                fi
+            ) &
         done
-        if [[ "$STALE" == "0" ]]; then
-            echo "  No stale branches"
-        fi
+        wait
     fi
 
     echo ""
-    if [[ "$WARN" == "0" ]]; then
-        echo "=== Session ready ==="
+    echo "── dashboard ──"
+
+    echo ""
+    echo "OPEN MRs:"
+    if [[ -f "$SI_TMP/mrs.txt" && -s "$SI_TMP/mrs.txt" ]]; then
+        sort "$SI_TMP/mrs.txt"
     else
-        echo "=== Session ready (with warnings) ==="
+        echo "  (none)"
+    fi
+
+    # Local branches not on main
+    echo ""
+    echo "LOCAL BRANCHES (not main):"
+    BRANCH_FOUND=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
+        [[ -z "$branches" ]] && continue
+        while IFS= read -r br; do
+            [[ -z "$br" ]] && continue
+            age_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "?")
+            last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
+            now=$(date +%s)
+            age_days=$(( (now - last_epoch) / 86400 ))
+            marker=""
+            [[ "$age_days" -gt 14 ]] && marker=" STALE"
+            echo "  $label ($br) last: $age_date (${age_days}d)$marker"
+            BRANCH_FOUND=1
+        done <<< "$branches"
+    done
+    [[ "$BRANCH_FOUND" == "0" ]] && echo "  (none)"
+
+    # Uncommitted changes
+    echo ""
+    echo "UNCOMMITTED:"
+    UNCOMMITTED=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+        if [[ -n "$status" ]]; then
+            count=$(echo "$status" | wc -l | tr -d ' ')
+            echo "  $label: $count file(s) modified"
+            UNCOMMITTED=1
+            WARN=1
+        fi
+    done
+    [[ "$UNCOMMITTED" == "0" ]] && echo "  (none)"
+
+    # Stashes
+    echo ""
+    echo "STASHES:"
+    STASH_FOUND=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        count=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$count" -gt 0 ]]; then
+            echo "  $label: $count stash(es)"
+            STASH_FOUND=1
+            WARN=1
+        fi
+    done
+    [[ "$STASH_FOUND" == "0" ]] && echo "  (none)"
+
+    echo ""
+    if [[ "$WARN" == "0" ]]; then
+        echo "=== Ready to work ==="
+    else
+        echo "=== Ready to work (with warnings) ==="
+    fi
+
+# Check session readiness before ending — ensures nothing is left behind
+[group('setup')]
+[script]
+session-end:
+    set -euo pipefail
+    echo "=== Session end ==="
+    ERRORS=0
+
+    # Check for uncommitted changes
+    echo ""
+    echo "── uncommitted changes ──"
+    UC=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+        if [[ -n "$status" ]]; then
+            echo "  ERROR: $label has uncommitted changes"
+            git -C "$d" status --short 2>/dev/null | sed 's/^/    /'
+            ERRORS=1
+            UC=1
+        fi
+    done
+    [[ "$UC" == "0" ]] && echo "  All clean"
+
+    # Check for unpushed commits
+    echo ""
+    echo "── unpushed commits ──"
+    UP=0
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        branch=$(git -C "$d" branch --show-current 2>/dev/null)
+        [[ -z "$branch" ]] && continue
+        ahead=$(git -C "$d" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        if [[ "$ahead" -gt 0 ]]; then
+            echo "  ERROR: $label ($branch) has $ahead unpushed commit(s)"
+            ERRORS=1
+            UP=1
+        fi
+    done
+    [[ "$UP" == "0" ]] && echo "  All pushed"
+
+    # Check for local branches without MRs
+    echo ""
+    echo "── branches without MRs ──"
+    ORPHAN=0
+    if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+        source scripts/scripts/resolve-repo.sh
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                [[ ! -d ".git" ]] && continue
+                label="root"; d="."
+            else
+                [[ ! -d "${dir}.git" ]] && continue
+                label="${dir%/}"; d="${dir%/}"
+            fi
+            branch=$(git -C "$d" branch --show-current 2>/dev/null)
+            [[ "$branch" == "main" || -z "$branch" ]] && continue
+            gl_name=$(_dir_to_gitlab_name "$label")
+            mr_count=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+                | jq 'length' 2>/dev/null || echo "0")
+            if [[ "$mr_count" == "0" ]]; then
+                echo "  WARN: $label ($branch) has no open MR"
+                ORPHAN=1
+            fi
+        done
+    fi
+    [[ "$ORPHAN" == "0" ]] && echo "  All branches have MRs (or on main)"
+
+    echo ""
+    if [[ "$ERRORS" -gt 0 ]]; then
+        echo "=== Session end: ISSUES FOUND ==="
+        echo "Fix before ending session:"
+        echo "  Uncommitted changes → just git wip"
+        echo "  Unpushed commits   → just git push-all"
+        echo "  No MR              → just gitlab mr-create <repo>"
+        exit 1
+    else
+        echo "=== Session end: all clear ==="
     fi
 
 # Install development dependencies (macOS via Homebrew + Cargo)

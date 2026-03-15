@@ -69,6 +69,10 @@ This reduces token usage, avoids permission prompts, and searches across all rep
 ### Full Command Reference
 
 ```bash
+# Session lifecycle
+just session-init            # Sync + fetch + MR/branch/uncommitted dashboard
+just session-end             # Pre-exit check: uncommitted, unpushed, orphan branches
+
 # Daily workflow
 just check [repo]           # Format-check + lint + test
 just build [repo]           # Build
@@ -140,6 +144,8 @@ just git main wip           # WIP-commit → checkout main → pull (non-interac
 just git wip [msg] [repos]  # Save WIP checkpoint commits (safer than stash)
 just git wip-undo [repos]   # Undo WIP commits (soft reset, keeps changes)
 just git resume <branch> [repos] # Switch to branch + auto-undo WIP commits
+just git branch-health      # Audit all branches: merged/stale/active status
+just git branch-health cleanup # Audit + auto-delete merged/in-main branches
 just git stale-branches [days] # Find branches with no recent activity (default: 14d)
 just git pull-all           # Pull latest in all repos
 just git push-all           # Push repos with commits ahead

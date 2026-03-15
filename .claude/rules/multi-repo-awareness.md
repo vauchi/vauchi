@@ -15,7 +15,7 @@ apply: always
 - **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git commands and `just <recipe> [repo]` for everything else. `cd` drifts the working directory and causes wrong-repo commits/pushes.
 - **Stay at workspace root** — the directory containing `CLAUDE.md`. All `just` recipes work from here.
 - **Use `just git *` recipes for all multi-repo git operations** — never write raw bash loops over repos
-  - Key recipes: `status`, `branch <name>`, `push-all`, `wip [msg]`, `wip-undo`, `resume <branch>`, `fetch`, `sync`, `cleanup`
+  - Key recipes: `status`, `branch <name>`, `push-all`, `wip [msg]`, `wip-undo`, `resume <branch>`, `fetch`, `sync`, `cleanup`, `branch-health`
   - Non-interactive: `just git main wip` (not bare `just git main` which prompts)
 - **Use `just worktree *` for parallel development** — `create <branch>`, `list`, `remove-force <branch>`
 - **Use `just gitlab *` for all GitLab operations** — never use raw `glab` commands
