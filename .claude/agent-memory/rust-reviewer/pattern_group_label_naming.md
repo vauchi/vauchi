@@ -1,3 +1,7 @@
+<!--
+SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
 ---
 name: group-label-naming-split
 description: GroupManager/Group are the struct names; LabelError is the error type; method names are split — some say "group" (create_group, delete_group), others say "label" (all_labels, label_count, labels_for_contact, insert_loaded_label). This inconsistency is a recurring review finding.
