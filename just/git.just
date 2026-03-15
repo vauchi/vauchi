@@ -528,8 +528,14 @@ push-all mode='full':
                 wip_blocked+=("$label")
                 return
             fi
-            status_ok "$label" "pushing ($ahead commits ahead)"
-            git -C "$dir" push
+            status_info "$label" "pushing ($ahead commits ahead)..."
+            if git -C "$dir" push; then
+                status_ok "$label" "pushed"
+            else
+                status_fail "$label" "push FAILED"
+                wip_blocked+=("$label")  # reuse array for all failures
+                return
+            fi
             pushed+=("$label")
         else
             skipped=$((skipped + 1))
