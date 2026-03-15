@@ -108,7 +108,7 @@ else
   echo "[PASS] Git: all repos on main, tracking origin"
 fi
 
-# ---------- 4. MCP config ----------
+# ---------- 4. Drift detector ----------
 MCP_ISSUES=()
 
 # Check drift-detector is built — auto-fix if missing
@@ -130,18 +130,13 @@ if [[ ! -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
   fi
 fi
 
-# Check GitLab token
-if [[ -z "${GITLAB_PERSONAL_ACCESS_TOKEN:-}" ]]; then
-  MCP_ISSUES+=("GITLAB_PERSONAL_ACCESS_TOKEN not set")
-fi
-
 if [[ ${#MCP_ISSUES[@]} -gt 0 ]]; then
   for issue in "${MCP_ISSUES[@]}"; do
     echo "[FAIL] MCP: ${issue}"
   done
   ISSUES=$((ISSUES + ${#MCP_ISSUES[@]}))
 else
-  echo "[PASS] MCP: drift-detector built, GitLab token set"
+  echo "[PASS] MCP: drift-detector built"
 fi
 
 # ---------- 5. GitLab auth ----------
