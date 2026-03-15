@@ -13,3 +13,4 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 - [schemas-and-contract-tests](pattern_schemas_contract_tests.md) — JSON schemas in `schemas/` and contract tests in `tests/contract_tests.rs` must be updated whenever ActionResult or UserAction variants are added
 - [proptest-match-exhaustiveness](pattern_proptest_exhaustive_match.md) — proptest files use explicit `match` arms on ActionResult; the validate_result helper is the key location to check on every new variant
+- [group-label-naming-split](pattern_group_label_naming.md) — GroupManager/Group structs renamed but LabelError + several methods (all_labels, label_count, labels_for_contact, insert_loaded_label) still use the old "label" vocabulary; flag on every review of contact/labels.rs
