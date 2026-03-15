@@ -93,9 +93,14 @@ session-init:
     # Open MRs (parallelize glab API calls)
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
         source scripts/scripts/resolve-repo.sh
-        for dir in */; do
-            [[ -d "${dir}.git" ]] || continue
-            label="${dir%/}"
+        for dir in . */; do
+            if [[ "$dir" == "." ]]; then
+                [[ ! -d ".git" ]] && continue
+                label="root"
+            else
+                [[ -d "${dir}.git" ]] || continue
+                label="${dir%/}"
+            fi
             (
                 gl_name=$(_dir_to_gitlab_name "$label")
                 mrs=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&per_page=20" 2>/dev/null || true)
