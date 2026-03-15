@@ -512,7 +512,13 @@ push-all mode='full':
     skipped=0
     push_repo() {
         local label="$1" dir="$2"
-        local ahead head_msg
+        local ahead head_msg branch
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        # Skip repos on main — main is protected, use MRs instead
+        if [[ "$branch" == "main" ]]; then
+            skipped=$((skipped + 1))
+            return
+        fi
         ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
         if [[ "$ahead" -gt 0 ]]; then
             # Block pushing WIP commits
@@ -748,19 +754,31 @@ sync:
 branch-status:
     source scripts/scripts/output-helpers.sh
     set -uo pipefail
-    printf "  %-20s %-30s %8s %8s %s\n" "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
-    printf "  ${DIM}%-20s %-30s %8s %8s %s${NC}\n" "----" "------" "-----" "------" "-------"
+    _BS_C1=22  # repo column
+    _BS_C2=32  # branch column
+    _tbl() {
+        local c1="$1" c2="$2" c3="$3" c4="$4" c5="$5"
+        local _p1=$(( _BS_C1 - ${#c1} )); [[ $_p1 -lt 1 ]] && _p1=1
+        local _p2=$(( _BS_C2 - ${#c2} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s %s%*s %8s %8s %s\n" "$c1" "$_p1" "" "$c2" "$_p2" "" "$c3" "$c4" "$c5"
+    }
+    _tbl "REPO" "BRANCH" "AHEAD" "BEHIND" "MERGED?"
+    printf "  ${DIM}%s${NC}\n" "$(printf '%*s' $(( _BS_C1 + _BS_C2 + 28 )) '' | tr ' ' '-')"
     check_repo() {
         local label="$1" dir="$2"
-        local branch ahead behind merged
+        local branch ahead behind merged color_l color_b
         branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "detached")
         if [[ "$branch" == "main" ]]; then
             behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
             if [[ "$behind" == "0" || "$behind" == "?" ]]; then
-                printf "  ${GREEN}%-20s${NC} %-30s %8s %8s %s\n" "$label" "main" "-" "$behind" "-"
+                color_l="${GREEN}" color_b=""
             else
-                printf "  ${YELLOW}%-20s${NC} %-30s %8s ${YELLOW}%8s${NC} %s\n" "$label" "main" "-" "$behind" "-"
+                color_l="${YELLOW}" color_b="${YELLOW}"
             fi
+            local _p1=$(( _BS_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+            local _p2=$(( _BS_C2 - ${#branch} )); [[ $_p2 -lt 1 ]] && _p2=1
+            printf "  ${color_l}%s${NC}%*s %s%*s %8s ${color_b}%8s${NC} %s\n" \
+                "$label" "$_p1" "" "$branch" "$_p2" "" "-" "$behind" "-"
             return
         fi
         ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
@@ -770,7 +788,10 @@ branch-status:
         else
             merged="no"
         fi
-        printf "  %-20s ${BLUE}%-30s${NC} %8s %8s %b\n" "$label" "$branch" "$ahead" "$behind" "$merged"
+        local _p1=$(( _BS_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+        local _p2=$(( _BS_C2 - ${#branch} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s ${BLUE}%s${NC}%*s %8s %8s %b\n" \
+            "$label" "$_p1" "" "$branch" "$_p2" "" "$ahead" "$behind" "$merged"
     }
     check_repo "vauchi (root)" "."
     for dir in */; do

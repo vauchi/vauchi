@@ -28,13 +28,19 @@ deploy-check:
     echo "Checking deployed service versions..."
     echo ""
 
+    _DS_C1=12  # service name column
+    _DS_C2=28  # status column (fits "STALE (99 commits behind)")
+
     check_service() {
         local name="$1" url="$2" repo="$3"
-        local deployed_sha deployed_time status
+        local deployed_sha deployed_time status_text status_color
 
         local info
         info=$(curl -sf --max-time 5 "$url" 2>/dev/null) || {
-            printf "  %-12s ${YELLOW}%-10s${NC}  %s\n" "$name" "UNKNOWN" "Could not fetch $url"
+            local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
+            local msg="UNKNOWN"
+            local _p2=$(( _DS_C2 - ${#msg} )); [[ $_p2 -lt 1 ]] && _p2=1
+            printf "  %s%*s ${YELLOW}%s${NC}%*s %s\n" "$name" "$_p" "" "$msg" "$_p2" "" "Could not fetch $url"
             return
         }
 
@@ -48,19 +54,23 @@ deploy-check:
         local main_short="${main_sha:0:8}"
 
         if [ "$deployed_sha" = "$main_sha" ]; then
-            status="${GREEN}UP TO DATE${NC}"
+            status_text="UP TO DATE"
+            status_color="$GREEN"
         else
-            # Check how far behind
             local behind
             behind=$(git -C "{{justfile_directory()}}/$repo" rev-list "$deployed_sha..origin/main" --count 2>/dev/null || echo "?")
-            status="${RED}STALE (${behind} commits behind)${NC}"
+            status_text="STALE ($behind behind)"
+            status_color="$RED"
         fi
 
-        printf "  %-12s %b  deployed=%-10s main=%-10s  %s\n" "$name" "$status" "$short_sha" "$main_short" "$deployed_time"
+        local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
+        local _p2=$(( _DS_C2 - ${#status_text} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s main=%-10s  %s\n" \
+            "$name" "$_p" "" "$status_text" "$_p2" "" "$short_sha" "$main_short" "$deployed_time"
     }
 
-    printf "  %-12s %-10s  %-22s %-22s  %s\n" "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
-    printf "  %-12s %-10s  %-22s %-22s  %s\n" "-------" "------" "--------" "----" "-----"
+    printf "  %-${_DS_C1}s %-${_DS_C2}s %-22s %-22s  %s\n" "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
+    printf "  ${DIM}%s${NC}\n" "$(printf '%*s' $(( _DS_C1 + _DS_C2 + 48 )) '' | tr ' ' '-')"
 
     check_service "relay"   "https://relay.vauchi.app/build-info" "relay"
     check_service "website" "https://vauchi.app/build-info.json"  "website"
