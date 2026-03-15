@@ -15,7 +15,7 @@ apply: always
 - **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git commands and `just <recipe> [repo]` for everything else. `cd` drifts the working directory and causes wrong-repo commits/pushes.
 - **Stay at workspace root** — the directory containing `CLAUDE.md`. All `just` recipes work from here.
 - **Use `just git *` recipes for all multi-repo git operations** — never write raw bash loops over repos
-  - Key recipes: `status`, `branch <name>`, `push-all`, `wip [msg]`, `wip-undo`, `resume <branch>`, `fetch`, `sync`, `cleanup`, `branch-health`
+  - Key recipes: `status`, `branch <name>`, `branch-inspect <name>`, `push-all`, `wip [msg]`, `wip-undo`, `resume <branch>`, `fetch`, `sync`, `cleanup`, `branch-health`
   - Non-interactive: `just git main wip` (not bare `just git main` which prompts)
 - **Use `just worktree *` for parallel development** — `create <branch>`, `list`, `remove-force <branch>`
 - **Use `just gitlab *` for all GitLab operations** — never use raw `glab` commands
@@ -24,6 +24,7 @@ apply: always
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
 - Push upstream repos first (core → cli/tui/e2e and other downstream), mark downstream MRs as Draft
 - iOS/Android binding repos are auto-generated — never edit manually
+- **Branch inspection: ALWAYS check ALL repos** — never check a single repo in isolation. Branches are cross-repo (same name spans many repos). A branch may appear empty in one repo but have real commits in another. Before reporting status, recommending deletion, or taking any action on a branch, use `just git branch-inspect <name>` to see the branch across all repos (ahead/behind/age/status). For broader audit use `just git branch-health`. Acting on a single repo's state risks destroying work in other repos.
 
 Full recipe reference: `.claude/docs/just-commands.md`
 MR template, multi-repo examples: `.claude/docs/commit-conventions.md`

@@ -1087,6 +1087,85 @@ branch-health mode='audit':
         echo "Run 'just git branch-health cleanup' to delete merged branches"
     fi
 
+# Inspect a specific branch across ALL repos
+# Shows: which repos have it, commits ahead/behind main, last commit age, status
+# Usage: just git branch-inspect tidy/phase1-audit-fixes
+#        just git branch-inspect feature/my-feature
+[no-cd]
+[script]
+branch-inspect name:
+    set -uo pipefail
+
+    if [[ -z "{{ name }}" ]]; then
+        echo "Usage: just git branch-inspect <branch-name>" >&2
+        exit 1
+    fi
+
+    BRANCH="{{ name }}"
+    echo "=== Branch Inspection: $BRANCH ==="
+    echo ""
+    echo "Fetching..."
+    for dir in . */; do
+        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
+        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
+    done
+    wait
+    echo ""
+
+    found=0
+    with_commits=0
+    empty=0
+
+    printf "%-24s %8s %8s %8s %-12s %s\n" "REPO" "AHEAD" "BEHIND" "AGE" "STATUS" "LAST COMMIT"
+    printf "%-24s %8s %8s %8s %-12s %s\n" "----" "-----" "------" "---" "------" "-----------"
+
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="vauchi (root)"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+
+        # Check if branch exists in this repo
+        git -C "$d" rev-parse --verify "$BRANCH" &>/dev/null || continue
+        found=$((found + 1))
+
+        ahead=$(git -C "$d" rev-list --count origin/main.."$BRANCH" 2>/dev/null || echo "?")
+        behind=$(git -C "$d" rev-list --count "$BRANCH"..origin/main 2>/dev/null || echo "?")
+
+        last_epoch=$(git -C "$d" log -1 --format=%ct "$BRANCH" 2>/dev/null || echo "0")
+        now=$(date +%s)
+        age_days=$(( (now - last_epoch) / 86400 ))
+
+        last_msg=$(git -C "$d" log -1 --format=%s "$BRANCH" 2>/dev/null || echo "")
+        # Truncate long messages
+        [[ ${#last_msg} -gt 50 ]] && last_msg="${last_msg:0:47}..."
+
+        # Determine status
+        if [[ "$ahead" == "0" ]]; then
+            status="empty"
+            empty=$((empty + 1))
+        elif git -C "$d" merge-base --is-ancestor "$BRANCH" origin/main 2>/dev/null; then
+            status="merged"
+        elif git -C "$d" diff --quiet origin/main..."$BRANCH" -- 2>/dev/null; then
+            status="in-main"
+        else
+            status="active"
+            with_commits=$((with_commits + 1))
+        fi
+
+        printf "%-24s %8s %8s %6sd %-12s %s\n" "$label" "$ahead" "$behind" "$age_days" "$status" "$last_msg"
+    done
+
+    echo ""
+    if [[ "$found" -eq 0 ]]; then
+        echo "Branch '$BRANCH' not found in any repo."
+    else
+        echo "Summary: $found repos have branch, $with_commits with commits, $empty empty (same as main)"
+    fi
+
 # Show branches with no commits in N days (default: 14)
 # Usage: just git stale-branches         (14-day threshold)
 #        just git stale-branches 7       (7-day threshold)

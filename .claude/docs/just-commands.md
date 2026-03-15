@@ -136,6 +136,7 @@ just git sync               # Fetch all + pull where on main
 just git main yes           # Checkout main + pull (non-interactive)
 just git status             # Status across all repos
 just git branch-status      # Branch state: ahead/behind/merged
+just git branch-inspect <name> # Inspect a specific branch across ALL repos (ahead/behind/age/status)
 just git diff-main [repo]   # Diff current branch vs main
 just git log-branch [repo]  # Commits on branch not on main
 just git rebase-main [repo] # Rebase branch on origin/main
