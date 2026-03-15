@@ -510,24 +510,28 @@ push-all mode='full':
     pushed=()
     wip_blocked=()
     skipped=0
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
-            if [[ "$ahead" -gt 0 ]]; then
-                # Block pushing WIP commits
-                head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
-                if [[ "$head_msg" == wip:* ]]; then
-                    status_fail "${dir%/}" "SKIPPED — HEAD is WIP ($head_msg)"
-                    wip_blocked+=("${dir%/}")
-                    continue
-                fi
-                status_ok "${dir%/}" "pushing ($ahead commits ahead)"
-                (cd "$dir" && git push)
-                pushed+=("${dir%/}")
-            else
-                skipped=$((skipped + 1))
+    push_repo() {
+        local label="$1" dir="$2"
+        local ahead head_msg
+        ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        if [[ "$ahead" -gt 0 ]]; then
+            # Block pushing WIP commits
+            head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
+            if [[ "$head_msg" == wip:* ]]; then
+                status_fail "$label" "SKIPPED — HEAD is WIP ($head_msg)"
+                wip_blocked+=("$label")
+                return
             fi
+            status_ok "$label" "pushing ($ahead commits ahead)"
+            git -C "$dir" push
+            pushed+=("$label")
+        else
+            skipped=$((skipped + 1))
         fi
+    }
+    push_repo "vauchi (root)" "."
+    for dir in */; do
+        [[ -d "${dir}.git" ]] && push_repo "${dir%/}" "$dir"
     done
     elapsed=$(timer_elapsed)
     if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 ]]; then
