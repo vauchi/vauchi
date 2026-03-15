@@ -8,7 +8,7 @@
 # Measure build time for a repo (baseline benchmark)
 [group('perf')]
 @perf-build repo='core':
-    echo "=== Build Time Benchmark ({{repo}}) ==="
+    echo "── Build Time Benchmark ({{repo}}) ──"
     echo "Clean build (cold cache):"
     /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real
     echo ""
@@ -18,14 +18,14 @@
 # Measure test time for a repo
 [group('perf')]
 @perf-test repo='core':
-    echo "=== Test Time Benchmark ({{repo}}) ==="
+    echo "── Test Time Benchmark ({{repo}}) ──"
     /usr/bin/time -p cargo test --manifest-path {{repo}}/Cargo.toml --lib 2>&1 | grep real
 
 # Check for duplicate dependencies in repo dependency graph
 [group('perf')]
 @perf-duplicates repo='core':
     #!/bin/bash
-    echo "=== Duplicate Dependencies ({{repo}}) ==="
+    echo "── Duplicate Dependencies ({{repo}}) ──"
     if command -v cargo-duplicates &>/dev/null; then
         cd {{repo}} && cargo duplicates || echo "   (no duplicates)"
     else
@@ -36,7 +36,7 @@
 [group('perf')]
 @perf-bloat repo='core':
     #!/bin/bash
-    echo "=== Binary Bloat Analysis ({{repo}}) ==="
+    echo "── Binary Bloat Analysis ({{repo}}) ──"
     if ! command -v cargo-bloat &>/dev/null; then
         echo "cargo-bloat not installed. Run: just install-dev-deps"
         exit 1
@@ -48,7 +48,7 @@
 @perf-sccache-stats:
     #!/bin/bash
     if command -v sccache &>/dev/null; then
-        echo "=== Sccache Statistics ==="
+        echo "── Sccache Statistics ──"
         sccache --show-stats
     else
         echo "sccache not installed. Run: just install-dev-deps"
@@ -58,7 +58,7 @@
 [group('perf')]
 @perf-cold-cache repo='core':
     #!/bin/bash
-    echo "=== Cold Cache Rebuild ({{repo}}) ==="
+    echo "── Cold Cache Rebuild ({{repo}}) ──"
     if command -v sccache &>/dev/null; then
         echo "Clearing sccache..."
         sccache --clear
@@ -72,7 +72,7 @@
 @perf-sccache-config:
     #!/bin/bash
     if command -v sccache &>/dev/null; then
-        echo "=== Sccache Configuration ==="
+        echo "── Sccache Configuration ──"
         sccache --show-config
     else
         echo "sccache not installed. Run: just install-dev-deps"
@@ -150,7 +150,7 @@
         echo "Baseline saved. Make your changes and run again to compare."
         cat "$BASELINE_FILE"
     else
-        echo "=== Build Time Comparison ({{repo}}) ==="
+        echo "── Build Time Comparison ({{repo}}) ──"
         echo "Measuring current build time..."
         /usr/bin/time -p cargo build --manifest-path {{repo}}/Cargo.toml 2>&1 | grep real > "$CURRENT_FILE"
 

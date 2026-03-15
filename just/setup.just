@@ -21,7 +21,7 @@ setup: check-prerequisites clone-repos && install-hooks install-mdplan setup-pat
 session-init:
     set -euo pipefail
 
-    echo "=== Session init ==="
+    echo "── Session init ──"
     WARN=0
 
     # Pull scripts repo (hooks, CI templates)
@@ -200,9 +200,9 @@ session-init:
 
     echo ""
     if [[ "$WARN" == "0" ]]; then
-        echo "=== Ready to work ==="
+        echo "── Ready to work ──"
     else
-        echo "=== Ready to work (with warnings) ==="
+        echo "── Ready to work (with warnings) ──"
     fi
 
 # Check session readiness before ending — ensures nothing is left behind
@@ -210,7 +210,7 @@ session-init:
 [script]
 session-end:
     set -euo pipefail
-    echo "=== Session end ==="
+    echo "── Session end ──"
     ERRORS=0
 
     # Check for uncommitted changes
@@ -287,14 +287,14 @@ session-end:
 
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
-        echo "=== Session end: ISSUES FOUND ==="
+        echo "── Session end: ISSUES FOUND ──"
         echo "Fix before ending session:"
         echo "  Uncommitted changes → just git wip"
         echo "  Unpushed commits   → just git push-all"
         echo "  No MR              → just gitlab mr-create <repo>"
         exit 1
     else
-        echo "=== Session end: all clear ==="
+        echo "── Session end: all clear ──"
     fi
 
 # Install development dependencies (macOS via Homebrew + Cargo)
@@ -303,7 +303,7 @@ session-end:
 install-dev-deps:
     set -e
 
-    echo "=== Installing development dependencies ==="
+    echo "── Installing development dependencies ──"
     echo ""
 
     # ── Homebrew packages ──────────────────────────────────────────
@@ -367,7 +367,7 @@ install-dev-deps:
     rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
     echo ""
 
-    echo "=== Done ==="
+    echo "── Done ──"
     echo ""
     echo "Optional (install manually if needed):"
     echo "  brew install kamal              # Relay deployment"
@@ -384,7 +384,7 @@ setup-fast-builds:
     CARGO_CONFIG="$HOME/.cargo/config.toml"
     CHANGED=0
 
-    echo "=== Configuring fast Rust builds ==="
+    echo "── Configuring fast Rust builds ──"
     echo ""
 
     # Ensure file exists
@@ -454,7 +454,7 @@ setup-fast-builds:
 setup-path-overrides:
     set -euo pipefail
 
-    echo "=== Setting up local Cargo path overrides ==="
+    echo "── Setting up local Cargo path overrides ──"
     echo ""
 
     CORE_PATCH="[patch.'https://gitlab.com/vauchi/core.git']"

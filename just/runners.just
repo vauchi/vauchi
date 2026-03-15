@@ -24,12 +24,12 @@ runners-stop:
 # Show status of all runners
 [group('runners')]
 runners-status:
-    @echo "=== Runner Status ==="
+    @echo "── Runner Status ──"
     @echo ""
     @echo "Docker-local (systemd):"
     @systemctl --user status gitlab-runner --no-pager 2>&1 | head -5 || echo "  Not configured"
     @echo ""
-    @echo "=== GitLab Runner Config ==="
+    @echo "── GitLab Runner Config ──"
     @gitlab-runner list 2>&1 | head -20 || echo "  gitlab-runner not installed"
 
 # ─── Docker-local Runner (systemd) ─────────────────────────────────

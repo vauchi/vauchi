@@ -62,13 +62,8 @@ schema-check:
 [group('dev')]
 [script]
 core-freshness:
+    source scripts/scripts/output-helpers.sh
     set -euo pipefail
-
-    GREEN='\033[0;32m'
-    RED='\033[0;31m'
-    YELLOW='\033[1;33m'
-    DIM='\033[2m'
-    NC='\033[0m'
 
     ROOT="{{justfile_directory()}}"
 
@@ -91,13 +86,13 @@ core-freshness:
         AHEAD="?"
     fi
 
-    echo "=== Core ==="
+    echo "── Core ──"
     printf "  HEAD:       %s (%s)\n" "$CORE_SHORT" "$CORE_MSG"
     printf "  Latest tag: %s (%b)\n" "$LATEST_TAG" "$TAG_STATUS"
     echo ""
 
     # Rust consumers (path-overridden locally)
-    echo "=== Rust Consumers (path-overridden locally) ==="
+    echo "── Rust Consumers (path-overridden locally) ──"
     for repo in cli tui; do
         DIR="$ROOT/$repo"
         [ -d "$DIR" ] || continue
@@ -111,7 +106,7 @@ core-freshness:
     echo ""
 
     # Platform bindings
-    echo "=== Platform Bindings ==="
+    echo "── Platform Bindings ──"
 
     # iOS — check Package.swift version
     IOS_PKG="$ROOT/vauchi-platform-swift/Package.swift"
@@ -137,7 +132,7 @@ core-freshness:
 
     # Local bindings status
     echo ""
-    echo "=== Local Bindings ==="
+    echo "── Local Bindings ──"
     IOS_LOCAL="$ROOT/ios/Vauchi/Generated"
     ANDROID_LOCAL="$ROOT/android/app/src/local-bindings"
     if [ -d "$IOS_LOCAL" ] && [ "$(ls -A "$IOS_LOCAL" 2>/dev/null)" ]; then

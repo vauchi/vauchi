@@ -24,13 +24,9 @@ deploy-check:
     #!/usr/bin/env bash
     set -euo pipefail
 
+    source scripts/scripts/output-helpers.sh
     echo "Checking deployed service versions..."
     echo ""
-
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    NC='\033[0m'
 
     check_service() {
         local name="$1" url="$2" repo="$3"
@@ -115,15 +111,15 @@ deploy-rollback:
         exit 1
     fi
 
-    echo "=== Current deployment ==="
+    echo "── Current deployment ──"
     kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not fetch current version)"
     echo ""
 
-    echo "=== Rolling back ==="
+    echo "── Rolling back ──"
     kamal rollback -c "$CONFIG"
 
     echo ""
-    echo "=== Rollback complete — verifying ==="
+    echo "── Rollback complete — verifying ──"
     kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not verify — check manually)"
 
 # ═══════════════════════════════════════════════════════════════════

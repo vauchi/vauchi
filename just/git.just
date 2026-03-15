@@ -13,6 +13,9 @@
 [no-cd]
 [script]
 main mode='':
+    source scripts/scripts/output-helpers.sh
+    timer_start
+
     # First pass: collect dirty repos and show changes
     dirty_repos=()
     dirty_labels=()
@@ -38,7 +41,7 @@ main mode='':
         for i in "${!dirty_repos[@]}"; do
             dir="${dirty_repos[$i]}"
             label="${dirty_labels[$i]}"
-            echo "=== $label ==="
+            echo "── $label ──"
             git -C "$dir" status --short
             echo ""
         done
@@ -64,11 +67,19 @@ main mode='':
         echo ""
     fi
 
+    # Count repos for progress
+    repo_total=1
+    for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
+    repo_n=0
+    fail_file=$(mktemp)
+    echo 0 > "$fail_file"
+
     # Second pass: save changes, checkout main, and pull
     switch_to_main() {
         local label="$1"
         local dir="$2"
-        echo -n "$label: "
+        local n="$3"
+        local save_info=""
         cd "$dir" || return 1
         # Save if dirty
         if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
@@ -77,39 +88,45 @@ main mode='':
                 timestamp=$(date +%Y%m%d-%H%M%S)
                 git add -A
                 git commit -m "wip: checkpoint $timestamp" --quiet --no-verify
-                echo -n "(wip saved) "
+                save_info="wip saved → "
             elif [[ "$save_mode" == "discard" ]]; then
                 git checkout -- . 2>/dev/null || true
                 git clean -fd --quiet 2>/dev/null || true
-                echo -n "(discarded) "
+                save_info="discarded → "
             else
                 git stash push -m "auto-stash before switching to main" --quiet
-                echo -n "(stashed) "
+                save_info="stashed → "
             fi
         fi
         # Checkout main and pull
         if git checkout main --quiet 2>/dev/null; then
             output=$(git pull --rebase 2>&1 || git pull 2>&1)
-            if echo "$output" | grep -q "Already up to date"; then
-                echo "up to date"
+            if echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
+                progress_ok "$n" "$repo_total" "$label" "${save_info}up to date"
             else
-                echo "$output" | tail -1
+                progress_ok "$n" "$repo_total" "$label" "${save_info}$(echo "$output" | tail -1)"
             fi
         else
-            echo "FAILED (no main branch?)"
+            progress_fail "$n" "$repo_total" "$label" "${save_info}FAILED (no main branch?)"
+            echo $(( $(cat "$fail_file") + 1 )) > "$fail_file"
         fi
     }
     # Root repo
-    switch_to_main "vauchi (root)" "."
+    repo_n=$((repo_n + 1))
+    switch_to_main "vauchi (root)" "." "$repo_n"
     # Sub-repos
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
-            (switch_to_main "${dir%/}" "$dir")
+            repo_n=$((repo_n + 1))
+            (switch_to_main "${dir%/}" "$dir" "$repo_n")
         fi
     done
 
+    fail_count=$(cat "$fail_file")
+    rm -f "$fail_file"
+    ok_count=$((repo_total - fail_count))
+
     # Auto-cleanup: delete local branches already merged into main
-    echo ""
     cleaned=0
     cleanup_merged() {
         local label="$1" dir="$2"
@@ -135,7 +152,7 @@ main mode='':
         while IFS= read -r b; do
             [[ -z "$b" ]] && continue
             if git -C "$dir" branch -D "$b" &>/dev/null; then
-                echo "  $label: deleted merged branch '$b'"
+                status_ok "$label" "deleted merged branch '$b'"
                 cleaned=$((cleaned + 1))
             fi
         done <<< "$merged"
@@ -144,6 +161,9 @@ main mode='':
     for dir in */; do
         [[ -d "${dir}.git" ]] && cleanup_merged "${dir%/}" "$dir"
     done
+
+    elapsed=$(timer_elapsed)
+    summary_mix "$ok_count" "$fail_count" "$elapsed"
     if [[ "$cleaned" -gt 0 ]]; then
         echo "Cleaned up $cleaned merged branch(es)"
     fi
@@ -153,6 +173,8 @@ main mode='':
 [default]
 [script]
 status:
+    source scripts/scripts/output-helpers.sh
+    shown=0
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             status=$(cd "$dir" && git status --porcelain 2>/dev/null)
@@ -161,47 +183,80 @@ status:
             behind=$(cd "$dir" && git rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
 
             if [[ -n "$status" ]] || [[ "$branch" != "main" ]] || [[ "$ahead" != "0" ]] || [[ "$behind" != "0" ]]; then
-                echo "=== ${dir%/} (${branch:-detached}) ==="
-                [[ "$ahead" != "0" && "$ahead" != "?" ]] && echo "  ↑ $ahead ahead"
-                [[ "$behind" != "0" && "$behind" != "?" ]] && echo "  ↓ $behind behind"
+                echo ""
+                echo "── ${dir%/} (${branch:-detached}) ──"
+                [[ "$ahead" != "0" && "$ahead" != "?" ]] && printf "  ${GREEN}↑${NC} %s ahead\n" "$ahead"
+                [[ "$behind" != "0" && "$behind" != "?" ]] && printf "  ${YELLOW}↓${NC} %s behind\n" "$behind"
                 [[ -n "$status" ]] && echo "$status" | sed 's/^/  /'
                 echo ""
+                shown=$((shown + 1))
             fi
         fi
     done
-    echo "Repos on main with no changes: not shown"
+    if [[ "$shown" -eq 0 ]]; then
+        status_ok "all repos" "clean, on main"
+    else
+        printf "\n${DIM}Repos on main with no changes: not shown${NC}\n"
+    fi
 
 # Checkout main branch in all repos
 [no-cd]
 [script]
 checkout-main:
+    source scripts/scripts/output-helpers.sh
+    out_begin
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
-            echo -n "${dir%/}: "
-            (cd "$dir" && git checkout main 2>&1) | tail -1
+            label="${dir%/}"
+            output=$( (cd "$dir" && git checkout main 2>&1) )
+            if echo "$output" | grep -q "Already on"; then
+                out_ok "$label" "already on main"
+            elif echo "$output" | grep -q "Switched to"; then
+                out_ok "$label" "switched to main"
+            else
+                out_fail "$label" "$(echo "$output" | tail -1)"
+            fi
         fi
     done
+    out_end
 
 # Fetch all repos
 [no-cd]
 [script]
 fetch:
+    source scripts/scripts/output-helpers.sh
+    timer_start
+    out_begin
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
-            echo -n "${dir%/}: "
-            (cd "$dir" && git fetch --all 2>&1) | grep -E "^Fetching|error|fatal" || echo "up to date"
+            label="${dir%/}"
+            output=$( (cd "$dir" && git fetch --all 2>&1) )
+            fetched=$(echo "$output" | grep -E "^Fetching|error|fatal" || true)
+            if [[ -n "$fetched" ]] && echo "$fetched" | grep -q "error\|fatal"; then
+                out_fail "$label" "$fetched"
+            else
+                out_ok "$label" "up to date"
+            fi
         fi
     done
+    out_end "$(timer_elapsed)"
 
 # Show branches across all repos
 [no-cd]
 [script]
 branches:
+    source scripts/scripts/output-helpers.sh
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             branch=$(cd "$dir" && git branch --show-current 2>/dev/null)
-            branches=$(cd "$dir" && git branch --list 2>/dev/null | wc -l)
-            echo "${dir%/}: ${branch:-detached} ($branches branches)"
+            branches=$(cd "$dir" && git branch --list 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "$branch" == "main" && "$branches" -le 1 ]]; then
+                status_ok "${dir%/}" "main"
+            elif [[ "$branch" == "main" ]]; then
+                status_info "${dir%/}" "main ($branches branches)"
+            else
+                status_info "${dir%/}" "${branch:-detached} ($branches branches)"
+            fi
         fi
     done
 
@@ -211,6 +266,7 @@ branches:
 [no-cd]
 [script]
 cleanup mode='dry-run':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
 
     MODE="{{ mode }}"
@@ -287,7 +343,8 @@ cleanup mode='dry-run':
         local total=$((lc + rc + sc))
         [[ "$total" -eq 0 ]] && return 0
 
-        echo "=== $label ==="
+        echo ""
+        echo "── $label ──"
 
         if [[ -n "$local_branches" ]]; then
             echo "  Local merged ($lc):"
@@ -297,12 +354,12 @@ cleanup mode='dry-run':
                     # Use -D: we've already verified content is in main
                     # (via --merged or diff check), but -d fails on squash merges
                     if git -C "$dir" branch -D "$b" &>/dev/null; then
-                        echo "    deleted  $b"
+                        printf "    ${GREEN}✓${NC} %-30s deleted\n" "$b"
                     else
-                        echo "    FAILED   $b (currently checked out?)"
+                        printf "    ${RED}✗${NC} %-30s FAILED (currently checked out?)\n" "$b"
                     fi
                 else
-                    echo "    $b"
+                    printf "    · %s\n" "$b"
                 fi
             done <<< "$local_branches"
         fi
@@ -313,12 +370,12 @@ cleanup mode='dry-run':
                 [[ -z "$b" ]] && continue
                 if [[ "$MODE" == "run" ]]; then
                     if git -C "$dir" push origin --delete "$b" 2>/dev/null; then
-                        echo "    deleted  origin/$b"
+                        printf "    ${GREEN}✓${NC} %-30s deleted\n" "origin/$b"
                     else
-                        echo "    FAILED   origin/$b (already gone or protected)"
+                        printf "    ${RED}✗${NC} %-30s FAILED (already gone or protected)\n" "origin/$b"
                     fi
                 else
-                    echo "    origin/$b"
+                    printf "    · %s\n" "origin/$b"
                 fi
             done <<< "$remote_branches"
         fi
@@ -327,15 +384,13 @@ cleanup mode='dry-run':
             echo "  Stale refs ($sc):"
             while IFS= read -r ref; do
                 [[ -z "$ref" ]] && continue
-                echo "    $ref"
+                printf "    · %s\n" "$ref"
             done <<< "$stale_refs"
             if [[ "$MODE" == "run" ]]; then
                 git -C "$dir" remote prune origin &>/dev/null
                 echo "    (pruned)"
             fi
         fi
-
-        echo ""
 
         total_local=$((total_local + lc))
         total_remote=$((total_remote + rc))
@@ -369,8 +424,7 @@ cleanup mode='dry-run':
 [no-cd]
 [script]
 stash-clear:
-    echo "Clearing git stash in all repos..."
-    echo ""
+    source scripts/scripts/output-helpers.sh
 
     cleared=()
 
@@ -378,7 +432,7 @@ stash-clear:
     count=$(git stash list 2>/dev/null | wc -l | tr -d ' ')
     if [[ "$count" -gt 0 ]]; then
         git stash clear
-        echo "vauchi (root): cleared $count stash(es)"
+        status_ok "vauchi (root)" "cleared $count stash(es)"
         cleared+=("vauchi (root)")
     fi
 
@@ -388,7 +442,7 @@ stash-clear:
             count=$(git -C "$dir" stash list 2>/dev/null | wc -l | tr -d ' ')
             if [[ "$count" -gt 0 ]]; then
                 git -C "$dir" stash clear
-                echo "${dir%/}: cleared $count stash(es)"
+                status_ok "${dir%/}" "cleared $count stash(es)"
                 cleared+=("${dir%/}")
             fi
         fi
@@ -405,12 +459,23 @@ stash-clear:
 [no-cd]
 [script]
 pull-all:
+    source scripts/scripts/output-helpers.sh
+    timer_start
+    out_begin
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
-            echo -n "${dir%/}: "
-            (cd "$dir" && git pull --rebase 2>&1) || (cd "$dir" && git pull 2>&1) || echo "FAILED"
+            label="${dir%/}"
+            output=$( (cd "$dir" && git pull --rebase 2>&1) || (cd "$dir" && git pull 2>&1) ) || output="FAILED"
+            if echo "$output" | grep -q "Already up to date"; then
+                out_ok "$label" "up to date"
+            elif echo "$output" | grep -q "FAILED\|fatal\|error"; then
+                out_fail "$label" "$(echo "$output" | tail -1)"
+            else
+                out_ok "$label" "$(echo "$output" | tail -1)"
+            fi
         fi
     done
+    out_end "$(timer_elapsed)"
 
 # Push all repos with commits ahead of origin
 # Usage: just git push-all              (fmt + clippy + tests per repo)
@@ -418,13 +483,15 @@ pull-all:
 [no-cd]
 [script]
 push-all mode='full':
+    source scripts/scripts/output-helpers.sh
+    timer_start
     if [[ "{{ mode }}" == "skip-tests" ]]; then
         export SKIP_TESTS=1
-        echo "Pushing with SKIP_TESTS=1 (fmt + clippy only)"
-        echo ""
+        printf "${DIM}Pushing with SKIP_TESTS=1 (fmt + clippy only)${NC}\n\n"
     fi
     pushed=()
     wip_blocked=()
+    skipped=0
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
             ahead=$(cd "$dir" && git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
@@ -432,25 +499,28 @@ push-all mode='full':
                 # Block pushing WIP commits
                 head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
                 if [[ "$head_msg" == wip:* ]]; then
-                    echo "SKIPPED ${dir%/}: HEAD is a WIP commit ($head_msg)"
-                    echo "  -> Run: just git wip-undo ${dir%/}"
+                    status_fail "${dir%/}" "SKIPPED — HEAD is WIP ($head_msg)"
                     wip_blocked+=("${dir%/}")
                     continue
                 fi
-                echo "Pushing ${dir%/} ($ahead commits ahead)"
+                status_ok "${dir%/}" "pushing ($ahead commits ahead)"
                 (cd "$dir" && git push)
                 pushed+=("${dir%/}")
+            else
+                skipped=$((skipped + 1))
             fi
         fi
     done
-    if [[ ${#wip_blocked[@]} -gt 0 ]]; then
-        echo ""
-        echo "WIP-blocked (${#wip_blocked[@]}): ${wip_blocked[*]}"
-        echo "Undo WIP commits first: just git wip-undo"
+    elapsed=$(timer_elapsed)
+    if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 ]]; then
+        status_ok "all repos" "nothing to push"
     fi
-    if [[ ${#pushed[@]} -gt 0 ]]; then
-        echo ""
-        echo "Verify with: git -C <repo> log --oneline origin/<branch>..<branch>"
+    if [[ ${#wip_blocked[@]} -gt 0 ]]; then
+        printf "\n${YELLOW}WIP-blocked (${#wip_blocked[@]}): ${wip_blocked[*]}${NC}\n"
+        printf "${DIM}Undo WIP commits first: just git wip-undo${NC}\n"
+    fi
+    if [[ ${#pushed[@]} -gt 0 || ${#wip_blocked[@]} -gt 0 ]]; then
+        summary_mix "${#pushed[@]}" "${#wip_blocked[@]}" "$elapsed"
     fi
 
 # Show diff of current branch vs origin/main
@@ -458,6 +528,7 @@ push-all mode='full':
 [no-cd]
 [script]
 diff-main repo='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
@@ -469,7 +540,7 @@ diff-main repo='':
         git -C "$dir" fetch origin main --quiet 2>/dev/null
         label="{{ repo }}"
         [[ "$dir" == "." ]] && label="vauchi (root)"
-        echo "=== ${label} ==="
+        echo "── ${label} ──"
         git -C "$dir" diff origin/main...HEAD
     else
         for dir in . */; do
@@ -487,7 +558,7 @@ diff-main repo='':
             git -C "$dir" fetch origin main --quiet 2>/dev/null
             count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
             [[ "$count" == "0" ]] && continue
-            echo "=== $label ($branch, $count commits) ==="
+            echo "── $label ($branch, $count commits) ──"
             git -C "$dir" diff origin/main...HEAD --stat
             echo ""
         done
@@ -498,6 +569,7 @@ diff-main repo='':
 [no-cd]
 [script]
 rebase-main repo='':
+    source scripts/scripts/output-helpers.sh
     set -euo pipefail
     rebase_repo() {
         local label="$1" dir="$2"
@@ -506,19 +578,20 @@ rebase-main repo='':
         if [[ "$branch" == "main" || -z "$branch" ]]; then
             return 0
         fi
-        echo "=== $label ($branch) ==="
+        echo ""
+        echo "── $label ($branch) ──"
         git -C "$dir" fetch origin main --quiet 2>/dev/null
         local behind
         behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
         if [[ "$behind" == "0" ]]; then
-            echo "  Already up to date with origin/main"
+            status_ok "$label" "up to date with origin/main"
             return 0
         fi
-        echo "  $behind commits behind origin/main — rebasing..."
+        printf "  ${YELLOW}↓${NC} %s commits behind origin/main — rebasing...\n" "$behind"
         if git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
-            echo "  Rebase OK"
+            status_ok "$label" "rebase OK"
         else
-            echo "  CONFLICT — resolve manually, then run: git -C $dir rebase --continue" >&2
+            status_fail "$label" "CONFLICT — resolve manually, then run: git -C $dir rebase --continue" >&2
             git -C "$dir" rebase --abort 2>/dev/null
             return 1
         fi
@@ -561,6 +634,7 @@ rebase-main repo='':
 [no-cd]
 [script]
 log-branch repo='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     log_repo() {
         local label="$1" dir="$2"
@@ -570,7 +644,7 @@ log-branch repo='':
         local count
         count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
         [[ "$count" == "0" ]] && return 0
-        echo "=== $label ($branch, $count commits) ==="
+        echo "── $label ($branch, $count commits) ──"
         git -C "$dir" log origin/main..HEAD --oneline --no-decorate
         echo ""
     }
@@ -602,26 +676,29 @@ log-branch repo='':
 [no-cd]
 [script]
 sync:
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
+    timer_start
+    out_begin
     sync_repo() {
         local label="$1" dir="$2"
-        echo -n "$label: "
         git -C "$dir" fetch --all --quiet 2>/dev/null
         local branch
         branch=$(git -C "$dir" branch --show-current 2>/dev/null)
         if [[ "$branch" == "main" ]]; then
             output=$(git -C "$dir" pull --rebase --quiet 2>&1 || git -C "$dir" pull --quiet 2>&1)
-            if echo "$output" | grep -q "Already up to date"; then
-                echo "fetched, main up to date"
+            if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
+                out_ok "$label" "fetched, main up to date"
+            elif echo "$output" | grep -qE "error|fatal|CONFLICT"; then
+                out_fail "$label" "fetched, pull failed"
             else
-                behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
-                echo "fetched, pulled main ($output)"
+                out_ok "$label" "fetched, pulled main"
             fi
         else
             local ahead behind
             ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
             behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
-            echo "fetched (on $branch, ↑$ahead ↓$behind vs main)"
+            out_info "$label" "fetched (on $branch, ↑$ahead ↓$behind vs main)"
         fi
     }
     sync_repo "vauchi (root)" "."
@@ -630,6 +707,7 @@ sync:
             sync_repo "${dir%/}" "$dir"
         fi
     done
+    out_end "$(timer_elapsed)"
 
 # Show branch status for all repos (branch, ahead/behind, merged)
 [no-cd]
@@ -667,13 +745,14 @@ branch-status:
 [no-cd]
 [script]
 stash-list:
+    source scripts/scripts/output-helpers.sh
     found=0
     # Root repo
     stashes=$(git stash list 2>/dev/null)
     if [[ -n "$stashes" ]]; then
         count=$(echo "$stashes" | wc -l | tr -d ' ')
-        echo "=== vauchi (root) ($count) ==="
-        echo "$stashes"
+        echo "── vauchi (root) ($count) ──"
+        echo "$stashes" | sed 's/^/  /'
         echo ""
         found=1
     fi
@@ -683,8 +762,8 @@ stash-list:
             stashes=$(git -C "$dir" stash list 2>/dev/null)
             if [[ -n "$stashes" ]]; then
                 count=$(echo "$stashes" | wc -l | tr -d ' ')
-                echo "=== ${dir%/} ($count) ==="
-                echo "$stashes"
+                echo "── ${dir%/} ($count) ──"
+                echo "$stashes" | sed 's/^/  /'
                 echo ""
                 found=1
             fi
@@ -701,6 +780,7 @@ stash-list:
 [no-cd]
 [script]
 branch name *repos='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git branch <branch-name> [repo1 repo2 ...]" >&2
@@ -748,7 +828,7 @@ branch name *repos='':
                             git -C "$dir" commit -m "wip: checkpoint $timestamp" --quiet --no-verify
                             label="$dir"
                             [[ "$dir" == "." ]] && label="vauchi (root)"
-                            echo "  $label: WIP saved"
+                            status_ok "$label" "WIP saved"
                         fi
                     done
                     echo ""
@@ -773,14 +853,12 @@ branch name *repos='':
             continue
         fi
         if git -C "$dir" rev-parse --verify "{{ name }}" &>/dev/null; then
-            echo -n "$label: branch exists, switching... "
             git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null
-            echo "OK"
+            status_ok "$label" "switched to existing branch"
             created+=("$label")
         else
-            echo -n "$label: creating {{ name }}... "
             git -C "$dir" checkout -b "{{ name }}" --quiet 2>/dev/null
-            echo "OK"
+            status_ok "$label" "created new branch"
             created+=("$label")
         fi
     done
@@ -802,6 +880,7 @@ branch name *repos='':
 [no-cd]
 [script]
 wip msg='' *repos='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
@@ -855,7 +934,7 @@ wip msg='' *repos='':
         fi
         git -C "$dir" add -A
         git -C "$dir" commit -m "$commit_msg" --quiet --no-verify
-        echo "$label: saved ($commit_msg)"
+        status_ok "$label" "saved ($commit_msg)"
         saved+=("$label")
     done
     echo ""
@@ -870,6 +949,7 @@ wip msg='' *repos='':
 [no-cd]
 [script]
 wip-undo *repos='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
@@ -915,7 +995,7 @@ wip-undo *repos='':
             continue
         fi
         git -C "$dir" reset --soft HEAD~1 --quiet
-        echo "$label: undone WIP commit ($last_msg)"
+        status_ok "$label" "undone WIP ($last_msg)"
         undone+=("$label")
     done
     echo ""
@@ -933,6 +1013,7 @@ wip-undo *repos='':
 [no-cd]
 [script]
 resume name *repos='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git resume <branch-name> [repo1 repo2 ...]" >&2
@@ -984,13 +1065,13 @@ resume name *repos='':
         [[ "$dir" == "." ]] && label="vauchi (root)"
         current=$(git -C "$dir" branch --show-current 2>/dev/null)
         if [[ "$current" == "{{ name }}" ]]; then
-            echo "$label: already on {{ name }}"
+            status_info "$label" "already on {{ name }}"
             switched+=("$dir")
             continue
         fi
         if git -C "$dir" rev-parse --verify "{{ name }}" &>/dev/null; then
             git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null
-            echo "$label: switched to {{ name }}"
+            status_ok "$label" "switched to {{ name }}"
             switched+=("$dir")
         fi
     done
@@ -1003,7 +1084,7 @@ resume name *repos='':
         last_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
         if [[ "$last_msg" == wip:* ]]; then
             git -C "$dir" reset --soft HEAD~1 --quiet
-            echo "$label: undone WIP commit ($last_msg)"
+            status_ok "$label" "restored WIP ($last_msg)"
             wip_undone+=("$label")
         fi
     done
@@ -1022,9 +1103,10 @@ resume name *repos='':
 [no-cd]
 [script]
 branch-health mode='audit':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
 
-    echo "=== Branch Health Audit ==="
+    echo "── Branch Health Audit ──"
     echo ""
     echo "Fetching..."
     for dir in . */; do
@@ -1103,6 +1185,7 @@ branch-health mode='audit':
 [no-cd]
 [script]
 branch-inspect name:
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
 
     if [[ -z "{{ name }}" ]]; then
@@ -1111,7 +1194,7 @@ branch-inspect name:
     fi
 
     BRANCH="{{ name }}"
-    echo "=== Branch Inspection: $BRANCH ==="
+    echo "── Branch Inspection: $BRANCH ──"
     echo ""
     echo "Fetching..."
     for dir in . */; do
@@ -1181,6 +1264,7 @@ branch-inspect name:
 [no-cd]
 [script]
 stale-branches days='14':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     threshold="{{ days }}"
     cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)

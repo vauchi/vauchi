@@ -16,6 +16,7 @@
 [no-cd]
 [script]
 create name *repos='':
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree create <branch-name> [repo1 repo2 ...]" >&2
@@ -64,18 +65,16 @@ create name *repos='':
 
         wt_path="$wt_base/$label"
 
-        echo -n "$label: "
-
         # Create worktree with a new branch based on current HEAD
         if git -C "$dir" worktree add "$(pwd)/$wt_path" -b "{{ name }}" --quiet 2>/dev/null; then
-            echo "created ($wt_path)"
+            status_ok "$label" "created ($wt_path)"
             created+=("$label")
         elif git -C "$dir" worktree add "$(pwd)/$wt_path" "{{ name }}" --quiet 2>/dev/null; then
             # Branch already exists — attach to it
-            echo "created (existing branch, $wt_path)"
+            status_ok "$label" "created (existing branch, $wt_path)"
             created+=("$label")
         else
-            echo "FAILED"
+            status_fail "$label" "FAILED"
             failed+=("$label")
             rmdir "$wt_path" 2>/dev/null || true
         fi
@@ -97,6 +96,7 @@ create name *repos='':
 [no-cd]
 [script]
 list:
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     wt_base=".worktrees"
 
@@ -116,7 +116,7 @@ list:
         else
             name="$flat_name"
         fi
-        echo "=== $name ==="
+        echo "── $name ──"
 
         repo_count=0
         for repo_dir in "$wt_dir"/*/; do
@@ -126,7 +126,7 @@ list:
             status=$(git -C "$repo_dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
             dirty=""
             [[ "$status" -gt 0 ]] && dirty=" ($status uncommitted)"
-            echo "  $repo: $branch$dirty"
+            status_ok "$repo" "$branch$dirty"
             repo_count=$((repo_count + 1))
         done
         # Check for root worktree (not in a subdirectory)
@@ -135,7 +135,7 @@ list:
             status=$(git -C "$wt_dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
             dirty=""
             [[ "$status" -gt 0 ]] && dirty=" ($status uncommitted)"
-            echo "  root: $branch$dirty"
+            status_ok "root" "$branch$dirty"
             repo_count=$((repo_count + 1))
         fi
         echo "  ($repo_count repos)"
@@ -154,6 +154,7 @@ list:
 [no-cd]
 [script]
 remove name:
+    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree remove <branch-name>" >&2
@@ -235,7 +236,7 @@ remove name:
                     label="${dir%/}"
                 fi
                 if git -C "$d" branch -d "{{ name }}" 2>/dev/null; then
-                    echo "  $label: deleted branch '{{ name }}'"
+                    status_ok "$label" "deleted branch '{{ name }}'"
                 fi
             done
         fi

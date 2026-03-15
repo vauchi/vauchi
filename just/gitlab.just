@@ -105,7 +105,9 @@ mr-close id repo='':
 [script]
 mr-create-all title='':
     just gitlab _check-auth
+    source scripts/scripts/output-helpers.sh
     set -euo pipefail
+    timer_start
 
     created=()
     updated=()
@@ -124,7 +126,8 @@ mr-create-all title='':
         ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
         [[ "$ahead" -eq 0 ]] && continue
 
-        echo "=== $label ($branch, $ahead commits) ==="
+        echo ""
+        echo "── $label ($branch, $ahead commits) ──"
 
         # Check for existing MR
         source scripts/scripts/resolve-repo.sh
@@ -137,9 +140,9 @@ mr-create-all title='':
         behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
         rebased=no
         if [[ "$behind" -gt 0 ]]; then
-            echo "  $behind commits behind — rebasing..."
+            printf "  ↓ %s commits behind — rebasing...\n" "$behind"
             if ! git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
-                echo "  CONFLICT — skipping (resolve manually)"
+                echo "  ✗ CONFLICT — skipping (resolve manually)"
                 git -C "$dir" rebase --abort 2>/dev/null
                 failed+=("$label")
                 continue
@@ -201,12 +204,13 @@ mr-create-all title='':
         echo ""
     done
 
+    elapsed=$(timer_elapsed)
     echo ""
-    echo "=== Summary ==="
-    [[ ${#created[@]}  -gt 0 ]] && echo "Created  (${#created[@]}):  ${created[*]}"
-    [[ ${#updated[@]}  -gt 0 ]] && echo "Updated  (${#updated[@]}):  ${updated[*]}"
-    [[ ${#uptodate[@]} -gt 0 ]] && echo "Up-to-date (${#uptodate[@]}): ${uptodate[*]}"
-    [[ ${#failed[@]}   -gt 0 ]] && echo "Failed   (${#failed[@]}):   ${failed[*]}"
+    echo "── Summary (${elapsed}s) ──"
+    [[ ${#created[@]}  -gt 0 ]] && printf "  ${GREEN}✓${NC} Created  (%d):  %s\n" "${#created[@]}" "${created[*]}"
+    [[ ${#updated[@]}  -gt 0 ]] && printf "  ${GREEN}✓${NC} Updated  (%d):  %s\n" "${#updated[@]}" "${updated[*]}"
+    [[ ${#uptodate[@]} -gt 0 ]] && printf "  ${DIM}·${NC} Up-to-date (%d): %s\n" "${#uptodate[@]}" "${uptodate[*]}"
+    [[ ${#failed[@]}   -gt 0 ]] && printf "  ${RED}✗${NC} Failed   (%d):   %s\n" "${#failed[@]}" "${failed[*]}"
     [[ ${#failed[@]}   -gt 0 ]] && exit 1 || true
 
 # ── Pipeline Operations ────────────────────────────────────────────

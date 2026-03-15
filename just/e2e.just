@@ -80,8 +80,7 @@ e2e-yaml-manual name:
 [group('e2e')]
 [script]
 e2e-coverage:
-    echo "E2E Test Coverage Report"
-    echo "========================"
+    echo "── E2E Test Coverage Report ──"
     echo ""
     echo "Gherkin Features:"
     feature_count=$(find features -name "*.feature" 2>/dev/null | wc -l)

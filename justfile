@@ -269,7 +269,7 @@ commit-repo repo message:
         echo "$label: nothing to commit"
         exit 0
     fi
-    echo "=== $label ==="
+    echo "── $label ──"
     git -C "$dir" status --short
     echo ""
     # Warn about untracked files (not staged by -u)
@@ -314,19 +314,19 @@ test-file name repo='core':
         tc=$(repo_toolchain "$r")
         case "$tc" in
             rust)
-                echo "=== $r: cargo test --test {{ name }} ==="
+                echo "── $r: cargo test --test {{ name }} ──"
                 (cd "$dir" && cargo test --test "{{ name }}" 2>&1) || true
                 ;;
             npm)
-                echo "=== $r: npx vitest {{ name }} ==="
+                echo "── $r: npx vitest {{ name }} ──"
                 (cd "$dir" && npx vitest run "{{ name }}" 2>&1) || true
                 ;;
             gradle)
-                echo "=== $r: ./gradlew test --tests *{{ name }}* ==="
+                echo "── $r: ./gradlew test --tests *{{ name }}* ──"
                 (cd "$dir" && ./gradlew test --tests "*{{ name }}*" 2>&1) || true
                 ;;
             *)
-                echo "=== $r: test-file not supported for $tc ==="
+                echo "── $r: test-file not supported for $tc ──"
                 ;;
         esac
     done
@@ -346,19 +346,19 @@ test-name pattern repo='core':
         tc=$(repo_toolchain "$r")
         case "$tc" in
             rust)
-                echo "=== $r: cargo test {{ pattern }} ==="
+                echo "── $r: cargo test {{ pattern }} ──"
                 (cd "$dir" && cargo test "{{ pattern }}" 2>&1) || true
                 ;;
             npm)
-                echo "=== $r: npx vitest -t '{{ pattern }}' ==="
+                echo "── $r: npx vitest -t '{{ pattern }}' ──"
                 (cd "$dir" && npx vitest run -t "{{ pattern }}" 2>&1) || true
                 ;;
             gradle)
-                echo "=== $r: ./gradlew test --tests *{{ pattern }}* ==="
+                echo "── $r: ./gradlew test --tests *{{ pattern }}* ──"
                 (cd "$dir" && ./gradlew test --tests "*{{ pattern }}*" 2>&1) || true
                 ;;
             *)
-                echo "=== $r: test-name not supported for $tc ==="
+                echo "── $r: test-name not supported for $tc ──"
                 ;;
         esac
     done
@@ -1387,7 +1387,7 @@ housekeeping:
 
     # Summary
     echo ""
-    echo "==========================================="
+    echo "──────────────────────────────────────────"
     if [[ "$ISSUES" -eq 0 ]]; then
         echo "Housekeeping: all clear!"
     else
@@ -1426,7 +1426,7 @@ grep pattern glob='':
             --glob '!*.lock' --glob '!.git/' \
             "${GLOB_ARGS[@]}" 2>/dev/null || true)
         if [[ -n "$results" ]]; then
-            echo "=== $label ==="
+            echo "── $label ──"
             echo "$results"
             echo ""
         fi
@@ -1475,7 +1475,7 @@ reuse repo='':
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
         [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
-        echo "=== {{ repo }} ==="
+        echo "── {{ repo }} ──"
         (cd "$dir" && reuse lint 2>&1) || true
     else
         for dir in . */; do
@@ -1486,7 +1486,7 @@ reuse repo='':
                 label="${dir%/}"
                 dir="${dir%/}"
             fi
-            echo "=== $label ==="
+            echo "── $label ──"
             (cd "$dir" && reuse lint 2>&1 | tail -3) || true
             echo ""
         done
@@ -1534,18 +1534,18 @@ concept name:
     echo "Aliases: ${unique[*]}"
     echo "Pattern: $pattern"
     echo ""
-    echo "=== Feature scenarios ==="
+    echo "── Feature scenarios ──"
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
-    echo "=== Tests ==="
+    echo "── Tests ──"
     rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli/ tui/ relay/ linux-gtk/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
-    echo "=== Source ==="
+    echo "── Source ──"
     rg -i "$pattern" core/vauchi-core/src/ relay/src/ linux-gtk/src/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
-    echo "=== Docs ==="
+    echo "── Docs ──"
     rg -i "$pattern" docs/ _private/docs/ \
         --glob '*.md' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
 
@@ -1672,7 +1672,7 @@ consumers pattern:
             -n --color=never 2>/dev/null || true)
         if [[ -n "$results" ]]; then
             count=$(echo "$results" | wc -l | tr -d ' ')
-            echo "=== $label ($count matches) ==="
+            echo "── $label ($count matches) ──"
             echo "$results"
             echo ""
         fi
@@ -1686,7 +1686,7 @@ consumers pattern:
             -n --color=never 2>/dev/null || true)
         if [[ -n "$results" ]]; then
             count=$(echo "$results" | wc -l | tr -d ' ')
-            echo "=== $dir ($count matches) ==="
+            echo "── $dir ($count matches) ──"
             echo "$results"
             echo ""
         fi
