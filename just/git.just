@@ -72,6 +72,7 @@ main mode='':
     for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
     repo_n=0
     fail_file=$(mktemp)
+    trap 'rm -f "$fail_file"' EXIT
     echo 0 > "$fail_file"
 
     # Second pass: save changes, checkout main, and pull
@@ -231,8 +232,8 @@ fetch:
         if [[ -d "${dir}.git" ]]; then
             label="${dir%/}"
             output=$( (cd "$dir" && git fetch --all 2>&1) )
-            fetched=$(echo "$output" | grep -E "^Fetching|error|fatal" || true)
-            if [[ -n "$fetched" ]] && echo "$fetched" | grep -q "error\|fatal"; then
+            fetched=$(echo "$output" | grep -E "^Fetching|^error:|^fatal:" || true)
+            if [[ -n "$fetched" ]] && echo "$fetched" | grep -qE "^(error|fatal):"; then
                 out_fail "$label" "$fetched"
             else
                 out_ok "$label" "up to date"
@@ -466,9 +467,9 @@ pull-all:
         if [[ -d "${dir}.git" ]]; then
             label="${dir%/}"
             output=$( (cd "$dir" && git pull --rebase 2>&1) || (cd "$dir" && git pull 2>&1) ) || output="FAILED"
-            if echo "$output" | grep -q "Already up to date"; then
+            if echo "$output" | grep -qE "Already up to date|is up to date"; then
                 out_ok "$label" "up to date"
-            elif echo "$output" | grep -q "FAILED\|fatal\|error"; then
+            elif echo "$output" | grep -qE "^(error|fatal):|FAILED"; then
                 out_fail "$label" "$(echo "$output" | tail -1)"
             else
                 out_ok "$label" "$(echo "$output" | tail -1)"
@@ -528,7 +529,6 @@ push-all mode='full':
 [no-cd]
 [script]
 diff-main repo='':
-    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
@@ -634,7 +634,6 @@ rebase-main repo='':
 [no-cd]
 [script]
 log-branch repo='':
-    source scripts/scripts/output-helpers.sh
     set -uo pipefail
     log_repo() {
         local label="$1" dir="$2"
@@ -679,35 +678,48 @@ sync:
     source scripts/scripts/output-helpers.sh
     set -uo pipefail
     timer_start
-    out_begin
+
+    # Count repos for progress
+    repo_total=1
+    for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
+    repo_n=0
+    ok_count=0
+    fail_count=0
+
     sync_repo() {
-        local label="$1" dir="$2"
+        local label="$1" dir="$2" n="$3"
         git -C "$dir" fetch --all --quiet 2>/dev/null
         local branch
         branch=$(git -C "$dir" branch --show-current 2>/dev/null)
         if [[ "$branch" == "main" ]]; then
             output=$(git -C "$dir" pull --rebase --quiet 2>&1 || git -C "$dir" pull --quiet 2>&1)
             if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
-                out_ok "$label" "fetched, main up to date"
-            elif echo "$output" | grep -qE "error|fatal|CONFLICT"; then
-                out_fail "$label" "fetched, pull failed"
+                progress_ok "$n" "$repo_total" "$label" "fetched, main up to date"
+                ok_count=$((ok_count + 1))
+            elif echo "$output" | grep -qE "^error:|^fatal:|CONFLICT"; then
+                progress_fail "$n" "$repo_total" "$label" "fetched, pull failed"
+                fail_count=$((fail_count + 1))
             else
-                out_ok "$label" "fetched, pulled main"
+                progress_ok "$n" "$repo_total" "$label" "fetched, pulled main"
+                ok_count=$((ok_count + 1))
             fi
         else
             local ahead behind
             ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "?")
             behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "?")
-            out_info "$label" "fetched (on $branch, ↑$ahead ↓$behind vs main)"
+            progress_info "$n" "$repo_total" "$label" "fetched (on $branch, ↑$ahead ↓$behind vs main)"
+            ok_count=$((ok_count + 1))
         fi
     }
-    sync_repo "vauchi (root)" "."
+    repo_n=$((repo_n + 1))
+    sync_repo "vauchi (root)" "." "$repo_n"
     for dir in */; do
         if [[ -d "${dir}.git" ]]; then
-            sync_repo "${dir%/}" "$dir"
+            repo_n=$((repo_n + 1))
+            sync_repo "${dir%/}" "$dir" "$repo_n"
         fi
     done
-    out_end "$(timer_elapsed)"
+    summary_mix "$ok_count" "$fail_count" "$(timer_elapsed)"
 
 # Show branch status for all repos (branch, ahead/behind, merged)
 [no-cd]
