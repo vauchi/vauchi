@@ -424,6 +424,11 @@ _dt-build-ios:
     echo -e "${YELLOW}Building iOS app for device $IOS_DEVICE_ID...${NC}"
 
     cd ios
+    # SPM resolve/build never advances branch pins — it honors Package.resolved
+    # and workspace-state.json as lock files. Delete both so SPM re-resolves to
+    # the latest branch tip. The bare repo cache stays warm so this is fast.
+    rm -f .spm-packages/workspace-state.json
+    rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
     xcodebuild -project Vauchi.xcodeproj \
         -scheme Vauchi \
         -configuration Debug \

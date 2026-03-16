@@ -32,6 +32,12 @@ dt-build-macos:
     command -v xcodegen &>/dev/null && xcodegen generate 2>/dev/null
 
     echo -e "${YELLOW}Resolving SPM dependencies...${NC}"
+    # SPM resolve/build never advances branch pins — it honors Package.resolved
+    # and workspace-state.json as lock files. Delete both so SPM re-resolves to
+    # the latest branch tip. The bare repo cache stays warm so this is fast.
+    rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+    DD_SPM=$(find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -name "Vauchi-*" 2>/dev/null | head -1)
+    [[ -n "$DD_SPM" ]] && rm -f "$DD_SPM/SourcePackages/workspace-state.json"
     xcodebuild -project Vauchi.xcodeproj -scheme Vauchi \
         -resolvePackageDependencies 2>&1 | tail -3
 
