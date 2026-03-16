@@ -4,3 +4,6 @@
 
 # Local settings (contains permissions, may contain tokens)
 settings.local.json
+
+# Work context (machine-specific current problem/phase)
+.workcontext
