@@ -134,6 +134,7 @@ After completion, update the estimate:
 
 ## Integration with Other Skills
 
+- Use `just risk` to surface blockers, stalled plans, and recurring failure patterns
 - Use `/plan-audit` to verify completion percentages before estimating remaining work
 - Use `/estimate --audit` after completing work to feed accuracy data back
 - Reference `_private/docs/planning/measurements/2026-03-16-estimation-accuracy-audit.md` for full methodology

@@ -32,6 +32,8 @@ intake → investigating → planning → implementing → testing → done (or 
    | **Owner** | <resolve from `git config user.name`, e.g. "Mattia Egloff"> |
    | **Created** | YYYY-MM-DD |
    | **Last Updated** | YYYY-MM-DD |
+   | **Estimated Effort** | <N focused days — omit for trivial/1-day tasks> |
+   | **Risk** | low / medium / high + type tag (see below) |
 
    ## Problem Statement
    <Clear description of the problem. Ideas must be restated as problems.>
@@ -59,6 +61,35 @@ intake → investigating → planning → implementing → testing → done (or 
    ```
 
 3. **Ask the user**: Is this actually a problem worth solving? If no → archive with learnings.
+
+### Estimation Fields
+
+| Field | When to fill | Notes |
+|-------|-------------|-------|
+| **Estimated Effort** | At `planning` phase | In focused days (not calendar). Omit for trivial/1-day tasks. Use `/estimate` skill for calibration. |
+| **Actual Effort** | At `done` phase | Fill in retrospective. Compare to estimate. |
+| **Risk** | At `intake` or `planning` | Format: `level — type`. See risk table below. Omit for trivial tasks. |
+
+### Risk Levels
+
+| Level | Criteria | Typical sources |
+|-------|----------|-----------------|
+| `low` | Well-understood scope, no blockers, done before | Config changes, doc updates, single-module fixes |
+| `medium` | Some unknowns OR 1 blocker OR cross-repo | New API surface, 1 upstream dependency, unfamiliar toolchain |
+| `high` | Multiple unknowns AND/OR chained blockers | Architecture changes, new platform, crypto, multi-ADR dependency |
+
+### Risk Types
+
+Tag risk with the dominant type to enable pattern analysis later:
+
+| Type | What it means | Historical failure mode |
+|------|--------------|------------------------|
+| `blocker` | Depends on upstream MR, ADR, or external system | 80→100% stretch takes longer than 0→80% |
+| `scope` | Requirements unclear or likely to expand | CI pipeline: 12→18 items mid-course |
+| `unknown` | Never done before, no comparable past work | New platform/toolchain first-time penalty |
+| `integration` | Cross-repo coordination, binding generation, CI wiring | Binding oscillation, version drift, token issues |
+
+**Counter-intuitive guidance**: The audit found that *detailed plans for large tasks* had the worst estimate accuracy (6-8x off), while *simple problems* were perfectly estimated. High risk often correlates with high overestimation — adjust accordingly.
 
 ### Priority Levels
 
@@ -112,6 +143,11 @@ Based on current status, guide to the next step:
 ### testing → done
 **Gate**: Retrospective written evaluating against goals. Child problems spawned if needed. Success criteria verified as met.
 - Write `retrospective.md` — evaluate against goals (were success criteria met?)
+- **Fill `Actual Effort` in README.md** — compare to estimate, note why if different
+- Add `## Estimation Accuracy` section to retrospective:
+  - Estimated: X focused days → Actual: Y focused days (ratio: Z)
+  - Blocker wait: N calendar days (on: <what>)
+  - Lesson: <what to adjust next time>
 - Spawn child problems from retrospective learnings
 - Move planning doc from `_private/docs/planning/todo/` to `done/`
 

@@ -281,6 +281,11 @@ plan-stale days='30':
     echo ""
     echo "$STALE stale plan(s) found."
 
+# Risk dashboard — surfaces blockers, stalled plans, recurring failures
+[group('tools')]
+risk *FLAGS:
+    scripts/scripts/risk-dashboard.sh {{FLAGS}}
+
 # Dry-run plan sync — show what CI would update
 [group('tools')]
 [script]
