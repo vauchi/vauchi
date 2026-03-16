@@ -84,6 +84,7 @@ Contributing guide: `docs/developers/contributing.md`.
 | `dependency-map` | Modifying Cargo.toml or debugging build issues |
 | `repo-map` | Locating files or running git commands across repos |
 | `dependent-mrs` | Creating tiered MRs respecting dependency order |
+| `estimate` | Estimating effort for tasks using empirical calibration data |
 
 **Reference docs** (`.claude/docs/`): `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`
 
