@@ -403,23 +403,26 @@ metrics-refresh:
     just gitlab _check-auth
     echo "── Metrics Refresh ──"
     echo ""
+    # METRICS_REFRESH=true tells CI templates to run coverage + binary-size
+    # jobs even on API-triggered pipelines (normally skipped to avoid
+    # redundant work on downstream verification triggers)
     echo "  Triggering metrics:daily (scripts)..."
     glab ci run -R vauchi/scripts -b main 2>/dev/null \
       && echo "    ✓ scripts pipeline created" \
       || echo "    ⚠ scripts trigger failed"
     for repo in core cli tui relay; do
         echo "  Triggering coverage + binary-size ($repo)..."
-        glab ci run -R "vauchi/$repo" -b main 2>/dev/null \
+        glab ci run -R "vauchi/$repo" -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
           && echo "    ✓ $repo pipeline created" \
           || echo "    ⚠ $repo trigger failed"
     done
     echo "  Triggering binary-size + design-drift (linux-gtk)..."
-    glab ci run -R vauchi/linux-gtk -b main 2>/dev/null \
+    glab ci run -R vauchi/linux-gtk -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
       && echo "    ✓ linux-gtk pipeline created" \
       || echo "    ⚠ linux-gtk trigger failed"
     for repo in linux-qt macos windows web-demo; do
         echo "  Triggering design-drift ($repo)..."
-        glab ci run -R "vauchi/$repo" -b main 2>/dev/null \
+        glab ci run -R "vauchi/$repo" -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
           && echo "    ✓ $repo pipeline created" \
           || echo "    ⚠ $repo trigger failed"
     done
