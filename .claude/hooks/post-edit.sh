@@ -93,7 +93,7 @@ check_test_assertions() {
     [[ $full_range_end -gt $total_lines ]] && full_range_end=$total_lines
     full_range=$(sed -n "${fn_line},${full_range_end}p" "$file")
 
-    local assertion_re='assert(_eq|_ne)?!|assert_(snapshot|debug_snapshot|compact_snapshot|json_snapshot|yaml_snapshot|toml_snapshot|csv_snapshot|compact_json_snapshot|redaction_snapshot)!|snap!|prop_assert(_eq|_ne)?!|\.expect\(|#\[should_panic\]'
+    local assertion_re='assert(_eq|_ne)?!|assert_(snapshot|debug_snapshot|compact_snapshot|json_snapshot|yaml_snapshot|toml_snapshot|csv_snapshot|compact_json_snapshot|redaction_snapshot)!|snap!|prop_assert(_eq|_ne)?!|\.expect\(|\.expect_err\(|#\[should_panic\]'
     if ! echo "$body" | grep -qE "$assertion_re"; then
       if ! echo "$full_range" | grep -qE "$assertion_re"; then
         violations+=("$fn_name (line $fn_line)")
