@@ -110,7 +110,7 @@ rebuild-android core_dir="":
 
 # ─── Internal sub-recipes ────────────────────────────────────────
 
-# Build vauchi-mobile for iOS device target (aarch64-apple-ios)
+# Build vauchi-platform for iOS device target (aarch64-apple-ios)
 [group('device-test')]
 [script]
 _dt-build-mobile-libs-ios core_dir:
@@ -118,12 +118,13 @@ _dt-build-mobile-libs-ios core_dir:
     source "$(pwd)/just/device-test-lib.sh"
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
+    export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
-    echo -e "${YELLOW}Building vauchi-mobile for aarch64-apple-ios (device)...${NC}"
-    cargo build -p vauchi-mobile --target aarch64-apple-ios --release
+    echo -e "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-apple-ios --release
     echo -e "${GREEN}  iOS device library built${NC}"
 
-# Build vauchi-mobile for Android device target (aarch64-linux-android)
+# Build vauchi-platform for Android device target (aarch64-linux-android)
 [group('device-test')]
 [script]
 _dt-build-mobile-libs-android core_dir:
@@ -133,11 +134,11 @@ _dt-build-mobile-libs-android core_dir:
     unset RUSTC_WRAPPER
 
     dt_setup_android_ndk
-    echo -e "${YELLOW}Building vauchi-mobile for aarch64-linux-android (device)...${NC}"
-    cargo build -p vauchi-mobile --target aarch64-linux-android --release
+    echo -e "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-linux-android --release
     echo -e "${GREEN}  Android device library built${NC}"
 
-# Build vauchi-mobile for both device targets + native (for Kotlin bindgen)
+# Build vauchi-platform for both device targets + native (for Kotlin bindgen)
 [group('device-test')]
 [script]
 _dt-build-mobile-libs core_dir:
@@ -145,21 +146,22 @@ _dt-build-mobile-libs core_dir:
     source "$(pwd)/just/device-test-lib.sh"
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
+    export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
     # iOS device
-    echo -e "${YELLOW}Building vauchi-mobile for aarch64-apple-ios (device)...${NC}"
-    cargo build -p vauchi-mobile --target aarch64-apple-ios --release
+    echo -e "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-apple-ios --release
     echo -e "${GREEN}  iOS device library built${NC}"
 
     # Android device
     dt_setup_android_ndk
-    echo -e "${YELLOW}Building vauchi-mobile for aarch64-linux-android (device)...${NC}"
-    cargo build -p vauchi-mobile --target aarch64-linux-android --release
+    echo -e "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-linux-android --release
     echo -e "${GREEN}  Android device library built${NC}"
 
     # Native macOS (needed for Kotlin binding generation)
-    echo -e "${YELLOW}Building vauchi-mobile native (for Kotlin bindgen)...${NC}"
-    RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+    echo -e "${YELLOW}Building vauchi-platform native (for Kotlin bindgen)...${NC}"
+    RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
     echo -e "${GREEN}  Native macOS library built${NC}"
 
 # Generate Swift bindings from iOS .a
@@ -174,8 +176,8 @@ _dt-generate-bindings-swift core_dir:
     echo -e "${YELLOW}Generating Swift bindings...${NC}"
     BINDINGS_OUT="target/bindings/ios/generated"
     mkdir -p "$BINDINGS_OUT"
-    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
-        --library target/aarch64-apple-ios/release/libvauchi_mobile.a \
+    cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
+        --library target/aarch64-apple-ios/release/libvauchi_platform.a \
         --language swift \
         --out-dir "$BINDINGS_OUT"
     echo -e "${GREEN}  Swift bindings generated at $BINDINGS_OUT${NC}"
@@ -190,16 +192,16 @@ _dt-generate-bindings-kotlin core_dir:
     unset RUSTC_WRAPPER
 
     # Build native library if not already built (needed for metadata extraction)
-    if [[ ! -f "target/release/libvauchi_mobile.dylib" ]]; then
+    if [[ ! -f "target/release/libvauchi_platform.dylib" ]]; then
         echo -e "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
-        RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-mobile --release
+        RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
     fi
 
     echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
     BINDINGS_OUT="target/bindings/android/kotlin"
     mkdir -p "$BINDINGS_OUT"
-    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
-        --library target/release/libvauchi_mobile.dylib \
+    cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
+        --library target/release/libvauchi_platform.dylib \
         --language kotlin \
         --out-dir "$BINDINGS_OUT"
     echo -e "${GREEN}  Kotlin bindings generated at $BINDINGS_OUT${NC}"
@@ -217,8 +219,8 @@ _dt-generate-bindings core_dir:
     echo -e "${YELLOW}Generating Swift bindings...${NC}"
     SWIFT_OUT="target/bindings/ios/generated"
     mkdir -p "$SWIFT_OUT"
-    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
-        --library target/aarch64-apple-ios/release/libvauchi_mobile.a \
+    cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
+        --library target/aarch64-apple-ios/release/libvauchi_platform.a \
         --language swift \
         --out-dir "$SWIFT_OUT"
     echo -e "${GREEN}  Swift bindings generated${NC}"
@@ -227,8 +229,8 @@ _dt-generate-bindings core_dir:
     echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
     KOTLIN_OUT="target/bindings/android/kotlin"
     mkdir -p "$KOTLIN_OUT"
-    cargo run -p vauchi-mobile --bin uniffi-bindgen -- generate \
-        --library target/release/libvauchi_mobile.dylib \
+    cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
+        --library target/release/libvauchi_platform.dylib \
         --language kotlin \
         --out-dir "$KOTLIN_OUT"
     echo -e "${GREEN}  Kotlin bindings generated${NC}"
@@ -243,9 +245,9 @@ _dt-package-ios core_dir:
     WORKSPACE_ROOT="$(pwd)"
 
     BINDINGS_DIR="$CORE_DIR/target/bindings/ios/generated"
-    DEVICE_LIB="$CORE_DIR/target/aarch64-apple-ios/release/libvauchi_mobile.a"
-    XCFW_DIR="$CORE_DIR/target/xcframework-build/VauchiMobileFFI.xcframework"
-    SPM_DIR="$WORKSPACE_ROOT/vauchi-mobile-swift"
+    DEVICE_LIB="$CORE_DIR/target/aarch64-apple-ios/release/libvauchi_platform.a"
+    XCFW_DIR="$CORE_DIR/target/xcframework-build/VauchiPlatformFFI.xcframework"
+    SPM_DIR="$WORKSPACE_ROOT/vauchi-platform-swift"
 
     # Extract version from workspace Cargo.toml
     VERSION=$(grep '^version' "$CORE_DIR/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
@@ -257,16 +259,16 @@ _dt-package-ios core_dir:
         echo "Run: just _dt-build-mobile-libs-ios $CORE_DIR"
         exit 1
     fi
-    if [[ ! -f "$BINDINGS_DIR/vauchi_mobile.swift" ]]; then
-        echo -e "${RED}ERROR: Swift bindings not found: $BINDINGS_DIR/vauchi_mobile.swift${NC}"
+    if [[ ! -f "$BINDINGS_DIR/vauchi_platform.swift" ]]; then
+        echo -e "${RED}ERROR: Swift bindings not found: $BINDINGS_DIR/vauchi_platform.swift${NC}"
         echo "Run: just _dt-generate-bindings-swift $CORE_DIR"
         exit 1
     fi
 
     # Ensure xcframework directory structure exists
     echo -e "${YELLOW}Packaging iOS xcframework...${NC}"
-    DEVICE_FW="$XCFW_DIR/ios-arm64/VauchiMobileFFI.framework"
-    SIM_FW="$XCFW_DIR/ios-arm64_x86_64-simulator/VauchiMobileFFI.framework"
+    DEVICE_FW="$XCFW_DIR/ios-arm64/VauchiPlatformFFI.framework"
+    SIM_FW="$XCFW_DIR/ios-arm64_x86_64-simulator/VauchiPlatformFFI.framework"
 
     # Create xcframework structure if it doesn't exist yet
     if [[ ! -d "$XCFW_DIR" ]]; then
@@ -277,21 +279,21 @@ _dt-package-ios core_dir:
 
     # Copy device .a as framework binary
     echo "  Copying device .a to xcframework..."
-    cp "$DEVICE_LIB" "$DEVICE_FW/VauchiMobileFFI"
+    cp "$DEVICE_LIB" "$DEVICE_FW/VauchiPlatformFFI"
 
     # Copy header to both slices
     echo "  Copying header to xcframework slices..."
-    if [[ -f "$BINDINGS_DIR/vauchi_mobileFFI.h" ]]; then
-        cp "$BINDINGS_DIR/vauchi_mobileFFI.h" "$DEVICE_FW/Headers/vauchi_mobileFFI.h"
-        cp "$BINDINGS_DIR/vauchi_mobileFFI.h" "$SIM_FW/Headers/vauchi_mobileFFI.h"
+    if [[ -f "$BINDINGS_DIR/vauchi_platformFFI.h" ]]; then
+        cp "$BINDINGS_DIR/vauchi_platformFFI.h" "$DEVICE_FW/Headers/vauchi_platformFFI.h"
+        cp "$BINDINGS_DIR/vauchi_platformFFI.h" "$SIM_FW/Headers/vauchi_platformFFI.h"
     fi
 
-    # Ensure modulemap says "framework module VauchiMobileFFI" (not "module vauchi_mobileFFI")
-    MODULEMAP_CONTENT='framework module VauchiMobileFFI {
-        umbrella header "vauchi_mobileFFI.h"
+    # Ensure modulemap says "framework module VauchiPlatformFFI" (not "module vauchi_platformFFI")
+    MODULEMAP_CONTENT='framework module VauchiPlatformFFI {
+        umbrella header "vauchi_platformFFI.h"
         export *
         module * { export * }
-        link "vauchi_mobile"
+        link "vauchi_platform"
     }'
     echo "$MODULEMAP_CONTENT" > "$DEVICE_FW/Headers/module.modulemap"
     echo "$MODULEMAP_CONTENT" > "$DEVICE_FW/Modules/module.modulemap"
@@ -302,9 +304,9 @@ _dt-package-ios core_dir:
     echo "  Generating Info.plist for device framework..."
     /usr/libexec/PlistBuddy -c "Clear dict" "$DEVICE_FW/Info.plist" 2>/dev/null || true
     /usr/libexec/PlistBuddy \
-        -c "Add :CFBundleExecutable string VauchiMobileFFI" \
-        -c "Add :CFBundleIdentifier string app.vauchi.VauchiMobileFFI" \
-        -c "Add :CFBundleName string VauchiMobileFFI" \
+        -c "Add :CFBundleExecutable string VauchiPlatformFFI" \
+        -c "Add :CFBundleIdentifier string app.vauchi.VauchiPlatformFFI" \
+        -c "Add :CFBundleName string VauchiPlatformFFI" \
         -c "Add :CFBundlePackageType string FMWK" \
         -c "Add :CFBundleVersion string 1" \
         -c "Add :CFBundleShortVersionString string $VERSION" \
@@ -325,14 +327,14 @@ _dt-package-ios core_dir:
     # Device slice
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0 dict" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:LibraryIdentifier string ios-arm64" "$XCFW_PLIST"
-    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:LibraryPath string VauchiMobileFFI.framework" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:LibraryPath string VauchiPlatformFFI.framework" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedArchitectures array" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedArchitectures:0 string arm64" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:0:SupportedPlatform string ios" "$XCFW_PLIST"
     # Simulator slice
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1 dict" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:LibraryIdentifier string ios-arm64_x86_64-simulator" "$XCFW_PLIST"
-    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:LibraryPath string VauchiMobileFFI.framework" "$XCFW_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:LibraryPath string VauchiPlatformFFI.framework" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures array" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures:0 string arm64" "$XCFW_PLIST"
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedArchitectures:1 string x86_64" "$XCFW_PLIST"
@@ -340,11 +342,11 @@ _dt-package-ios core_dir:
     /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:1:SupportedPlatformVariant string simulator" "$XCFW_PLIST"
 
     # Copy Swift bindings to SPM package
-    echo "  Copying Swift bindings to vauchi-mobile-swift..."
-    cp "$BINDINGS_DIR/vauchi_mobile.swift" "$SPM_DIR/Sources/VauchiMobile/vauchi_mobile.swift"
+    echo "  Copying Swift bindings to vauchi-platform-swift..."
+    cp "$BINDINGS_DIR/vauchi_platform.swift" "$SPM_DIR/Sources/VauchiPlatform/vauchi_platform.swift"
 
     # Sync xcframework into SPM package (supports both symlink and real directory)
-    SPM_XCFW="$SPM_DIR/VauchiMobileFFI.xcframework"
+    SPM_XCFW="$SPM_DIR/VauchiPlatformFFI.xcframework"
     if [[ -L "$SPM_XCFW" ]]; then
         # Already a symlink — update if pointing to wrong place
         SYMLINK_TARGET=$(readlink "$SPM_XCFW")
@@ -367,7 +369,7 @@ _dt-package-ios core_dir:
     echo "  XCFramework: $XCFW_DIR"
     echo "  SPM package: $SPM_XCFW"
     echo "  Info.plist files: 3 (device + simulator + root)"
-    ls -lh "$DEVICE_FW/VauchiMobileFFI"
+    ls -lh "$DEVICE_FW/VauchiPlatformFFI"
 
 # Package Android: copy .so and Kotlin bindings to android repo
 [group('device-test')]
@@ -378,7 +380,7 @@ _dt-package-android core_dir:
     CORE_DIR="{{core_dir}}"
     WORKSPACE_ROOT="$(pwd)"
 
-    ANDROID_SO="$CORE_DIR/target/aarch64-linux-android/release/libvauchi_mobile.so"
+    ANDROID_SO="$CORE_DIR/target/aarch64-linux-android/release/libvauchi_platform.so"
     KOTLIN_DIR="$CORE_DIR/target/bindings/android/kotlin"
     ANDROID_DIR="$WORKSPACE_ROOT/android"
 
@@ -393,23 +395,23 @@ _dt-package-android core_dir:
     # Copy .so to jniLibs
     echo "  Copying .so to android/app/src/main/jniLibs/arm64-v8a/..."
     mkdir -p "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a"
-    cp "$ANDROID_SO" "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_mobile.so"
+    cp "$ANDROID_SO" "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so"
 
     # Copy Kotlin bindings to local-bindings source set (only compiled with -PlocalBindings)
-    if [[ -f "$KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt" ]]; then
+    if [[ -f "$KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt" ]]; then
         echo "  Copying Kotlin bindings to android/app/src/local-bindings/kotlin/uniffi/..."
-        mkdir -p "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_mobile"
-        cp "$KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt" \
-           "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_mobile/vauchi_mobile.kt"
+        mkdir -p "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_platform"
+        cp "$KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt" \
+           "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
         # Remove stale bindings from default source set if present
-        rm -f "$ANDROID_DIR/app/src/main/kotlin/uniffi/vauchi_mobile/vauchi_mobile.kt"
+        rm -f "$ANDROID_DIR/app/src/main/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
     else
-        echo -e "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_mobile/vauchi_mobile.kt${NC}"
+        echo -e "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt${NC}"
         exit 1
     fi
 
     echo -e "${GREEN}  Android packaging complete${NC}"
-    ls -lh "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_mobile.so"
+    ls -lh "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so"
 
 # Build iOS app for physical device
 [group('device-test')]

@@ -40,7 +40,7 @@ ignore = [
   "**/_private/strategy/**",
   "**/drift-detector/**",
   "**/builds/**",
-  "**/vauchi-platform-kotlin/vauchi-mobile-android-*/**",
+  "**/vauchi-platform-kotlin/vauchi-platform-kotlin-*/**",
   "**/vauchi-platform-swift/VauchiPlatform*/**",
 ]
 
