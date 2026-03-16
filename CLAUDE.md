@@ -56,7 +56,7 @@ Every problem record must have: **status**, **priority**, **owner**, **goals**. 
 
 ## Dependencies & Repo Layout
 
-`vauchi-core` → cli, tui, e2e, macos, windows, linux-gtk, linux-qt, web-demo (git dep). `vauchi-protocol` → relay (shared types only). `vauchi-cabi` → C ABI exports for FFI consumers. Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides.
+`vauchi-core` → cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo (git dep). `vauchi-platform` → UniFFI bindings for mobile/macOS (vauchi-platform-swift, vauchi-platform-kotlin). `vauchi-cabi` → C ABI exports for linux-qt, windows. `vauchi-protocol` → relay (shared types only). Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides.
 
 Repo layout: `.claude/docs/repo-organization.md`. Drift naming: `.claude/docs/drift-naming.md`.
 

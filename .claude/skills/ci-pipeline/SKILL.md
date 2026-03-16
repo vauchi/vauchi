@@ -154,7 +154,7 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | `vauchi-platform-kotlin` | `core`, `android`, `vauchi-platform-kotlin` |
 | `ios` | `ios`, `vauchi-platform-swift` |
 | `android` | `android`, `vauchi-platform-kotlin` |
-| `desktop` | `vauchi` (root), `core`, `desktop` | **(ARCHIVED)** |
+| `desktop` | `vauchi` (root), `core`, `desktop` | **ARCHIVED** (ADR-027) — allowlist kept for historical pipelines |
 | `cli` | `vauchi` (root), `core`, `cli` |
 | `tui` | `vauchi` (root), `core`, `tui` |
 
@@ -165,7 +165,7 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | Cold Cargo rebuild (15-25 min) | Cargo.lock changed, cache miss | Fallback cache keys handle this |
 | sccache missing | Linux runner without sccache | Auto-installs via cargo-binstall |
 | Clippy fails on git dep | Core version ahead of downstream | `allow_failure: true` + manual retry |
-| `build:frontend-dist` missing | Tauri clippy needs built frontend (desktop — ARCHIVED) | Job dependency via `needs:` |
+| ~~`build:frontend-dist` missing~~ | ~~Tauri clippy needs built frontend~~ | **Obsolete** — desktop archived per ADR-027 |
 | macOS no iOS runtime | Xcode not updated on runner | `before_script` checks + error message |
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
@@ -217,7 +217,7 @@ just release-history  # Show promotion chain
 | core | yes | yes | `just release-dev` | N/A (is upstream) |
 | cli | yes | yes | `just release-dev cli` | yes |
 | tui | yes | yes | `just release-dev tui` | yes |
-| desktop | yes | yes | `just release-dev desktop` | yes | **(ARCHIVED)** |
+| ~~desktop~~ | — | — | — | — | **ARCHIVED** (ADR-027) |
 | relay | yes | yes | `just release-dev relay` | N/A (no core dep) |
 
 ### Core Dev/RC Downstream Triggers

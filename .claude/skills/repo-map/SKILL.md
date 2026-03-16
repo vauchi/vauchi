@@ -25,7 +25,7 @@ Every sub-directory is its own git repo. Always use `git -C <dir>` to target the
 | Relay server | `relay/` | `vauchi/relay` |
 | CLI app | `cli/` | `vauchi/cli` |
 | TUI app | `tui/` | `vauchi/tui` |
-| Desktop (Tauri + SolidJS) — **ARCHIVED** | `desktop/` | `vauchi/desktop` |
+| Desktop — **ARCHIVED** (ADR-027, replaced by macos/windows/linux-gtk/linux-qt) | `desktop/` | `vauchi/desktop` |
 | macOS app (native Swift) | `macos/` | `vauchi/macos` |
 | Windows app (native) | `windows/` | `vauchi/windows` |
 | Linux GTK app (Rust) | `linux-gtk/` | `vauchi/linux-gtk` |

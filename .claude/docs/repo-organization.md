@@ -16,7 +16,7 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 │── relay/                       ← WebSocket relay server (uses vauchi-protocol)
 │── cli/                         ← Command-line interface
 │── tui/                         ← Terminal user interface
-│── desktop/                     ← Tauri + SolidJS desktop app (ARCHIVED)
+│── desktop/                     ← ARCHIVED (replaced by macos/, windows/, linux-gtk/, linux-qt/ per ADR-027)
 │
 ├── android/                     ← Kotlin/Compose native app
 ├── ios/                         ← SwiftUI native app
@@ -61,7 +61,7 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 |------|---------|
 | `cli/` | Command-line interface |
 | `tui/` | Terminal user interface |
-| `desktop/` | Tauri + SolidJS desktop app (ARCHIVED) |
+| `desktop/` | ARCHIVED — was Tauri + SolidJS, replaced by native apps per ADR-027 |
 | `android/` | Kotlin/Compose native app |
 | `ios/` | SwiftUI native app |
 | `macos/` | Native SwiftUI macOS app |
