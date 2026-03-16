@@ -81,6 +81,7 @@ Contributing guide: `docs/developers/contributing.md`.
 | `tdd-workflow` | Implementing features or bugfixes with TDD |
 | `platform-bindings` | UniFFI binding generation, SPM/Maven packaging |
 | `ci-pipeline` | Investigating CI failures or modifying pipelines |
+| `ci-fix` | Diagnosing and fixing CI pipeline failures (logs, root cause, fix) |
 | `dependency-map` | Modifying Cargo.toml or debugging build issues |
 | `repo-map` | Locating files or running git commands across repos |
 | `dependent-mrs` | Creating tiered MRs respecting dependency order |

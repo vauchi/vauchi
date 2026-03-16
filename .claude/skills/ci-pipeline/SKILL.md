@@ -171,6 +171,9 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | Snapshot baselines missing | First run | `allow_failure: true` |
 | Version mismatch at publish | Tag != Cargo.toml version | Auto-creates MR to sync |
 | Downstream trigger fails | CI_JOB_TOKEN allowlist misconfigured | `allow_failure: true` (non-blocking), manual trigger via GitLab UI |
+| CMake artifact gap | `build` artifacts too narrow (only binary, not test executables) | Artifact entire `build/` dir, add `build:cabi` to test `needs` |
+| WASM C FFI fail | Non-optional C dep (rusqlite, aws-lc-rs) compiled for wasm32 | Feature-gate dep (`optional = true`), `#[cfg(feature)]` on modules |
+| Feature unification trap | `default-features = false` doesn't exclude non-optional deps | Must use `optional = true` in Cargo.toml |
 
 ## Timeout Reference
 
