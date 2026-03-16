@@ -142,7 +142,7 @@ All repos inherit a group-level rule: **push = No one**, merge = Maintainers, fo
 
 **Do not remove** the project-level rules on binding repos — the release pipeline will break.
 
-The CI bot (`group_122552022_bot_*`, Maintainer level 40) authenticates via `CI_JOB_TOKEN` and pushes the generated commit + tag. Core's `auto-tag:version` uses `PROJECT_ACCESS_TOKEN` instead (CI_JOB_TOKEN pushes don't trigger new pipelines).
+The CI bot (`group_122552022_bot_*`, Maintainer level 40) authenticates via `PROJECT_ACCESS_TOKEN` (group-level variable) for all push operations. `CI_JOB_TOKEN` is not used for pushes because: (1) CI_JOB_TOKEN pushes don't trigger new pipelines (core auto-tag), and (2) CI_JOB_TOKEN from upstream-triggered pipelines lacks write access to the triggered repo (app bindings-version bumps).
 
 See `_private/docs/development/2026-02-25-branch-protection-config.md` for full details.
 
@@ -170,7 +170,7 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
 | Version mismatch at publish | Tag != Cargo.toml version | Auto-creates MR to sync |
-| Downstream trigger fails | CI_JOB_TOKEN allowlist misconfigured | `allow_failure: true` (non-blocking), manual trigger via GitLab UI |
+| Downstream trigger fails | CI_JOB_TOKEN from upstream trigger lacks write access to target repo | Use `PROJECT_ACCESS_TOKEN` for push + MR API in triggered jobs |
 | CMake artifact gap | `build` artifacts too narrow (only binary, not test executables) | Artifact entire `build/` dir, add `build:cabi` to test `needs` |
 | WASM C FFI fail | Non-optional C dep (rusqlite, aws-lc-rs) compiled for wasm32 | Feature-gate dep (`optional = true`), `#[cfg(feature)]` on modules |
 | Feature unification trap | `default-features = false` doesn't exclude non-optional deps | Must use `optional = true` in Cargo.toml |
