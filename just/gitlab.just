@@ -390,3 +390,68 @@ pipeline-wait repo='':
         fi
         sleep 30
     done
+
+# ── Metrics Operations ────────────────────────────────────────────
+
+# Trigger all metrics pipelines to refresh Grafana dashboard data
+# Triggers: coverage, binary-size, design-drift, daily engineering metrics
+[no-cd]
+[group('metrics')]
+metrics-refresh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just gitlab _check-auth
+    echo "── Metrics Refresh ──"
+    echo ""
+    echo "  Triggering metrics:daily (scripts)..."
+    glab ci run -R vauchi/scripts -b main 2>/dev/null \
+      && echo "    ✓ scripts pipeline created" \
+      || echo "    ⚠ scripts trigger failed"
+    for repo in core cli tui relay; do
+        echo "  Triggering coverage + binary-size ($repo)..."
+        glab ci run -R "vauchi/$repo" -b main 2>/dev/null \
+          && echo "    ✓ $repo pipeline created" \
+          || echo "    ⚠ $repo trigger failed"
+    done
+    echo "  Triggering binary-size + design-drift (linux-gtk)..."
+    glab ci run -R vauchi/linux-gtk -b main 2>/dev/null \
+      && echo "    ✓ linux-gtk pipeline created" \
+      || echo "    ⚠ linux-gtk trigger failed"
+    for repo in linux-qt macos windows web-demo; do
+        echo "  Triggering design-drift ($repo)..."
+        glab ci run -R "vauchi/$repo" -b main 2>/dev/null \
+          && echo "    ✓ $repo pipeline created" \
+          || echo "    ⚠ $repo trigger failed"
+    done
+    echo ""
+    echo "── Triggered 9 pipelines ──"
+    echo ""
+    echo "Dashboard: https://grafana.vauchi.app/d/vauchi-engineering-metrics/engineering-metrics"
+    echo ""
+    echo "Metrics populate after pipelines complete (~5-15 min)."
+    echo "Run 'just gitlab metrics-status' to check progress."
+
+# Show status of metrics-related CI jobs across repos
+[no-cd]
+[group('metrics')]
+metrics-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just gitlab _check-auth
+    printf "%-12s %-12s %-12s %-12s %-12s\n" "REPO" "COVERAGE" "BINARY-SIZE" "DESIGN-DRIFT" "PIPELINE"
+    printf "%-12s %-12s %-12s %-12s %-12s\n" "----------" "----------" "----------" "----------" "----------"
+    for repo in core cli tui relay linux-gtk linux-qt macos windows web-demo; do
+        pipeline_status=$(glab api "projects/vauchi%2F${repo}/pipelines?ref=main&per_page=1" 2>/dev/null \
+          | python3 -c "import sys,json;d=json.load(sys.stdin);print(d[0]['status'] if d else 'none')" 2>/dev/null || echo "?")
+        case "$repo" in
+            core)     cov="yes" bs="yes"  dd="-"   ;;
+            cli|tui)  cov="yes" bs="yes"  dd="yes"  ;;
+            relay)    cov="yes" bs="yes"  dd="-"   ;;
+            linux-gtk) cov="-" bs="yes"  dd="yes"  ;;
+            linux-qt|macos|windows|web-demo) cov="-" bs="-" dd="yes" ;;
+            *) cov="-" bs="-" dd="-" ;;
+        esac
+        printf "%-12s %-12s %-12s %-12s %-12s\n" "$repo" "$cov" "$bs" "$dd" "$pipeline_status"
+    done
+    echo ""
+    echo "Dashboard: https://grafana.vauchi.app/d/vauchi-engineering-metrics/engineering-metrics"
