@@ -15,6 +15,11 @@ apply: always
 - All work must be either: committed + pushed, or explicitly abandoned
 - Never leave uncommitted changes across sessions
 - If work is incomplete, save with `just git wip` and push
+- **Update documentation** before declaring housekeeping complete:
+  - Problem records: update status, last_updated, add notes for work done (`_private/docs/problems/`)
+  - Plans: check off completed items, update percentages (`_private/docs/planning/todo/`)
+  - Work context: clear or update `.claude/.workcontext`
+  - Clean up stale memories in `.claude/projects/*/memory/`
 
 ### Cross-Machine Sync (CRITICAL)
 - **Always push before switching machines or ending a session**
