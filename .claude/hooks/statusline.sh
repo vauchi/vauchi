@@ -5,9 +5,8 @@
 # Claude Code status line — Catppuccin Mocha palette
 #
 # Layout:
-#   [⚠ DRIFT] [⎇ worktree] directory  branch  [problem→]next-action
-#   [⚠ STALE|→ push|✓ clean]  [Nt Nf Nr]  commit-age  model ctx
-#   ctx%  +lines -lines  CHF cost
+#   Line 1: [⚠ DRIFT] [⎇ worktree] .../vauchi/  [→ next-action]  [nudge]  [TDD ratio]  commit-age  O.4.6 1M
+#   Line 2: branch  ctx%  +lines -lines  CHF cost
 #
 # Performance budget: ~36ms total (JSON: 0ms, git: ~30ms, file: ~1ms)
 
@@ -62,14 +61,12 @@ fi
 
 # === Derived values ===
 
-# Truncate cwd: show last 3 path components
+# Truncate cwd: show .../project_root_name/
 short_dir=""
-if [ -n "$cwd" ]; then
-  short_dir=$(echo "$cwd" | awk -F'/' '{
-    n = NF
-    if (n <= 3) { print $0 }
-    else { print "…/" $(n-2) "/" $(n-1) "/" $n }
-  }')
+if [ -n "$project_dir" ]; then
+  short_dir="…/$(basename "$project_dir")/"
+elif [ -n "$cwd" ]; then
+  short_dir="…/$(basename "$cwd")/"
 fi
 
 # Drift detection: CWD ≠ project root
@@ -171,81 +168,88 @@ mauve="\033[38;2;203;166;247m"   # #CBA6F7 — next-action / refactor
 dim="\033[38;2;147;153;178m"     # #939AB2 — secondary info
 reset="\033[0m"
 
-# === Build output ===
-parts=()
+# === Build output (two lines) ===
+line1=()
+line2=()
+
+# --- Line 1: drift, worktree, directory, next-action, nudge, TDD ratio, commit-age, model, ctx ---
 
 # Drift warning (red, prominent)
-[ -n "$drifted" ] && parts+=("$(printf "${red}⚠ DRIFT${reset}")")
+[ -n "$drifted" ] && line1+=("$(printf "${red}⚠ DRIFT${reset}")")
 
 # Worktree badge
-[ -n "$worktree_name" ] && parts+=("$(printf "${teal}⎇ %s${reset}" "$worktree_name")")
+[ -n "$worktree_name" ] && line1+=("$(printf "${teal}⎇ %s${reset}" "$worktree_name")")
 
 # Directory
-[ -n "$short_dir" ] && parts+=("$(printf "${blue}%s${reset}" "$short_dir")")
-
-# Git branch
-[ -n "$branch" ] && parts+=("$(printf "${teal}%s${reset}" "$branch")")
+[ -n "$short_dir" ] && line1+=("$(printf "${blue}%s${reset}" "$short_dir")")
 
 # Combined next-action indicator (problem phase prefix + TDD next)
 if [ -n "$next_action" ]; then
-  # Color based on what the next action IS
   na_color="$mauve"
   case "$next_action" in
-    test|investigate) na_color="$red" ;;     # write test / research
-    impl|implement)   na_color="$green" ;;   # make it pass / start coding
-    tidy|plan)        na_color="$mauve" ;;   # refactor / design
-    close|branch)     na_color="$dim" ;;     # wrap up
-    document)         na_color="$yellow" ;;  # document findings
+    test|investigate) na_color="$red" ;;
+    impl|implement)   na_color="$green" ;;
+    tidy|plan)        na_color="$mauve" ;;
+    close|branch)     na_color="$dim" ;;
+    document)         na_color="$yellow" ;;
   esac
-  # Show problem phase prefix when not implementing (implementing defers to TDD)
   if [ -n "$problem_phase" ] && [ "$problem_phase" != "implementing" ] && [ "$problem_phase" != "done" ]; then
-    parts+=("$(printf "${dim}%s${reset}${na_color}→ %s${reset}" "$problem_phase" "$next_action")")
+    line1+=("$(printf "${dim}%s${reset}${na_color}→ %s${reset}" "$problem_phase" "$next_action")")
   else
-    parts+=("$(printf "${na_color}→ %s${reset}" "$next_action")")
+    line1+=("$(printf "${na_color}→ %s${reset}" "$next_action")")
   fi
 fi
 
-# Session nudge (contextual — only when noteworthy)
+# Session nudge
 case "$session_nudge" in
-  STALE) parts+=("$(printf "${red}⚠ STALE${reset}")") ;;
-  push)  parts+=("$(printf "${orange}→ push${reset}")") ;;
-  clean) parts+=("$(printf "${green}✓${reset}")") ;;
-  # dirty: no indicator — you're actively working, don't nag
+  STALE) line1+=("$(printf "${red}⚠ STALE${reset}")") ;;
+  push)  line1+=("$(printf "${orange}→ push${reset}")") ;;
+  clean) line1+=("$(printf "${green}✓${reset}")") ;;
 esac
 
-# TDD discipline ratio (only on feature branches with commits)
+# TDD discipline ratio
 tdd_total=$((tdd_tests + tdd_feats + tdd_refactors + tdd_tidies))
 if [ "$tdd_total" -gt 0 ]; then
-  # Color the ratio: red if no tests, green if healthy
   ratio_color="$dim"
   if [ "$tdd_feats" -gt 0 ] && [ "$tdd_tests" -eq 0 ]; then
-    ratio_color="$red"  # features without tests = violation
+    ratio_color="$red"
   elif [ "$tdd_tests" -ge "$tdd_feats" ]; then
-    ratio_color="$green"  # at least 1:1 test:feat ratio
+    ratio_color="$green"
   fi
   ratio_str="${tdd_tests}t ${tdd_feats}f"
   [ "$tdd_refactors" -gt 0 ] && ratio_str="$ratio_str ${tdd_refactors}r"
   [ "$tdd_tidies" -gt 0 ] && ratio_str="$ratio_str ${tdd_tidies}y"
-  parts+=("$(printf "${ratio_color}[%s]${reset}" "$ratio_str")")
+  line1+=("$(printf "${ratio_color}[%s]${reset}" "$ratio_str")")
 fi
 
 # Time since last commit
-[ -n "$commit_age" ] && parts+=("$(printf "${dim}%s${reset}" "$commit_age")")
+[ -n "$commit_age" ] && line1+=("$(printf "${dim}%s${reset}" "$commit_age")")
 
 # Model + context size
 if [ -n "$model_name" ]; then
-  model_display="$model_name"
-  [ -n "$ctx_size" ] && model_display="$model_name ${dim}${ctx_size}${reset}"
-  parts+=("$(printf "${pink}%s" "$model_display")")
+  short_model="$model_name"
+  short_model=$(echo "$short_model" | sed -E '
+    s/Claude Opus ([0-9.]+).*/O.\1/
+    s/Claude Sonnet ([0-9.]+).*/S.\1/
+    s/Claude Haiku ([0-9.]+).*/H.\1/
+  ')
+  model_display="$short_model"
+  [ -n "$ctx_size" ] && model_display="$short_model ${dim}${ctx_size}${reset}"
+  line1+=("$(printf "${pink}%s" "$model_display")")
 fi
 
-# Context usage (color-coded by pressure)
+# --- Line 2: branch, ctx%, lines, cost ---
+
+# Git branch (full name)
+[ -n "$branch" ] && line2+=("$(printf "${teal}%s${reset}" "$branch")")
+
+# Context usage
 if [ -n "$used" ]; then
   used_int=$(printf "%.0f" "$used")
   ctx_color="$yellow"
   [ "$used_int" -ge 60 ] && ctx_color="$red"
   [ "$used_int" -ge 30 ] && [ "$used_int" -lt 60 ] && ctx_color="$orange"
-  parts+=("$(printf "${ctx_color}ctx %s%%${reset}" "$used_int")")
+  line2+=("$(printf "${ctx_color}ctx %s%%${reset}" "$used_int")")
 fi
 
 # Lines delta
@@ -256,16 +260,24 @@ if [ -n "$lines_added" ] || [ -n "$lines_removed" ]; then
     [ -n "$line_str" ] && line_str="$line_str "
     line_str="${line_str}${red}-${lines_removed}${reset}"
   fi
-  [ -n "$line_str" ] && parts+=("$line_str")
+  [ -n "$line_str" ] && line2+=("$line_str")
 fi
 
 # Cost in CHF
-[ -n "$cost_chf" ] && parts+=("$(printf "${dim}CHF %s${reset}" "$cost_chf")")
+[ -n "$cost_chf" ] && line2+=("$(printf "${dim}CHF %s${reset}" "$cost_chf")")
 
-# === Join with separator ===
-result=""
-for part in "${parts[@]}"; do
-  [ -z "$result" ] && result="$part" || result="$result  $part"
-done
+# === Join each line with separator, combine with newline ===
+join_parts() {
+  local result=""
+  for part in "$@"; do
+    [ -z "$result" ] && result="$part" || result="$result  $part"
+  done
+  echo "$result"
+}
+
+result=$(join_parts "${line1[@]}")
+line2_str=$(join_parts "${line2[@]}")
+[ -n "$line2_str" ] && result="$result
+$line2_str"
 
 printf "%b" "$result"
