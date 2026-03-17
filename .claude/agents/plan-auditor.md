@@ -19,7 +19,7 @@ grep -rn '#\[test\]' <repo>/tests/ <repo>/src/ 2>/dev/null | wc -l
 ### File Existence
 **ALWAYS use `ls <exact-path>` first**, not pattern searches:
 ```bash
-ls /home/megloff1/Workspace/vauchi-1/features/accessibility.feature
+ls features/accessibility.feature
 ```
 
 ### Percentage Claims
