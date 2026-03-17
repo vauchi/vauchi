@@ -1219,14 +1219,31 @@ branch-health mode='audit':
 
             status="active"
             action="-"
+            has_remote=false
+            git -C "$d" rev-parse --verify "origin/$br" &>/dev/null && has_remote=true
+
             if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
-                status="merged"
-                action="DELETE"
-                merged=$((merged + 1))
+                if $has_remote; then
+                    # Commits are in main but remote branch still exists —
+                    # likely an open MR or WIP. Don't mark for deletion.
+                    status="merged"
+                    action="- (remote)"
+                    active=$((active + 1))
+                else
+                    status="merged"
+                    action="DELETE"
+                    merged=$((merged + 1))
+                fi
             elif git -C "$d" diff --quiet origin/main..."$br" -- 2>/dev/null; then
-                status="in-main"
-                action="DELETE"
-                merged=$((merged + 1))
+                if $has_remote; then
+                    status="in-main"
+                    action="- (remote)"
+                    active=$((active + 1))
+                else
+                    status="in-main"
+                    action="DELETE"
+                    merged=$((merged + 1))
+                fi
             elif [[ "$last_epoch" -lt "$cutoff_14d" ]]; then
                 status="stale"
                 action="REVIEW"
@@ -1236,7 +1253,13 @@ branch-health mode='audit':
             fi
 
             if [[ "{{ mode }}" == "cleanup" && "$action" == "DELETE" ]]; then
-                if git -C "$d" branch -D "$br" &>/dev/null; then
+                # Safety: never delete a branch that still exists on remote.
+                # A remote branch means active work (open MR, WIP, etc.)
+                # even if its commits are ancestors of main (merged via
+                # another branch path). Only delete truly orphaned locals.
+                if git -C "$d" rev-parse --verify "origin/$br" &>/dev/null; then
+                    action="SKIP (remote exists)"
+                elif git -C "$d" branch -D "$br" &>/dev/null; then
                     action="DELETED"
                 fi
             fi
