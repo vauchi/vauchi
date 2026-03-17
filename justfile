@@ -37,6 +37,19 @@ alias t := test
 alias c := check
 alias f := fmt
 
+# Run a command inside a sub-repo directory (subshell — cwd never leaks)
+# Usage: just exec-in-repo android "./gradlew :app:assembleDebug"
+#        just exec-in-repo core "cargo test -p vauchi-core"
+#        just exec-in-repo ios "xcodebuild -scheme Vauchi build"
+[group('core')]
+exec-in-repo repo +cmd:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! -d "{{ repo }}" ]]; then
+        echo "Error: repo '{{ repo }}' not found" >&2; exit 1
+    fi
+    (cd "{{ repo }}" && {{ cmd }})
+
 # ─── Modules ──────────────────────────────────────────────────────
 
 [doc('Multi-repo git operations')]
