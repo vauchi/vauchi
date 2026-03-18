@@ -458,3 +458,63 @@ metrics-status:
     done
     echo ""
     echo "Dashboard: https://grafana.vauchi.app/d/vauchi-engineering-metrics/engineering-metrics"
+
+# ── Package Registry ──────────────────────────────────────────────
+
+# Show latest published binding versions across all distribution channels
+# Usage: just gitlab published
+[no-cd]
+[script]
+published:
+    just gitlab _check-auth
+    set -euo pipefail
+
+    # Workspace root: just sets this to the directory containing the justfile
+    WS="${JUST_INVOCATION_DIRECTORY:-$(dirname "$(dirname "$0")")}"
+    # Fallback: walk up from cwd until we find the top-level justfile
+    if [[ ! -f "$WS/justfile" ]]; then
+        WS="$(pwd)"
+        while [[ "$WS" != "/" && ! -f "$WS/justfile" ]]; do WS="$(dirname "$WS")"; done
+    fi
+
+    printf "\n%-22s %-22s %-22s %s\n" "Channel" "Latest" "Previous" "Published"
+    printf "%-22s %-22s %-22s %s\n" "─────────────────────" "─────────────────────" "─────────────────────" "──────────────────"
+
+    # Helper: query GitLab package registry (latest 2 by creation date, descending)
+    query_packages() {
+        local project="$1" label="$2"
+        glab api "projects/${project}/packages?per_page=2&sort=desc&order_by=created_at" 2>/dev/null \
+        | python3 -c "
+    import sys,json
+    pkgs=json.load(sys.stdin)[:2]
+    label='$label'
+    if len(pkgs)>=2: print(f'{label:22s} {pkgs[0][\"version\"]:22s} {pkgs[1][\"version\"]:22s} {pkgs[0][\"created_at\"][:16]}')
+    elif len(pkgs)==1: print(f'{label:22s} {pkgs[0][\"version\"]:22s} {\"—\":22s} {pkgs[0][\"created_at\"][:16]}')
+    else: print(f'{label:22s} {\"(none)\":22s}')
+    " 2>/dev/null || printf "%-22s (query failed)\n" "$label"
+    }
+
+    query_packages "vauchi%2Fcore"                     "core (generic)"
+    query_packages "vauchi%2Fvauchi-platform-kotlin"    "kotlin (maven)"
+
+    # Swift SPM (uses git tags, not package registry)
+    git -C "$WS/vauchi-platform-swift" ls-remote --tags origin 2>/dev/null \
+    | sed 's|.*refs/tags/||' | grep -E '^v[0-9]' | sort -V | tail -2 \
+    | python3 -c "
+    import sys
+    tags=[l.strip() for l in sys.stdin if l.strip()]
+    if len(tags)>=2: print(f\"{'swift (spm tags)':22s} {tags[1]:22s} {tags[0]:22s}\")
+    elif len(tags)==1: print(f\"{'swift (spm tags)':22s} {tags[0]:22s}\")
+    else: print(f\"{'swift (spm tags)':22s} {'(none)':22s}\")
+    " 2>/dev/null || printf "%-22s (query failed)\n" "swift (spm tags)"
+
+    # Local versions (source vs consumer) — use git show to avoid branch drift
+    printf "%-22s %-22s\n" "──────────────────────" "──────────────────────"
+    CARGO_VER=$(git -C "$WS/core" show origin/main:Cargo.toml 2>/dev/null | grep '^version' | head -1 | sed 's/.*"\(.*\)"/\1/' || echo "?")
+    printf "%-22s %-22s\n" "core (Cargo.toml)" "$CARGO_VER"
+    ANDROID_VER=$(git -C "$WS/android" show origin/main:app/build.gradle.kts 2>/dev/null | grep -E 'vauchi-platform:' | grep -v '//' | sed 's/.*vauchi-platform:\(.*\)").*/\1/' | head -1 || echo "?")
+    printf "%-22s %-22s\n" "android (consumer)" "$ANDROID_VER"
+    # iOS uses SPM git tags directly — consumer version is the swift tag
+    IOS_VER=$(git -C "$WS/ios" show origin/main:Vauchi.xcodeproj/project.pbxproj 2>/dev/null | grep -E 'version.*=.*"[0-9]' | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "(uses spm tag)")
+    printf "%-22s %-22s\n" "ios (consumer)" "$IOS_VER"
+    echo ""
