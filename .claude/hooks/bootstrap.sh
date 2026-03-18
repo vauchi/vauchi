@@ -12,6 +12,27 @@ ISSUES=0
 
 echo "=== Vauchi Environment Bootstrap ==="
 
+# ---------- 0. Self-heal settings.local.json ----------
+# Prevents junk accumulation from one-off "Allow" clicks.
+# Canonical state: only disabledMcpjsonServers (machine-local preference).
+# Any useful permissions belong in settings.json (tracked).
+LOCAL_SETTINGS="$PROJECT_DIR/.claude/settings.local.json"
+CANONICAL_LOCAL='{
+  "disabledMcpjsonServers": [
+    "context7"
+  ]
+}'
+
+if [[ -f "$LOCAL_SETTINGS" ]]; then
+  CURRENT_PERMS=$(jq -r '.permissions.allow // [] | length' "$LOCAL_SETTINGS" 2>/dev/null || echo "0")
+  if [[ "$CURRENT_PERMS" -gt 0 ]]; then
+    echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
+    echo "[FIX ] Settings: reset settings.local.json (had $CURRENT_PERMS accumulated permissions)"
+  fi
+else
+  echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
+fi
+
 # ---------- 1. Required CLI tools ----------
 TOOLS=(cargo rustfmt clippy-driver node npm just jq glab)
 MISSING=()
