@@ -55,8 +55,10 @@ if [[ "$TOOL_NAME" == "Write" ]] && ! head -5 "$FILE_PATH" | grep -q 'SPDX-'; th
   esac
 
   if [[ "$SKIP_SPDX" == "false" ]]; then
+    # REUSE-IgnoreStart
     SPDX_COPY="SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>"
     SPDX_LIC="SPDX-License-Identifier: GPL-3.0-or-later"
+    # REUSE-IgnoreEnd
     HEADER=""
     case "$FILE_PATH" in
       *.rs|*.swift|*.kt|*.ts|*.js|*.tsx|*.jsx)
