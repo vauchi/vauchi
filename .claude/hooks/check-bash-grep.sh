@@ -33,6 +33,9 @@ Use `just grep <pattern>` instead, which uses ripgrep under the hood.
 For code search, prefer: just grep <pattern> [glob]
 For concept search, prefer: just concept <name>
 EOF
+  printf '{"ts":"%s","hook":"check-bash-grep","category":"grep-P","command":"%s","reason":"grep -P not on macOS"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(echo "$COMMAND" | head -c 200)" \
+    >> "${CLAUDE_PROJECT_DIR:-.}/.claude/.session-errors" 2>/dev/null
   exit 2
 fi
 

@@ -7,3 +7,8 @@ settings.local.json
 
 # Work context (machine-specific current problem/phase)
 .workcontext
+
+# Session telemetry (ephemeral, processed by session-end)
+.session-errors
+.session-reads
+.session-edits

@@ -70,26 +70,10 @@ All repos have protected `main` — merge via MR only, force push disabled.
 Use `just gitlab mr-create [repo]` for MRs. Use `/create-mr` for multi-repo workflows.
 Contributing guide: `docs/developers/contributing.md`.
 
-## Skills & Reference Docs
+## Reference Docs
 
-**Skills** (`.claude/skills/`) provide domain-specific workflows. Invoke the matching skill before starting work in that area:
-
-| Skill | When to use |
-|-------|-------------|
-| `device-testing` | Physical device GUI testing (ADB, WDA, screenshots, onboarding/exchange flows) |
-| `rust-patterns` | Writing/modifying Rust code in core/ |
-| `tdd-workflow` | Implementing features or bugfixes with TDD |
-| `platform-bindings` | UniFFI binding generation, SPM/Maven packaging |
-| `ci-pipeline` | Investigating CI failures or modifying pipelines |
-| `ci-fix` | Diagnosing and fixing CI pipeline failures (logs, root cause, fix) |
-| `dependency-map` | Modifying Cargo.toml or debugging build issues |
-| `repo-map` | Locating files or running git commands across repos |
-| `dependent-mrs` | Creating tiered MRs respecting dependency order |
-| `estimate` | Estimating effort for tasks using empirical calibration data |
-
-**Reference docs** (`.claude/docs/`): `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`
-
-**Testing docs** (`_private/docs/testing/`): `manual-testing.md` (multi-device dev testing), `device-automation/` (physical device test toolkit)
+`.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`
+`_private/docs/testing/`: `manual-testing.md`, `device-automation/`
 
 ## Exploration
 

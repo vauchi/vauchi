@@ -13,6 +13,13 @@
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
+log_error() {
+  local category="$1" reason="$2"
+  local log="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-errors"
+  printf '{"ts":"%s","hook":"check-cd-git","category":"%s","command":"%s","reason":"%s"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$category" "$(echo "$COMMAND" | head -c 200)" "$reason" >> "$log" 2>/dev/null
+}
+
 # Block: cd <path> && git ... (use git -C instead)
 if echo "$COMMAND" | grep -qE '^\s*cd\s+.*&&\s*git\s'; then
   cat >&2 <<'EOF'
@@ -22,6 +29,7 @@ Use "git -C <dir> ..." instead. Examples:
   git -C /path/to/repo show HEAD:file.rs
   git -C /path/to/repo grep "pattern"
 EOF
+  log_error "cwd-drift" "cd && git — use git -C"
   exit 2
 fi
 
@@ -30,6 +38,7 @@ if echo "$COMMAND" | grep -qE '^\s*cd\s+.*;\s*git\s'; then
   cat >&2 <<'EOF'
 Do not use "cd <dir>; git ..." — use "git -C <dir> ..." instead.
 EOF
+  log_error "cwd-drift" "cd ; git — use git -C"
   exit 2
 fi
 
@@ -42,6 +51,7 @@ if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+.*&&' && ! echo "$COMMAND" | grep -qE
 Wrap in a subshell so cwd resets after: (cd <dir> && <command>)
 Or use absolute paths / tool-specific flags (git -C, cargo --manifest-path).
 EOF
+  log_error "cwd-drift" "cd && cmd — use subshell"
   exit 2
 fi
 
@@ -55,6 +65,7 @@ Stay at workspace root ($CLAUDE_PROJECT_DIR). Use:
   cargo --manifest-path <dir>/Cargo.toml ...
   (cd <dir> && ./gradlew ...)  # subshell — cwd resets after
 EOF
+  log_error "cwd-drift" "bare cd — blocked"
   exit 2
 fi
 

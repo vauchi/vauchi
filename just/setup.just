@@ -285,6 +285,48 @@ session-end:
     fi
     [[ "$ORPHAN" == "0" ]] && echo "  All branches have MRs (or on main)"
 
+    # Process session error log (from hooks that blocked)
+    echo ""
+    echo "── hook errors this session ──"
+    SESSION_LOG=".claude/.session-errors"
+    if [[ -f "$SESSION_LOG" && -s "$SESSION_LOG" ]]; then
+        TOTAL=$(wc -l < "$SESSION_LOG" | tr -d ' ')
+        echo "  $TOTAL hook block(s) recorded:"
+
+        # Summarize by category
+        jq -r '.category' "$SESSION_LOG" 2>/dev/null | sort | uniq -c | sort -rn | while read -r count cat; do
+            echo "    $count × $cat"
+        done
+
+        # Append to durable ledger (one JSONL file, append-only)
+        LEDGER="_private/docs/reference/error-ledger.jsonl"
+        if [[ -d "_private/docs/reference" ]]; then
+            cat "$SESSION_LOG" >> "$LEDGER"
+            echo "  → appended to $LEDGER"
+        fi
+
+        # Check for emerging patterns (3+ same category = system problem)
+        if [[ -f "$LEDGER" ]]; then
+            echo ""
+            echo "── pattern detection (all sessions) ──"
+            PATTERNS=$(jq -r '.category' "$LEDGER" 2>/dev/null | sort | uniq -c | sort -rn | head -5)
+            echo "$PATTERNS" | while read -r count cat; do
+                if [[ "$count" -ge 3 ]]; then
+                    echo "  ⚠ $cat ($count occurrences) — consider a hook fix (3-strike rule)"
+                else
+                    echo "    $cat ($count)"
+                fi
+            done
+        fi
+
+        # Clear session logs
+        rm -f "$SESSION_LOG"
+        rm -f ".claude/.session-reads"
+        rm -f ".claude/.session-edits"
+    else
+        echo "  No hook blocks recorded"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"

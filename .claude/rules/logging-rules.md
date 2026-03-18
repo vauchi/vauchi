@@ -1,3 +1,15 @@
+---
+paths:
+  - "core/**"
+  - "android/**"
+  - "ios/**"
+  - "macos/**"
+  - "windows/**"
+  - "linux-gtk/**"
+  - "linux-qt/**"
+  - "relay/**"
+---
+
 ## Logging Rules (MANDATORY)
 
 ### Privacy

@@ -12,16 +12,19 @@
 
 input=$(cat)
 
-# === JSON fields (free, no subprocess) ===
-cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // empty')
-project_dir=$(echo "$input" | jq -r '.workspace.project_dir // empty')
-model_name=$(echo "$input" | jq -r '.model.display_name // empty')
-model_id=$(echo "$input" | jq -r '.model.id // empty')
-used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
-cost_usd=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
-lines_added=$(echo "$input" | jq -r '.cost.total_lines_added // empty')
-lines_removed=$(echo "$input" | jq -r '.cost.total_lines_removed // empty')
-worktree_name=$(echo "$input" | jq -r '.worktree.name // empty')
+# === JSON fields (single jq call → 9 fields via tab-separated line) ===
+IFS=$'\t' read -r cwd project_dir model_name model_id used cost_usd lines_added lines_removed worktree_name \
+  < <(echo "$input" | jq -r '[
+    (.workspace.current_dir // .cwd // ""),
+    (.workspace.project_dir // ""),
+    (.model.display_name // ""),
+    (.model.id // ""),
+    (.context_window.used_percentage // ""),
+    (.cost.total_cost_usd // ""),
+    (.cost.total_lines_added // ""),
+    (.cost.total_lines_removed // ""),
+    (.worktree.name // "")
+  ] | join("\t")')
 
 # === Git fields (~30ms total) ===
 git_dir="${project_dir:-$cwd}"
@@ -55,8 +58,8 @@ workcontext_file="${project_dir:-.}/.claude/.workcontext"
 problem_phase=""
 problem_name=""
 if [ -f "$workcontext_file" ]; then
-  problem_phase=$(jq -r '.phase // empty' "$workcontext_file" 2>/dev/null)
-  problem_name=$(jq -r '.problem // empty' "$workcontext_file" 2>/dev/null)
+  IFS=$'\t' read -r problem_phase problem_name \
+    < <(jq -r '[(.phase // ""), (.problem // "")] | join("\t")' "$workcontext_file" 2>/dev/null)
 fi
 
 # === Derived values ===
