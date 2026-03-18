@@ -23,5 +23,6 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
 - **CC-17**: Every `#[test]` must contain `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`.
 - **CC-18**: Never retry a failed pipeline without fixing the root cause.
 - **CC-19**: Tidy before behavior change — small structural-only improvement in its own `tidy:` commit before starting RED. Skip if code is already clean.
+- **CC-20 No Tautological Accessibility Tests**: Accessibility tests must query the live view hierarchy (XCUITest, Espresso, AT-SPI). Forbidden: asserting compile-time constants (`Identifiers.X.count > 0`), asserting minimum clickable node counts (`>= 1 clickable`), any assertion that cannot fail. A11y tests must verify that labeled elements exist in the rendered UI, not that string constants are non-empty.
 
 Full test design guidelines (AAA, coverage, mocking, organization): `.claude/docs/test-quality-rules.md`

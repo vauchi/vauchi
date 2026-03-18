@@ -119,6 +119,36 @@ session-init:
     echo ""
     echo "── dashboard ──"
 
+    # Platform binding versions (Gate 8: frontend architecture audit 2026-03-18)
+    echo ""
+    echo "BINDING VERSIONS:"
+    SWIFT_LATEST=""
+    if [[ -d "vauchi-platform-swift" ]]; then
+        SWIFT_LATEST=$(git -C vauchi-platform-swift describe --tags --abbrev=0 2>/dev/null || echo "?")
+    fi
+    IOS_PIN=""
+    if [[ -f "ios/project.yml" ]]; then
+        IOS_PIN=$(grep -E 'from:|version:' ios/project.yml 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/' | tr -d ' ' || echo "?")
+    fi
+    MACOS_PIN=""
+    if [[ -f "macos/project.yml" ]]; then
+        MACOS_PIN=$(grep -E 'from:|version:' macos/project.yml 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/' | tr -d ' ' || echo "?")
+    fi
+    ANDROID_PIN=""
+    if [[ -f "android/app/build.gradle.kts" ]]; then
+        ANDROID_PIN=$(grep 'app\.vauchi:vauchi-platform:' android/app/build.gradle.kts 2>/dev/null | sed 's/.*:\([0-9].*\)".*/\1/' || echo "?")
+    fi
+    echo "  platform-swift latest: ${SWIFT_LATEST:-?}"
+    [[ -n "$IOS_PIN" ]] && echo "  iOS pinned:           $IOS_PIN"
+    [[ -n "$MACOS_PIN" ]] && echo "  macOS pinned:         $MACOS_PIN"
+    [[ -n "$ANDROID_PIN" ]] && echo "  Android pinned:       $ANDROID_PIN"
+    # Staleness alert: warn if iOS is >2 minor versions behind
+    if [[ -n "$SWIFT_LATEST" && -n "$IOS_PIN" && "$SWIFT_LATEST" != "?" && "$IOS_PIN" != "?" ]]; then
+        if [[ "$SWIFT_LATEST" != *"$IOS_PIN"* && "$IOS_PIN" != *"$SWIFT_LATEST"* ]]; then
+            echo "  NOTE: iOS ($IOS_PIN) differs from latest ($SWIFT_LATEST)"
+        fi
+    fi
+
     echo ""
     echo "OPEN MRs:"
     if [[ -f "$SI_TMP/mrs.txt" && -s "$SI_TMP/mrs.txt" ]]; then

@@ -21,6 +21,11 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 - **CC-12 Beware Test-Code Correlation Trap**: Write the test FIRST, commit it, verify it fails, THEN write code. Never "write tests for this function" after the function exists. Mutation testing is the automated defense.
 - **CC-13 Stateful Property Tests for Lifecycles**: For domain objects with state machines (identity, contacts, exchange, sync, backup), write stateful property tests that verify invariants across random operation sequences.
 - **CC-14 Adversarial Test Data for Security Boundaries**: For functions processing user input or external data, include parameterized tests with adversarial payloads (empty, max-length, unicode, RTL, null bytes, injection payloads, corrupted data, tampered signatures).
+- **CC-20 No Tautological Accessibility Tests**: Accessibility tests must query the **live view hierarchy** — XCUITest (iOS), Espresso/Compose semantics (Android), AT-SPI (Linux), UI Automation (Windows). Forbidden patterns:
+  - Asserting compile-time string constants: `XCTAssertTrue(Identifiers.X.count > 0)` — can never fail
+  - Asserting minimum clickable counts: `assert(clickableNodes >= 1)` — vacuously true for any UI
+  - Any assertion whose outcome is determined at compile time, not runtime
+  - **Required**: Tests must render the actual UI and query elements by accessibility identifier, then assert existence, labels, hints, or traits. If a screen reader label were deleted from production code, the test must fail.
 
 ## Tidy First (Kent Beck)
 
