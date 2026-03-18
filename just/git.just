@@ -1182,6 +1182,7 @@ branch-health mode='audit':
 
     merged=0
     stale=0
+    gone=0
     active=0
 
     cutoff_14d=$(date -v-14d +%s 2>/dev/null || date -d "14 days ago" +%s 2>/dev/null)
@@ -1221,6 +1222,11 @@ branch-health mode='audit':
             action="-"
             has_remote=false
             git -C "$d" rev-parse --verify "origin/$br" &>/dev/null && has_remote=true
+            is_gone=false
+            if ! $has_remote; then
+                upstream=$(git -C "$d" for-each-ref --format='%(upstream)' "refs/heads/$br" 2>/dev/null)
+                [[ -n "$upstream" ]] && is_gone=true
+            fi
 
             if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
                 if $has_remote; then
@@ -1244,6 +1250,10 @@ branch-health mode='audit':
                     action="DELETE"
                     merged=$((merged + 1))
                 fi
+            elif $is_gone; then
+                status="gone"
+                action="RECOVER"
+                gone=$((gone + 1))
             elif [[ "$last_epoch" -lt "$cutoff_14d" ]]; then
                 status="stale"
                 action="REVIEW"
@@ -1268,11 +1278,12 @@ branch-health mode='audit':
             case "$status" in
                 merged|in-main) _sc="$GREEN" ;;
                 stale) _sc="$YELLOW" ;;
+                gone) _sc="$RED" ;;
             esac
             _ac=""
             case "$action" in
                 DELETE|DELETED) _ac="$RED" ;;
-                REVIEW) _ac="$YELLOW" ;;
+                REVIEW|RECOVER) _ac="$YELLOW" ;;
             esac
             _p1=$(( _BH_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
             _p2=$(( _BH_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
@@ -1282,9 +1293,13 @@ branch-health mode='audit':
     done
 
     echo ""
-    echo "Summary: $merged merged/in-main, $stale stale (>14d), $active active"
+    summary="Summary: $merged merged/in-main, $stale stale (>14d), $gone gone (remote deleted, unmerged), $active active"
+    echo "$summary"
     if [[ "$merged" -gt 0 && "{{ mode }}" != "cleanup" ]]; then
         echo "Run 'just git branch-health cleanup' to delete merged branches"
+    fi
+    if [[ "$gone" -gt 0 ]]; then
+        echo "Gone branches have unmerged commits — re-push with 'git -C <repo> push -u origin <branch>'"
     fi
 
 # Inspect a specific branch across ALL repos
