@@ -23,7 +23,7 @@ The crypto foundation, core protocol, and backend are production-ready. The gap 
 
 | Component | Status | Evidence |
 |-----------|--------|----------|
-| Core crypto (aws-lc-rs) | Done | FIPS 140-3, Double Ratchet, X3DH. **Note**: SP-30 will migrate to ed25519-dalek (pure Rust) |
+| Core crypto (RustCrypto) | Done | ed25519-dalek, sha2, hmac, hkdf (L0 migration complete 2026-03-18). Double Ratchet, X3DH. aws-lc-rs retained for TLS only. |
 | E2E encryption | Done | XChaCha20-Poly1305, forward secrecy |
 | Contact exchange (QR) | Done | QR exchange working, audio proximity |
 | Recovery system | Done | 1,062 lines in recovery/mod.rs |
@@ -81,10 +81,10 @@ The crypto foundation, core protocol, and backend are production-ready. The gap 
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| ADR-031: Exchange Architecture Unification | In progress | linux-gtk done. Core generalization + platform wiring remaining |
-| ADR-030: Transport Type-Erasure | Phase 1 done (folded into ADR-031) | Phase 1 core type-erasure complete. CABI storage + Windows/Linux-Qt relay still pending (depends on ADR-031) |
-| CABI Completion | Blocked on ADR-030 | 6 missing screens, CI distribution pipeline |
-| SP-30: Crypto Backend Abstraction | Planning | aws-lc-rs → pure Rust (ed25519-dalek). Blocks Web Demo WASM. Problem record: `2026-03-16-crypto-backend-abstraction` |
+| ~~ADR-031: Exchange Architecture Unification~~ | **Done** | Verified 2026-03-17 — BLE/NFC/Audio paths wired through unified ExchangeEngine |
+| ~~ADR-030: Transport Type-Erasure~~ | **Done** | Verified 2026-03-17 — transport type-erased, CABI persistence unblocked |
+| CABI Completion | In progress | 6 missing screens, CI distribution pipeline |
+| ~~SP-30: Crypto Backend Abstraction~~ | **Done** | L0 migration complete 2026-03-18 (core!310). aws-lc-rs → ed25519-dalek/sha2/hmac/hkdf. 3713 tests pass. |
 
 ### P2: UX Audit + GUI Guideline Compliance
 
@@ -190,11 +190,11 @@ Core `SocialNetworkRegistry` + `ContentManager` + bundled networks.json exist. R
 | 2 | E2E encryption verified on real devices | Pending |
 | 3 | Cross-platform exchange works (iOS ↔ Android QR) | Pending |
 | 4 | Onboarding completes without confusion on iOS + Android | ~95% |
-| 5 | Web demo loads and runs the happy path (depends on #9) | ~65%, blocked on crypto-backend-abstraction |
+| 5 | Web demo loads and runs the happy path | ~85% (crypto-backend-abstraction DONE, WASM bridge wired, phases 3-4 deferred) |
 | 6 | UX audit complete on Tier 1 platforms | Not started |
 | 7 | No critical GUI violations on Tier 1 (UI-02: irrevocable action confirmations) | 13 violations |
 | 8 | Recovery works cross-platform | Pending |
-| 9 | crypto-backend-abstraction merged (aws-lc-rs → pure Rust) | Planning |
+| 9 | ~~crypto-backend-abstraction merged (aws-lc-rs → pure Rust)~~ | **Done** (core!310 merged 2026-03-18) |
 | 10 | 90%+ test coverage vauchi-core | Ongoing |
 | 11 | Anonymous Sender Protocol complete | ~40% core |
 | 12 | Offline happy path works (card creation + QR exchange + contact view, zero network) | Not verified |
