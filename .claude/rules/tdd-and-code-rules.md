@@ -12,7 +12,7 @@ apply: always
   - Commit immediately when tests go green
   - Commit after each refactor if tests still green
 - **Structure**: `src/` = prod, `tests/` = tests (siblings). Never mix. Test helpers in `tests/common/` or `tests/helpers/`
-- **Crypto**: `aws-lc-rs` primary (FIPS 140-3). Exceptions (spec-mandated): `chacha20poly1305`, `argon2`, `x25519-dalek`. WASM demo: hybrid WebCrypto API (Ed25519, SHA-256, HMAC, HKDF, PBKDF2, X25519) + RustCrypto (ChaCha20-Poly1305, Argon2) via `crypto-wasm` feature. Never mock crypto. Never introduce new crypto libs without approval (aws-lc-rs replaces ring). Zeroize key material after use.
+- **Crypto**: RustCrypto audited crates primary (`ed25519-dalek`, `x25519-dalek`, `sha2`, `hmac`, `hkdf`). Spec-mandated: `chacha20poly1305`, `argon2`. TLS only: `aws-lc-rs` (via rustls). WASM: pure Rust (no WebCrypto bridge needed). Never mock crypto. Never introduce new crypto libs without approval. Zeroize key material after use.
 - **Coverage**: 90%+ for vauchi-core. Measure with `just coverage`.
 - **Checks**: Run `just check [repo]` before pushing (fmt-check + lint + test in one command).
 - **Planning**: Feature done → move `_private/docs/planning/todo/` doc to `done/`
