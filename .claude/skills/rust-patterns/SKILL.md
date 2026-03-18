@@ -18,7 +18,7 @@ core/
 │   ├── src/
 │   │   ├── lib.rs          # Module exports and public API
 │   │   ├── api/            # High-level orchestration (feature-gated: network)
-│   │   ├── crypto/         # aws-lc-rs + documented exceptions
+│   │   ├── crypto/         # RustCrypto audited crates (ed25519-dalek, sha2, hmac, hkdf)
 │   │   ├── exchange/       # X3DH, QR, proximity, BLE (NFC Active + NFC Dead Drop planned)
 │   │   ├── contact/        # Contact model + visibility
 │   │   ├── contact_card/   # Shareable card fields
@@ -54,14 +54,17 @@ testing           # Expose internals for integration tests
 
 ## Crypto Rules (MANDATORY)
 
-**Primary: `aws-lc-rs` only.** Documented exceptions:
+**Primary: RustCrypto audited crates.** `aws-lc-rs` retained for TLS only (via rustls).
 
-| Crate | Reason |
-|-------|--------|
-| `aws-lc-rs` | HMAC, Ed25519, AES-256-GCM, HKDF (FIPS-validated, ring-compatible API) |
-| `x25519-dalek 2.0` | X25519 DH (spec-mandated) |
-| `chacha20poly1305 0.10` | XChaCha20-Poly1305 (spec-mandated cipher) |
-| `argon2 0.5` | Argon2id KDF (spec-mandated for backup) |
+| Crate | Purpose |
+|-------|---------|
+| `ed25519-dalek 2.x` | Ed25519 signing/verification (Trail of Bits audited) |
+| `x25519-dalek 2.x` | X25519 DH key agreement (Trail of Bits audited) |
+| `sha2` | SHA-256/SHA-512 hashing |
+| `hmac` | HMAC-SHA256 |
+| `hkdf` | HKDF key derivation (RFC 5869) |
+| `chacha20poly1305` | XChaCha20-Poly1305 AEAD (spec-mandated) |
+| `argon2` | Argon2id KDF (spec-mandated for backup) |
 
 **Never mock crypto in tests.** Use real signatures, real encryption, real KDF.
 

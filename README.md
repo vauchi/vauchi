@@ -105,7 +105,7 @@ Vauchi uses:
 - **Double Ratchet** for forward secrecy
 - **XChaCha20-Poly1305** for symmetric encryption
 - **Ed25519** for signatures
-- **aws-lc-rs** crypto library (FIPS 140-3 Level 1)
+- **RustCrypto** audited crates (`ed25519-dalek`, `sha2`, `hmac`, `hkdf`)
 
 All cryptographic operations are in `core/vauchi-core/src/crypto/`.
 

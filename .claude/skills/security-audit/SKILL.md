@@ -57,11 +57,11 @@ For each applicable category, search the codebase for the patterns described. Us
 
 ### 2. Signature Verification
 
-**Source**: Vodozemac audit (Ed25519 strict verification), aws-lc-rs FIPS compliance
+**Source**: Vodozemac audit (Ed25519 strict verification), ed25519-dalek (Trail of Bits audited)
 
 | ID | Check | How to Verify |
 |----|-------|---------------|
-| SIG-01 | Ed25519 strict verification enabled (no lenient mode) | Verify `aws_lc_rs::signature::ED25519` is used (not a non-strict variant) |
+| SIG-01 | Ed25519 strict verification enabled (no lenient mode) | Verify `ed25519_dalek::VerifyingKey::verify()` is used (strict by default in dalek 2.x) |
 | SIG-02 | No signature verification behind feature flags | Grep for `#[cfg(feature` near verify calls — verification must not be optional |
 | SIG-03 | Signature checked before processing payload | In message handlers, verify signature check happens before any state mutation |
 | SIG-04 | Tampered signature/message tests exist | Check test files for wrong-key, tampered-message, tampered-signature test cases |
@@ -132,7 +132,7 @@ For each applicable category, search the codebase for the patterns described. Us
 | ID | Check | How to Verify |
 |----|-------|---------------|
 | DEP-01 | No RustSec advisories on direct dependencies | Run `cargo audit` or check `rustsec.org/advisories/` |
-| DEP-02 | Crypto crates up to date | Check `aws-lc-rs`, `x25519-dalek`, `chacha20poly1305`, `argon2` versions against crates.io |
+| DEP-02 | Crypto crates up to date | Check `ed25519-dalek`, `x25519-dalek`, `sha2`, `hmac`, `hkdf`, `chacha20poly1305`, `argon2` versions against crates.io |
 | DEP-03 | No new crypto crates without approval | Diff `Cargo.lock` for new `*crypto*`, `*cipher*`, `*aes*`, `*rsa*` crates |
 | DEP-04 | `cargo deny` passes (license + duplicate check) | Run `just deny` or `cargo deny check` |
 | DEP-05 | No `unsafe` in vauchi-core (except documented FFI) | Run `cargo geiger` or grep for `unsafe` blocks |

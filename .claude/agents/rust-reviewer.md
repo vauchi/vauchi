@@ -13,7 +13,7 @@ When invoked, analyze recent changes and provide actionable feedback.
 ## Review Checklist
 
 ### Crypto Rules (CRITICAL)
-- `aws-lc-rs` is the primary crypto library (FIPS 140-3). Only `chacha20poly1305`, `argon2`, and `x25519-dalek` are allowed exceptions (spec-mandated)
+- RustCrypto audited crates primary (`ed25519-dalek`, `x25519-dalek`, `sha2`, `hmac`, `hkdf`). `chacha20poly1305` and `argon2` spec-mandated. `aws-lc-rs` retained for TLS only (via rustls)
 - Crypto operations are NEVER mocked in tests
 - Key material is zeroized after use
 - No hardcoded secrets or keys
