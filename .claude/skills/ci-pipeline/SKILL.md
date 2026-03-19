@@ -31,7 +31,17 @@ include:
 | `downstream.yml` | Cross-repo pipeline triggering |
 | `reuse.yml` | SPDX license header compliance |
 | `lint-docs.yml` | Markdown + Gherkin linting, doc naming validation |
-| `timeouts.yml` | Timeout definitions (10m/30m/1h/2h) |
+| `timeouts.yml` | Timeout definitions (10m/30m/1h/2h) — standalone for non-Rust repos |
+| `coverage.yml` | llvm-cov coverage with Pushgateway metrics |
+| `mutation.yml` | cargo-mutants nightly testing with progress tracking |
+| `benchmark.yml` | Criterion benchmark caching and comparison |
+| `perf.yml` | Duplicate/unused dependency checks, binary size tracking |
+| `file-size.yml` | Rust source file line count enforcement |
+| `freshness.yml` | Core dependency staleness advisory |
+| `design-drift.yml` | Component implementation coverage against design specs |
+| `plan-sync.yml` | Auto-update plans post-merge with debounce |
+| `test-quality.yml` | Zero-assertion scanner, test-to-code ratio, metrics dashboard |
+| `badges.yml` | Pipeline status and coverage badge generation |
 
 ## Change-Based Rules (mr-rules.yml)
 
@@ -63,7 +73,7 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 
 | Template | Runner | Resources |
 |----------|--------|-----------|
-| `.linux-runner` | Self-hosted shell executor | 4 CPU, 8GB RAM, 150GB |
+| `.linux-runner` | Self-hosted shell executor | 16 CPU, 20GB RAM, Arch Linux |
 | `.macos-runner` | Self-hosted shell executor | 8 CPU, 16GB RAM |
 | `.docker-runner` | Docker executor | Shared |
 | `.self-hosted` | Base: sccache + git HTTPS | CI_JOB_TOKEN auth |
