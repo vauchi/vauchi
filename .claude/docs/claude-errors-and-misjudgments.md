@@ -3,190 +3,107 @@
 
 # Claude Errors & Misjudgments Log
 
-Track recurring Claude mistakes and misjudgments to identify patterns, reduce token waste,
-and find opportunities for hooks or rules that prevent recurrence.
-
-**Format**: Each entry has: what happened → tokens wasted → root cause → fix
+Track recurring Claude mistakes to identify patterns and reduce token waste.
+Each entry: what happened → root cause → prevention.
 
 ---
 
 ## Session 2026-03-19: Master Plan Audit + SP-32 Implementation
 
-### E1: Linter reverted edits silently (3 occurrences, ~2000 tokens wasted)
+### E1: Edits lost during parallel agent work (3 files, 3 re-read cycles)
 
-**What**: Applied edits to `relay_client.rs`, `sync_controller.rs`, and `anonymous.rs`. The
-post-edit linter (`cargo fmt` or similar) silently reverted the changes. Had to re-read and
-re-apply each edit, sometimes 3 times for the same file.
+**What**: Edits to `relay_client.rs`, `sync_controller.rs`, `anonymous.rs` didn't persist.
+Had to re-read and re-apply each edit multiple times.
 
-**Root cause**: The Edit tool triggers a linter hook that can reformat (expected) but in this
-case it appears to have restored the original file content. Likely the linter's rewrite
-overwrites the edit when the file is re-read from disk.
+**Root cause**: Three background agents were editing files in the same `core/` repo
+simultaneously. When one agent's edit triggers `rustfmt` on the workspace, it can touch
+files another agent (or the main conversation) just edited. The Edit tool's stale-read
+detection rejects the next edit, appearing as a "reversion."
 
-**Tokens wasted**: ~2000 (3× read-edit-verify cycles per file, 3 files)
+**Prevention**: Don't run parallel agents that edit files in the same repo. After parallel
+agents complete, re-read before editing. Rule: `verify-before-acting.md`.
 
-**Fix**: After editing a file, immediately verify with `grep` that the change is present
-before proceeding. If reverted, investigate the hook rather than blindly retrying. Consider
-a rule: "After editing Rust files, always verify the edit took hold before building."
+### E2: Wrong MockTransport return type in tests
 
----
+**What**: Assumed `sent_messages()` returns `Vec<Vec<u8>>`. It returns `Vec<MessageEnvelope>`.
 
-### E2: `sent_messages()` return type wrong in tests (~500 tokens)
+**Root cause**: Wrote tests without reading the mock API first.
 
-**What**: Wrote test code assuming `MockTransport::sent_messages()` returns `Vec<Vec<u8>>`.
-It actually returns `Vec<MessageEnvelope>`. Had to recompile, diagnose, and fix.
+**Prevention**: Read mock/test infrastructure types before writing wire-level tests.
 
-**Root cause**: Didn't read the `MockTransport` API before writing tests. Assumed bytes-based
-API from the name.
+### E3: SP-32 percentage inconsistent across 3 documents (FIXED)
 
-**Tokens wasted**: ~500 (compile error → read error → fix → recompile)
+**What**: Master plan said ~60%, problem record said ~75%, roadmap said ~75%.
 
-**Fix**: Always read the mock/test infrastructure types before writing wire-level tests. Or
-use a rule: "Before writing tests that use MockTransport, read its API first."
+**Root cause**: Updated docs at different points in the session. Master plan was updated
+first, then implementation happened, then only problem record and roadmap were updated.
 
----
+**Prevention**: Use `just doc-refs "SP-32"` after implementation to find all references.
+Update all in one commit. Fixed in private!432.
 
-### E3: Master plan SP-32 percentage stale after implementation (~300 tokens)
+### E4: WASM problem record had wrong feature gate names
 
-**What**: Updated SP-32 to ~60% in the master plan during housekeeping. Then implemented
-code that brought it to ~75%. The master plan still said ~60% when I updated the problem
-record to 75%. Cross-document inconsistency.
+**What**: Problem record proposed `#[cfg(feature = "storage")]` and `#[cfg(feature = "network")]`.
+Actual code uses `#[cfg(any(feature = "network-native-tls", feature = "network-rustls"))]`.
 
-**Root cause**: Updated docs at two different times. The master plan was updated first
-(housekeeping phase), then implementation happened, then only the problem record and roadmap
-were updated. The master plan was forgotten.
+**Root cause**: Guessed feature names from error messages instead of checking existing
+`#[cfg]` patterns in the codebase.
 
-**Tokens wasted**: ~300 (inconsistency found during audit, extra doc update MR)
+**Prevention**: `grep -r 'cfg.*feature' src/` before proposing new gates. Problem record
+is `done` — low impact.
 
-**Fix**: When implementation changes a percentage, update ALL documents that reference it
-in a single commit. Use `grep` to find all references: `grep -r "SP-32" _private/docs/`.
+### E5: Launched agent for already-fixed bug (ConsentType::Analytics)
 
-**Status**: Master plan still says ~60% (line 153). **Needs fix.**
+**What**: Launched background agent to remove `ConsentType::Analytics`. Agent discovered
+it was already removed. Full agent execution wasted.
 
----
+**Root cause**: Trusted the problem record ("implementing — Analytics still in consent.rs")
+without verifying the code. The record was stale.
 
-### E4: WASM problem record says "storage" feature but code uses "network-native-tls/network-rustls" (~200 tokens)
+**Prevention**: `grep "Analytics" core/vauchi-core/src/api/consent.rs` before launching.
+Rule: `verify-before-acting.md`.
 
-**What**: The WASM gating problem record (created by me) says the fix is to gate behind
-`#[cfg(feature = "storage")]` and `#[cfg(feature = "network")]`. The actual implementation
-(by Stream B agent) used `#[cfg(any(feature = "network-native-tls", feature = "network-rustls"))]`.
-The problem record's fix strategy is wrong.
+### E6: "LAST P0 GAP" label wrong after adding 2 more P0 items (FIXED)
 
-**Root cause**: Guessed the feature names from the error messages (`could not find network`)
-instead of reading the actual `#[cfg]` patterns used in the codebase. The feature gate names
-are more specific than the module names.
+**What**: Labeled proximity audio as "LAST P0 SECURITY GAP" then added two more P0 items.
 
-**Tokens wasted**: ~200 (incorrect documentation, not actionable since code is correct)
+**Root cause**: Updated problem record before updating master plan with new items.
 
-**Fix**: Always check existing `#[cfg]` patterns in the file before proposing new ones.
-`grep -r 'cfg.*feature.*network' src/` would have shown the correct names.
+**Prevention**: Update all documents atomically after finishing a batch of changes.
+Fixed in private!432.
 
-**Status**: Problem record has wrong fix strategy. But it's marked `done` so low impact.
+### E7: Done problem records not moved to done/ (FIXED)
 
----
+**What**: Changed WASM gating and MockProximityVerifier status to `done` without moving
+to `done/` directory.
 
-### E5: ConsentType::Analytics reported as "needs removal" but was already removed (~1500 tokens)
+**Root cause**: Changed status field without the corresponding directory move.
 
-**What**: Identified `ConsentType::Analytics` removal as a P0 task (Stream D). Launched a
-background agent to do it. Agent discovered the variant was already removed from the enum.
-Wasted agent execution time on a solved problem.
+**Prevention**: "Closing a problem record = change status + `git mv` to done/" in same
+commit. Fixed in private!432.
 
-**Root cause**: Read the problem record (which said "implementing — Analytics still in
-consent.rs") but didn't verify against the actual code. The problem record was stale — the
-variant had been removed in a previous session.
+### E8: `replace_all` missed call sites with different formatting
 
-**Tokens wasted**: ~1500 (full agent execution reading files, discovering it's done, only
-doing test comment cleanup)
+**What**: Used `replace_all` to update function callers. Only matched one of two sites
+because they had different first arguments.
 
-**Fix**: Before launching an implementation agent, always verify the actual code state with
-a quick grep: `grep "Analytics" core/vauchi-core/src/api/consent.rs`. Trust code over docs.
-**Rule candidate**: "Before implementing a fix, verify the bug still exists in code."
+**Root cause**: Assumed identical text at all call sites without checking.
+
+**Prevention**: `grep` all call sites first, update each individually.
 
 ---
 
-### E6: Proximity audio priority said "LAST P0 GAP" but there are now 3 P0 gaps (~100 tokens)
+## Aggregate
 
-**What**: Updated the proximity audio problem record to say `P0 — LAST P0 SECURITY GAP`.
-But during the same session, I also added two more P0 items (proximity unidirectional +
-MockProximityVerifier). So "LAST" is no longer accurate.
+| Root Cause | Occurrences | Prevention |
+|---|---|---|
+| Trusted stale docs over code | 3 (E3, E5, E6) | Rule: verify-before-acting.md |
+| Parallel agents in same repo | 1 (E1, 3 files) | Don't parallelize edits in same repo |
+| Sequential doc updates | 3 (E3, E6, E7) | `just doc-refs` + atomic commits |
+| Didn't read API before using | 2 (E2, E4) | Read before writing |
 
-**Root cause**: Updated the problem record before updating the master plan with the new items.
-Sequential edits created a temporal inconsistency.
+### Implemented fixes
 
-**Tokens wasted**: ~100 (minor wording issue)
-
-**Fix**: The master plan now says "4/7 CLOSED" which is correct. The problem record should
-not say "LAST" — it should just say "P0 SECURITY GAP". **Needs fix.**
-
----
-
-### E7: Created problem record in wrong location (~100 tokens)
-
-**What**: WASM gating problem record created at `_private/docs/problems/2026-03-19-wasm-compilation-gating/`
-but it's now `done`. Done records should be in `_private/docs/problems/done/`. It was never moved.
-
-**Root cause**: Created the record while it was `implementing`, then changed status to `done`
-without moving the directory.
-
-**Tokens wasted**: ~100 (will need a separate commit to move it)
-
-**Fix**: When changing a problem record status to `done`, also move it to `done/` in the
-same commit. **Rule candidate**: "Closing a problem record = change status + move to done/."
-
----
-
-### E8: `replace_all` on non-unique strings hit wrong call sites (~300 tokens)
-
-**What**: Used `replace_all: true` to update `send_update()` callers but the replacement
-pattern `.send_update(&update.contact_id, ratchet, &update.payload, &update.id)` only
-matched one of the two call sites. The second had slightly different formatting (different
-first argument). Had to do a second pass.
-
-**Root cause**: Assumed both call sites had identical text. They didn't.
-
-**Tokens wasted**: ~300 (extra read-edit cycle)
-
-**Fix**: When updating function signatures, use `grep` to find ALL call sites first, then
-update each individually. `replace_all` is only safe for truly identical patterns like
-variable renames.
-
----
-
-## Aggregate Analysis
-
-| Category | Occurrences | Tokens wasted | Fix type |
-|----------|-------------|---------------|----------|
-| Linter reverts edits | 3 | ~2000 | Verify after edit (habit) |
-| Stale docs / code mismatch | 3 (E3, E5, E6) | ~1900 | Verify code before acting on docs |
-| Wrong API assumptions | 1 (E2) | ~500 | Read API before writing tests |
-| Wrong feature gate names | 1 (E4) | ~200 | Check existing patterns |
-| Incomplete multi-doc update | 2 (E3, E7) | ~400 | Update all references atomically |
-| **Total** | **10** | **~5000** | |
-
-### Top Root Causes
-
-1. **Trusting docs over code** (E3, E5, E6): Problem records and plans become stale. Always
-   verify claims against actual code with grep before acting.
-
-2. **Not verifying edits took hold** (E1): Linter hooks can silently revert changes. Always
-   verify with grep after editing Rust files.
-
-3. **Sequential document updates** (E3, E6, E7): Updating docs at different points in a
-   session creates temporal inconsistencies. Batch all doc updates into one commit after
-   implementation is complete.
-
-### Recommended Rule Additions
-
-```
-## Pre-implementation verification (MANDATORY)
-- Before launching an implementation agent, verify the bug still exists: `grep` the code
-- Before writing tests, read the mock/test API you'll use
-- After editing Rust files, verify the edit with grep before proceeding
-```
-
-### Recommended Hook Candidates
-
-1. **Post-edit verify hook**: After Edit tool on `.rs` files, automatically grep for the
-   new_string to confirm the edit took hold. Alert if not found.
-
-2. **Problem record done → move hook**: When a problem record's status changes to `done`,
-   warn if it's not in the `done/` directory.
+1. **Rule**: `.claude/rules/verify-before-acting.md` — verify code before acting on docs
+2. **Recipe**: `just doc-refs <pattern>` — find all planning doc references for batch update
+3. **Errors doc**: This file — track patterns across sessions
