@@ -99,6 +99,8 @@ mr-close id repo='':
 
 # Create or update MRs for all repos on the same feature branch
 # Idempotent: creates MR if none exists, rebases + force-pushes if one does.
+# After all MRs exist, auto-populates Related MRs and marks downstream as Draft.
+#
 # Usage: just gitlab mr-create-all                    # auto-fill title from commits
 #        just gitlab mr-create-all "feat: my feature" # custom title
 [no-cd]
@@ -106,13 +108,25 @@ mr-close id repo='':
 mr-create-all title='':
     just gitlab _check-auth
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/resolve-repo.sh
     set -euo pipefail
     timer_start
+
+    # ── Dependency graph for Draft detection ──────────────────────────
+    # Tier 0 = upstream (no vauchi git deps). If tier 0 has an MR,
+    # everything downstream is Draft. Derived from Cargo.toml git deps.
+    UPSTREAM_REPOS="core"
+    # Repos that depend on core via git (tier 1+)
+    DOWNSTREAM_OF_CORE="cli tui relay linux-gtk e2e"
 
     created=()
     updated=()
     uptodate=()
     failed=()
+
+    # Collect MR IIDs + labels for the cross-reference pass
+    # Format: "label:gl_name:iid" per entry
+    mr_registry=()
 
     for dir in */; do
         [[ -d "${dir}.git" ]] || continue
@@ -129,11 +143,12 @@ mr-create-all title='':
         echo ""
         echo "── $label ($branch, $ahead commits) ──"
 
-        # Check for existing MR
-        source scripts/scripts/resolve-repo.sh
         gl_name=$(_dir_to_gitlab_name "$label")
-        existing=$(glab mr list -R "vauchi/$gl_name" --source-branch "$branch" --json url 2>/dev/null | grep -c "url" || true)
-        has_mr=$([[ "$existing" -gt 0 ]] && echo "yes" || echo "no")
+
+        # Check for existing MR
+        existing_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+          | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
+        has_mr=$([[ -n "$existing_iid" ]] && echo "yes" || echo "no")
 
         # Rebase on origin/main
         git -C "$dir" fetch origin main --quiet 2>/dev/null
@@ -155,17 +170,19 @@ mr-create-all title='':
         if [[ "$has_mr" == "yes" ]]; then
             # MR exists — force-push if rebased, otherwise up-to-date
             if [[ "$rebased" == "yes" ]]; then
-                echo "  MR exists — force-pushing rebased branch..."
+                echo "  MR exists (!${existing_iid}) — force-pushing rebased branch..."
                 if git -C "$dir" push --force-with-lease origin "$branch" 2>&1 | sed 's/^/  /'; then
                     updated+=("$label")
                 else
                     echo "  Force-push failed"
                     failed+=("$label")
+                    continue
                 fi
             else
-                echo "  MR exists, already up to date"
+                echo "  MR exists (!${existing_iid}), already up to date"
                 uptodate+=("$label")
             fi
+            mr_registry+=("${label}:${gl_name}:${existing_iid}")
         else
             # No MR — create one via push options
             PUSH_OPTS=(-u origin "$branch")
@@ -183,26 +200,74 @@ mr-create-all title='':
             echo "  Pushing and creating MR..."
             if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
                 created+=("$label")
-
-                # Update MR description via API (push options don't support multiline)
-                mr_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+                # Fetch the new MR IID
+                new_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
                   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
-                if [[ -n "$mr_iid" ]]; then
-                    # Generate description from commits and changed files
-                    commits=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s")
-                    files=$(git -C "$dir" diff --stat origin/main..HEAD | tail -1 | sed 's/^ //')
-                    desc="## Summary\n\n${commits}\n\n---\n_${files}_"
-                    glab api -X PUT "projects/vauchi%2F${gl_name}/merge_requests/${mr_iid}" \
-                      -f "description=${desc}" >/dev/null 2>&1 || true
-                    echo "  Updated MR !${mr_iid} description"
-                fi
+                [[ -n "$new_iid" ]] && mr_registry+=("${label}:${gl_name}:${new_iid}")
             else
                 echo "  Push failed"
                 failed+=("$label")
             fi
         fi
-        echo ""
     done
+
+    # ── Pass 2: Cross-reference Related MRs + Draft downstream ────────
+    if [[ ${#mr_registry[@]} -gt 1 ]]; then
+        echo ""
+        echo "── Cross-referencing ${#mr_registry[@]} MRs ──"
+
+        # Determine if upstream (core) has an MR — if so, downstream should be Draft
+        upstream_has_mr=false
+        for entry in "${mr_registry[@]}"; do
+            entry_label="${entry%%:*}"
+            if echo " $UPSTREAM_REPOS " | grep -q " $entry_label "; then
+                upstream_has_mr=true
+                break
+            fi
+        done
+
+        for entry in "${mr_registry[@]}"; do
+            IFS=: read -r elabel egl eiid <<< "$entry"
+
+            # Build description: commits + related MRs
+            commits=$(git -C "$elabel" log origin/main..HEAD --reverse --format="- %s" 2>/dev/null || true)
+            files=$(git -C "$elabel" diff --stat origin/main..HEAD 2>/dev/null | tail -1 | sed 's/^ //' || true)
+
+            # Related MRs = all except self
+            other_mrs=""
+            for other in "${mr_registry[@]}"; do
+                IFS=: read -r ol ogl oiid <<< "$other"
+                [[ "$ol" == "$elabel" ]] && continue
+                other_mrs="${other_mrs}- vauchi/${ogl}!${oiid}\n"
+            done
+
+            desc="## Summary\n\n${commits}\n\n## Related MRs\n\n${other_mrs}\n---\n_${files}_"
+
+            # Mark downstream repos as Draft if upstream has an MR
+            is_downstream=false
+            if $upstream_has_mr && echo " $DOWNSTREAM_OF_CORE " | grep -q " $elabel "; then
+                is_downstream=true
+            fi
+
+            update_args=(-f "description=${desc}")
+            if $is_downstream; then
+                # Get current title and prepend Draft: if not already
+                current_title=$(glab api "projects/vauchi%2F${egl}/merge_requests/${eiid}" 2>/dev/null \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('title',''))" 2>/dev/null || true)
+                if [[ -n "$current_title" && "$current_title" != Draft:* ]]; then
+                    update_args+=(-f "title=Draft: ${current_title}")
+                fi
+            fi
+
+            glab api -X PUT "projects/vauchi%2F${egl}/merge_requests/${eiid}" "${update_args[@]}" >/dev/null 2>&1 || true
+
+            if $is_downstream; then
+                printf "  ✓ %s !%s — Related MRs + Draft\n" "$elabel" "$eiid"
+            else
+                printf "  ✓ %s !%s — Related MRs\n" "$elabel" "$eiid"
+            fi
+        done
+    fi
 
     elapsed=$(timer_elapsed)
     echo ""
@@ -211,6 +276,9 @@ mr-create-all title='':
     [[ ${#updated[@]}  -gt 0 ]] && printf "  ${GREEN}✓${NC} Updated  (%d):  %s\n" "${#updated[@]}" "${updated[*]}"
     [[ ${#uptodate[@]} -gt 0 ]] && printf "  ${DIM}·${NC} Up-to-date (%d): %s\n" "${#uptodate[@]}" "${uptodate[*]}"
     [[ ${#failed[@]}   -gt 0 ]] && printf "  ${RED}✗${NC} Failed   (%d):   %s\n" "${#failed[@]}" "${failed[*]}"
+    if [[ ${#mr_registry[@]} -gt 1 ]]; then
+        printf "  ${GREEN}✓${NC} Cross-referenced %d MRs\n" "${#mr_registry[@]}"
+    fi
     [[ ${#failed[@]}   -gt 0 ]] && exit 1 || true
 
 # ── Pipeline Operations ────────────────────────────────────────────
