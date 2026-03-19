@@ -229,20 +229,28 @@ session-init:
     [[ "$STASH_FOUND" == "0" ]] && echo "  (none)"
 
     # Sweep stale Cargo incremental artifacts (prevents unbounded growth).
-    # Incremental sessions accumulate 50+ GB over weeks of development.
-    # 2-day window keeps same-day builds fast while preventing bloat.
+    # Two-pass strategy:
+    #   1. Time-based: remove artifacts older than 2 days (keeps same-day builds fast)
+    #   2. Size-based: if any target/ exceeds 20 GB, aggressively sweep to 1 day
+    # This is self-healing — even without manual cleanup, targets stay bounded.
     if command -v cargo-sweep &>/dev/null; then
         echo ""
-        echo "SWEEP (cargo artifacts >2 days):"
+        echo "SWEEP (cargo artifacts):"
         total_freed=0
         for dir in core cli relay tui e2e linux-gtk; do
             [[ -d "$dir/target" ]] || continue
             before=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
+            # Pass 1: time-based (2 days)
             cargo sweep --time 2 "$dir" 2>/dev/null
             after=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
+            # Pass 2: if still over 20 GB, sweep more aggressively (1 day)
+            if [[ $after -gt 20480 ]]; then
+                cargo sweep --time 1 "$dir" 2>/dev/null
+                after=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
+            fi
             freed=$((before - after))
             total_freed=$((total_freed + freed))
-            [[ $freed -gt 100 ]] && echo "  $dir: freed ${freed} MB"
+            [[ $freed -gt 100 ]] && echo "  $dir: freed ${freed} MB (${before} → ${after} MB)"
         done
         if [[ $total_freed -gt 100 ]]; then
             echo "  Total freed: ${total_freed} MB"

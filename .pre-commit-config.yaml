@@ -32,14 +32,14 @@ repos:
     hooks:
       - id: cargo-fmt
         name: cargo fmt
-        entry: bash -c 'cd code && cargo fmt --all -- --check'
+        entry: bash -c 'cd core && cargo fmt --all -- --check'
         language: system
         types: [rust]
         pass_filenames: false
 
       - id: cargo-clippy
         name: cargo clippy
-        entry: bash -c 'cd code && cargo clippy --workspace -- -D warnings'
+        entry: bash -c 'cd core && cargo clippy --workspace -- -D warnings'
         language: system
         types: [rust]
         pass_filenames: false

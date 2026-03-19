@@ -1474,6 +1474,68 @@ check-refs:
         exit 1
     fi
 
+# Check crypto-critical crate versions are consistent across all Cargo.lock files
+# Catches version skew where cli and relay could ship different zeroize/chacha20/subtle versions
+[group('tools')]
+[no-cd]
+[script]
+check-lockfile-consistency:
+    set -euo pipefail
+    echo "Checking crypto crate version consistency across Cargo.lock files..."
+    echo ""
+
+    # Crypto-critical crates that MUST be the same version everywhere
+    CRITICAL_CRATES="ed25519-dalek x25519-dalek sha2 hmac hkdf chacha20poly1305 argon2 zeroize subtle curve25519-dalek aead"
+
+    LOCKFILES=()
+    LABELS=()
+    for dir in core cli relay tui e2e linux-gtk; do
+        if [[ -f "$dir/Cargo.lock" ]]; then
+            LOCKFILES+=("$dir/Cargo.lock")
+            LABELS+=("$dir")
+        fi
+    done
+
+    if [[ ${#LOCKFILES[@]} -lt 2 ]]; then
+        echo "  Only ${#LOCKFILES[@]} Cargo.lock file(s) found — nothing to compare"
+        exit 0
+    fi
+
+    divergent=0
+    for crate in $CRITICAL_CRATES; do
+        versions=()
+        sources=()
+        for i in "${!LOCKFILES[@]}"; do
+            # Extract version from Cargo.lock (format: name = "crate"\nversion = "x.y.z")
+            ver=$(sed -n "/^name = \"${crate}\"\$/,/^$/{ s/^version = \"\(.*\)\"/\1/p; }" "${LOCKFILES[$i]}" | head -1)
+            if [[ -n "$ver" ]]; then
+                versions+=("$ver")
+                sources+=("${LABELS[$i]}=$ver")
+            fi
+        done
+
+        # Check if all versions are the same
+        if [[ ${#versions[@]} -gt 1 ]]; then
+            unique=$(printf '%s\n' "${versions[@]}" | sort -u | wc -l | tr -d ' ')
+            if [[ "$unique" -gt 1 ]]; then
+                echo "  DIVERGENT: $crate"
+                for s in "${sources[@]}"; do
+                    echo "    $s"
+                done
+                divergent=$((divergent + 1))
+            fi
+        fi
+    done
+
+    if [[ "$divergent" -eq 0 ]]; then
+        echo "  All ${#LOCKFILES[@]} lockfiles agree on crypto crate versions"
+    else
+        echo ""
+        echo "FAIL: $divergent crypto crate(s) have version skew across repos"
+        echo "Fix: run 'cargo update -p <crate>' in the divergent repos"
+        exit 1
+    fi
+
 # Run REUSE compliance check (SPDX license headers)
 # Usage: just reuse [repo]   (omit for all repos)
 [group('tools')]
