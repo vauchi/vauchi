@@ -228,6 +228,29 @@ session-init:
     done
     [[ "$STASH_FOUND" == "0" ]] && echo "  (none)"
 
+    # Sweep stale Cargo incremental artifacts (prevents unbounded growth).
+    # Incremental sessions accumulate 50+ GB over weeks of development.
+    # 2-day window keeps same-day builds fast while preventing bloat.
+    if command -v cargo-sweep &>/dev/null; then
+        echo ""
+        echo "SWEEP (cargo artifacts >2 days):"
+        total_freed=0
+        for dir in core cli relay tui e2e linux-gtk; do
+            [[ -d "$dir/target" ]] || continue
+            before=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
+            cargo sweep --time 2 "$dir" 2>/dev/null
+            after=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
+            freed=$((before - after))
+            total_freed=$((total_freed + freed))
+            [[ $freed -gt 100 ]] && echo "  $dir: freed ${freed} MB"
+        done
+        if [[ $total_freed -gt 100 ]]; then
+            echo "  Total freed: ${total_freed} MB"
+        else
+            echo "  (clean — <100 MB to sweep)"
+        fi
+    fi
+
     echo ""
     if [[ "$WARN" == "0" ]]; then
         echo "── Ready to work ──"
@@ -417,7 +440,7 @@ install-dev-deps:
 
     # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
-    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat)
+    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat cargo-sweep)
     for tool in "${cargo_tools[@]}"; do
         bin_name="$tool"
         if cargo install --list | grep -q "^${tool} "; then
@@ -690,6 +713,31 @@ clean-rust:
         if [[ -d "$dir/target" ]]; then
             echo "  $dir/target"
             rm -rf "$dir/target"
+        fi
+    done
+    echo "Done!"
+
+# Compact git repos — aggressive gc on repos with large binary history.
+# Binding repos (kotlin, ios, swift) accumulate native binaries (.so, .a)
+# across releases. git gc reduces pack size ~30%.
+[group('setup')]
+[script]
+git-compact:
+    set -euo pipefail
+    echo "── Compacting git repos ──"
+    # Only gc repos >50MB — small repos don't benefit
+    for dir in */; do
+        [[ -d "${dir}.git" ]] || continue
+        label="${dir%/}"
+        size_kb=$(du -sk "${dir}.git" 2>/dev/null | cut -f1)
+        size_mb=$((size_kb / 1024))
+        if [[ $size_mb -gt 50 ]]; then
+            echo -n "  $label (${size_mb} MB) → "
+            git -C "$label" gc --aggressive --prune=now 2>/dev/null
+            new_kb=$(du -sk "${dir}.git" 2>/dev/null | cut -f1)
+            new_mb=$((new_kb / 1024))
+            freed=$((size_mb - new_mb))
+            echo "${new_mb} MB (freed ${freed} MB)"
         fi
     done
     echo "Done!"
