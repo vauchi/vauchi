@@ -1301,6 +1301,8 @@ housekeeping:
     fi
 
     # 13. Stale problem records (14d intake, 30d other phases)
+    # Uses git last-modified date (not directory creation date) for accuracy.
+    # A record updated yesterday is not stale even if created months ago.
     section "Stale problem records"
     stale_problems=0
     now_epoch=$(date +%s)
@@ -1311,15 +1313,21 @@ housekeeping:
         # Extract status from first 20 lines using sed
         status=$(head -20 "${dir}README.md" | sed -n 's/.*\*\*Status\*\*[[:space:]]*[|:][[:space:]]*`\?\([a-zA-Z]*\).*/\1/p' | head -1 || true)
         status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
-        # Extract date from dirname (YYYY-MM-DD prefix)
-        date_prefix=$(echo "$dirname" | sed -n 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/p')
-        [[ -z "$date_prefix" ]] && continue
-        dir_epoch=$(date -d "$date_prefix" +%s 2>/dev/null || continue)
-        age_days=$(( (now_epoch - dir_epoch) / 86400 ))
+        [[ "$status" == "done" || "$status" == "archived" || "$status" == "complete" ]] && continue
+        # Use git last-modified date for any file in the problem directory
+        # This catches updates to README.md, plan.md, investigation.md, etc.
+        last_modified=$(git -C _private log -1 --format=%ct -- "docs/problems/$dirname/" 2>/dev/null || echo "0")
+        if [[ "$last_modified" == "0" ]]; then
+            # Fallback: directory creation date from name prefix
+            date_prefix=$(echo "$dirname" | sed -n 's/^\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\).*/\1/p')
+            [[ -z "$date_prefix" ]] && continue
+            last_modified=$(date -j -f "%Y-%m-%d" "$date_prefix" +%s 2>/dev/null || date -d "$date_prefix" +%s 2>/dev/null || continue)
+        fi
+        age_days=$(( (now_epoch - last_modified) / 86400 ))
         threshold=30
         [[ "$status" == "intake" ]] && threshold=14
-        if [[ "$age_days" -ge "$threshold" && "$status" != "done" && "$status" != "archived" && "$status" != "complete" ]]; then
-            echo "  $dirname (${status:-unknown}, ${age_days}d old, threshold: ${threshold}d)"
+        if [[ "$age_days" -ge "$threshold" ]]; then
+            echo "  $dirname (${status:-unknown}, ${age_days}d since last update, threshold: ${threshold}d)"
             stale_problems=$((stale_problems + 1))
         fi
     done
