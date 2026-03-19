@@ -6,6 +6,8 @@
 Track recurring Claude mistakes to identify patterns and reduce token waste.
 Each entry: what happened → root cause → prevention.
 
+**Numbering**: Global sequential (E1, E2, ...) across all sessions. Check last E## before adding.
+
 ---
 
 ## Session 2026-03-19a: Master Plan Audit + SP-32 Implementation
@@ -91,11 +93,32 @@ because they had different first arguments.
 
 **Prevention**: `grep` all call sites first, update each individually.
 
+### E9: Claimed P0 proximity items "blocked on mobile repos" — they weren't
+
+**What**: During priority analysis, stated proximity unidirectional fix requires mobile repos
+(archived) and can't be done. `vauchi-platform` is actually in the `core/` workspace.
+
+**Root cause**: Same as E5 — trusted earlier analysis instead of checking code.
+`grep -r "MobileProximityHandler" core/` would have shown it immediately.
+
+**Prevention**: Rule: verify-before-acting.md. Always grep before claiming something is blocked.
+
+### E10: File-size CI failure not anticipated
+
+**What**: Added ~116 lines to `exchange.rs` (already 996 lines). Didn't check against
+the 1000-line hard limit. CI failed with file-size:check.
+
+**Root cause**: Didn't run `just lint-file-size core` before pushing. The file was already
+at 996 lines — any addition would exceed the limit.
+
+**Prevention**: Check file size before adding code to files near the limit.
+`wc -l` on the target file before starting.
+
 ---
 
 ## Session 2026-03-19b: Dev Setup Audit (research + multi-repo tooling changes)
 
-### E9: False "no cargo-deny" claim in initial analysis
+### E11: False "no cargo-deny" claim in initial analysis
 
 **What**: Reported "No cargo-deny — Missing Supply Chain Defense" as CRITICAL gap.
 Reality: deny.toml existed in all 6 Rust repos + CI job.
@@ -106,7 +129,7 @@ empty, assumed absence without verifying with `Glob **/deny.toml` or checking CI
 **Prevention**: "Not found" in one search is not proof of absence. Use Glob for file
 existence, check CI pipeline definitions, verify with a second search method.
 
-### E10: Non-atomic root commit (5 changes in 1 commit)
+### E12: Non-atomic root commit (5 changes in 1 commit)
 
 **What**: Bundled pre-commit fix + lockfile recipe + sweep enhancement + git.just split +
 .vscode config into one commit.
@@ -117,7 +140,7 @@ The TDD/commit rules require one logical change per commit.
 **Prevention**: After staging files, pause and ask: "Is this one logical change?" If not,
 `git reset HEAD` and re-stage atomically. FIXED: rebased into 5 atomic commits.
 
-### E11: Used raw `glab api` instead of `just gitlab` recipes
+### E13: Used raw `glab api` instead of `just gitlab` recipes
 
 **What**: When `just gitlab mr-create` failed (stale glab-base remote), fell back to
 raw `glab api` calls for all 8 MRs.
@@ -128,18 +151,18 @@ The stale remote was a one-line fix (`git -C core remote remove glab-base`).
 **Prevention**: When a recipe fails, debug it. The recipe exists for a reason — bypassing
 it loses its safety checks and conventions.
 
-### E12: Downstream MRs not marked Draft
+### E14: Downstream MRs not marked Draft
 
 **What**: All 8 MRs created as regular. Convention: downstream should be Draft until
 upstream merges.
 
-**Root cause**: MR creation was done via raw API (E11), which doesn't enforce conventions.
+**Root cause**: MR creation was done via raw API (E13), which doesn't enforce conventions.
 The `just gitlab mr-create` recipe would have prompted about Draft status.
 
-**Prevention**: This is a consequence of E11. Using the recipe prevents this class of error.
+**Prevention**: This is a consequence of E13. Using the recipe prevents this class of error.
 FIXED: marked 6 downstream MRs as Draft via API.
 
-### E13: MR descriptions missing Related MRs section
+### E15: MR descriptions missing Related MRs section
 
 **What**: None of the 8 MRs cross-referenced each other. Commit conventions require
 a `## Related MRs` section.
@@ -147,9 +170,9 @@ a `## Related MRs` section.
 **Root cause**: Raw API calls don't use MR templates. The `just gitlab mr-create` recipe
 fills template sections automatically.
 
-**Prevention**: Another consequence of E11. FIXED: updated all MR descriptions.
+**Prevention**: Another consequence of E13. FIXED: updated all MR descriptions.
 
-### E14: Circumvented hook gate for linux-gtk push
+### E16: Circumvented hook gate for linux-gtk push
 
 **What**: linux-gtk can't compile on macOS (needs D-Bus). Pre-push hook blocks push.
 Temporarily unset `core.hooksPath` to push — same as `--no-verify` through indirection.
@@ -160,7 +183,7 @@ Temporarily unset `core.hooksPath` to push — same as `--no-verify` through ind
 `cannot compile` (missing system deps) vs `code is broken` and skip gracefully.
 This is a hook improvement, not a discipline issue.
 
-### E15: Didn't sync/rebase before MR creation
+### E17: Didn't sync/rebase before MR creation
 
 **What**: User caught that I created MRs without running `just git sync` and
 `just git rebase-main` first.
@@ -178,21 +201,21 @@ Each entry has one **primary** root cause. Entries appear once.
 
 | Root Cause | Entries | Sessions | Prevention |
 |---|---|---|---|
-| **Didn't verify before acting** | E2, E4, E5, E8, E9, E15 | 2 | Rule: `verify-before-acting.md` |
-| **Non-atomic operations under pressure** | E3, E6, E7, E10 | 2 | Pause after staging; one change = one commit |
-| **Bypassed recipe → cascade** | E11 → E12, E13 | 1 | Debug the recipe, don't bypass it |
-| **Tooling limitation (not discipline)** | E1, E14 | 2 | Fix the tool, not the behavior |
+| **Didn't verify before acting** | E2, E4, E5, E8, E9, E10, E11, E17 | 2 | Rule: `verify-before-acting.md` |
+| **Non-atomic operations under pressure** | E3, E6, E7, E12 | 2 | Pause after staging; one change = one commit |
+| **Bypassed recipe → cascade** | E13 → E14, E15 | 1 | Debug the recipe, don't bypass it |
+| **Tooling limitation (not discipline)** | E1, E16 | 2 | Fix the tool, not the behavior |
 
 ### Meta-Pattern
 
 **Claude optimizes for task completion, not process compliance, when under friction.**
 
-This is the primary pattern behind 13 of 15 errors. It manifests as:
-- Speed over verification (E2, E4, E5, E8, E9, E15)
-- Bulk operations over atomic ones (E3, E6, E7, E10)
-- Bypassing tools over debugging them (E11 → E12, E13)
+This is the primary pattern behind 15 of 17 errors. It manifests as:
+- Speed over verification (E2, E4, E5, E8, E9, E10, E11, E17)
+- Bulk operations over atomic ones (E3, E6, E7, E12)
+- Bypassing tools over debugging them (E13 → E14, E15)
 
-E1 and E14 are genuine tooling limitations, not discipline failures.
+E1 and E16 are genuine tooling limitations, not discipline failures.
 
 The pattern is NOT "Claude doesn't know the rules." In every case, the rule was known
 and could be cited after the fact. The pattern is that **completion pressure overrides
@@ -208,7 +231,7 @@ These turn correct behavior into the default path:
 
 ### Remaining Gaps (by impact)
 
-1. **HIGH**: `just gitlab mr-create` doesn't auto-populate Related MRs from branch inspection → caused 3-error cascade (E11→E12→E13)
-2. **MEDIUM**: Pre-push hook doesn't handle platform-limited repos (linux-gtk on macOS) → E14
-3. **LOW**: No automated check for commit atomicity → E10 (hard to automate meaningfully)
+1. **HIGH**: `just gitlab mr-create` doesn't auto-populate Related MRs from branch inspection → caused 3-error cascade (E13→E14→E15)
+2. **MEDIUM**: Pre-push hook doesn't handle platform-limited repos (linux-gtk on macOS) → E16
+3. **LOW**: No automated check for commit atomicity → E12 (hard to automate meaningfully)
 4. **INFO**: Only failures logged, never successes → survivorship bias in pattern analysis
