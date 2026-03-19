@@ -27,6 +27,12 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
+  # Spell checking (source-code-aware, low false positives)
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.31.1
+    hooks:
+      - id: typos
+
   # Rust formatting
   - repo: local
     hooks:

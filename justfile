@@ -1544,6 +1544,12 @@ check-lockfile-consistency:
         exit 1
     fi
 
+# Check spelling across all repos (typos — fast, source-code-aware)
+# Usage: just spellcheck
+[group('tools')]
+spellcheck:
+    typos .
+
 # Run REUSE compliance check (SPDX license headers)
 # Usage: just reuse [repo]   (omit for all repos)
 [group('tools')]
