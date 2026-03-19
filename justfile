@@ -1962,3 +1962,29 @@ drift-ci *args:
 [group('tools')]
 tell-me-about *topic:
     ./scripts/scripts/tell-me-about.sh {{topic}}
+
+# Find all doc references to a pattern (SP number, problem slug, percentage)
+# Use after implementation to find all docs that need updating.
+# e.g., just doc-refs "SP-32" or just doc-refs "anonymous-sender"
+[group('tools')]
+doc-refs pattern:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "=== References to '{{pattern}}' in planning docs ==="
+    echo ""
+    echo "── master-plan.plan.md ──"
+    grep -n "{{pattern}}" _private/docs/planning/master-plan.plan.md 2>/dev/null || echo "  (none)"
+    echo ""
+    echo "── roadmap.md ──"
+    grep -n "{{pattern}}" _private/docs/planning/roadmap.md 2>/dev/null || echo "  (none)"
+    echo ""
+    echo "── problem records ──"
+    grep -rn "{{pattern}}" _private/docs/problems/*/README.md 2>/dev/null | grep -v "done/" || echo "  (none)"
+    echo ""
+    echo "── planning docs ──"
+    grep -rn "{{pattern}}" _private/docs/planning/todo/ 2>/dev/null || echo "  (none)"
+    echo ""
+    echo "── rescoping design ──"
+    grep -n "{{pattern}}" _private/docs/plans/*counter-intuitive* 2>/dev/null || echo "  (none)"
+    echo ""
+    echo "Update ALL of the above when changing status or percentages."

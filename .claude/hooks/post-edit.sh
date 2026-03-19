@@ -183,11 +183,16 @@ case "$FILE_PATH" in
 
   # ── Rust ──────────────────────────────────────────────────────────
   *.rs)
+    # Capture pre-format hash to detect if rustfmt changes the file
+    PRE_HASH=$(shasum -a 256 "$FILE_PATH" 2>/dev/null | cut -d' ' -f1)
     # Auto-format
     if command -v rustfmt &>/dev/null; then
       if ! rustfmt --edition 2021 --check "$FILE_PATH" &>/dev/null; then
         rustfmt --edition 2021 "$FILE_PATH" 2>/dev/null
-        echo "Auto-formatted $FILE_PATH with rustfmt. Re-read before editing again."
+        POST_HASH=$(shasum -a 256 "$FILE_PATH" 2>/dev/null | cut -d' ' -f1)
+        if [[ "$PRE_HASH" != "$POST_HASH" ]]; then
+          echo "Auto-formatted $FILE_PATH with rustfmt. Re-read before editing again."
+        fi
       fi
     fi
     # Test assertion check
