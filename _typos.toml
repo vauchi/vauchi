@@ -24,3 +24,5 @@ UDID = "UDID"
 [default.extend-words]
 # Domain-specific terms that are not typos
 udid = "udid"
+# PNGs is a valid plural of PNG (image format)
+PNGs = "PNGs"
