@@ -19,7 +19,7 @@ just check    # Run all checks
 - **Principles**: All work must align with [docs/about/principles.md](docs/docs/about/principles.md)
 - **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
-- **Test Quality & Design**: CC-01 through CC-19 in `.claude/rules/test-quality-rules.md`
+- **Test Quality & Design**: CC-03 through CC-20 in `.claude/rules/test-quality-rules.md`. Full reference: `.claude/docs/test-quality-rules.md`
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md` — `session-init` at start, `session-end` before ending, always push before switching machines
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **File Size**: See `.claude/rules/file-size.md` — src <1000, test <1200, functions <100 lines
@@ -68,7 +68,7 @@ Run `just drift` after completing features or before MRs. Levels: `high`/`medium
 
 All repos have protected `main` — merge via MR only, force push disabled.
 Use `just gitlab mr-create [repo]` for MRs. Use `/create-mr` for multi-repo workflows.
-Contributing guide: `docs/developers/contributing.md`.
+Contributing guide: `docs/docs/developers/contributing.md`.
 
 ## Reference Docs
 

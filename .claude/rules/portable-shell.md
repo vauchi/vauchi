@@ -1,3 +1,7 @@
+---
+apply: always
+---
+
 ## Portable Shell (MANDATORY)
 
 All shell scripts and Bash tool commands must work on both macOS and Linux.

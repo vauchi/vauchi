@@ -1,3 +1,7 @@
+---
+apply: always
+---
+
 ## Work Context Tracking (MANDATORY)
 
 The file `.claude/.workcontext` tracks the current problem and workflow phase for the statusline.
