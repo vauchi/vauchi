@@ -202,7 +202,10 @@ problem-list phase='':
     by_status = defaultdict(list)
 
     for d in sorted(os.listdir(problems_dir)):
+        # Support both README.md (current) and problem.md (legacy)
         readme = os.path.join(problems_dir, d, 'README.md')
+        if not os.path.isfile(readme):
+            readme = os.path.join(problems_dir, d, 'problem.md')
         if not os.path.isfile(readme):
             continue
         with open(readme) as f:
@@ -256,6 +259,84 @@ problem-list phase='':
             print(f'{phase_filter.upper()} ({len(items)})\n')
             for pr, d in items:
                 print(f'  [{pr:6s}] {d}')
+    PYEOF
+
+# Move done/closed/resolved problem records to done/
+[group('tools')]
+[script]
+problems-tidy:
+    set -euo pipefail
+    PROBLEMS="_private/docs/problems"
+    DONE_DIR="$PROBLEMS/done"
+    if [[ ! -d "$PROBLEMS" ]]; then
+        echo "ERROR: $PROBLEMS not found"
+        exit 1
+    fi
+    mkdir -p "$DONE_DIR"
+    python3 << 'PYEOF'
+    import os, re, shutil
+
+    problems_dir = '_private/docs/problems'
+    done_dir = os.path.join(problems_dir, 'done')
+    terminal = {'done', 'closed', 'resolved', 'completed'}
+    moved = []
+    skipped = []
+
+    for d in sorted(os.listdir(problems_dir)):
+        if d in ('done', 'README.md'):
+            continue
+        # Support both README.md (current) and problem.md (legacy)
+        readme = os.path.join(problems_dir, d, 'README.md')
+        if not os.path.isfile(readme):
+            readme = os.path.join(problems_dir, d, 'problem.md')
+        if not os.path.isfile(readme):
+            continue
+        with open(readme) as f:
+            header = ''.join(f.readlines()[:20])
+        st = None
+        for pat in [
+            r'\*\*Status\*\*\s*\|\s*\`?(\w+)',
+            r'\*\*Status:\*\*\s*\`?(\w+)',
+            r'\*\*Status\*\*\s*:\s*\`?(\w+)',
+            r'##\s+Status:\s*(\w+)',
+        ]:
+            m = re.search(pat, header)
+            if m:
+                st = m.group(1).lower()
+                break
+        if st in terminal:
+            src = os.path.join(problems_dir, d)
+            dst = os.path.join(done_dir, d)
+            if os.path.exists(dst):
+                skipped.append((d, st, 'already in done/'))
+            else:
+                shutil.move(src, dst)
+                moved.append((d, st))
+
+    if moved:
+        print(f'Moved {len(moved)} record(s) to done/:\n')
+        for name, st in moved:
+            print(f'  {st:10s}  {name}')
+    else:
+        print('No done/closed/resolved records to move.')
+
+    if skipped:
+        print(f'\nSkipped {len(skipped)} (already in done/):\n')
+        for name, st, reason in skipped:
+            print(f'  {st:10s}  {name}  ({reason})')
+
+    # Summary
+    active = 0
+    for d in sorted(os.listdir(problems_dir)):
+        if d in ('done', 'README.md'):
+            continue
+        if os.path.isdir(os.path.join(problems_dir, d)):
+            active += 1
+    archived = 0
+    for d in sorted(os.listdir(done_dir)):
+        if os.path.isdir(os.path.join(done_dir, d)):
+            archived += 1
+    print(f'\nActive: {active}  Archived: {archived}')
     PYEOF
 
 # Show .plan.md files with no git changes in N days

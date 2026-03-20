@@ -1,0 +1,23 @@
+# .driftignore — Suppress known false-positive drift items
+#
+# Format: glob_pattern [category1,category2]
+#   - pattern alone → suppress all categories
+#   - pattern + categories → suppress only listed categories
+#
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# ── Auto-generated binding repos (never hand-edited) ──────────
+vauchi-platform-kotlin/**/*
+vauchi-platform-swift/**/*
+
+# ── Web-demo reference app (not production surface) ───────────
+web-demo/**/* missing_doc,orphan_code
+
+# ── Test helpers and common modules (internal, not public API) ─
+**/tests/common/**/* missing_doc
+**/tests/helpers/**/* missing_doc
+
+# ── Platform FFI diagnostic types (generated/internal) ────────
+core/vauchi-platform/src/diagnostic.rs missing_doc
+core/vauchi-platform/src/diagnostic/**/* missing_doc
