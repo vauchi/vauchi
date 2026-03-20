@@ -26,3 +26,10 @@ UDID = "UDID"
 udid = "udid"
 # PNGs is a valid plural of PNG (image format)
 PNGs = "PNGs"
+# Federation test: _ba = connection from relay B to relay A
+ba = "ba"
+# Ratatui is a Rust TUI framework name
+Ratatui = "Ratatui"
+ratatui = "ratatui"
+# Intentional substring match for upstream error messages with typos
+ecryption = "ecryption"
