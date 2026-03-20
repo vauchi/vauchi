@@ -92,6 +92,7 @@ service-account*.json
 *.p12
 .kamal/secret
 .kamal/secrets
+/keys/
 vauchi.code-workspace
 
 # Drift detector (local MCP server)
