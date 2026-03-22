@@ -62,7 +62,7 @@ The exchange protocol rejects QR codes with clock drift > 120 seconds (`MAX_CLOC
 ### Device Reset
 
 - **iOS**: Delete app from home screen (clears Keychain)
-- **Android**: `adb uninstall com.vauchi` (NOT `pm clear` — stale Keystore keys can cause `KeyStoreException: 112`)
+- **Android**: `adb uninstall app.vauchi` (NOT `pm clear` — stale Keystore keys can cause `KeyStoreException: 112`)
 
 ### Screenshot Commands
 
@@ -83,4 +83,4 @@ just dt-screenshot-ios failure.png
 | Exchange hangs | State machine divergence | Check both devices' logs |
 | SPM build fails | Missing Info.plist in xcframework | Run `just rebuild-ios` |
 | "clock drift" error | Device time out of sync | Fix device Date & Time settings |
-| `KeyStoreException: 112` | Stale Android Keystore | `adb uninstall com.vauchi` and reinstall |
+| `KeyStoreException: 112` | Stale Android Keystore | `adb uninstall app.vauchi` and reinstall |

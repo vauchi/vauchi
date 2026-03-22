@@ -102,7 +102,7 @@ vauchi-platform-swift's Package.swift downloads pre-built XCFramework:
 ```kotlin
 // android/app/build.gradle.kts
 dependencies {
-    implementation("com.vauchi:vauchi-platform:0.1.2")
+    implementation("app.vauchi:vauchi-platform:0.1.2")
 }
 ```
 

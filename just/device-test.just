@@ -561,7 +561,7 @@ dt-verify-builds:
             MODEL=$(adb -s "$SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
             echo ""
             echo -e "${YELLOW}Android ($MODEL — $SERIAL):${NC}"
-            adb -s "$SERIAL" shell dumpsys package com.vauchi 2>/dev/null | grep -E "versionName|versionCode" | head -2 || echo "  App not installed"
+            adb -s "$SERIAL" shell dumpsys package app.vauchi 2>/dev/null | grep -E "versionName|versionCode" | head -2 || echo "  App not installed"
             echo "  Core version (from logcat):"
             adb -s "$SERIAL" logcat -d -s "Vauchi:I" 2>/dev/null | grep "Build:" | tail -1 || echo "  No build log found — launch app first"
         done
@@ -647,9 +647,9 @@ dt-relaunch-android:
     source "$(pwd)/just/device-test-lib.sh"
     SERIAL=$(dt_detect_android_device)
     echo "Killing and relaunching Vauchi on Android ($SERIAL)..."
-    adb -s "$SERIAL" shell am force-stop com.vauchi
+    adb -s "$SERIAL" shell am force-stop app.vauchi
     sleep 1
-    adb -s "$SERIAL" shell am start -n com.vauchi/.MainActivity
+    adb -s "$SERIAL" shell am start -n app.vauchi/.MainActivity
     echo "Android app relaunched."
 
 # Install + relaunch iOS (convenience: build already done, just install and restart)

@@ -38,14 +38,14 @@ run platform="" *args:
             just build-android release
             cd android && ./gradlew assembleRelease
             adb install -r android/app/build/outputs/apk/release/app-release.apk
-            adb shell am start -n com.vauchi.app/.MainActivity
+            adb shell am start -n app.vauchi/.MainActivity
             ;;
         ios)
             just build-ios release
             cd ios && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 15 Pro' -configuration Release build
             xcrun simctl boot "iPhone 15 Pro" 2>/dev/null || true
             xcrun simctl install "iPhone 15 Pro" ios/build/Build/Products/Release-iphonesimulator/Vauchi.app
-            xcrun simctl launch "iPhone 15 Pro" com.vauchi.app
+            xcrun simctl launch "iPhone 15 Pro" app.vauchi.ios
             ;;
         relay)
             cd relay && cargo run -- {{args}}

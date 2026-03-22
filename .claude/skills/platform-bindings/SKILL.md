@@ -201,13 +201,13 @@ let checksum = "319802bc..."
 
 **build.gradle.kts**:
 ```kotlin
-android { namespace = "com.vauchi.mobile"; compileSdk = 34; minSdk = 26 }
+android { namespace = "app.vauchi.platform"; compileSdk = 34; minSdk = 26 }
 dependencies {
     implementation("net.java.dev.jna:jna:5.14.0@aar")  // UniFFI runtime
 }
 publishing {
     // Publishes to GitLab Maven registry
-    groupId = "com.vauchi"; artifactId = "vauchi-platform"
+    groupId = "app.vauchi"; artifactId = "vauchi-platform"
 }
 ```
 
@@ -240,7 +240,7 @@ Version pinned in `Package.resolved` with commit SHA + checksum.
 maven { url = uri("https://gitlab.com/api/v4/projects/77955319/packages/maven") }
 
 // app/build.gradle.kts
-implementation("com.vauchi:vauchi-platform:0.1.2")
+implementation("app.vauchi:vauchi-platform:0.1.2")
 
 // Usage
 import uniffi.vauchi_platform.VauchiPlatform

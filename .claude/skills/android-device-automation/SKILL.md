@@ -28,13 +28,13 @@ adb -s "$PIXEL" <command>
 
 ```bash
 # Force stop app
-adb -s "$PIXEL" shell am force-stop com.vauchi
+adb -s "$PIXEL" shell am force-stop app.vauchi
 
 # Launch main activity
-adb -s "$PIXEL" shell am start -n com.vauchi/.MainActivity
+adb -s "$PIXEL" shell am start -n app.vauchi/.MainActivity
 
 # Launch with intent extras (key automation mechanism)
-adb -s "$PIXEL" shell am start -n com.vauchi/.diagnostic.BleDiagnosticActivity \
+adb -s "$PIXEL" shell am start -n app.vauchi/.diagnostic.BleDiagnosticActivity \
   --es test discovery    # String extra: test=discovery
 
 # Intent extra types
@@ -154,10 +154,10 @@ done
 
 ```bash
 # Pull file from app storage (requires run-as or debuggable app)
-adb -s "$PIXEL" shell run-as com.vauchi cat files/data.json > /tmp/data.json
+adb -s "$PIXEL" shell run-as app.vauchi cat files/data.json > /tmp/data.json
 
 # List app files
-adb -s "$PIXEL" shell run-as com.vauchi ls files/
+adb -s "$PIXEL" shell run-as app.vauchi ls files/
 
 # Push file to shared storage
 adb -s "$PIXEL" push /tmp/config.json /sdcard/Download/config.json
