@@ -562,6 +562,7 @@ setup-path-overrides:
 
     CORE_PATCH="[patch.'https://gitlab.com/vauchi/core.git']"
     CORE_DEP='vauchi-core = { path = "../core/vauchi-core" }'
+    PROTOCOL_DEP='vauchi-protocol = { path = "../core/vauchi-protocol" }'
 
     RELAY_PATCH="[patch.'https://gitlab.com/vauchi/relay.git']"
     RELAY_DEP='vauchi-relay = { path = "../relay" }'
@@ -594,6 +595,11 @@ setup-path-overrides:
             write_config "$dir" "$CORE_PATCH" "$CORE_DEP" ""
         fi
     done
+
+    # relay depends on vauchi-protocol (from core git URL)
+    if [ -d "relay" ]; then
+        write_config "relay" "$CORE_PATCH" "$PROTOCOL_DEP" ""
+    fi
 
     # e2e depends on both core and relay
     if [ -d "e2e" ]; then
