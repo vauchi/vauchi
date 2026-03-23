@@ -4,7 +4,7 @@
 # Roadmap — March 2026
 
 **Goal**: Production release reordered around the adoption funnel — discover → try → use → grow → protect
-**Last audit**: 2026-03-17 (counter-intuitive MVP rescoping — see `_private/docs/plans/2026-03-17-counter-intuitive-mvp-rescoping-design.md`)
+**Last audit**: 2026-03-17 (counter-intuitive MVP rescoping — see `_private/docs/designs/2026-03-17-counter-intuitive-mvp-rescoping-design.md`)
 
 ---
 

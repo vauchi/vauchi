@@ -1993,6 +1993,6 @@ doc-refs pattern:
     grep -rn "{{pattern}}" _private/docs/problems/*/README.md 2>/dev/null | grep -v "/done/" || echo "  (none)"
     echo ""
     echo "── design docs ──"
-    grep -rn "{{pattern}}" _private/docs/plans/ 2>/dev/null || echo "  (none)"
+    grep -rn "{{pattern}}" _private/docs/designs/ 2>/dev/null || echo "  (none)"
     echo ""
     echo "When changing status or percentages, update ALL of the above in one commit."

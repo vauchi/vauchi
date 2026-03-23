@@ -10,7 +10,8 @@ apply: always
 |------|---------|
 | `problems/` | Active problem records |
 | `problems/done/` | Completed/archived records |
-| `planning/` | Todo, done, archived, post-mortems |
+| `designs/` | Standalone design documents (`*-design.md` only) |
+| `planning/` | Todo, done, archived, post-mortems, investigations |
 | `specs/` | Internal protocol specifications |
 | `reference/` | Security audit, threat model, CI/CD |
 | `testing/` | QA strategy, manual testing |

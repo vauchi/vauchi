@@ -37,8 +37,8 @@ If you accidentally commit a secret, consider it compromised and rotate it immed
 |-----------|---------|-------------|
 | `infra/` | Deployment configs, server IPs, runner tokens | Security - exposes infrastructure |
 | `strategy/` | Business plans, funding, roadmap priorities | Business sensitive |
-| `docs/plans/` | Implementation plans, design docs | Internal working docs with local paths and private references |
-| `docs/planning/` | Todo/done workflow, roadmap, post-mortems | Internal planning workflow |
+| `docs/designs/` | Standalone design documents (`*-design.md`) | Internal working docs with local paths and private references |
+| `docs/planning/` | Plans, task DAGs, todo/done workflow, post-mortems | Internal planning workflow |
 | `docs/problems/` | Problem records, investigations | Internal problem tracking |
 
 ## What Makes Something Private?
@@ -77,7 +77,8 @@ If the hook flags your commit:
 |--------------------|--------------|
 | Architecture docs | `docs/architecture/` |
 | Planning docs | `_private/docs/planning/` |
-| Implementation plans | `_private/docs/plans/` |
+| Design documents | `_private/docs/designs/` |
+| Implementation plans | `_private/docs/planning/todo/` |
 | Problem records | `_private/docs/problems/` |
 | Dev scripts | `scripts/` |
 | Deployment with secrets | `_private/infra/` |
