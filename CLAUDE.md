@@ -75,6 +75,10 @@ Contributing guide: `docs/docs/developers/contributing.md`.
 `.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`
 `_private/docs/testing/`: `manual-testing.md`, `device-automation/`
 
+## Reasoning Error Log
+
+Maintain `memory/log_reasoning_errors.md` — append an entry whenever a reasoning error, bad decision, wrong assumption, or dead-end debugging path is identified (self-caught or user-corrected). Review the log for recurring pattern tags; promote to a dedicated feedback memory after 3+ occurrences.
+
 ## Exploration
 
 `just tell-me-about "<topic>"` — uses local LLM to search and summarize codebase.
