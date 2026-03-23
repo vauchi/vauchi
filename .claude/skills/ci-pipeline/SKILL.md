@@ -97,7 +97,9 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 2. `build:ios` (macOS), `build:android` (Linux+NDK), `build:validate-bindings`
 3. `package:xcframework` (macOS), `package:android` (Linux)
 4. `publish:packages`, `publish:core`, `publish:mobile`, `release:create`
-5. `trigger:swift` + `trigger:android` — triggers distribution repos via native `trigger:` keyword
+5. `publish:maven` — builds AAR + publishes to group Maven registry
+6. `update:swift-bindings` — pushes updated Package.swift + bindings to platform-swift
+7. `trigger:ios` + `trigger:macos` + `trigger:android` — triggers consumer app repos directly
 
 ### Relay (`relay/.gitlab-ci.yml`)
 - Lint + test + security + Docker build
@@ -121,22 +123,23 @@ The Tauri desktop app (`desktop/`) has been archived and replaced by native plat
 - `update:bindings-version` — triggered by upstream, creates MR with auto-merge
 
 ### Distribution Repos
-**vauchi-platform-swift**: `validate:package` → `update:version` (triggered) → `notify:ios-app`
-**vauchi-platform-kotlin**: `build:aar` → `update:bindings` (triggered) → `notify:android-app`
+**vauchi-platform-swift**: `validate:package` + `update:version` (triggered by core's `update:swift-bindings`)
+**vauchi-platform-kotlin**: **Archived** — Maven AAR now published directly from core
 
-## Mobile Distribution Flow
+## Mobile Distribution Flow (2-hop)
 
 ```
 core tag v*.*.* →
   build iOS/Android bindings →
     publish to GitLab packages →
-      trigger vauchi-platform-swift + vauchi-platform-kotlin →
-        download + update + commit + tag →
-          trigger ios + android apps →
-            auto-create MR to bump dependency
+      publish:maven (AAR to group Maven) →
+        trigger:android → android app (auto-MR)
+      update:swift-bindings (push to platform-swift) →
+        trigger:ios → ios app (auto-MR)
+        trigger:macos → macos app (auto-MR)
 ```
 
-**Uses native GitLab `trigger:` keyword** to pass `UPSTREAM_VERSION` variable (CI_JOB_TOKEN lacks `api` scope for Pipeline API).
+**Uses native GitLab `trigger:` keyword** for consumer triggers. `update:swift-bindings` uses `CI_JOB_TOKEN` + git push to platform-swift.
 
 ## Branch Protection & CI Push Access
 

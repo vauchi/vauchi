@@ -163,7 +163,9 @@ On tag `v*.*.*`:
 2. **build:ios** (macOS runner) + **build:android** (Linux+NDK) + **build:validate-bindings**
 3. **package:xcframework** + **package:android**
 4. **publish:packages** → GitLab Generic Packages registry
-5. **trigger:swift** + **trigger:android** → triggers distribution repos via native `trigger:` keyword
+5. **publish:maven** — builds AAR + publishes to group Maven registry
+6. **update:swift-bindings** — pushes updated Package.swift + bindings to platform-swift
+7. **trigger:ios** + **trigger:macos** + **trigger:android** — triggers consumer app repos directly
 
 ### Binding Validation
 
@@ -189,34 +191,16 @@ let checksum = "319802bc..."
 )
 ```
 
-**CI `update:version` job** (triggered by core):
-1. Downloads checksum from core packages
-2. Downloads Swift bindings from `VauchiPlatform-{VERSION}.zip`
-3. Updates `Package.swift` (version + checksum)
-4. Updates `Sources/VauchiPlatform/vauchi_platform.swift`
-5. Commits, tags, force-pushes to main
-6. Triggers `vauchi/ios` → auto-MR with auto-merge
+**CI `update:version` job** (triggered by core's `update:swift-bindings`):
+1. Receives updated Package.swift + bindings via git push from core
+2. Validates package structure
+3. Tags new version
 
-### vauchi-platform-kotlin
+Note: Core's `update:swift-bindings` job handles downloading, updating, and pushing bindings directly to platform-swift. The platform-swift CI no longer triggers ios/macos — core does that directly via `trigger:ios`/`trigger:macos`.
 
-**build.gradle.kts**:
-```kotlin
-android { namespace = "app.vauchi.platform"; compileSdk = 34; minSdk = 26 }
-dependencies {
-    implementation("net.java.dev.jna:jna:5.14.0@aar")  // UniFFI runtime
-}
-publishing {
-    // Publishes to GitLab Maven registry
-    groupId = "app.vauchi"; artifactId = "vauchi-platform"
-}
-```
+### vauchi-platform-kotlin (ARCHIVED)
 
-**CI `update:bindings` job** (triggered by core):
-1. Downloads Android bindings zip from core packages
-2. Extracts JNI libs + Kotlin bindings
-3. Builds + publishes AAR to Maven
-4. Commits, tags
-5. Triggers `vauchi/android` → MR to bump dependency
+**Archived** — Maven AAR is now published directly from core's `publish:maven` job. The AAR is built using a Gradle wrapper embedded in `core/ci/maven-publish/` and published to the group-level Maven registry. Android resolves it from the group Maven URL.
 
 ## Consumer Integration
 
@@ -236,11 +220,11 @@ Version pinned in `Package.resolved` with commit SHA + checksum.
 ### Android App
 
 ```kotlin
-// settings.gradle.kts — GitLab Maven registry
-maven { url = uri("https://gitlab.com/api/v4/projects/77955319/packages/maven") }
+// settings.gradle.kts — GitLab group Maven registry
+maven { url = uri("https://gitlab.com/api/v4/groups/122552022/-/packages/maven") }
 
 // app/build.gradle.kts
-implementation("app.vauchi:vauchi-platform:0.1.2")
+implementation("app.vauchi:vauchi-platform:0.8.3")
 
 // Usage
 import uniffi.vauchi_platform.VauchiPlatform
