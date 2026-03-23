@@ -234,15 +234,16 @@ just release-history  # Show promotion chain
 | ~~desktop~~ | — | — | — | — | **ARCHIVED** (ADR-027) |
 | relay | yes | yes | `just release-dev relay` | N/A (no core dep) |
 
-### Core Dev/RC Downstream Triggers
+### Core Downstream Triggers
 
-When core gets a dev or RC tag, it triggers cli/tui to run `verify:upstream-prerelease` — verifying compatibility before committing to a PROD release.
+| Core Event | Downstream Action |
+|------------|-------------------|
+| Merge to main (code changes) | `verify:downstream-rust` → cli/tui/e2e/relay/linux-gtk rebuild + test |
+| `v*-dev.N` | lint + test only (no downstream triggers, no build/publish) |
+| `v*-rc.N` | `verify:downstream-rc` → cli/tui/e2e/relay/linux-gtk verify compat |
+| `v*.*.*` (PROD) | Full: build + package + publish + trigger ios/macos/android |
 
-| Core Tag | Downstream Action |
-|----------|-------------------|
-| `v*-dev.N` | Trigger cli/tui: lint + test |
-| `v*-rc.N` | Trigger cli/tui: lint + test |
-| `v*.*.*` (PROD) | Existing: mobile binding chain + downstream verify |
+Note: Dev tags are only created when Rust code changes. Non-code merges (docs, scripts, CI config) skip dev tag creation entirely.
 
 ### Safety Guards
 
@@ -255,7 +256,7 @@ When core gets a dev or RC tag, it triggers cli/tui to run `verify:upstream-prer
 
 - All jobs: `interruptible: true` (auto-cancel on new commits)
 - Retry: `max: 1` on runner system failures only
-- GIT_DEPTH: 1 (shallow clone)
+- GIT_DEPTH: 1 (shallow clone; auto-tag uses 50 for diff detection)
 - RUST_BACKTRACE: 1
 
 ## Reading Job Logs
