@@ -547,3 +547,10 @@ user_doc_filenames = ["README.md"]
 
 [layers.gherkin]
 problem_paths = ["_private/features/", "_private/docs/problems/"]
+
+# ─── Embeddings ──────────────────────────────────────────
+
+[embeddings]
+model = "qwen3-embedding:0.6B"
+base_url = "http://localhost:11434"
+enabled = true
