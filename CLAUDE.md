@@ -45,7 +45,7 @@ Lifecycle: `intake → investigating → planning → implementing → testing �
 
 Every problem record must have: **status**, **priority**, **owner**, **goals**. Critical/high problems require **containment** before investigation. Rejected solutions go in `### Rejected Approaches`. Track Gherkin promotion with `promoted_to:` links.
 
-**Alert threshold**: 5+ unreviewed docs in `_private/docs/planning/proposals/`.
+**Alert threshold**: 5+ unreviewed problems in `_private/docs/problems/` with status `intake`.
 **Staleness threshold**: 14 days (intake) or 30 days (other phases).
 
 ## Shell & Cargo Rules

@@ -185,8 +185,8 @@ case "$FILE_PATH" in
   *.rs)
     # Auto-format
     if command -v rustfmt &>/dev/null; then
-      if ! rustfmt --edition 2021 --check "$FILE_PATH" &>/dev/null; then
-        rustfmt --edition 2021 "$FILE_PATH" 2>/dev/null
+      if ! rustfmt --edition 2024 --check "$FILE_PATH" &>/dev/null; then
+        rustfmt --edition 2024 "$FILE_PATH" 2>/dev/null
         echo "Auto-formatted $FILE_PATH with rustfmt. Re-read before editing again."
       fi
     fi
