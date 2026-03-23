@@ -25,8 +25,8 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 ├── linux-gtk/                   ← Native GTK4-rs Linux app
 ├── linux-qt/                    ← Native Qt6/C++ Linux app
 ├── web-demo/                    ← SolidJS + WASM web demo
-├── vauchi-platform-kotlin/       ← Generated Kotlin bindings + JNI libs (Gradle distribution)
 ├── vauchi-platform-swift/         ← Generated Swift bindings + XCFramework (SPM distribution)
+├── vauchi-platform-kotlin/       ← ARCHIVED (Maven AAR now published from core)
 │
 ├── e2e/                         ← End-to-end tests
 ├── features/                    ← Gherkin specs (shared across all platforms)
@@ -75,9 +75,9 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 | Repo | Purpose |
 |------|---------|
 | `vauchi-platform-swift/` | Swift bindings + XCFramework (consumed by `ios/` via SPM) |
-| `vauchi-platform-kotlin/` | Kotlin bindings + JNI libs (consumed by `android/` via Gradle) |
+| `vauchi-platform-kotlin/` | **ARCHIVED** — Maven AAR now published directly from `core/` |
 
-These repos are **not manually edited**. `core/` CI builds UniFFI bindings for all targets and pushes the artifacts to these repos when merging to `main`.
+`vauchi-platform-swift` is updated by core's `update:swift-bindings` CI job. Android consumes the AAR from the group-level Maven registry (published by core's `publish:maven` job).
 
 **Testing & Specs:**
 

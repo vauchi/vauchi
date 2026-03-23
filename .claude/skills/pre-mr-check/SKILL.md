@@ -14,7 +14,7 @@ The goal is to **make MRs pass CI on the first try** by catching every issue loc
 ## Step 1: Detect Repos to Check
 
 If no repos specified:
-- Scan all sub-repos: `core relay cli tui android ios macos windows linux-gtk linux-qt web-demo e2e features docs website scripts assets themes locales _private vauchi-platform-kotlin vauchi-platform-swift`
+- Scan all sub-repos: `core relay cli tui android ios macos windows linux-gtk linux-qt web-demo e2e features docs website scripts assets themes locales _private vauchi-platform-swift`
 - Include the root repo (current directory)
 - For each, check if the current branch is not `main` and has commits ahead of `origin/main`
 

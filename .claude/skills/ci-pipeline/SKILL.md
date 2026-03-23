@@ -150,10 +150,11 @@ All repos inherit a group-level rule: **push = No one**, merge = Maintainers, fo
 | Repo | Push | Force Push | Reason |
 |------|------|------------|--------|
 | `vauchi-platform-swift` | Maintainers | **true** | CI force-pushes bindings |
-| `vauchi-platform-kotlin` | Maintainers | false | CI pushes bindings |
 | All other repos | No one | false | MR-only (inherited) |
 
-**Do not remove** the project-level rules on binding repos — the release pipeline will break.
+**Do not remove** the project-level rule on vauchi-platform-swift — the release pipeline will break.
+
+Note: `vauchi-platform-kotlin` is archived — its branch protection rules are no longer active.
 
 The CI bot (`group_122552022_bot_*`, Maintainer level 40) authenticates via `PROJECT_ACCESS_TOKEN` (group-level variable) for all push operations. `CI_JOB_TOKEN` is not used for pushes because: (1) CI_JOB_TOKEN pushes don't trigger new pipelines (core auto-tag), and (2) CI_JOB_TOKEN from upstream-triggered pipelines lacks write access to the triggered repo (app bindings-version bumps).
 
@@ -164,9 +165,9 @@ See `_private/docs/development/2026-02-25-branch-protection-config.md` for full 
 | Repo | Allows Triggers From |
 |------|---------------------|
 | `vauchi-platform-swift` | `core`, `ios`, `vauchi-platform-swift` |
-| `vauchi-platform-kotlin` | `core`, `android`, `vauchi-platform-kotlin` |
-| `ios` | `ios`, `vauchi-platform-swift` |
-| `android` | `android`, `vauchi-platform-kotlin` |
+| `ios` | `ios`, `core`, `vauchi-platform-swift` |
+| `macos` | `macos`, `core` |
+| `android` | `android`, `core` |
 | `desktop` | `vauchi` (root), `core`, `desktop` | **ARCHIVED** (ADR-027) — allowlist kept for historical pipelines |
 | `cli` | `vauchi` (root), `core`, `cli` |
 | `tui` | `vauchi` (root), `core`, `tui` |
@@ -247,7 +248,7 @@ When core gets a dev or RC tag, it triggers cli/tui to run `verify:upstream-prer
 
 - `auto-tag:version` rejects pre-release versions (won't auto-create dev/rc tags)
 - `publish-packages.sh`, `package-xcframework.sh`, `package-android.sh` reject pre-release versions
-- `update:version` (vauchi-platform-swift) and `update:bindings` (vauchi-platform-kotlin) reject pre-release versions
+- `update:version` (vauchi-platform-swift) rejects pre-release versions
 - Tag regex `$` anchor on all PROD jobs prevents dev/rc tags from triggering release pipeline
 
 ## Key Settings

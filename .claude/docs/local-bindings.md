@@ -20,7 +20,7 @@ just bindings-remote   # Revert to published packages
 
 ```
 vauchi-platform-swift (SPM, GitLab) ──→ ios/Vauchi.xcodeproj
-vauchi-platform-kotlin (Maven, GitLab) ──→ android/build.gradle.kts
+Group Maven registry (AAR, published from core) ──→ android/build.gradle.kts
 ```
 
 Both packages are published by CI on `core` tags. Platform apps consume them

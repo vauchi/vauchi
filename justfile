@@ -592,7 +592,7 @@ release-chain-status version="":
     fi
 
     # 3. Distribution repo status
-    for dist_repo in vauchi-platform-swift vauchi-platform-kotlin; do
+    for dist_repo in vauchi-platform-swift; do
         echo "── ${dist_repo} ──"
         if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
             # Check for open MRs mentioning this version

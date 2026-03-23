@@ -8,7 +8,7 @@ apply: always
 ## Platform Bindings
 
 ### Android
-- Kotlin, Jetpack Compose, Gradle (Kotlin DSL), UniFFI bindings via `vauchi-platform-kotlin`
+- Kotlin, Jetpack Compose, Gradle (Kotlin DSL), UniFFI bindings via group Maven registry (published from core)
 - Use Compose for all new UI
 - Pre-MR: `just check-android` (or `./gradlew lint assembleDebug test`)
 
