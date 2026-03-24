@@ -79,11 +79,9 @@ session-init:
     # Fetch all repos in parallel + prune stale refs
     echo ""
     echo "── fetch ──"
-    for dir in . */; do
-        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
-        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
-    done
-    wait
+    source scripts/scripts/for-each-repo.sh
+    _fetch_repo() { local label="$1" dir="$2"; git -C "$dir" fetch --all --prune --quiet 2>/dev/null; }
+    for_each_repo_parallel _fetch_repo
     echo "  All repos fetched + pruned"
 
     # ── Dashboard ──
@@ -93,27 +91,21 @@ session-init:
     # Open MRs (parallelize glab API calls)
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
         source scripts/scripts/resolve-repo.sh
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                [[ ! -d ".git" ]] && continue
-                label="root"
-            else
-                [[ -d "${dir}.git" ]] || continue
-                label="${dir%/}"
+        _check_mrs() {
+            local label="$1" dir="$2"
+            [[ "$dir" == "." ]] && label="root"
+            local gl_name mrs count
+            gl_name=$(_dir_to_gitlab_name "$label")
+            mrs=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&per_page=20" 2>/dev/null || true)
+            count=$(echo "$mrs" | jq 'length' 2>/dev/null || echo "0")
+            if [[ "$count" -gt 0 ]]; then
+                echo "$mrs" | jq -r '.[] | (.iid | tostring) + "\t" + .title' 2>/dev/null \
+                    | while IFS=$'\t' read -r iid title; do
+                        echo "  $label !${iid}  ${title}" >> "$SI_TMP/mrs.txt"
+                    done
             fi
-            (
-                gl_name=$(_dir_to_gitlab_name "$label")
-                mrs=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&per_page=20" 2>/dev/null || true)
-                count=$(echo "$mrs" | jq 'length' 2>/dev/null || echo "0")
-                if [[ "$count" -gt 0 ]]; then
-                    echo "$mrs" | jq -r '.[] | (.iid | tostring) + "\t" + .title' 2>/dev/null \
-                        | while IFS=$'\t' read -r iid title; do
-                            echo "  $label !${iid}  ${title}" >> "$SI_TMP/mrs.txt"
-                        done
-                fi
-            ) &
-        done
-        wait
+        }
+        for_each_repo_parallel _check_mrs
     fi
 
     echo ""
@@ -158,43 +150,37 @@ session-init:
     fi
 
     # Local branches, uncommitted changes, stashes — scan all repos in parallel
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
+    _scan_repo_status() {
+        local label="$1" d="$2"
+        [[ "$d" == "." ]] && label="root"
+        # Branches not on main
+        local branches br age_date last_epoch now age_days marker status count scount
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
+        if [[ -n "$branches" ]]; then
+            while IFS= read -r br; do
+                [[ -z "$br" ]] && continue
+                age_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "?")
+                last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
+                now=$(date +%s)
+                age_days=$(( (now - last_epoch) / 86400 ))
+                marker=""
+                [[ "$age_days" -gt 14 ]] && marker=" STALE"
+                echo "  $label ($br) last: $age_date (${age_days}d)$marker" >> "$SI_TMP/branches.txt"
+            done <<< "$branches"
         fi
-        (
-            # Branches not on main
-            branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
-            if [[ -n "$branches" ]]; then
-                while IFS= read -r br; do
-                    [[ -z "$br" ]] && continue
-                    age_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "?")
-                    last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
-                    now=$(date +%s)
-                    age_days=$(( (now - last_epoch) / 86400 ))
-                    marker=""
-                    [[ "$age_days" -gt 14 ]] && marker=" STALE"
-                    echo "  $label ($br) last: $age_date (${age_days}d)$marker" >> "$SI_TMP/branches.txt"
-                done <<< "$branches"
-            fi
-            # Uncommitted changes
-            status=$(git -C "$d" status --porcelain 2>/dev/null || true)
-            if [[ -n "$status" ]]; then
-                count=$(echo "$status" | wc -l | tr -d ' ')
-                echo "  $label: $count file(s) modified" >> "$SI_TMP/uncommitted.txt"
-            fi
-            # Stashes
-            scount=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
-            if [[ "$scount" -gt 0 ]]; then
-                echo "  $label: $scount stash(es)" >> "$SI_TMP/stashes.txt"
-            fi
-        ) &
-    done
-    wait
+        # Uncommitted changes
+        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+        if [[ -n "$status" ]]; then
+            count=$(echo "$status" | wc -l | tr -d ' ')
+            echo "  $label: $count file(s) modified" >> "$SI_TMP/uncommitted.txt"
+        fi
+        # Stashes
+        scount=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$scount" -gt 0 ]]; then
+            echo "  $label: $scount stash(es)" >> "$SI_TMP/stashes.txt"
+        fi
+    }
+    for_each_repo_parallel _scan_repo_status
 
     echo ""
     echo "LOCAL BRANCHES (not main):"
@@ -278,43 +264,38 @@ session-end:
     fi
 
     # Scan all repos in parallel: uncommitted, unpushed, orphan branches
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
+    source scripts/scripts/for-each-repo.sh
+    _check_session_end() {
+        local label="$1" d="$2"
+        [[ "$d" == "." ]] && label="root"
+        # Uncommitted changes
+        local status branch ahead gl_name mr_count
+        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+        if [[ -n "$status" ]]; then
+            {
+                echo "  ERROR: $label has uncommitted changes"
+                git -C "$d" status --short 2>/dev/null | while IFS= read -r line; do echo "    $line"; done
+            } >> "$SE_TMP/uncommitted.txt"
         fi
-        (
-            # Uncommitted changes
-            status=$(git -C "$d" status --porcelain 2>/dev/null || true)
-            if [[ -n "$status" ]]; then
-                {
-                    echo "  ERROR: $label has uncommitted changes"
-                    git -C "$d" status --short 2>/dev/null | while IFS= read -r line; do echo "    $line"; done
-                } >> "$SE_TMP/uncommitted.txt"
+        # Unpushed commits
+        branch=$(git -C "$d" branch --show-current 2>/dev/null)
+        if [[ -n "$branch" ]]; then
+            ahead=$(git -C "$d" rev-list --count "@{u}..HEAD" 2>/dev/null || echo "0")
+            if [[ "$ahead" -gt 0 ]]; then
+                echo "  ERROR: $label ($branch) has $ahead unpushed commit(s)" >> "$SE_TMP/unpushed.txt"
             fi
-            # Unpushed commits
-            branch=$(git -C "$d" branch --show-current 2>/dev/null)
-            if [[ -n "$branch" ]]; then
-                ahead=$(git -C "$d" rev-list --count "@{u}..HEAD" 2>/dev/null || echo "0")
-                if [[ "$ahead" -gt 0 ]]; then
-                    echo "  ERROR: $label ($branch) has $ahead unpushed commit(s)" >> "$SE_TMP/unpushed.txt"
-                fi
+        fi
+        # Branches without MRs
+        if [[ "$GLAB_OK" == "1" && "$branch" != "main" && -n "$branch" ]]; then
+            gl_name=$(_dir_to_gitlab_name "$label")
+            mr_count=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+                | jq 'length' 2>/dev/null || echo "0")
+            if [[ "$mr_count" == "0" ]]; then
+                echo "  WARN: $label ($branch) has no open MR" >> "$SE_TMP/orphan.txt"
             fi
-            # Branches without MRs
-            if [[ "$GLAB_OK" == "1" && "$branch" != "main" && -n "$branch" ]]; then
-                gl_name=$(_dir_to_gitlab_name "$label")
-                mr_count=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
-                    | jq 'length' 2>/dev/null || echo "0")
-                if [[ "$mr_count" == "0" ]]; then
-                    echo "  WARN: $label ($branch) has no open MR" >> "$SE_TMP/orphan.txt"
-                fi
-            fi
-        ) &
-    done
-    wait
+        fi
+    }
+    for_each_repo_parallel _check_session_end
 
     echo ""
     echo "── uncommitted changes ──"
@@ -743,19 +724,21 @@ clean-rust:
 git-compact:
     set -euo pipefail
     echo "── Compacting git repos ──"
+    source scripts/scripts/for-each-repo.sh
     # Only gc repos >50MB — small repos don't benefit
-    for dir in */; do
-        [[ -d "${dir}.git" ]] || continue
-        label="${dir%/}"
-        size_kb=$(du -sk "${dir}.git" 2>/dev/null | cut -f1)
+    _compact_repo() {
+        local label="$1" dir="$2"
+        local size_kb size_mb new_kb new_mb freed
+        size_kb=$(du -sk "${dir}/.git" 2>/dev/null | cut -f1)
         size_mb=$((size_kb / 1024))
         if [[ $size_mb -gt 50 ]]; then
             echo -n "  $label (${size_mb} MB) → "
-            git -C "$label" gc --aggressive --prune=now 2>/dev/null
-            new_kb=$(du -sk "${dir}.git" 2>/dev/null | cut -f1)
+            git -C "$dir" gc --aggressive --prune=now 2>/dev/null
+            new_kb=$(du -sk "${dir}/.git" 2>/dev/null | cut -f1)
             new_mb=$((new_kb / 1024))
             freed=$((size_mb - new_mb))
             echo "${new_mb} MB (freed ${freed} MB)"
         fi
-    done
+    }
+    for_each_repo --no-root _compact_repo
     echo "Done!"
