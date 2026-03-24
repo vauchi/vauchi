@@ -195,6 +195,60 @@ This is a hook improvement, not a discipline issue.
 
 ---
 
+## Session 2026-03-24a: Audit Housekeeping + CI Pipeline Investigation
+
+### E18: Pre-push hook silently pushed stale refs (design flaw, not discipline)
+
+**What**: The pre-push hook's auto-rebase code rebased the branch onto origin/main,
+then let the push proceed. But git computes refs-to-push BEFORE the hook runs,
+so git pushed the pre-rebase SHA. The rebase was invisible to the remote.
+
+**Root cause**: Fundamental git design constraint — stdin refs are pre-computed.
+The hook was designed to "help" but worked against git's contract.
+
+**Prevention**: Fixed in scripts !174. Hook now blocks after rebase with RETRY message.
+Self-healing: works WITH git's design instead of against it.
+
+### E19: Stale branches left behind after MR merges
+
+**What**: After MR !359 and !360 merged, local branches (`fix/ci-idempotent-uploads`,
+`fix/audit-tier0-root`, `fix/audit-tier0` in web-demo) remained checked out.
+Next session started on a stale branch without noticing.
+
+**Root cause**: No post-merge cleanup step. `session-init` warns about non-main branches
+but the warning says "local changes" (misleading — implies dirty files, not stale branch).
+
+**Prevention**: Use `just git branch-health cleanup` regularly. Consider adding
+auto-detection of "branch merged but still checked out" to `session-init`.
+
+### E20: Audit plan lacked completion tracking
+
+**What**: The audit remediation plan had no checkboxes or status column. After completing
+7/13 T0 items across multiple sessions, there was no way to tell at a glance what was done.
+
+**Root cause**: Plan was written as a one-shot list, not an ongoing tracker.
+
+**Prevention**: Added Status column to T0 table. Plans with >5 items should always include
+completion tracking from the start.
+
+### E21: Audit plan tracked 7/13 T0 done but actual was 11/13 (missed 4 completions + 1 T1)
+
+**What**: T0-3, T0-8 (android commit `986bc218`), T0-12, T0-13 (_private commit `2c3779ca`),
+and T1-1 (unicode normalization) were all completed and merged to main but never reflected
+in the audit plan. Session housekeeping on 2026-03-24 started with incorrect priorities
+(planned to work on already-done items).
+
+**Root cause**: Completions happened across multiple repos/sessions. The plan was updated
+with a Status column but only populated from one session's perspective without checking
+git history in ALL repos. Plan-code drift.
+
+**Prevention**: Before updating plan status, verify against `git log --oneline --all --grep="T0-"`
+across repos. The `/plan-audit` skill exists for exactly this purpose — use it.
+Also: T1-3 original estimate said ~34 unsafe blocks but actual is 160 — always verify
+estimates against code before committing to them.
+
+---
+
 ## Aggregate
 
 Each entry has one **primary** root cause. Entries appear once.
@@ -204,18 +258,20 @@ Each entry has one **primary** root cause. Entries appear once.
 | **Didn't verify before acting** | E2, E4, E5, E8, E9, E10, E11, E17 | 2 | Rule: `verify-before-acting.md` |
 | **Non-atomic operations under pressure** | E3, E6, E7, E12 | 2 | Pause after staging; one change = one commit |
 | **Bypassed recipe → cascade** | E13 → E14, E15 | 1 | Debug the recipe, don't bypass it |
-| **Tooling limitation (not discipline)** | E1, E16 | 2 | Fix the tool, not the behavior |
+| **Tooling limitation (not discipline)** | E1, E16, E18 | 3 | Fix the tool, not the behavior |
+| **No cleanup after completion** | E19, E20, E21 | 1 | Post-merge cleanup, status tracking from start, verify plan vs git |
 
 ### Meta-Pattern
 
 **Claude optimizes for task completion, not process compliance, when under friction.**
 
-This is the primary pattern behind 15 of 17 errors. It manifests as:
+This is the primary pattern behind 15 of 21 errors. It manifests as:
 - Speed over verification (E2, E4, E5, E8, E9, E10, E11, E17)
 - Bulk operations over atomic ones (E3, E6, E7, E12)
 - Bypassing tools over debugging them (E13 → E14, E15)
 
-E1 and E16 are genuine tooling limitations, not discipline failures.
+E1, E16, and E18 are genuine tooling limitations, not discipline failures.
+E19 and E20 are process gaps — no cleanup/tracking step existed.
 
 The pattern is NOT "Claude doesn't know the rules." In every case, the rule was known
 and could be cited after the fact. The pattern is that **completion pressure overrides
