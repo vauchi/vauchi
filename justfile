@@ -33,7 +33,6 @@ tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@
 # iOS simulator device name (single source of truth for all recipes)
 ios_simulator := "iPhone 17 Pro"
 
-
 # ─── Aliases ─────────────────────────────────────────────────────
 
 alias b := build
