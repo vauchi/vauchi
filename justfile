@@ -1010,6 +1010,7 @@ sweep days="30":
 [script]
 housekeeping:
     set -uo pipefail
+    source scripts/scripts/for-each-repo.sh
     ISSUES=0
     SECTION=0
 
@@ -1021,65 +1022,59 @@ housekeeping:
 
     # 0. Fetch remotes, fast-forward main, rebase local branches
     section "Sync with remotes"
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        git -C "$gitdir" fetch origin --prune --quiet 2>/dev/null || { echo "  $label: fetch failed"; continue; }
-        branch=$(git -C "$gitdir" branch --show-current 2>/dev/null || echo "")
-        [[ -z "$branch" ]] && continue
+    _sync_repo() {
+        local label="$1" dir="$2"
+        git -C "$dir" fetch origin --prune --quiet 2>/dev/null || { echo "  $label: fetch failed"; return; }
+        local branch
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
+        [[ -z "$branch" ]] && return
         if [[ "$branch" == "main" ]]; then
             # Fast-forward main if clean
-            if git -C "$gitdir" diff --quiet 2>/dev/null && git -C "$gitdir" diff --cached --quiet 2>/dev/null; then
-                behind=$(git -C "$gitdir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+            if git -C "$dir" diff --quiet 2>/dev/null && git -C "$dir" diff --cached --quiet 2>/dev/null; then
+                local behind
+                behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
                 if [[ "$behind" -gt 0 ]]; then
-                    git -C "$gitdir" merge --ff-only origin/main --quiet 2>/dev/null \
+                    git -C "$dir" merge --ff-only origin/main --quiet 2>/dev/null \
                         && echo "  $label: fast-forwarded main ($behind commit(s))" \
                         || echo "  $label: main diverged, cannot fast-forward"
                 fi
             fi
         else
             # Rebase feature branch onto latest origin/main
-            if git -C "$gitdir" diff --quiet 2>/dev/null && git -C "$gitdir" diff --cached --quiet 2>/dev/null; then
-                rebase_output=$(git -C "$gitdir" rebase origin/main 2>&1) \
+            if git -C "$dir" diff --quiet 2>/dev/null && git -C "$dir" diff --cached --quiet 2>/dev/null; then
+                local rebase_output
+                rebase_output=$(git -C "$dir" rebase origin/main 2>&1) \
                     && { echo "$rebase_output" | grep -q "up to date" || echo "  $label: rebased $branch onto origin/main"; } \
-                    || { echo "  $label: rebase failed on $branch — resolve manually"; git -C "$gitdir" rebase --abort 2>/dev/null; ISSUES=$((ISSUES + 1)); }
+                    || { echo "  $label: rebase failed on $branch — resolve manually"; git -C "$dir" rebase --abort 2>/dev/null; ISSUES=$((ISSUES + 1)); }
             else
                 echo "  $label: skipped rebase (dirty working tree on $branch)"
             fi
         fi
-    done
+    }
+    for_each_repo _sync_repo
     echo "  Sync complete"
 
     # 1. Uncommitted changes & untracked files
     section "Uncommitted changes"
     dirty=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        status=$(git -C "$gitdir" status --porcelain 2>/dev/null || true)
+    _check_uncommitted() {
+        local label="$1" dir="$2"
+        local status
+        status=$(git -C "$dir" status --porcelain 2>/dev/null || true)
         if [[ -n "$status" ]]; then
+            local modified untracked
             modified=$(echo "$status" | grep -c '^ M\|^M \|^MM' || true)
             untracked=$(echo "$status" | grep -c '^??' || true)
-            parts=()
+            local parts=()
             [[ "$modified" -gt 0 ]] && parts+=("$modified modified")
             [[ "$untracked" -gt 0 ]] && parts+=("$untracked untracked")
+            local detail
             detail=$(IFS=', '; echo "${parts[*]}")
             echo "  $label: $detail"
             dirty=$((dirty + modified + untracked))
         fi
-    done
+    }
+    for_each_repo _check_uncommitted
     if [[ "$dirty" -eq 0 ]]; then
         echo "  All clean"
     else
@@ -1102,23 +1097,18 @@ housekeeping:
     # 3. Stashes
     section "Stashes"
     stash_total=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        stash_count=$(git -C "$gitdir" stash list 2>/dev/null | wc -l | tr -d ' ')
+    _check_stashes() {
+        local label="$1" dir="$2"
+        local stash_count
+        stash_count=$(git -C "$dir" stash list 2>/dev/null | wc -l | tr -d ' ')
         if [[ "$stash_count" -gt 0 ]]; then
             echo "  $label: $stash_count stash(es)"
-            git -C "$gitdir" stash list 2>/dev/null | head -3 | sed 's/^/    /'
+            git -C "$dir" stash list 2>/dev/null | head -3 | sed 's/^/    /'
             [[ "$stash_count" -gt 3 ]] && echo "    ... and $((stash_count - 3)) more"
             stash_total=$((stash_total + stash_count))
         fi
-    done
+    }
+    for_each_repo _check_stashes
     if [[ "$stash_total" -eq 0 ]]; then
         echo "  None"
     else
@@ -1128,22 +1118,18 @@ housekeeping:
     # 4. Leftover WIP commits
     section "WIP commits (unsaved work)"
     wip_count=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        head_msg=$(git -C "$gitdir" log -1 --format=%s 2>/dev/null || true)
+    _check_wip() {
+        local label="$1" dir="$2"
+        local head_msg
+        head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
         if [[ "$head_msg" == wip:* ]]; then
-            branch=$(git -C "$gitdir" branch --show-current 2>/dev/null || echo "detached")
+            local branch
+            branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "detached")
             echo "  $label ($branch): $head_msg"
             wip_count=$((wip_count + 1))
         fi
-    done
+    }
+    for_each_repo _check_wip
     if [[ "$wip_count" -eq 0 ]]; then
         echo "  None"
     else
@@ -1156,20 +1142,15 @@ housekeeping:
     section "Stale local branches"
     stale_branches=0
     now_epoch=$(date +%s)
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        branches=$(git -C "$gitdir" branch --no-color 2>/dev/null | grep -v '^\* ' | grep -v 'main$' | sed 's/^[[:space:]]*//' || true)
+    _check_stale_branches() {
+        local label="$1" dir="$2"
+        local branches
+        branches=$(git -C "$dir" branch --no-color 2>/dev/null | grep -v '^\* ' | grep -v 'main$' | sed 's/^[[:space:]]*//' || true)
         if [[ -n "$branches" ]]; then
             while IFS= read -r br; do
                 [[ -z "$br" ]] && continue
-                last_epoch=$(git -C "$gitdir" log -1 --format=%ct "$br" 2>/dev/null || echo "$now_epoch")
+                local last_epoch age_days age_label
+                last_epoch=$(git -C "$dir" log -1 --format=%ct "$br" 2>/dev/null || echo "$now_epoch")
                 age_days=$(( (now_epoch - last_epoch) / 86400 ))
                 if [[ "$age_days" -ge 14 ]]; then
                     age_label="${age_days}d STALE"
@@ -1180,7 +1161,8 @@ housekeeping:
                 stale_branches=$((stale_branches + 1))
             done <<< "$branches"
         fi
-    done
+    }
+    for_each_repo _check_stale_branches
     if [[ "$stale_branches" -eq 0 ]]; then
         echo "  None"
     else
@@ -1264,21 +1246,16 @@ housekeeping:
     # 11. Unpushed commits
     section "Unpushed commits"
     unpushed=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir%/}"
-        fi
-        ahead=$(git -C "$gitdir" rev-list --count @{upstream}..HEAD 2>/dev/null || echo "0")
+    _check_unpushed() {
+        local label="$1" dir="$2"
+        local ahead
+        ahead=$(git -C "$dir" rev-list --count @{upstream}..HEAD 2>/dev/null || echo "0")
         if [[ "$ahead" -gt 0 ]]; then
             echo "  $label: $ahead commit(s) ahead of origin"
             unpushed=$((unpushed + ahead))
         fi
-    done
+    }
+    for_each_repo _check_unpushed
     if [[ "$unpushed" -eq 0 ]]; then
         echo "  All repos up to date with origin"
     else
@@ -1431,31 +1408,26 @@ housekeeping:
 [script]
 grep pattern glob='':
     set -uo pipefail
+    source scripts/scripts/for-each-repo.sh
     GLOB_ARGS=()
     if [[ -n "{{ glob }}" ]]; then
         GLOB_ARGS=(--glob "{{ glob }}")
     fi
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            search_dir="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            search_dir="${dir%/}"
-        fi
+    _grep_repo() {
+        local label="$1" dir="$2"
         # Skip generated/vendor dirs
-        results=$(rg "{{ pattern }}" "$search_dir" \
+        results=$(rg "{{ pattern }}" "$dir" \
             --no-heading --color=never \
             --glob '!target/' --glob '!node_modules/' --glob '!dist/' \
             --glob '!*.lock' --glob '!.git/' \
-            "${GLOB_ARGS[@]}" 2>/dev/null || true)
+            ${GLOB_ARGS[@]+"${GLOB_ARGS[@]}"} 2>/dev/null || true)
         if [[ -n "$results" ]]; then
             echo "── $label ──"
             echo "$results"
             echo ""
         fi
-    done
+    }
+    for_each_repo _grep_repo
 
 # Verify Cargo.toml branch refs point to main
 # Usage: just check-refs
@@ -1565,24 +1537,20 @@ reuse repo='':
         exit 0
     fi
     set -uo pipefail
+    source scripts/scripts/for-each-repo.sh
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
         [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
         echo "── {{ repo }} ──"
         (cd "$dir" && reuse lint 2>&1) || true
     else
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                label="vauchi (root)"
-            else
-                [[ ! -d "${dir}.git" ]] && continue
-                label="${dir%/}"
-                dir="${dir%/}"
-            fi
+        _reuse_repo() {
+            local label="$1" dir="$2"
             echo "── $label ──"
             (cd "$dir" && reuse lint 2>&1 | tail -3) || true
             echo ""
-        done
+        }
+        for_each_repo _reuse_repo
     fi
 
 # Search by drift-detector concept (uses concept aliases from driftconfig.toml)
