@@ -34,6 +34,7 @@ create name *repos='':
         exit 1
     fi
 
+    source scripts/scripts/for-each-repo.sh
     targets=()
     if [[ -n "{{ repos }}" ]]; then
         for r in {{ repos }}; do
@@ -47,10 +48,8 @@ create name *repos='':
         done
     else
         # All sub-repos
-        for dir in */; do
-            [[ ! -d "${dir}.git" ]] && continue
-            targets+=("${dir%/}")
-        done
+        _collect_target() { targets+=("$2"); }
+        for_each_repo --no-root _collect_target
     fi
 
     mkdir -p "$wt_base"
@@ -223,22 +222,16 @@ remove name:
 
     # Optionally delete the branch too
     if [[ -t 0 ]]; then
+        source scripts/scripts/for-each-repo.sh
         read -rp "Also delete branch '{{ name }}'? [y/N] " answer
         if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
-            for dir in . */; do
-                if [[ "$dir" == "." ]]; then
-                    [[ ! -d ".git" ]] && continue
-                    d="."
-                    label="root"
-                else
-                    [[ ! -d "${dir}.git" ]] && continue
-                    d="${dir%/}"
-                    label="${dir%/}"
-                fi
-                if git -C "$d" branch -d "{{ name }}" 2>/dev/null; then
+            _delete_branch() {
+                local label="$1" dir="$2"
+                if git -C "$dir" branch -d "{{ name }}" 2>/dev/null; then
                     status_ok "$label" "deleted branch '{{ name }}'"
                 fi
-            done
+            }
+            for_each_repo _delete_branch
         fi
     fi
 

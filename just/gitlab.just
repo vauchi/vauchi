@@ -115,6 +115,7 @@ mr-create-all title='':
     just gitlab _check-auth
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/resolve-repo.sh
+    source scripts/scripts/for-each-repo.sh
     set -euo pipefail
     timer_start
 
@@ -134,17 +135,16 @@ mr-create-all title='':
     # Format: "label:gl_name:iid" per entry
     mr_registry=()
 
-    for dir in */; do
-        [[ -d "${dir}.git" ]] || continue
-        label="${dir%/}"
+    _process_repo() {
+        local label="$1" dir="$2"
         branch=$(git -C "$dir" branch --show-current 2>/dev/null)
 
         # Skip repos on main or detached HEAD
-        [[ "$branch" == "main" || -z "$branch" ]] && continue
+        [[ "$branch" == "main" || -z "$branch" ]] && return 0
 
         # Skip repos with no commits ahead
         ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
-        [[ "$ahead" -eq 0 ]] && continue
+        [[ "$ahead" -eq 0 ]] && return 0
 
         echo ""
         echo "── $label ($branch, $ahead commits) ──"
@@ -166,7 +166,7 @@ mr-create-all title='':
                 echo "  ✗ CONFLICT — skipping (resolve manually)"
                 git -C "$dir" rebase --abort 2>/dev/null
                 failed+=("$label")
-                continue
+                return 0
             fi
             rebased=yes
         fi
@@ -182,7 +182,7 @@ mr-create-all title='':
                 else
                     echo "  Force-push failed"
                     failed+=("$label")
-                    continue
+                    return 0
                 fi
             else
                 echo "  MR exists (!${existing_iid}), already up to date"
@@ -215,7 +215,8 @@ mr-create-all title='':
                 failed+=("$label")
             fi
         fi
-    done
+    }
+    for_each_repo --no-root _process_repo
 
     # ── Pass 2: Cross-reference Related MRs + Draft downstream ────────
     if [[ ${#mr_registry[@]} -gt 1 ]]; then
