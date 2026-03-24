@@ -249,6 +249,81 @@ estimates against code before committing to them.
 
 ---
 
+## Session 2026-03-24b: iOS Simulator Contention Deep Dive
+
+### E22: Boot+shutdown "cleanup cycle" was counterproductive (cargo cult)
+
+**What**: Three successive fix commits (8efb289, 4e0dd44, 8f4dd1b) added increasingly
+aggressive simulator cleanup: shutdown → delete clones → boot → sleep 3 → shutdown.
+Each iteration added complexity without addressing the root cause.
+
+**Root cause**: `simctl shutdown` + `simctl boot` resets RUNTIME state (processes,
+SpringBoard in-memory) but NOT DISK state (installed apps, data, keychain). After
+test:snapshots installs Vauchi, the app bundle persists on the simulator's disk through
+reboots. When test:ui then boots and tries to install VauchiUITests-Runner, SpringBoard's
+preflight checks fail on stale app state. The 7-step cleanup was adding state transitions
+that made the problem worse, not better.
+
+**Fix**: Replace with `simctl shutdown all` + `simctl erase all` (2 steps). Erase is the
+definitive way to reset a simulator — it wipes installed apps, keychain, and settings.
+
+**Pattern tag**: `cargo-cult-fix`, `escalating-complexity`
+
+### E23: GitLab `before_script` override silently dropped cleanup (hidden bug)
+
+**What**: `coverage:unit` extended `.simulator-job` but had its own `before_script`
+(to install xcresultparser), which completely overrode `.simulator-job`'s cleanup.
+It kept `resource_group` and `after_script` but lost all `before_script` cleanup steps.
+Latent failure on main/schedule pipelines.
+
+**Root cause**: GitLab CI `before_script` is NOT merged across `extends` — the job's
+own `before_script` completely replaces all template before_scripts. This is not obvious
+and easy to miss when composing multiple templates.
+
+**Fix**: Use `!reference [.simulator-job, before_script]` in `coverage:unit` to compose.
+
+**Pattern tag**: `yaml-override-surprise`, `latent-bug`
+
+### E24: Record baselines git checkout always broken (masked by earlier failure)
+
+**What**: `test:snapshots:record` job failed at `git checkout "${CI_COMMIT_REF_NAME}"`
+with "pathspec did not match". The tests executed and snapshots were recorded, but the
+commit+push step was unreachable.
+
+**Root cause**: `git fetch <url> <branch>` stores the result in `FETCH_HEAD` only — it
+does NOT create a local branch. In GitLab's shallow clone (`GIT_DEPTH: 20`) with
+detached HEAD (`refs/merge-requests/N/head`), there is no local branch named
+`fix/simulator-contention`. This bug was always present but masked by simulator
+contention failures (E22) — the job never survived past the test execution step to
+reach the git operations.
+
+**Fix**: Use explicit refspec to create a local branch:
+`git fetch "$PUSH_URL" "+refs/heads/${CI_COMMIT_REF_NAME}:refs/heads/${CI_COMMIT_REF_NAME}"`
+
+**Pattern tag**: `masked-by-earlier-failure`, `shallow-clone-surprise`
+
+### E25: CI_JOB_TOKEN push rejected — commit email must be verified (5th masked layer)
+
+**What**: After fixing Bugs #1-#4, the record job finally pushed but was rejected:
+"You cannot push commits for 'ci@vauchi.app'. You can only push commits if the
+committer email is one of your own verified emails."
+
+**Root cause**: CI_JOB_TOKEN authenticates as the pipeline triggerer (megloff1), not a
+bot account. GitLab push rules require the commit author email to be one of the
+authenticated user's verified emails. `ci@vauchi.app` is not verified for megloff1.
+
+**Fix**: Use `${GITLAB_USER_EMAIL}` (pipeline triggerer's email) instead of a fake bot
+email. Semantically correct — whoever clicked "Record baselines" authored the commit.
+
+**Pattern tag**: `masked-by-earlier-failure`, `auth-identity-mismatch`
+
+**Meta-observation**: 5 bugs, each masked by the previous one. The entire record job had
+never successfully completed since its creation. Every fix revealed the next failure.
+Lesson: trace the FULL script path before pushing — reading 50 lines costs 2 minutes,
+each push-wait-fail cycle costs 10.
+
+---
+
 ## Aggregate
 
 Each entry has one **primary** root cause. Entries appear once.
@@ -260,6 +335,9 @@ Each entry has one **primary** root cause. Entries appear once.
 | **Bypassed recipe → cascade** | E13 → E14, E15 | 1 | Debug the recipe, don't bypass it |
 | **Tooling limitation (not discipline)** | E1, E16, E18 | 3 | Fix the tool, not the behavior |
 | **No cleanup after completion** | E19, E20, E21 | 1 | Post-merge cleanup, status tracking from start, verify plan vs git |
+| **Cargo-cult fix / escalating complexity** | E22 | 1 | Understand the mechanism (disk vs runtime state), simplify |
+| **YAML override surprise** | E23 | 1 | GitLab before_script replaces, not merges — use !reference |
+| **Masked by earlier failure** | E24 | 1 | Fix ALL failures before declaring "partially working" |
 
 ### Meta-Pattern
 
