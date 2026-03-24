@@ -30,6 +30,19 @@ private_repo := "private"
 # Tooling repositories (url,dir format, outside vauchi group)
 tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@gitlab.com:megloff1/markdown-plan.git,markdown-plan"
 
+# iOS simulator device name (single source of truth for all recipes)
+ios_simulator := "iPhone 17 Pro"
+
+# Metrics repo groups (non-overlapping — each repo appears in exactly one group)
+# Group 1: coverage + binary-size metrics
+metrics_coverage_repos := "core cli tui relay"
+# Group 2: binary-size + design-drift (no coverage)
+metrics_binary_drift_repos := "linux-gtk"
+# Group 3: design-drift only
+metrics_drift_only_repos := "linux-qt macos windows web-demo"
+# All repos with metrics jobs (union — for metrics-status display)
+metrics_all_repos := "core cli tui relay linux-gtk linux-qt macos windows web-demo"
+
 # ─── Aliases ─────────────────────────────────────────────────────
 
 alias b := build
@@ -122,7 +135,7 @@ build *args:
                 rust)    (cd "$dir" && cargo build --workspace 2>&1) ;;
                 npm)     (cd "$dir" && npm ci --silent && npm run build 2>&1) ;;
                 gradle)  (cd "$dir" && ./gradlew assembleDebug 2>&1) ;;
-                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -configuration Debug build -quiet 2>&1) ;;
+                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name={{ ios_simulator }}' -configuration Debug build -quiet 2>&1) ;;
                 mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
                 *)       echo "  (no build step for $tc)"; return 0 ;;
             esac
@@ -154,7 +167,7 @@ test *args:
                     ;;
                 npm)     (cd "$dir" && npx playwright test --project=chromium --grep-invert "@visual|@a11y" 2>&1) ;;
                 gradle)  (cd "$dir" && ./gradlew test 2>&1) ;;
-                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -quiet 2>&1) ;;
+                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name={{ ios_simulator }}' test -quiet 2>&1) ;;
                 mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
                 *)       echo "  (no test step for $tc)"; return 0 ;;
             esac
@@ -725,7 +738,7 @@ coverage *args:
                     fi
                     rm -rf "$dir/coverage_result.xcresult"
                     (cd "$dir" && xcodebuild -scheme Vauchi \
-                        -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+                        -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
                         -enableCodeCoverage YES \
                         -resultBundlePath "$dir/coverage_result" \
                         test 2>&1)

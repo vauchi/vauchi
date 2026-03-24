@@ -54,12 +54,12 @@ check-ios:
     echo ""
     echo "── iOS: Building (Debug) ──"
     xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
-      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
       -clonedSourcePackagesDirPath .spm-packages build
     echo ""
     echo "── iOS: Running tests ──"
     xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
-      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
       -clonedSourcePackagesDirPath .spm-packages test
     echo ""
     echo "── iOS checks passed ──"

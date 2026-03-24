@@ -42,10 +42,10 @@ run platform="" *args:
             ;;
         ios)
             just build-ios release
-            cd ios && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name=iPhone 15 Pro' -configuration Release build
-            xcrun simctl boot "iPhone 15 Pro" 2>/dev/null || true
-            xcrun simctl install "iPhone 15 Pro" ios/build/Build/Products/Release-iphonesimulator/Vauchi.app
-            xcrun simctl launch "iPhone 15 Pro" app.vauchi.ios
+            cd ios && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name={{ ios_simulator }}' -configuration Release build
+            xcrun simctl boot "{{ ios_simulator }}" 2>/dev/null || true
+            xcrun simctl install "{{ ios_simulator }}" ios/build/Build/Products/Release-iphonesimulator/Vauchi.app
+            xcrun simctl launch "{{ ios_simulator }}" app.vauchi.ios
             ;;
         relay)
             cd relay && cargo run -- {{args}}
