@@ -161,7 +161,6 @@ main mode='':
             fi
         done <<< "$merged"
     }
-    source scripts/scripts/for-each-repo.sh
     for_each_repo cleanup_merged
 
     elapsed=$(timer_elapsed)
