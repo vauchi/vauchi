@@ -14,6 +14,7 @@
 [script]
 wip msg='' *repos='':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
@@ -27,22 +28,14 @@ wip msg='' *repos='':
             fi
         done
     else
-        # All repos including root
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                gitdir=".git"
-            else
-                [[ ! -d "${dir}.git" ]] && continue
-                gitdir="${dir}.git"
-            fi
+        # All repos including root — collect dirty ones
+        _collect_dirty() {
+            local label="$1" dir="$2"
             if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
-                if [[ "$dir" == "." ]]; then
-                    targets+=(".")
-                else
-                    targets+=("${dir%/}")
-                fi
+                targets+=("$dir")
             fi
-        done
+        }
+        for_each_repo _collect_dirty
     fi
 
     if [[ ${#targets[@]} -eq 0 ]]; then
@@ -83,6 +76,7 @@ wip msg='' *repos='':
 [script]
 wip-undo *repos='':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
@@ -97,19 +91,15 @@ wip-undo *repos='':
         done
     else
         # All repos — only those whose HEAD is a wip: commit
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                [[ ! -d ".git" ]] && continue
-            else
-                [[ ! -d "${dir}.git" ]] && continue
-            fi
-            d="$dir"
-            [[ "$dir" != "." ]] && d="${dir%/}"
-            last_msg=$(git -C "$d" log -1 --format=%s 2>/dev/null || true)
+        _collect_wip() {
+            local label="$1" dir="$2"
+            local last_msg
+            last_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
             if [[ "$last_msg" == wip:* ]]; then
-                targets+=("$d")
+                targets+=("$dir")
             fi
-        done
+        }
+        for_each_repo _collect_wip
     fi
 
     if [[ ${#targets[@]} -eq 0 ]]; then
@@ -143,6 +133,7 @@ wip-undo *repos='':
 [script]
 resume name *repos='':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git resume <branch-name> [repo1 repo2 ...]" >&2
@@ -162,15 +153,11 @@ resume name *repos='':
             fi
         done
     else
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                [[ ! -d ".git" ]] && continue
-                targets+=(".")
-            else
-                [[ ! -d "${dir}.git" ]] && continue
-                targets+=("${dir%/}")
-            fi
-        done
+        _collect_all() {
+            local label="$1" dir="$2"
+            targets+=("$dir")
+        }
+        for_each_repo _collect_all
     fi
 
     dirty=()
