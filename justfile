@@ -33,15 +33,6 @@ tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@
 # iOS simulator device name (single source of truth for all recipes)
 ios_simulator := "iPhone 17 Pro"
 
-# Metrics repo groups (non-overlapping — each repo appears in exactly one group)
-# Group 1: coverage + binary-size metrics
-metrics_coverage_repos := "core cli tui relay"
-# Group 2: binary-size + design-drift (no coverage)
-metrics_binary_drift_repos := "linux-gtk"
-# Group 3: design-drift only
-metrics_drift_only_repos := "linux-qt macos windows web-demo"
-# All repos with metrics jobs (union — for metrics-status display)
-metrics_all_repos := "core cli tui relay linux-gtk linux-qt macos windows web-demo"
 
 # ─── Aliases ─────────────────────────────────────────────────────
 

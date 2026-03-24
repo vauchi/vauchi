@@ -5,6 +5,12 @@
 # GitLab operations: MRs, pipelines, issues
 # Usage: just gitlab <recipe>
 
+# Metrics repo groups (non-overlapping — each repo in exactly one group)
+metrics_coverage_repos := "core cli tui relay"
+metrics_binary_drift_repos := "linux-gtk"
+metrics_drift_only_repos := "linux-qt macos windows web-demo"
+metrics_all_repos := "core cli tui relay linux-gtk linux-qt macos windows web-demo"
+
 # ── Helpers ─────────────────────────────────────────────────────────
 
 [private]
@@ -478,17 +484,19 @@ metrics-refresh:
     glab ci run -R vauchi/scripts -b main 2>/dev/null \
       && echo "    ✓ scripts pipeline created" \
       || echo "    ⚠ scripts trigger failed"
-    for repo in core cli tui relay; do
+    for repo in {{ metrics_coverage_repos }}; do
         echo "  Triggering coverage + binary-size ($repo)..."
         glab ci run -R "vauchi/$repo" -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
           && echo "    ✓ $repo pipeline created" \
           || echo "    ⚠ $repo trigger failed"
     done
-    echo "  Triggering binary-size + design-drift (linux-gtk)..."
-    glab ci run -R vauchi/linux-gtk -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
-      && echo "    ✓ linux-gtk pipeline created" \
-      || echo "    ⚠ linux-gtk trigger failed"
-    for repo in linux-qt macos windows web-demo; do
+    for repo in {{ metrics_binary_drift_repos }}; do
+        echo "  Triggering binary-size + design-drift ($repo)..."
+        glab ci run -R "vauchi/$repo" -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
+          && echo "    ✓ $repo pipeline created" \
+          || echo "    ⚠ $repo trigger failed"
+    done
+    for repo in {{ metrics_drift_only_repos }}; do
         echo "  Triggering design-drift ($repo)..."
         glab ci run -R "vauchi/$repo" -b main --variables "METRICS_REFRESH:true" 2>/dev/null \
           && echo "    ✓ $repo pipeline created" \
@@ -511,7 +519,7 @@ metrics-status:
     just gitlab _check-auth
     printf "%-12s %-12s %-12s %-12s %-12s\n" "REPO" "COVERAGE" "BINARY-SIZE" "DESIGN-DRIFT" "PIPELINE"
     printf "%-12s %-12s %-12s %-12s %-12s\n" "----------" "----------" "----------" "----------" "----------"
-    for repo in core cli tui relay linux-gtk linux-qt macos windows web-demo; do
+    for repo in {{ metrics_all_repos }}; do
         pipeline_status=$(glab api "projects/vauchi%2F${repo}/pipelines?ref=main&per_page=1" 2>/dev/null \
           | python3 -c "import sys,json;d=json.load(sys.stdin);print(d[0]['status'] if d else 'none')" 2>/dev/null || echo "?")
         case "$repo" in
