@@ -33,3 +33,5 @@ Ratatui = "Ratatui"
 ratatui = "ratatui"
 # Intentional substring match for upstream error messages with typos
 ecryption = "ecryption"
+# flate2 is a Rust compression crate name (not a typo for "flat")
+flate = "flate"
