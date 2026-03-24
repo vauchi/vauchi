@@ -223,8 +223,9 @@ All recipes require `glab` auth. Error immediately if not authenticated.
 |--------|---------|
 | `just runners-start` | Start docker-local runner |
 | `just runners-stop` | Stop docker-local runner |
+| `just runners-restart` | Restart docker-local runner |
 | `just runners-status` | Show runner status |
-| `just docker-runner-start/stop/status/logs/restart` | Docker runner lifecycle |
+| `just runners-logs` | Follow docker-local runner logs |
 
 ## Dev (Multi-Instance)
 

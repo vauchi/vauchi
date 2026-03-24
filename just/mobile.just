@@ -9,9 +9,19 @@
 # ═══════════════════════════════════════════════════════════════════
 
 # Build Android native libraries
+# NOTE: Requires core/scripts/build-android.sh — see platform-bindings skill
 [group('mobile')]
+[script]
 build-android mode="debug":
-    ./core/scripts/build-android.sh {{mode}}
+    set -e
+    SCRIPT="./core/scripts/build-android.sh"
+    if [ ! -f "$SCRIPT" ]; then
+        echo "ERROR: $SCRIPT not found"
+        echo "Android build scripts are not yet implemented."
+        echo "Use 'just bindings' for UniFFI binding generation instead."
+        exit 1
+    fi
+    "$SCRIPT" {{mode}}
 
 # Build Android APK
 [group('mobile')]
@@ -20,9 +30,19 @@ android mode="debug": (build-android mode)
     ./gradlew assemble{{mode}}
 
 # Build iOS framework (macOS only)
+# NOTE: Requires ios/build-ios.sh — see platform-bindings skill
 [group('mobile')]
+[script]
 build-ios mode="debug":
-    BUILD_MODE={{mode}} ./ios/build-ios.sh
+    set -e
+    SCRIPT="./ios/build-ios.sh"
+    if [ ! -f "$SCRIPT" ]; then
+        echo "ERROR: $SCRIPT not found"
+        echo "iOS build scripts are not yet implemented."
+        echo "Use 'just bindings' for UniFFI binding generation instead."
+        exit 1
+    fi
+    BUILD_MODE={{mode}} "$SCRIPT"
 
 # Generate UniFFI mobile bindings
 [group('mobile')]

@@ -5,7 +5,7 @@
 # GitLab runner recipes
 
 # ═══════════════════════════════════════════════════════════════════
-# GITLAB RUNNERS
+# GITLAB RUNNERS (docker-local via systemd)
 # ═══════════════════════════════════════════════════════════════════
 
 # Start docker-local runner service
@@ -19,7 +19,13 @@ runners-start:
 [group('runners')]
 runners-stop:
     @echo "Stopping docker-local runner..."
-    systemctl --user stop gitlab-runner 2>/dev/null || true
+    systemctl --user stop gitlab-runner 2>/dev/null || echo "[SKIP] docker-local service not configured"
+
+# Restart docker-local runner service
+[group('runners')]
+runners-restart:
+    @echo "Restarting docker-local runner..."
+    systemctl --user restart gitlab-runner 2>/dev/null || echo "[SKIP] docker-local service not configured"
 
 # Show status of all runners
 [group('runners')]
@@ -32,29 +38,7 @@ runners-status:
     @echo "── GitLab Runner Config ──"
     @gitlab-runner list 2>&1 | head -20 || echo "  gitlab-runner not installed"
 
-# ─── Docker-local Runner (systemd) ─────────────────────────────────
-
-# Start docker-local runner service
+# View docker-local runner logs (follow mode)
 [group('runners')]
-docker-runner-start:
-    systemctl --user start gitlab-runner
-
-# Stop docker-local runner service
-[group('runners')]
-docker-runner-stop:
-    systemctl --user stop gitlab-runner
-
-# Show docker-local runner status
-[group('runners')]
-docker-runner-status:
-    systemctl --user status gitlab-runner --no-pager
-
-# View docker-local runner logs
-[group('runners')]
-docker-runner-logs:
+runners-logs:
     journalctl --user -u gitlab-runner -f
-
-# Restart docker-local runner
-[group('runners')]
-docker-runner-restart:
-    systemctl --user restart gitlab-runner
