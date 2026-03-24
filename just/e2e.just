@@ -248,7 +248,7 @@ e2e-deploy-android:
 
 # Start Android emulator manually (with xcb Qt platform for Wayland compatibility)
 [group('e2e')]
-e2e-android-start avd="Pixel_7":
+e2e-android-start avd=avd_android:
     QT_QPA_PLATFORM=xcb emulator -avd {{avd}} -gpu auto
 
 # Run interactive mobile E2E test session
@@ -322,7 +322,7 @@ maestro-setup:
         echo "  [OK] ADB: $(adb --version 2>&1 | head -1)"
         echo "  [INFO] Connected devices: $DEVICES"
         if [[ "$DEVICES" -eq 0 ]]; then
-            echo "    Hint: emulator -avd Pixel_7  (or start via Android Studio)"
+            echo "    Hint: emulator -avd {{avd_android}}  (or start via Android Studio)"
         fi
     else
         echo "  [MISSING] ADB not in PATH"

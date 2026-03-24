@@ -30,8 +30,9 @@ private_repo := "private"
 # Tooling repositories (url,dir format, outside vauchi group)
 tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@gitlab.com:megloff1/markdown-plan.git,markdown-plan"
 
-# iOS simulator device name (single source of truth for all recipes)
+# Device names (single source of truth for all recipes)
 ios_simulator := "iPhone 17 Pro"
+avd_android := "Pixel_7"
 
 # ─── Aliases ─────────────────────────────────────────────────────
 
