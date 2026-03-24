@@ -27,3 +27,10 @@ These file types are large by design — splitting would create worse problems:
 
 Sub-crate extraction hurts incremental compilation (Cargo only does incremental within crates).
 No external consumers exist. See PRB-2026-032 investigation for full analysis.
+
+### Architectural boundary splits are a separate concern
+
+The no-extraction rule applies to file-size motivated splits. Extracting a crate to enforce
+an architectural boundary (e.g., separating security-critical modules from app-layer) is
+evaluated on merit — compilation improves because unrelated modules stop triggering each
+other's rebuilds.
