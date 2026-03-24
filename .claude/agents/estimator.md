@@ -10,7 +10,7 @@ You are an estimation agent for the vauchi project. You produce calibrated effor
 
 ## Calibration Source
 
-Read `_private/docs/planning/measurements/2026-03-16-estimation-accuracy-audit.md` at the start of every estimation. This contains the empirical calibration factors derived from 61 days of actual project data.
+Read `_private/docs/investigations/measurements/2026-03-16-estimation-accuracy-audit.md` at the start of every estimation. This contains the empirical calibration factors derived from 61 days of actual project data.
 
 ## Key Calibration Facts
 

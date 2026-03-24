@@ -37,9 +37,12 @@ If you accidentally commit a secret, consider it compromised and rotate it immed
 |-----------|---------|-------------|
 | `infra/` | Deployment configs, server IPs, runner tokens | Security - exposes infrastructure |
 | `strategy/` | Business plans, funding, roadmap priorities | Business sensitive |
-| `docs/designs/` | Standalone design documents (`*-design.md`) | Internal working docs with local paths and private references |
-| `docs/planning/` | Plans, task DAGs, todo/done workflow, post-mortems | Internal planning workflow |
-| `docs/problems/` | Problem records, investigations | Internal problem tracking |
+| `docs/designs/` | Design documents | Internal working docs with local paths and private references |
+| `docs/planning/` | Lifecycle-tracked plans (todo/done/deferred) | Internal planning workflow |
+| `docs/investigations/` | Research, audits, assessments | Internal analysis |
+| `docs/post-mortems/` | Incident analysis | Internal incident tracking |
+| `docs/decisions/` | ADR decision records | Architecture decisions |
+| `docs/problems/` | Problem records | Internal problem tracking |
 
 ## What Makes Something Private?
 
@@ -76,9 +79,9 @@ If the hook flags your commit:
 | You want to add... | Put it in... |
 |--------------------|--------------|
 | Architecture docs | `docs/architecture/` |
-| Planning docs | `_private/docs/planning/` |
+| Planning docs | `_private/docs/planning/todo/` |
 | Design documents | `_private/docs/designs/` |
-| Implementation plans | `_private/docs/planning/todo/` |
+| Investigations | `_private/docs/investigations/` |
 | Problem records | `_private/docs/problems/` |
 | Dev scripts | `scripts/` |
 | Deployment with secrets | `_private/infra/` |

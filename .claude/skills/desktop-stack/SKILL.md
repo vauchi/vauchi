@@ -18,7 +18,7 @@ The `desktop/` repo (Tauri 2 + SolidJS) was **archived per ADR-027** (2026-03). 
 | `linux-qt/` | Qt 6 + QML | C++ | cbindgen → C ABI (`vauchi-cabi`) |
 | `windows/` | WinUI 3 | C# (.NET 8) | C ABI (`vauchi-cabi`) |
 
-**Why**: Direct hardware access (camera, BLE, NFC), native look-and-feel, eliminates WebView security surface. See `_private/docs/specs/2026-01-22-decisions.md` (ADR-027).
+**Why**: Direct hardware access (camera, BLE, NFC), native look-and-feel, eliminates WebView security surface. See `_private/docs/decisions/adr-027-native-desktop-replaces-tauri.md`.
 
 **Web demo** (`web-demo/`) uses SolidJS + WASM — it is a separate project, not a desktop replacement.
 

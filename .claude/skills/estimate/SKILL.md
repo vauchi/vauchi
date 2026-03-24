@@ -19,7 +19,7 @@ Produce calibrated effort estimates using empirical data from this project's his
 
 ## Calibration Data (from 2026-03-16 audit)
 
-**Source**: `_private/docs/planning/measurements/2026-03-16-estimation-accuracy-audit.md`
+**Source**: `_private/docs/investigations/measurements/2026-03-16-estimation-accuracy-audit.md`
 
 Based on 61 days of data across 25 repos, 1,163+ core commits, 42 completed plans, and 31 resolved problem records:
 
@@ -137,4 +137,4 @@ After completion, update the estimate:
 - Use `just risk` to surface blockers, stalled plans, and recurring failure patterns
 - Use `/plan-audit` to verify completion percentages before estimating remaining work
 - Use `/estimate --audit` after completing work to feed accuracy data back
-- Reference `_private/docs/planning/measurements/2026-03-16-estimation-accuracy-audit.md` for full methodology
+- Reference `_private/docs/investigations/measurements/2026-03-16-estimation-accuracy-audit.md` for full methodology

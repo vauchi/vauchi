@@ -158,7 +158,7 @@ Note: `vauchi-platform-kotlin` is archived — its branch protection rules are n
 
 The CI bot (`group_122552022_bot_*`, Maintainer level 40) authenticates via `PROJECT_ACCESS_TOKEN` (group-level variable) for all push operations. `CI_JOB_TOKEN` is not used for pushes because: (1) CI_JOB_TOKEN pushes don't trigger new pipelines (core auto-tag), and (2) CI_JOB_TOKEN from upstream-triggered pipelines lacks write access to the triggered repo (app bindings-version bumps).
 
-See `_private/docs/development/2026-02-25-branch-protection-config.md` for full details.
+See `_private/docs/reference/2026-02-25-branch-protection-config.md` for full details.
 
 ## CI Job Token Allowlists
 

@@ -8,13 +8,19 @@ apply: always
 
 | Path | Content |
 |------|---------|
-| `problems/` | Active problem records |
-| `problems/done/` | Completed/archived records |
-| `designs/` | Standalone design documents (`*-design.md` only) |
-| `planning/` | Todo, done, archived, post-mortems, investigations |
+| `problems/` | Active problem records (with `done/`) |
+| `designs/` | Design documents (`*-design.md`) |
+| `planning/` | Lifecycle-tracked plans (`todo/`, `done/`, `deferred/`, `rejected/`, `archived/`) |
+| `investigations/` | Research, audits, assessments (with `measurements/` subdir) |
+| `post-mortems/` | Incident analysis |
+| `decisions/` | ADR decision records (`adr-NNN-slug.md`) |
 | `specs/` | Internal protocol specifications |
-| `reference/` | Security audit, threat model, CI/CD |
-| `testing/` | QA strategy, manual testing |
+| `audit-review-frameworks/` | Numbered review templates/checklists |
+| `reference/` | Security audit, threat model, CI/CD, guides, workflows, knowledge |
+| `testing/` | QA strategy, manual testing, device automation |
+| `legal/` | Compliance, licensing |
+| `archive/` | Docs from deprecated projects |
+| `scripts/` | Documentation tooling (naming validator) |
 
 ### Problem Records
 

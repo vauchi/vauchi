@@ -6,7 +6,10 @@ apply: always
 
 - **Design documents** (`*-design.md`) → go in `_private/docs/designs/`
 - **Implementation plans, task DAGs** → go in `_private/docs/planning/todo/` (or inside a problem record)
-- **Planning workflow docs (todo/done/roadmap)** → always go in `_private/docs/planning/`
+- **Investigations, audits, assessments** → go in `_private/docs/investigations/`
+- **Post-mortems** → go in `_private/docs/post-mortems/`
+- **ADRs** → go in `_private/docs/decisions/` (numbered `adr-NNN-slug.md`)
+- **Reference docs** (guides, strategies, workflows) → go in `_private/docs/reference/`
 - **Never write plans to `docs/`** — the `docs/` repo is public and deployed to docs.vauchi.app
 - **Never embed local absolute paths** (`/Users/...`) in any document — use project-relative paths
 - **Never reference `_private/` paths from public docs** — contributors can't access them
