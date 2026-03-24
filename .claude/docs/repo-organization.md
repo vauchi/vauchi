@@ -14,6 +14,7 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 │
 │── core/                        ← Rust workspace: vauchi-core + vauchi-platform + vauchi-protocol
 │── relay/                       ← WebSocket relay server (uses vauchi-protocol)
+│── ohttp-relay/                 ← OHTTP forwarding proxy (standalone, no vauchi deps)
 │── cli/                         ← Command-line interface
 │── tui/                         ← Terminal user interface
 │── desktop/                     ← ARCHIVED (replaced by macos/, windows/, linux-gtk/, linux-qt/ per ADR-027)
@@ -54,6 +55,7 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 |------|---------|
 | `core/` | Rust workspace containing `vauchi-core` (crypto, storage, protocol), `vauchi-platform` (UniFFI bindings), and `vauchi-protocol` (shared message types) |
 | `relay/` | WebSocket relay server (uses `vauchi-protocol` for shared types) |
+| `ohttp-relay/` | Minimal OHTTP forwarding proxy (standalone, no vauchi deps) |
 
 **Clients** — platform apps:
 

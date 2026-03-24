@@ -6,10 +6,10 @@
 # Usage: just gitlab <recipe>
 
 # Metrics repo groups (non-overlapping — each repo in exactly one group)
-metrics_coverage_repos := "core cli tui relay"
+metrics_coverage_repos := "core cli tui relay ohttp-relay"
 metrics_binary_drift_repos := "linux-gtk"
 metrics_drift_only_repos := "linux-qt macos windows web-demo"
-metrics_all_repos := "core cli tui relay linux-gtk linux-qt macos windows web-demo"
+metrics_all_repos := "core cli tui relay ohttp-relay linux-gtk linux-qt macos windows web-demo"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
@@ -527,6 +527,7 @@ metrics-status:
             core)     cov="yes" bs="yes"  dd="-"   ;;
             cli|tui)  cov="yes" bs="yes"  dd="yes"  ;;
             relay)    cov="yes" bs="yes"  dd="-"   ;;
+            ohttp-relay) cov="yes" bs="-"  dd="-"   ;;
             linux-gtk) cov="-" bs="yes"  dd="yes"  ;;
             linux-qt|macos|windows|web-demo) cov="-" bs="-" dd="yes" ;;
             *) cov="-" bs="-" dd="-" ;;

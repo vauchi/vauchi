@@ -217,7 +217,7 @@ session-init:
         echo ""
         echo "SWEEP (cargo artifacts):"
         total_freed=0
-        for dir in core cli relay tui e2e linux-gtk; do
+        for dir in core cli relay ohttp-relay tui e2e linux-gtk; do
             [[ -d "$dir/target" ]] || continue
             before=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
             # Pass 1: time-based (2 days)
@@ -666,7 +666,7 @@ clean:
     echo "Cleaning build artifacts..."
 
     # Rust targets
-    for dir in core relay cli tui e2e linux-gtk web-demo/wasm; do
+    for dir in core relay ohttp-relay cli tui e2e linux-gtk web-demo/wasm; do
         if [[ -d "$dir/target" ]]; then
             echo "  Cleaning $dir/target"
             rm -rf "$dir/target"
@@ -708,7 +708,7 @@ clean:
 [script]
 clean-rust:
     echo "Cleaning Rust targets..."
-    for dir in core relay cli tui e2e linux-gtk web-demo/wasm; do
+    for dir in core relay ohttp-relay cli tui e2e linux-gtk web-demo/wasm; do
         if [[ -d "$dir/target" ]]; then
             echo "  $dir/target"
             rm -rf "$dir/target"

@@ -22,7 +22,7 @@ export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay cli tui e2e features android ios docs locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo"
+public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo"
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
@@ -644,7 +644,7 @@ audit repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     # Only Rust repos support cargo audit
-    RUST_REPOS="core cli relay tui e2e linux-gtk"
+    RUST_REPOS="core cli relay ohttp-relay tui e2e linux-gtk"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
@@ -788,7 +788,7 @@ install-hooks:
 lint-file-size repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    RUST_REPOS="core cli relay tui e2e linux-gtk"
+    RUST_REPOS="core cli relay ohttp-relay tui e2e linux-gtk"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
@@ -988,7 +988,7 @@ sweep days="30":
         echo "cargo-sweep not installed. Run: cargo install cargo-sweep"
         exit 1
     fi
-    rust_dirs=(core cli relay tui e2e linux-gtk)
+    rust_dirs=(core cli relay ohttp-relay tui e2e linux-gtk)
     total_before=0
     total_after=0
     for dir in "${rust_dirs[@]}"; do
@@ -1357,7 +1357,7 @@ housekeeping:
     # 16. Cargo target sizes
     section "Cargo target sizes"
     total_mb=0
-    for dir in core cli relay tui e2e linux-gtk; do
+    for dir in core cli relay ohttp-relay tui e2e linux-gtk; do
         target="$dir/target"
         [[ -d "$target" ]] || continue
         size_mb=$(du -sm "$target" 2>/dev/null | cut -f1)
@@ -1473,7 +1473,7 @@ check-lockfile-consistency:
 
     LOCKFILES=()
     LABELS=()
-    for dir in core cli relay tui e2e linux-gtk; do
+    for dir in core cli relay ohttp-relay tui e2e linux-gtk; do
         if [[ -f "$dir/Cargo.lock" ]]; then
             LOCKFILES+=("$dir/Cargo.lock")
             LABELS+=("$dir")
