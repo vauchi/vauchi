@@ -11,6 +11,7 @@
 [script]
 cleanup mode='dry-run':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
 
     MODE="{{ mode }}"
@@ -27,10 +28,8 @@ cleanup mode='dry-run':
         echo "(run 'just git cleanup run' to execute)"
     fi
     echo "Fetching all repos first..."
-    for dir in . */; do
-        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
-        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null
-    done
+    _fetch_repo() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    for_each_repo _fetch_repo
     echo ""
 
     total_local=0
@@ -143,15 +142,7 @@ cleanup mode='dry-run':
         total_stale=$((total_stale + sc))
     }
 
-    # Root repo
-    cleanup_repo "vauchi (root)" "."
-
-    # Sub-repos
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            cleanup_repo "${dir%/}" "$dir"
-        fi
-    done
+    for_each_repo cleanup_repo
 
     # Summary
     grand_total=$((total_local + total_remote + total_stale))
@@ -171,28 +162,21 @@ cleanup mode='dry-run':
 [script]
 stash-clear:
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
 
     cleared=()
 
-    # Root repo
-    count=$(git stash list 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "$count" -gt 0 ]]; then
-        git stash clear
-        status_ok "vauchi (root)" "cleared $count stash(es)"
-        cleared+=("vauchi (root)")
-    fi
-
-    # Sub-repos
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            count=$(git -C "$dir" stash list 2>/dev/null | wc -l | tr -d ' ')
-            if [[ "$count" -gt 0 ]]; then
-                git -C "$dir" stash clear
-                status_ok "${dir%/}" "cleared $count stash(es)"
-                cleared+=("${dir%/}")
-            fi
+    _clear_stash() {
+        local label="$1" dir="$2"
+        local count
+        count=$(git -C "$dir" stash list 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$count" -gt 0 ]]; then
+            git -C "$dir" stash clear
+            status_ok "$label" "cleared $count stash(es)"
+            cleared+=("$label")
         fi
-    done
+    }
+    for_each_repo _clear_stash
 
     echo ""
     if [[ ${#cleared[@]} -eq 0 ]]; then
@@ -206,29 +190,24 @@ stash-clear:
 [script]
 stash-list:
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     found=0
-    # Root repo
-    stashes=$(git stash list 2>/dev/null)
-    if [[ -n "$stashes" ]]; then
-        count=$(echo "$stashes" | wc -l | tr -d ' ')
-        echo "── vauchi (root) ($count) ──"
-        echo "$stashes" | sed 's/^/  /'
-        echo ""
-        found=1
-    fi
-    # Sub-repos
-    for dir in */; do
-        if [[ -d "${dir}.git" ]]; then
-            stashes=$(git -C "$dir" stash list 2>/dev/null)
-            if [[ -n "$stashes" ]]; then
-                count=$(echo "$stashes" | wc -l | tr -d ' ')
-                echo "── ${dir%/} ($count) ──"
-                echo "$stashes" | sed 's/^/  /'
-                echo ""
-                found=1
-            fi
+
+    _list_stash() {
+        local label="$1" dir="$2"
+        local stashes
+        stashes=$(git -C "$dir" stash list 2>/dev/null)
+        if [[ -n "$stashes" ]]; then
+            local count
+            count=$(echo "$stashes" | wc -l | tr -d ' ')
+            echo "── $label ($count) ──"
+            echo "$stashes" | sed 's/^/  /'
+            echo ""
+            found=1
         fi
-    done
+    }
+    for_each_repo _list_stash
+
     if [[ "$found" -eq 0 ]]; then
         echo "No stashes in any repo."
     fi
@@ -240,16 +219,14 @@ stash-list:
 [script]
 branch-health mode='audit':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
 
     echo "── Branch Health Audit ──"
     echo ""
     echo "Fetching..."
-    for dir in . */; do
-        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
-        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
-    done
-    wait
+    _bh_fetch() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    for_each_repo_parallel _bh_fetch
 
     merged=0
     stale=0
@@ -270,17 +247,13 @@ branch-health mode='audit':
     _bh_row "REPO" "BRANCH" "AGE" "STATUS" "ACTION"
     printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _BH_C1 + _BH_C2 + 24 )) '' | tr ' ' '-')"
 
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
+    _bh_check_repo() {
+        local label="$1" d="$2"
+        [[ "$label" == "vauchi (root)" ]] && label="root"
 
+        local branches
         branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
-        [[ -z "$branches" ]] && continue
+        [[ -z "$branches" ]] && return 0
 
         while IFS= read -r br; do
             [[ -z "$br" ]] && continue
@@ -301,8 +274,6 @@ branch-health mode='audit':
 
             if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
                 if $has_remote; then
-                    # Commits are in main but remote branch still exists —
-                    # likely an open MR or WIP. Don't mark for deletion.
                     status="merged"
                     action="- (remote)"
                     active=$((active + 1))
@@ -334,10 +305,6 @@ branch-health mode='audit':
             fi
 
             if [[ "{{ mode }}" == "cleanup" && "$action" == "DELETE" ]]; then
-                # Safety: never delete a branch that still exists on remote.
-                # A remote branch means active work (open MR, WIP, etc.)
-                # even if its commits are ancestors of main (merged via
-                # another branch path). Only delete truly orphaned locals.
                 if git -C "$d" rev-parse --verify "origin/$br" &>/dev/null; then
                     action="SKIP (remote exists)"
                 elif git -C "$d" branch -D "$br" &>/dev/null; then
@@ -361,7 +328,8 @@ branch-health mode='audit':
             printf "%s%*s %s%*s %8s ${_sc}%-12s${NC} ${_ac}%s${NC}\n" \
                 "$label" "$_p1" "" "$br" "$_p2" "" "${age_days}d" "$status" "$action"
         done <<< "$branches"
-    done
+    }
+    for_each_repo _bh_check_repo
 
     echo ""
     summary="Summary: $merged merged/in-main, $stale stale (>14d), $gone gone (remote deleted, unmerged), $active active"
@@ -381,6 +349,7 @@ branch-health mode='audit':
 [script]
 branch-inspect name:
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
 
     if [[ -z "{{ name }}" ]]; then
@@ -392,11 +361,8 @@ branch-inspect name:
     echo "── Branch Inspection: $BRANCH ──"
     echo ""
     echo "Fetching..."
-    for dir in . */; do
-        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
-        [[ -d "$gitdir" ]] && git -C "$dir" fetch --all --prune --quiet 2>/dev/null &
-    done
-    wait
+    _bi_fetch() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    for_each_repo_parallel _bi_fetch
     echo ""
 
     found=0
@@ -412,19 +378,14 @@ branch-inspect name:
     _bi_row "REPO" "AHEAD" "BEHIND" "AGE" "STATUS" "LAST COMMIT"
     printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _BI_C1 + 52 )) '' | tr ' ' '-')"
 
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="vauchi (root)"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
+    _bi_check_repo() {
+        local label="$1" d="$2"
 
         # Check if branch exists in this repo
-        git -C "$d" rev-parse --verify "$BRANCH" &>/dev/null || continue
+        git -C "$d" rev-parse --verify "$BRANCH" &>/dev/null || return 0
         found=$((found + 1))
 
+        local ahead behind last_epoch now age_days last_msg status
         ahead=$(git -C "$d" rev-list --count origin/main.."$BRANCH" 2>/dev/null || echo "?")
         behind=$(git -C "$d" rev-list --count "$BRANCH"..origin/main 2>/dev/null || echo "?")
 
@@ -433,10 +394,8 @@ branch-inspect name:
         age_days=$(( (now - last_epoch) / 86400 ))
 
         last_msg=$(git -C "$d" log -1 --format=%s "$BRANCH" 2>/dev/null || echo "")
-        # Truncate long messages
         [[ ${#last_msg} -gt 50 ]] && last_msg="${last_msg:0:47}..."
 
-        # Determine status
         if [[ "$ahead" == "0" ]]; then
             status="empty"
             empty=$((empty + 1))
@@ -449,14 +408,15 @@ branch-inspect name:
             with_commits=$((with_commits + 1))
         fi
 
-        _sc=""
+        local _sc=""
         case "$status" in
             merged|in-main|empty) _sc="$DIM" ;;
             active) _sc="$GREEN" ;;
         esac
-        _p=$(( _BI_C1 - ${#label} )); [[ $_p -lt 1 ]] && _p=1
+        local _p=$(( _BI_C1 - ${#label} )); [[ $_p -lt 1 ]] && _p=1
         printf "%s%*s %8s %8s %7sd ${_sc}%-12s${NC} %s\n" "$label" "$_p" "" "$ahead" "$behind" "$age_days" "$status" "$last_msg"
-    done
+    }
+    for_each_repo _bi_check_repo
 
     echo ""
     if [[ "$found" -eq 0 ]]; then
@@ -472,16 +432,14 @@ branch-inspect name:
 [script]
 stale-branches days='14':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -uo pipefail
     threshold="{{ days }}"
     cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)
 
     # Fetch so origin/main is current for status checks
-    for dir in . */; do
-        [[ "$dir" == "." ]] && gitdir=".git" || gitdir="${dir}.git"
-        [[ -d "$gitdir" ]] && git -C "$dir" fetch origin main --quiet 2>/dev/null &
-    done
-    wait
+    _sb_fetch() { git -C "$2" fetch origin main --quiet 2>/dev/null; }
+    for_each_repo_parallel _sb_fetch
 
     _SB_C1=20  # repo column
     _SB_C2=30  # branch column
@@ -496,28 +454,23 @@ stale-branches days='14':
 
     total=0
     deletable=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="vauchi (root)"
-            d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            d="${dir%/}"
-        fi
 
+    _sb_check_repo() {
+        local label="$1" d="$2"
+
+        local branches
         branches=$(git -C "$d" branch --no-color 2>/dev/null | grep -v 'main$' | sed 's/^[* ]*//' || true)
-        [[ -z "$branches" ]] && continue
+        [[ -z "$branches" ]] && return 0
 
         while IFS= read -r br; do
             [[ -z "$br" ]] && continue
+            local last_epoch last_date
             last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
             last_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
             if [[ "$last_epoch" -lt "$cutoff" ]]; then
+                local now age_days status
                 now=$(date +%s)
                 age_days=$(( (now - last_epoch) / 86400 ))
-                # Check if content is already in main (merged or squash-merged)
                 status="unmerged"
                 if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
                     status="merged"
@@ -527,18 +480,19 @@ stale-branches days='14':
                 if [[ "$status" != "unmerged" ]]; then
                     deletable=$((deletable + 1))
                 fi
-                _sc=""
+                local _sc=""
                 case "$status" in
                     merged|in-main) _sc="$GREEN" ;;
                     unmerged) _sc="$YELLOW" ;;
                 esac
-                _p1=$(( _SB_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
-                _p2=$(( _SB_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
+                local _p1=$(( _SB_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
+                local _p2=$(( _SB_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
                 printf "%s%*s %s%*s %-12s %-6s ${_sc}%s${NC}\n" "$label" "$_p1" "" "$br" "$_p2" "" "$last_date" "${age_days}d" "$status"
                 total=$((total + 1))
             fi
         done <<< "$branches"
-    done
+    }
+    for_each_repo _sb_check_repo
 
     echo ""
     if [[ "$total" -eq 0 ]]; then
