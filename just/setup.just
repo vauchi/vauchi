@@ -562,6 +562,7 @@ setup-path-overrides:
 
     CORE_PATCH="[patch.'https://gitlab.com/vauchi/core.git']"
     CORE_DEP='vauchi-core = { path = "../core/vauchi-core" }'
+    APP_DEP='vauchi-app = { path = "../core/vauchi-app" }'
     PROTOCOL_DEP='vauchi-protocol = { path = "../core/vauchi-protocol" }'
 
     RELAY_PATCH="[patch.'https://gitlab.com/vauchi/relay.git']"
@@ -589,12 +590,19 @@ setup-path-overrides:
         echo "  $dir (created)"
     }
 
-    # Repos that depend on vauchi-core
+    # Repos that depend on vauchi-core + vauchi-app
     for dir in cli tui linux-gtk; do
         if [ -d "$dir" ]; then
-            write_config "$dir" "$CORE_PATCH" "$CORE_DEP" ""
+            write_config "$dir" "$CORE_PATCH" "$CORE_DEP" "$APP_DEP" ""
         fi
     done
+
+    # web-demo/wasm depends on vauchi-core + vauchi-app (nested Cargo workspace)
+    if [ -d "web-demo/wasm" ]; then
+        WASM_CORE='vauchi-core = { path = "../../core/vauchi-core" }'
+        WASM_APP='vauchi-app = { path = "../../core/vauchi-app" }'
+        write_config "web-demo/wasm" "$CORE_PATCH" "$WASM_CORE" "$WASM_APP" ""
+    fi
 
     # relay depends on vauchi-protocol (from core git URL)
     if [ -d "relay" ]; then
@@ -603,7 +611,7 @@ setup-path-overrides:
 
     # e2e depends on both core and relay
     if [ -d "e2e" ]; then
-        write_config "e2e" "$CORE_PATCH" "$CORE_DEP" "" "$RELAY_PATCH" "$RELAY_DEP" ""
+        write_config "e2e" "$CORE_PATCH" "$CORE_DEP" "$APP_DEP" "" "$RELAY_PATCH" "$RELAY_DEP" ""
     fi
 
     echo ""
