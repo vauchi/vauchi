@@ -5,6 +5,8 @@
 # Deployment recipes
 # Config: _private/infra/config/deploy.combined.yml
 
+ssh_target := "vauchi@bold-hopper-vps"
+
 # ═══════════════════════════════════════════════════════════════════
 # VALIDATION
 # ═══════════════════════════════════════════════════════════════════
@@ -164,12 +166,12 @@ mail-prepare:
 # Run backup on the VPS
 [group('deploy')]
 backup:
-    ssh vauchi@bold-hopper-vps "/opt/vauchi-infra/scripts/backup.sh"
+    ssh {{ssh_target}} "/opt/vauchi-infra/scripts/backup.sh"
 
 # Verify latest backup is restorable (runs on VPS)
 [group('deploy')]
 verify-backup:
-    ssh vauchi@bold-hopper-vps "/opt/vauchi-infra/scripts/verify-backup.sh"
+    ssh {{ssh_target}} "/opt/vauchi-infra/scripts/verify-backup.sh"
 
 # ═══════════════════════════════════════════════════════════════════
 # MONITORING (Prometheus + Grafana)
@@ -195,14 +197,13 @@ monitoring-logs:
 monitoring-relay-alias:
     #!/usr/bin/env bash
     set -euo pipefail
-    SSH_TARGET="vauchi@bold-hopper-vps"
-    RELAY=$(ssh "$SSH_TARGET" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
+    RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
     if [ -z "$RELAY" ]; then
         echo "ERROR: No running relay container found"
         exit 1
     fi
-    ssh "$SSH_TARGET" "docker network disconnect monitoring_monitoring $RELAY 2>/dev/null || true"
-    ssh "$SSH_TARGET" "docker network connect --alias vauchi-relay-web monitoring_monitoring $RELAY"
+    ssh "{{ssh_target}}" "docker network disconnect monitoring_monitoring $RELAY 2>/dev/null || true"
+    ssh "{{ssh_target}}" "docker network connect --alias vauchi-relay-web monitoring_monitoring $RELAY"
     echo "Connected $RELAY to monitoring network as 'vauchi-relay-web'"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -220,29 +221,29 @@ deploy-all: deploy deploy-mail deploy-monitoring
 # Show mail server logs
 [group('deploy')]
 mail-logs:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose logs -f mailserver"
+    ssh {{ssh_target}} "cd /opt/mail && docker compose logs -f mailserver"
 
 # Mail server status
 [group('deploy')]
 mail-status:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose ps && echo '' && ./setup.sh email list"
+    ssh {{ssh_target}} "cd /opt/mail && docker compose ps && echo '' && ./setup.sh email list"
 
 # Webmail logs
 [group('deploy')]
 mail-webmail-logs:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && docker compose logs -f roundcube webmail-nginx"
+    ssh {{ssh_target}} "cd /opt/mail && docker compose logs -f roundcube webmail-nginx"
 
 # Add mail user
 [group('deploy')]
 mail-add-user email:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email add {{email}}"
+    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email add {{email}}"
 
 # Update mail user password
 [group('deploy')]
 mail-update-password email:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email update {{email}}"
+    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email update {{email}}"
 
 # List mail users
 [group('deploy')]
 mail-list-users:
-    ssh vauchi@bold-hopper-vps "cd /opt/mail && ./setup.sh email list"
+    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email list"
