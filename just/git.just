@@ -22,25 +22,20 @@ import 'git-audit.just'
 [script]
 main mode='':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     timer_start
 
     # First pass: collect dirty repos and show changes
     dirty_repos=()
     dirty_labels=()
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            label="vauchi (root)"
-            gitdir=".git"
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"
-            gitdir="${dir}.git"
-        fi
+    _collect_dirty() {
+        local label="$1" dir="$2"
         if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
             dirty_repos+=("$dir")
             dirty_labels+=("$label")
         fi
-    done
+    }
+    for_each_repo _collect_dirty
 
     save_mode=""
     if [[ ${#dirty_repos[@]} -gt 0 ]]; then
@@ -166,10 +161,8 @@ main mode='':
             fi
         done <<< "$merged"
     }
-    cleanup_merged "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && cleanup_merged "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo cleanup_merged
 
     elapsed=$(timer_elapsed)
     summary_mix "$ok_count" "$fail_count" "$elapsed"
@@ -202,10 +195,8 @@ status:
             shown=$((shown + 1))
         fi
     }
-    show_repo_status "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && show_repo_status "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo show_repo_status
     if [[ "$shown" -eq 0 ]]; then
         status_ok "all repos" "clean, on main"
     else
@@ -230,10 +221,8 @@ checkout-main:
             out_fail "$label" "$(echo "$output" | tail -1)"
         fi
     }
-    checkout_repo "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && checkout_repo "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo checkout_repo
     out_end
 
 # Fetch all repos
@@ -254,10 +243,8 @@ fetch:
             out_ok "$label" "up to date"
         fi
     }
-    fetch_repo "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && fetch_repo "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo fetch_repo
     out_end "$(timer_elapsed)"
 
 # Show branches across all repos
@@ -278,10 +265,8 @@ branches:
             status_info "$label" "${branch:-detached} ($count branches)"
         fi
     }
-    show_branch "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && show_branch "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo show_branch
 
 # Pull latest changes from all repos
 [no-cd]
@@ -302,10 +287,8 @@ pull-all:
             out_ok "$label" "$(echo "$output" | tail -1)"
         fi
     }
-    pull_repo "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && pull_repo "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo pull_repo
     out_end "$(timer_elapsed)"
 
 # Push all repos with commits ahead of origin
@@ -354,10 +337,8 @@ push-all mode='full':
             skipped=$((skipped + 1))
         fi
     }
-    push_repo "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && push_repo "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo push_repo
     elapsed=$(timer_elapsed)
     if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 ]]; then
         status_ok "all repos" "nothing to push"
@@ -612,10 +593,8 @@ branch-status:
         printf "  %s%*s ${BLUE}%s${NC}%*s %8s %8s %b\n" \
             "$label" "$_p1" "" "$branch" "$_p2" "" "$ahead" "$behind" "$merged"
     }
-    check_repo "vauchi (root)" "."
-    for dir in */; do
-        [[ -d "${dir}.git" ]] && check_repo "${dir%/}" "$dir"
-    done
+    source scripts/scripts/for-each-repo.sh
+    for_each_repo check_repo
 
 # Create a branch with the same name across repos
 # If repos have uncommitted changes, prompts to save them first
