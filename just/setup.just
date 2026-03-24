@@ -157,76 +157,70 @@ session-init:
         echo "  (none)"
     fi
 
-    # Local branches not on main
+    # Local branches, uncommitted changes, stashes — scan all repos in parallel
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        (
+            # Branches not on main
+            branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
+            if [[ -n "$branches" ]]; then
+                while IFS= read -r br; do
+                    [[ -z "$br" ]] && continue
+                    age_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "?")
+                    last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
+                    now=$(date +%s)
+                    age_days=$(( (now - last_epoch) / 86400 ))
+                    marker=""
+                    [[ "$age_days" -gt 14 ]] && marker=" STALE"
+                    echo "  $label ($br) last: $age_date (${age_days}d)$marker" >> "$SI_TMP/branches.txt"
+                done <<< "$branches"
+            fi
+            # Uncommitted changes
+            status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+            if [[ -n "$status" ]]; then
+                count=$(echo "$status" | wc -l | tr -d ' ')
+                echo "  $label: $count file(s) modified" >> "$SI_TMP/uncommitted.txt"
+            fi
+            # Stashes
+            scount=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "$scount" -gt 0 ]]; then
+                echo "  $label: $scount stash(es)" >> "$SI_TMP/stashes.txt"
+            fi
+        ) &
+    done
+    wait
+
     echo ""
     echo "LOCAL BRANCHES (not main):"
-    BRANCH_FOUND=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
-        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
-        [[ -z "$branches" ]] && continue
-        while IFS= read -r br; do
-            [[ -z "$br" ]] && continue
-            age_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "?")
-            last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
-            now=$(date +%s)
-            age_days=$(( (now - last_epoch) / 86400 ))
-            marker=""
-            [[ "$age_days" -gt 14 ]] && marker=" STALE"
-            echo "  $label ($br) last: $age_date (${age_days}d)$marker"
-            BRANCH_FOUND=1
-        done <<< "$branches"
-    done
-    [[ "$BRANCH_FOUND" == "0" ]] && echo "  (none)"
+    if [[ -s "$SI_TMP/branches.txt" ]]; then
+        sort "$SI_TMP/branches.txt"
+    else
+        echo "  (none)"
+    fi
 
-    # Uncommitted changes
     echo ""
     echo "UNCOMMITTED:"
-    UNCOMMITTED=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
-        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
-        if [[ -n "$status" ]]; then
-            count=$(echo "$status" | wc -l | tr -d ' ')
-            echo "  $label: $count file(s) modified"
-            UNCOMMITTED=1
-            WARN=1
-        fi
-    done
-    [[ "$UNCOMMITTED" == "0" ]] && echo "  (none)"
+    if [[ -s "$SI_TMP/uncommitted.txt" ]]; then
+        sort "$SI_TMP/uncommitted.txt"
+        WARN=1
+    else
+        echo "  (none)"
+    fi
 
-    # Stashes
     echo ""
     echo "STASHES:"
-    STASH_FOUND=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
-        count=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
-        if [[ "$count" -gt 0 ]]; then
-            echo "  $label: $count stash(es)"
-            STASH_FOUND=1
-            WARN=1
-        fi
-    done
-    [[ "$STASH_FOUND" == "0" ]] && echo "  (none)"
+    if [[ -s "$SI_TMP/stashes.txt" ]]; then
+        sort "$SI_TMP/stashes.txt"
+        WARN=1
+    else
+        echo "  (none)"
+    fi
 
     # Sweep stale Cargo incremental artifacts (prevents unbounded growth).
     # Two-pass strategy:
@@ -273,78 +267,80 @@ session-end:
     set -euo pipefail
     echo "── Session end ──"
     ERRORS=0
+    SE_TMP=$(mktemp -d)
+    trap 'rm -rf "$SE_TMP"' EXIT
 
-    # Check for uncommitted changes
-    echo ""
-    echo "── uncommitted changes ──"
-    UC=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
-        status=$(git -C "$d" status --porcelain 2>/dev/null || true)
-        if [[ -n "$status" ]]; then
-            echo "  ERROR: $label has uncommitted changes"
-            git -C "$d" status --short 2>/dev/null | sed 's/^/    /'
-            ERRORS=1
-            UC=1
-        fi
-    done
-    [[ "$UC" == "0" ]] && echo "  All clean"
-
-    # Check for unpushed commits
-    echo ""
-    echo "── unpushed commits ──"
-    UP=0
-    for dir in . */; do
-        if [[ "$dir" == "." ]]; then
-            [[ ! -d ".git" ]] && continue
-            label="root"; d="."
-        else
-            [[ ! -d "${dir}.git" ]] && continue
-            label="${dir%/}"; d="${dir%/}"
-        fi
-        branch=$(git -C "$d" branch --show-current 2>/dev/null)
-        [[ -z "$branch" ]] && continue
-        ahead=$(git -C "$d" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
-        if [[ "$ahead" -gt 0 ]]; then
-            echo "  ERROR: $label ($branch) has $ahead unpushed commit(s)"
-            ERRORS=1
-            UP=1
-        fi
-    done
-    [[ "$UP" == "0" ]] && echo "  All pushed"
-
-    # Check for local branches without MRs
-    echo ""
-    echo "── branches without MRs ──"
-    ORPHAN=0
+    # Source resolve-repo for MR check (if available)
+    GLAB_OK=0
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
         source scripts/scripts/resolve-repo.sh
-        for dir in . */; do
-            if [[ "$dir" == "." ]]; then
-                [[ ! -d ".git" ]] && continue
-                label="root"; d="."
-            else
-                [[ ! -d "${dir}.git" ]] && continue
-                label="${dir%/}"; d="${dir%/}"
-            fi
-            branch=$(git -C "$d" branch --show-current 2>/dev/null)
-            [[ "$branch" == "main" || -z "$branch" ]] && continue
-            gl_name=$(_dir_to_gitlab_name "$label")
-            mr_count=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
-                | jq 'length' 2>/dev/null || echo "0")
-            if [[ "$mr_count" == "0" ]]; then
-                echo "  WARN: $label ($branch) has no open MR"
-                ORPHAN=1
-            fi
-        done
+        GLAB_OK=1
     fi
-    [[ "$ORPHAN" == "0" ]] && echo "  All branches have MRs (or on main)"
+
+    # Scan all repos in parallel: uncommitted, unpushed, orphan branches
+    for dir in . */; do
+        if [[ "$dir" == "." ]]; then
+            [[ ! -d ".git" ]] && continue
+            label="root"; d="."
+        else
+            [[ ! -d "${dir}.git" ]] && continue
+            label="${dir%/}"; d="${dir%/}"
+        fi
+        (
+            # Uncommitted changes
+            status=$(git -C "$d" status --porcelain 2>/dev/null || true)
+            if [[ -n "$status" ]]; then
+                {
+                    echo "  ERROR: $label has uncommitted changes"
+                    git -C "$d" status --short 2>/dev/null | while IFS= read -r line; do echo "    $line"; done
+                } >> "$SE_TMP/uncommitted.txt"
+            fi
+            # Unpushed commits
+            branch=$(git -C "$d" branch --show-current 2>/dev/null)
+            if [[ -n "$branch" ]]; then
+                ahead=$(git -C "$d" rev-list --count "@{u}..HEAD" 2>/dev/null || echo "0")
+                if [[ "$ahead" -gt 0 ]]; then
+                    echo "  ERROR: $label ($branch) has $ahead unpushed commit(s)" >> "$SE_TMP/unpushed.txt"
+                fi
+            fi
+            # Branches without MRs
+            if [[ "$GLAB_OK" == "1" && "$branch" != "main" && -n "$branch" ]]; then
+                gl_name=$(_dir_to_gitlab_name "$label")
+                mr_count=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+                    | jq 'length' 2>/dev/null || echo "0")
+                if [[ "$mr_count" == "0" ]]; then
+                    echo "  WARN: $label ($branch) has no open MR" >> "$SE_TMP/orphan.txt"
+                fi
+            fi
+        ) &
+    done
+    wait
+
+    echo ""
+    echo "── uncommitted changes ──"
+    if [[ -s "$SE_TMP/uncommitted.txt" ]]; then
+        cat "$SE_TMP/uncommitted.txt"
+        ERRORS=1
+    else
+        echo "  All clean"
+    fi
+
+    echo ""
+    echo "── unpushed commits ──"
+    if [[ -s "$SE_TMP/unpushed.txt" ]]; then
+        sort "$SE_TMP/unpushed.txt"
+        ERRORS=1
+    else
+        echo "  All pushed"
+    fi
+
+    echo ""
+    echo "── branches without MRs ──"
+    if [[ -s "$SE_TMP/orphan.txt" ]]; then
+        sort "$SE_TMP/orphan.txt"
+    else
+        echo "  All branches have MRs (or on main)"
+    fi
 
     # Process session error log (from hooks that blocked)
     echo ""
