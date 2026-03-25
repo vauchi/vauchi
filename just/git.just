@@ -131,27 +131,12 @@ main mode='':
     ok_count=$((repo_total - fail_count))
 
     # Auto-cleanup: delete local branches already merged into main
+    source scripts/scripts/git-helpers.sh
     cleaned=0
     cleanup_merged() {
         local label="$1" dir="$2"
         local merged
-        # Check against origin/main (local main may be stale after ff merge)
-        merged=$(git -C "$dir" branch --merged origin/main 2>/dev/null \
-            | grep -vE '^\*|^[[:space:]]+main$' \
-            | sed 's/^[[:space:]]*//' || true)
-        # Fallback: detect branches whose content is in main even if
-        # git ancestry doesn't show it (e.g. rebased before ff merge)
-        local all_local
-        all_local=$(git -C "$dir" branch --no-color 2>/dev/null \
-            | grep -vE '^\*|^[[:space:]]+main$' \
-            | sed 's/^[[:space:]]*//' || true)
-        for candidate in $all_local; do
-            echo "$merged" | grep -qxF "$candidate" && continue
-            if git -C "$dir" diff --quiet origin/main..."$candidate" -- 2>/dev/null; then
-                merged=$(printf '%s\n%s' "$merged" "$candidate")
-            fi
-        done
-        merged=$(echo "$merged" | sed '/^$/d' || true)
+        merged=$(list_merged_branches "$dir")
         [[ -z "$merged" ]] && return 0
         while IFS= read -r b; do
             [[ -z "$b" ]] && continue

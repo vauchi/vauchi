@@ -12,6 +12,7 @@
 cleanup mode='dry-run':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
+    source scripts/scripts/git-helpers.sh
     set -uo pipefail
 
     MODE="{{ mode }}"
@@ -46,26 +47,8 @@ cleanup mode='dry-run':
 
         local local_branches remote_branches stale_refs
 
-        # Local branches merged into origin/main (exclude current branch and main itself)
-        # Uses origin/main (not local main) because fetch runs first but doesn't
-        # update local main — so local main can be stale after ff merges.
-        local_branches=$(git -C "$dir" branch --merged origin/main 2>/dev/null \
-            | grep -vE '^\*|^[[:space:]]+main$' \
-            | sed 's/^[[:space:]]*//' || true)
-
-        # Fallback: detect branches whose content is already in origin/main
-        # even if git ancestry doesn't show it (e.g. after interactive rebase
-        # rewrote commits before the ff merge, or rare squash merges).
-        all_local=$(git -C "$dir" branch --no-color 2>/dev/null \
-            | grep -vE '^\*|^[[:space:]]+main$' \
-            | sed 's/^[[:space:]]*//' || true)
-        for candidate in $all_local; do
-            echo "$local_branches" | grep -qxF "$candidate" && continue
-            if git -C "$dir" diff --quiet origin/main..."$candidate" -- 2>/dev/null; then
-                local_branches=$(printf '%s\n%s' "$local_branches" "$candidate")
-            fi
-        done
-        local_branches=$(echo "$local_branches" | sed '/^$/d' || true)
+        # Local branches merged into origin/main (ancestry + content-equivalent)
+        local_branches=$(list_merged_branches "$dir")
 
         # Remote branches merged into origin/main (exclude main and HEAD pointer)
         remote_branches=$(git -C "$dir" branch -r --merged origin/main 2>/dev/null \
@@ -220,6 +203,7 @@ stash-list:
 branch-health mode='audit':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
+    source scripts/scripts/git-helpers.sh
     set -uo pipefail
 
     echo "── Branch Health Audit ──"
@@ -282,7 +266,7 @@ branch-health mode='audit':
                     action="DELETE"
                     merged=$((merged + 1))
                 fi
-            elif git -C "$d" diff --quiet origin/main..."$br" -- 2>/dev/null; then
+            elif is_branch_in_main "$d" "$br"; then
                 if $has_remote; then
                     status="in-main"
                     action="- (remote)"
@@ -350,6 +334,7 @@ branch-health mode='audit':
 branch-inspect name:
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
+    source scripts/scripts/git-helpers.sh
     set -uo pipefail
 
     if [[ -z "{{ name }}" ]]; then
@@ -399,10 +384,8 @@ branch-inspect name:
         if [[ "$ahead" == "0" ]]; then
             status="empty"
             empty=$((empty + 1))
-        elif git -C "$d" merge-base --is-ancestor "$BRANCH" origin/main 2>/dev/null; then
+        elif is_branch_in_main "$d" "$BRANCH"; then
             status="merged"
-        elif git -C "$d" diff --quiet origin/main..."$BRANCH" -- 2>/dev/null; then
-            status="in-main"
         else
             status="active"
             with_commits=$((with_commits + 1))
@@ -433,6 +416,7 @@ branch-inspect name:
 stale-branches days='14':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
+    source scripts/scripts/git-helpers.sh
     set -uo pipefail
     threshold="{{ days }}"
     cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)
@@ -472,10 +456,8 @@ stale-branches days='14':
                 now=$(date +%s)
                 age_days=$(( (now - last_epoch) / 86400 ))
                 status="unmerged"
-                if git -C "$d" merge-base --is-ancestor "$br" origin/main 2>/dev/null; then
+                if is_branch_in_main "$d" "$br"; then
                     status="merged"
-                elif git -C "$d" diff --quiet origin/main..."$br" -- 2>/dev/null; then
-                    status="in-main"
                 fi
                 if [[ "$status" != "unmerged" ]]; then
                     deletable=$((deletable + 1))

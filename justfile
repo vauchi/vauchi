@@ -394,49 +394,22 @@ build-release:
 
 # Create a dev tag for fast CI feedback (lint + test only)
 # Usage: just release-dev [repo] [version]
-# If no version given, reads from <repo>/Cargo.toml and increments dev counter
 [group('extended')]
 [script]
 release-dev repo="core" version="":
-    set -euo pipefail
-    REPO="{{ repo }}"
-    CARGO_TOML="$REPO/Cargo.toml"
-    if [[ -n "{{ version }}" ]]; then
-        TAG="v{{ version }}"
-    else
-        if [[ "$REPO" == "core" ]]; then
-            BASE=$(grep -A5 '^\[workspace\.package\]' "$CARGO_TOML" | grep '^version' | sed 's/.*"\(.*\)"/\1/')
-        else
-            BASE=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/')
-        fi
-        BASE=$(echo "$BASE" | sed 's/-.*//')
-        LAST=$(git -C "$REPO" tag -l "v${BASE}-dev.*" | sort -V | tail -1 || true)
-        if [[ -n "$LAST" ]]; then
-            N=$(echo "$LAST" | grep -oE '[0-9]+$')
-            N=$((N + 1))
-        else
-            N=1
-        fi
-        TAG="v${BASE}-dev.${N}"
-    fi
-    echo "Creating dev tag for $REPO: $TAG"
-    echo "  This will trigger a lightweight pipeline (lint + test only)"
-    echo ""
-    BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
-    if [[ "$BRANCH" != "main" ]]; then
-        echo "ERROR: Must be on main branch (currently on $BRANCH)"
-        exit 1
-    fi
-    git -C "$REPO" tag -a "$TAG" -m "Dev release $TAG"
-    git -C "$REPO" push origin "$TAG"
-    echo "Created and pushed $TAG"
-    echo "  Pipeline: https://gitlab.com/vauchi/$REPO/-/pipelines"
+    just _release-tag "{{ repo }}" "{{ version }}" dev "Dev release" "lightweight pipeline (lint + test only)"
 
 # Create an RC tag for full quality gate (coverage, mutation, bench)
 # Usage: just release-rc [repo] [version]
 [group('extended')]
 [script]
 release-rc repo="core" version="":
+    just _release-tag "{{ repo }}" "{{ version }}" rc "Release candidate" "full quality gate (coverage, mutation, bench, security)\n  NO publish, deploy, or mobile binding trigger"
+
+# Internal: create a suffixed tag (-dev.N or -rc.N) with auto-increment
+[private]
+[script]
+_release-tag repo version suffix label description:
     set -euo pipefail
     REPO="{{ repo }}"
     CARGO_TOML="$REPO/Cargo.toml"
@@ -449,25 +422,24 @@ release-rc repo="core" version="":
             BASE=$(grep '^version' "$CARGO_TOML" | head -1 | sed 's/.*"\(.*\)"/\1/')
         fi
         BASE=$(echo "$BASE" | sed 's/-.*//')
-        LAST=$(git -C "$REPO" tag -l "v${BASE}-rc.*" | sort -V | tail -1 || true)
+        LAST=$(git -C "$REPO" tag -l "v${BASE}-{{ suffix }}.*" | sort -V | tail -1 || true)
         if [[ -n "$LAST" ]]; then
             N=$(echo "$LAST" | grep -oE '[0-9]+$')
             N=$((N + 1))
         else
             N=1
         fi
-        TAG="v${BASE}-rc.${N}"
+        TAG="v${BASE}-{{ suffix }}.${N}"
     fi
-    echo "Creating RC tag for $REPO: $TAG"
-    echo "  This will trigger a full quality gate (coverage, mutation, bench, security)"
-    echo "  NO publish, deploy, or mobile binding trigger"
+    echo "Creating {{ suffix }} tag for $REPO: $TAG"
+    echo -e "  This will trigger a {{ description }}"
     echo ""
     BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
     if [[ "$BRANCH" != "main" ]]; then
         echo "ERROR: Must be on main branch (currently on $BRANCH)"
         exit 1
     fi
-    git -C "$REPO" tag -a "$TAG" -m "Release candidate $TAG"
+    git -C "$REPO" tag -a "$TAG" -m "{{ label }} $TAG"
     git -C "$REPO" push origin "$TAG"
     echo "Created and pushed $TAG"
     echo "  Pipeline: https://gitlab.com/vauchi/$REPO/-/pipelines"
