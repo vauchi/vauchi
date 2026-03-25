@@ -16,10 +16,15 @@ e2e:
     @echo ""
     @echo "Run with: just e2e-run <name>  (or 'all' for all tests)"
 
+# Build E2E binaries with SHA-based caching (relay + CLI)
+[group('e2e')]
+e2e-build:
+    ./scripts/scripts/e2e/build-binaries.sh
+
 # Run E2E test(s) - use 'all' to run everything
 [group('e2e')]
 [script]
-e2e-run name: build build-cli build-relay
+e2e-run name: build e2e-build
     if [[ "{{name}}" == "all" ]]; then
         cd e2e && cargo test -- --ignored --nocapture
     else
@@ -29,7 +34,7 @@ e2e-run name: build build-cli build-relay
 # Run E2E smoke tests (fast, for every push)
 [group('e2e')]
 [script]
-e2e-smoke: build-cli build-relay
+e2e-smoke: e2e-build
     echo "Running E2E smoke tests..."
     cd e2e && cargo test smoke_ -- --ignored --nocapture
     echo ""
@@ -38,7 +43,7 @@ e2e-smoke: build-cli build-relay
 # Run E2E release tests (full validation)
 [group('e2e')]
 [script]
-e2e-release: build-cli build-relay
+e2e-release: e2e-build
     echo "Running full E2E test suite for release validation..."
     cd e2e && cargo test -- --ignored --nocapture
     echo ""
@@ -47,7 +52,7 @@ e2e-release: build-cli build-relay
 # Run E2E integration tests only (excludes smoke)
 [group('e2e')]
 [script]
-e2e-integration: build-cli build-relay
+e2e-integration: e2e-build
     echo "Running E2E integration tests..."
     cd e2e && cargo test integration_ -- --ignored --nocapture
     echo ""
@@ -213,7 +218,7 @@ e2e-desktop-build:
 # Run mobile E2E tests (requires booted simulator/emulator + Maestro)
 [group('e2e')]
 [script]
-e2e-mobile: build-cli build-relay
+e2e-mobile: e2e-build
     echo "Running mobile E2E tests..."
     cd e2e && cargo test test_ios_simulator_exchange -- --ignored --nocapture
     cd e2e && cargo test test_android_emulator_exchange -- --ignored --nocapture
@@ -223,7 +228,7 @@ e2e-mobile: build-cli build-relay
 # Run all E2E tests (CLI + Desktop + Mobile)
 [group('e2e')]
 [script]
-e2e-all: build-cli build-relay
+e2e-all: e2e-build
     echo "Running full E2E suite (all platforms)..."
     cd e2e && cargo test -- --ignored --nocapture
     echo ""
