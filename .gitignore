@@ -26,6 +26,7 @@
 /scripts/
 /assets/
 /gitlab-profile/
+/ohttp-relay/
 
 # ===========================================
 # Private content (not mirrored to GitHub)
