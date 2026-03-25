@@ -873,7 +873,6 @@ help:
 
     Git (multi-repo):
       just git sync           Fetch all + pull where on main
-      just git main           Stash → checkout main → pull (interactive)
       just git main           Switch to main (prompts: wip/stash/abort)
       just git main wip       Switch to main (auto-WIP-commit, non-interactive)
       just git main yes       Switch to main (auto-stash, non-interactive)
@@ -1270,7 +1269,7 @@ housekeeping:
         prop_count=$(find "$proposals_dir" -name '*.md' -not -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
         if [[ "$prop_count" -ge 5 ]]; then
             echo "  ALERT: $prop_count unreviewed proposal(s) (threshold: 5)"
-            find "$proposals_dir" -name '*.md' -not -name 'README.md' -printf '    %f\n' 2>/dev/null
+            find "$proposals_dir" -name '*.md' -not -name 'README.md' 2>/dev/null | while IFS= read -r f; do echo "    $(basename "$f")"; done
             ISSUES=$((ISSUES + prop_count))
         elif [[ "$prop_count" -gt 0 ]]; then
             echo "  $prop_count proposal(s)"

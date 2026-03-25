@@ -674,7 +674,7 @@ clean:
     done
 
     # Node modules and build outputs
-    for dir in _private/website web-demo; do
+    for dir in website web-demo; do
         if [[ -d "$dir/node_modules" ]]; then
             echo "  Cleaning $dir/node_modules"
             rm -rf "$dir/node_modules"

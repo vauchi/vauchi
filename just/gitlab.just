@@ -350,7 +350,7 @@ pipeline-cancel id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci delete "{{id}}" -R "vauchi/$r"
+    glab ci cancel "{{id}}" -R "vauchi/$r"
 
 # ── Issue Operations ───────────────────────────────────────────────
 
