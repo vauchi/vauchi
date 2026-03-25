@@ -93,9 +93,15 @@ check *args:
         export _QR_SHARED_DIR
         _QR_SHARED_DIR=$(mktemp -d)
         trap 'rm -rf "$_QR_SHARED_DIR"' EXIT
-        just fmt-check ${_QR_REPO:-} --quiet || true
-        just lint ${_QR_REPO:-} --quiet || true
-        just test ${_QR_REPO:-} --quiet || true
+        # Run all three phases in parallel. Each writes to a separate
+        # results file in _QR_SHARED_DIR, so no file conflicts.
+        # Within a single repo, clippy and test share target/ and Cargo
+        # serializes them via its lock — the speedup comes from fmt-check
+        # overlapping with compilation and from cross-repo parallelism.
+        just fmt-check ${_QR_REPO:-} --quiet &
+        just lint ${_QR_REPO:-} --quiet &
+        just test ${_QR_REPO:-} --quiet &
+        wait
         qr_print_shared_summary "check" || exit 1
     else
         just fmt-check ${_QR_REPO:-}
