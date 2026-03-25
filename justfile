@@ -643,8 +643,7 @@ release-chain-status version="":
 audit repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    # Only Rust repos support cargo audit
-    RUST_REPOS="core cli relay ohttp-relay tui e2e linux-gtk"
+    RUST_REPOS="$(repos_by_toolchain rust)"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
@@ -788,7 +787,7 @@ install-hooks:
 lint-file-size repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    RUST_REPOS="core cli relay ohttp-relay tui e2e linux-gtk"
+    RUST_REPOS="$(repos_by_toolchain rust)"
     if [[ -z "{{repo}}" ]]; then
         repos="$RUST_REPOS"
     elif [[ "{{repo}}" == "all" ]]; then
@@ -987,7 +986,8 @@ sweep days="30":
         echo "cargo-sweep not installed. Run: cargo install cargo-sweep"
         exit 1
     fi
-    rust_dirs=(core cli relay ohttp-relay tui e2e linux-gtk)
+    source scripts/scripts/resolve-repo.sh
+    read -ra rust_dirs <<< "$(repos_by_toolchain rust)"
     total_before=0
     total_after=0
     for dir in "${rust_dirs[@]}"; do
@@ -1010,6 +1010,7 @@ sweep days="30":
 housekeeping:
     set -uo pipefail
     source scripts/scripts/for-each-repo.sh
+    source scripts/scripts/resolve-repo.sh
     ISSUES=0
     SECTION=0
 
@@ -1356,7 +1357,7 @@ housekeeping:
     # 16. Cargo target sizes
     section "Cargo target sizes"
     total_mb=0
-    for dir in core cli relay ohttp-relay tui e2e linux-gtk; do
+    for dir in $(repos_by_toolchain rust); do
         target="$dir/target"
         [[ -d "$target" ]] || continue
         size_mb=$(du -sm "$target" 2>/dev/null | cut -f1)
@@ -1472,7 +1473,7 @@ check-lockfile-consistency:
 
     LOCKFILES=()
     LABELS=()
-    for dir in core cli relay ohttp-relay tui e2e linux-gtk; do
+    for dir in $(repos_by_toolchain rust); do
         if [[ -f "$dir/Cargo.lock" ]]; then
             LOCKFILES+=("$dir/Cargo.lock")
             LABELS+=("$dir")
