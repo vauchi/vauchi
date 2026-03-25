@@ -124,7 +124,7 @@ mr-create-all title='':
     # everything downstream is Draft. Derived from Cargo.toml git deps.
     UPSTREAM_REPOS="core"
     # Repos that depend on core via git (tier 1+)
-    DOWNSTREAM_OF_CORE="cli tui relay linux-gtk e2e"
+    DOWNSTREAM_OF_CORE="cli tui relay ohttp-relay linux-gtk e2e"
 
     created=()
     updated=()
@@ -411,13 +411,13 @@ mr-status repo='':
         exit 0
     fi
     # Find MR for this branch
-    mr_json=$(glab mr list -R "vauchi/$r" --source-branch "$branch" --json number,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
+    mr_json=$(glab mr list -R "vauchi/$r" --source-branch "$branch" --json iid,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
     count=$(echo "$mr_json" | jq 'length')
     if [[ "$count" == "0" ]]; then
         echo "No MR found for branch '$branch' in vauchi/$r"
         exit 0
     fi
-    echo "$mr_json" | jq -r '.[] | "MR !\(.number): \(.title)\n  State: \(.state)\n  URL:   \(.webUrl)\n"'
+    echo "$mr_json" | jq -r '.[] | "MR !\(.iid): \(.title)\n  State: \(.state)\n  URL:   \(.webUrl)\n"'
     # Show pipeline status
     echo "Pipeline:"
     glab ci status --branch "$branch" -R "vauchi/$r" 2>/dev/null || echo "  No pipeline found"
@@ -504,7 +504,7 @@ metrics-refresh:
           || echo "    ⚠ $repo trigger failed"
     done
     echo ""
-    echo "── Triggered 9 pipelines ──"
+    echo "── Triggered 11 pipelines ──"
     echo ""
     echo "Dashboard: https://grafana.vauchi.app/d/vauchi-engineering-metrics/engineering-metrics"
     echo ""
@@ -573,7 +573,9 @@ published:
     }
 
     query_packages "vauchi%2Fcore"                     "core (generic)"
-    query_packages "vauchi%2Fvauchi-platform-kotlin"    "kotlin (maven)"
+    # Note: vauchi-platform-kotlin is archived — Maven AAR now published
+    # directly from core. Query kept for visibility of last published version.
+    query_packages "vauchi%2Fvauchi-platform-kotlin"    "kotlin (maven, archived)"
 
     # Swift SPM (uses git tags, not package registry)
     git -C "$WS/vauchi-platform-swift" ls-remote --tags origin 2>/dev/null \
