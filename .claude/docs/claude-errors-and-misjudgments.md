@@ -322,6 +322,45 @@ never successfully completed since its creation. Every fix revealed the next fai
 Lesson: trace the FULL script path before pushing — reading 50 lines costs 2 minutes,
 each push-wait-fail cycle costs 10.
 
+### E26: Designed Plan 2 (QR scanning) for work that already existed
+
+**What**: The brainstorming session designed a 6-phase transport rollout with "Phase 1:
+Desktop QR Scanning" as the first implementation target. Plan 2 was allocated for QR scanning
+on GTK + macOS. Exploration after Plan 1 completion revealed both platforms already have full
+QR scanning: GTK uses nokhwa (V4L2) + rqrr with live camera preview and paste fallback.
+macOS uses AVFoundation (AVCaptureMetadataOutput) with built-in QR detection.
+
+**Root cause**: The design was based on the v0.2.0 checklist item "QR exchange works
+cross-platform (iOS ↔ Android ↔ Desktop)" being unchecked. The brainstorming explored the
+core exchange architecture but did not verify what platform code already existed before
+proposing the phased rollout. The exploration agent reported the transport capabilities
+design doc (which listed QR scanning as future work) without cross-checking the actual
+GTK/macOS source code.
+
+**Fix**: Always verify platform repos before designing platform plans. The v0.2.0 checklist
+item is unchecked because it hasn't been device-tested, not because the code is missing.
+
+**Pattern tag**: `verify-before-acting`, `stale-doc`, `assumed-gap`
+
+### E27: Plan referenced non-existent `Contact::new_test()` constructor
+
+**What**: Implementation plan for exchange core foundation used `Contact::new_test("alice")`
+in 8+ test snippets across Tasks 6, 7, and 9. This constructor does not exist. Existing
+tests use `Contact::from_exchange(public_key, card, shared_key)` with helpers.
+
+**Root cause**: Explore agent reported "Contact struct" but plan author assumed a `new_test()`
+convenience constructor. The review agent (feature-dev:code-reviewer) checked the plan's
+structure but not whether `Contact::new_test()` existed — it focused on method signatures,
+serde annotations, and migration struct fields.
+
+**Fix**: Replace all `Contact::new_test("alice")` with `make_contact(|_| {})` pattern matching
+the existing test files. Add `make_contact` helper to each new test file.
+
+**Prevention**: When writing test code in plans, always verify the test helper/constructor
+API by reading the existing test files — `grep 'fn.*contact\|Contact::' tests/*.rs`.
+
+**Pattern tag**: `assumed-api`, `test-helper-mismatch`
+
 ---
 
 ## Aggregate

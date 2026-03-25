@@ -36,6 +36,7 @@
 # Ignore generated/cache directories
 # ===========================================
 /.worktrees/
+/.superpowers/
 /data/
 /tmp/
 /cache/
