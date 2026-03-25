@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Removed symbols manifest — add entries here when removing features from core.
+# CI downstream repos grep for these to catch stale references in docs, tests,
+# configs, and comments. (Rust compiler already catches code references.)
+#
+# Format: one identifier per line. Use # for comments.
+# Include all case variants (snake_case, PascalCase, UI labels).
+
+# ── Removed 2026-03: Tor integration (replaced by OHTTP relay) ──
+tor_settings
+TorSettings
+Tor Settings
