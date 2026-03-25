@@ -64,7 +64,7 @@ This reduces token usage, avoids permission prompts, and searches across all rep
 - **Explicit name** → `just test core`, `just lint relay`, `just check ios`
 - **`all`** → `just test all` runs across all applicable repos
 
-**Valid repo names:** `root`, `core`, `cli`, `relay`, `tui`, `e2e`, `android`, `ios`, `macos`, `windows`, `linux-gtk`, `linux-qt`, `web-demo`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`, `_private`
+**Valid repo names:** `root`, `core`, `cli`, `relay`, `ohttp-relay`, `tui`, `e2e`, `android`, `ios`, `macos`, `windows`, `linux-gtk`, `linux-qt`, `web-demo`, `docs`, `locales`, `themes`, `features`, `website`, `scripts`, `_private`, `drift-detector`, `markdown-plan`
 
 ### Full Command Reference
 

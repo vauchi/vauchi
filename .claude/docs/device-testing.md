@@ -52,7 +52,7 @@ The recipe auto-detects worktrees from the SPM symlink target, but explicit path
 
 **Quick check**: After copying bindings, verify new APIs are present:
 ```bash
-grep "peerDisplayName\|coreVersion\|your_new_function" vauchi-mobile-swift/Sources/VauchiMobile/vauchi_mobile.swift
+grep "peerDisplayName\|coreVersion\|your_new_function" vauchi-platform-swift/Sources/VauchiMobile/vauchi_mobile.swift
 ```
 
 ### Clock Drift

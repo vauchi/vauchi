@@ -39,7 +39,7 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 ## Problem Workflow (MANDATORY)
 
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
-See: `_private/docs/2026-01-23-problem-to-solution-flow.md`
+See: `_private/docs/reference/2026-01-23-problem-to-solution-flow.md`
 
 Lifecycle: `intake → investigating → planning → implementing → testing → done`
 
