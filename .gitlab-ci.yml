@@ -4,11 +4,9 @@
 
 # GitLab CI/CD Pipeline for Vauchi
 #
-# Mirrors GitHub Actions functionality for GitLab users
-#
 # Pipeline strategy:
 #   - MR: Full validation (reuse-lint, secret detection)
-#   - Scheduled: Security scans
+#   - Scheduled: Security scans + prerelease cleanup
 #   Main branch is protected and merge-only. All validation happens
 #   during the MR pipeline; post-merge pipelines are unnecessary.
 #
@@ -22,16 +20,19 @@
 #   See _private/infra/runners/ for runner details.
 
 # GitLab Ultimate Templates
-# Security scanning, code quality, and license compliance
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
     ref: main
     file: '/ci-templates/reuse.yml'
+  - project: 'vauchi/scripts'
+    ref: main
+    file: '/ci-templates/cleanup.yml'
 
 stages:
   - lint
   - security
+  - deploy
 
 # REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
@@ -42,3 +43,7 @@ secret_detection:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Weekly prerelease cleanup (scheduled only)
+cleanup:prerelease:
+  extends: .cleanup-prerelease
