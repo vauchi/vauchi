@@ -25,10 +25,6 @@ include:
   - project: 'vauchi/scripts'
     ref: main
     file: '/ci-templates/reuse.yml'
-  - project: 'vauchi/scripts'
-    ref: main
-    file: '/ci-templates/cleanup.yml'
-    optional: true
 
 stages:
   - lint
@@ -46,7 +42,7 @@ secret_detection:
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
 # Weekly prerelease cleanup (scheduled only)
-# Requires cleanup.yml from vauchi/scripts (merge scripts first)
+# Fetches cleanup script from vauchi/scripts at runtime.
 cleanup:prerelease:
   stage: deploy
   image: python:3.12-slim
@@ -57,10 +53,13 @@ cleanup:prerelease:
   before_script:
     - apt-get update -qq && apt-get install -yqq curl >/dev/null
   script:
-    - |
-      export GITLAB_TOKEN="${CLEANUP_TOKEN:-${CI_JOB_TOKEN}}"
-      curl -sf -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}"         "https://gitlab.com/api/v4/projects/vauchi%2Fscripts/repository/files/scripts%2Fcleanup-prerelease.sh/raw?ref=main"         -o /tmp/cleanup.sh
-      chmod +x /tmp/cleanup.sh
-      /tmp/cleanup.sh
+    - export GITLAB_TOKEN="${CLEANUP_TOKEN:-${CI_JOB_TOKEN}}"
+    - >-
+      curl -sf
+      -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}"
+      "https://gitlab.com/api/v4/projects/vauchi%2Fscripts/repository/files/scripts%2Fcleanup-prerelease.sh/raw?ref=main"
+      -o /tmp/cleanup.sh
+    - chmod +x /tmp/cleanup.sh
+    - /tmp/cleanup.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CLEANUP_PRERELEASE == "true"
