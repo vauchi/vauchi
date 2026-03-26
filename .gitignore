@@ -47,12 +47,16 @@
 /node_modules/
 
 # ===========================================
-# Local/machine-specific directories
+# Sub-repos not in primary clone list
 # ===========================================
-/_VMs/
 /github-profile/
 /vauchi-platform-kotlin/
 /vauchi-platform-swift/
+
+# ===========================================
+# Local/machine-specific directories
+# ===========================================
+/_VMs/
 
 
 
@@ -95,7 +99,7 @@ service-account*.json
 .kamal/secret
 .kamal/secrets
 /keys/
-vauchi.code-workspace
+# vauchi.code-workspace is tracked (team IDE config)
 
 # Drift detector (local MCP server)
 /drift-detector/
@@ -108,6 +112,12 @@ vauchi.code-workspace
 
 # Device testing screenshots
 screenshot-*.png
+
+# iOS device bridge caches
+idb-*/
+
+# Package manager — npm only (yarn.lock removed)
+yarn.lock
 
 # macOS
 .DS_Store
