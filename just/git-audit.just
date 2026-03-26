@@ -419,7 +419,7 @@ stale-branches days='14':
     source scripts/scripts/git-helpers.sh
     set -uo pipefail
     threshold="{{ days }}"
-    cutoff=$(date -d "$threshold days ago" +%s 2>/dev/null || date -v-${threshold}d +%s 2>/dev/null)
+    cutoff=$(date -v-${threshold}d +%s 2>/dev/null || date -d "$threshold days ago" +%s 2>/dev/null)
 
     # Fetch so origin/main is current for status checks
     _sb_fetch() { git -C "$2" fetch origin main --quiet 2>/dev/null; }
