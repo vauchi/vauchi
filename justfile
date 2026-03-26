@@ -76,6 +76,7 @@ import 'just/plan.just'
 import 'just/perf.just'
 import 'just/device-test.just'
 import 'just/device-test-macos.just'
+import 'just/desktop-test.just'
 
 # ═══════════════════════════════════════════════════════════════════
 # DAILY COMMANDS - Use these regularly
