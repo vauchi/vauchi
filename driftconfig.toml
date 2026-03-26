@@ -323,8 +323,7 @@ ignore = [
 "/vouching.rs" = "vouching"
 "/consent/" = "consent"
 "/consent.rs" = "consent"
-"/tor/" = "tor-mode"
-"/tor.rs" = "tor-mode"
+# tor-mode removed 2026-03 (see removed-symbols.txt) — name patterns still catch accidental reintroduction
 "/shred/" = "emergency-shred"
 "/shred.rs" = "emergency-shred"
 "/device_link/" = "device-linking"

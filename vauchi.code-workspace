@@ -21,10 +21,6 @@
       "name": "relay"
     },
     {
-      "path": "desktop",
-      "name": "desktop"
-    },
-    {
       "path": "e2e",
       "name": "e2e"
     },
@@ -98,7 +94,7 @@
       "cli/Cargo.toml",
       "tui/Cargo.toml",
       "e2e/Cargo.toml",
-      "desktop/src-tauri/Cargo.toml"
+      "linux-gtk/Cargo.toml"
     ],
     "rust-analyzer.rustfmt.enableRangeFormatting": true,
     "rust-analyzer.check.command": "clippy",
@@ -234,7 +230,6 @@
       "esbenp.prettier-vscode",
       "dbaeumer.vscode-eslint",
       "nicknisi.solid-vscode",
-      "tauri-apps.tauri-vscode",
       "fwcd.kotlin",
       "sswg.swift-lang",
       "redhat.vscode-yaml",

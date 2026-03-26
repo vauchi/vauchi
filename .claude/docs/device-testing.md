@@ -5,7 +5,7 @@
 
 ## Documentation
 
-Full device testing guide: `_private/docs/guides/device-testing-guide.md`
+Full device testing guide: `_private/docs/testing/manual-testing.md`
 
 ## Recipes
 

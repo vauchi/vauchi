@@ -19,7 +19,7 @@ apply: always
   - Problem records: update status, last_updated, add notes for work done (`_private/docs/problems/`)
   - Plans: check off completed items, update percentages (`_private/docs/planning/todo/`)
   - Work context: clear or update `.claude/.workcontext`
-  - Clean up stale memories in `.claude/projects/*/memory/`
+  - Review auto-memory for stale entries (`~/.claude/projects/*/memory/`)
 
 ### Cross-Machine Sync (CRITICAL)
 - **Always push before switching machines or ending a session**

@@ -25,8 +25,9 @@ These file types are large by design — splitting would create worse problems:
 
 ### Do NOT extract sub-crates for file size
 
-Sub-crate extraction hurts incremental compilation (Cargo only does incremental within crates).
-No external consumers exist. See PRB-2026-032 investigation for full analysis.
+No external consumers exist. Cargo only does incremental compilation within crates —
+extracting a sub-crate resets incremental state for all dependents, increasing build times
+for the common single-crate edit case.
 
 ### Architectural boundary splits are a separate concern
 

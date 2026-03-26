@@ -6,7 +6,7 @@
     "role": "owner",
     "name": "Mattia Egloff",
     "email": "mattia.egloff@pm.me",
-    "description": "Creator and maintainer of Vauchi — privacy-focused updatable contact cards via in-person exchange. E2E encrypted using Signal protocol (X3DH + Double Ratchet), decentralized, no accounts required. Built in Rust with iOS (SwiftUI), Android (Kotlin/Compose), Desktop (Tauri), CLI, and TUI clients.",
+    "description": "Creator and maintainer of Vauchi — privacy-focused updatable contact cards via in-person exchange. E2E encrypted using Signal protocol (X3DH + Double Ratchet), decentralized, no accounts required. Built in Rust with iOS (SwiftUI), Android (Kotlin/Compose), macOS, Windows, Linux (GTK/Qt), CLI, and TUI clients.",
     "webpageUrl": {
       "url": "https://vauchi.app"
     }
