@@ -1511,6 +1511,57 @@ check-lockfile-consistency:
         exit 1
     fi
 
+# Verify cosign.pub is identical across all repos that serve it
+# Source of truth: core/cosign.pub. Self-healing: run with 'fix' to sync.
+# Usage: just check-cosign-pub [fix]
+[group('tools')]
+[no-cd]
+[script]
+check-cosign-pub action='check':
+    set -euo pipefail
+    SOURCE="core/cosign.pub"
+    COPIES=(
+        "website/app-files-src/cosign.pub"
+        "website/public/.well-known/cosign.pub"
+        "docs/docs/.well-known/cosign.pub"
+    )
+    if [[ ! -f "$SOURCE" ]]; then
+        echo "ERROR: source of truth missing: $SOURCE"
+        exit 1
+    fi
+    SOURCE_HASH=$(sha256sum "$SOURCE" | cut -d' ' -f1)
+    divergent=0
+    for copy in "${COPIES[@]}"; do
+        if [[ ! -f "$copy" ]]; then
+            echo "  MISSING: $copy"
+            divergent=$((divergent + 1))
+            if [[ "{{ action }}" == "fix" ]]; then
+                mkdir -p "$(dirname "$copy")"
+                cp "$SOURCE" "$copy"
+                echo "    → copied from $SOURCE"
+            fi
+        else
+            COPY_HASH=$(sha256sum "$copy" | cut -d' ' -f1)
+            if [[ "$SOURCE_HASH" != "$COPY_HASH" ]]; then
+                echo "  DIVERGENT: $copy (hash mismatch)"
+                divergent=$((divergent + 1))
+                if [[ "{{ action }}" == "fix" ]]; then
+                    cp "$SOURCE" "$copy"
+                    echo "    → synced from $SOURCE"
+                fi
+            fi
+        fi
+    done
+    if [[ "$divergent" -eq 0 ]]; then
+        echo "  cosign.pub: all ${#COPIES[@]} copies match $SOURCE (sha256:${SOURCE_HASH:0:16}…)"
+    elif [[ "{{ action }}" != "fix" ]]; then
+        echo ""
+        echo "Fix: run 'just check-cosign-pub fix' to sync from $SOURCE"
+        exit 1
+    else
+        echo "  Fixed $divergent divergent copies"
+    fi
+
 # Check spelling across all repos (typos — fast, source-code-aware)
 # Usage: just spellcheck
 [group('tools')]
