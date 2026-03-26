@@ -339,6 +339,162 @@ problems-tidy:
     print(f'\nActive: {active}  Archived: {archived}')
     PYEOF
 
+# Archive a doc: git mv to archived/, update all references, record redirect with status
+# Usage: just archive <file> <status> [note]
+#   status: done | deprecated | deferred | superseded
+#   note:   optional reason (e.g. "superseded by 2026-03-24-overhaul")
+# Examples:
+#   just archive todo/checklist.md done
+#   just archive todo/old-plan.md superseded "replaced by new-plan"
+#   just archive todo/feature-x.md deferred "moved to v0.3.0"
+[group('tools')]
+[script]
+archive file status='done' note='':
+    set -euo pipefail
+    FILE="{{file}}"
+    STATUS="{{status}}"
+    NOTE="{{note}}"
+    PRIVATE="_private/docs"
+
+    # Validate status
+    case "$STATUS" in
+        done|deprecated|deferred|superseded) ;;
+        *) echo "ERROR: status must be one of: done, deprecated, deferred, superseded (got: $STATUS)"; exit 1 ;;
+    esac
+
+    # Resolve paths — accept both full and relative-to-planning forms
+    if [[ "$FILE" == _private/* ]]; then
+        REL="${FILE#_private/}"
+    elif [[ "$FILE" == docs/* ]]; then
+        REL="$FILE"
+    else
+        REL="docs/planning/$FILE"
+    fi
+    FULL="$PRIVATE/${REL#docs/}"
+
+    if [[ ! -f "$FULL" ]]; then
+        echo "ERROR: $FULL not found"
+        exit 1
+    fi
+
+    DIR=$(dirname "$FULL")
+    BASE=$(basename "$FULL")
+
+    # Route by status: deferred → deferred/, everything else → archived/
+    case "$STATUS" in
+        deferred) DEST_DIR="${DIR%/*}/deferred" ;;
+        *)        DEST_DIR="${DIR%/*}/archived" ;;
+    esac
+
+    if [[ ! -d "$DEST_DIR" ]]; then
+        echo "ERROR: $DEST_DIR does not exist"
+        exit 1
+    fi
+
+    if [[ "$DIR" == *"/archived" || "$DIR" == *"/deferred" ]]; then
+        echo "ERROR: already in $(basename "$DIR")/"
+        exit 1
+    fi
+
+    OLD_REL="${FULL#$PRIVATE/}"
+    NEW_REL="${DEST_DIR#$PRIVATE/}/$BASE"
+    # git paths are relative to _private/ repo root (prefix with docs/)
+    GIT_OLD="docs/$OLD_REL"
+    GIT_NEW="docs/$NEW_REL"
+    DEST_NAME=$(basename "$DEST_DIR")
+
+    echo "Archive ($STATUS): $OLD_REL → $NEW_REL"
+    [[ -z "$NOTE" ]] || echo "  Note: $NOTE"
+
+    # 1. git mv (+ companion .plan.md if exists)
+    git -C _private mv "$GIT_OLD" "$GIT_NEW"
+    COMPANION=""
+    if [[ "$BASE" != *.plan.md ]]; then
+        PLAN_BASE="${BASE%.md}.plan.md"
+        PLAN_OLD="$(dirname "$OLD_REL")/$PLAN_BASE"
+        if [[ -f "$PRIVATE/$PLAN_OLD" ]]; then
+            PLAN_NEW="${DEST_DIR#$PRIVATE/}/$PLAN_BASE"
+            git -C _private mv "docs/$PLAN_OLD" "docs/$PLAN_NEW"
+            COMPANION="$PLAN_BASE"
+            echo "  + companion: $PLAN_OLD → $PLAN_NEW"
+        fi
+    fi
+
+    # 2. Record redirect with status
+    REDIRECTS="$PRIVATE/planning/.redirects.json"
+    if [[ ! -f "$REDIRECTS" ]]; then
+        echo '{}' > "$REDIRECTS"
+    fi
+    python3 -c "
+    import json
+    from datetime import date
+    with open('$REDIRECTS') as f:
+        data = json.load(f)
+    entry = {'to': '$NEW_REL', 'status': '$STATUS', 'date': str(date.today())}
+    note = '''$NOTE'''
+    if note:
+        entry['note'] = note
+    data['$OLD_REL'] = entry
+    companion = '$COMPANION'
+    if companion:
+        old_dir = '/'.join('$OLD_REL'.split('/')[:-1])
+        new_dir = '/'.join('$NEW_REL'.split('/')[:-1])
+        data[f'{old_dir}/{companion}'] = dict(entry, to=f'{new_dir}/{companion}')
+    with open('$REDIRECTS', 'w') as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+        f.write('\n')
+    print(f'  Recorded {len(data)} redirect(s) in .redirects.json')
+    "
+
+    # 3. Update all references across _private/docs/
+    UPDATED=0
+    OLD_PATTERNS=("$OLD_REL" "planning/${OLD_REL#planning/}" "_private/docs/$OLD_REL")
+    NEW_PATTERNS=("$NEW_REL" "planning/${NEW_REL#planning/}" "_private/docs/$NEW_REL")
+
+    while IFS= read -r -d '' mdfile; do
+        CHANGED=false
+        for i in "${!OLD_PATTERNS[@]}"; do
+            if grep -qF "${OLD_PATTERNS[$i]}" "$mdfile" 2>/dev/null; then
+                python3 -c "
+    with open('$mdfile') as f:
+        text = f.read()
+    updated = text.replace('${OLD_PATTERNS[$i]}', '${NEW_PATTERNS[$i]}')
+    if updated != text:
+        with open('$mdfile', 'w') as f:
+            f.write(updated)
+        print(f'  Updated: $mdfile (${OLD_PATTERNS[$i]})')
+    "
+                CHANGED=true
+            fi
+        done
+        # Also fix relative links (e.g. ../todo/file.md → ../archived/file.md)
+        OLD_PARENT=$(basename "$(dirname "$OLD_REL")")
+        NEW_PARENT=$(basename "$(dirname "$NEW_REL")")
+        if [[ "$OLD_PARENT" != "$NEW_PARENT" ]]; then
+            REL_OLD="../$OLD_PARENT/$BASE"
+            REL_NEW="../$NEW_PARENT/$BASE"
+            if grep -qF "$REL_OLD" "$mdfile" 2>/dev/null; then
+                python3 -c "
+    with open('$mdfile') as f:
+        text = f.read()
+    updated = text.replace('$REL_OLD', '$REL_NEW')
+    if updated != text:
+        with open('$mdfile', 'w') as f:
+            f.write(updated)
+        print(f'  Updated: $mdfile ($REL_OLD)')
+    "
+                CHANGED=true
+            fi
+        fi
+        if $CHANGED; then
+            UPDATED=$((UPDATED + 1))
+        fi
+    done < <(find "$PRIVATE" -name "*.md" -print0)
+
+    echo ""
+    echo "Done: $STATUS ${BASE}${COMPANION:+ + $COMPANION} → $DEST_NAME/, updated $UPDATED file(s)"
+    echo "Run: git -C _private diff --stat  to review"
+
 # Show .plan.md files with no git changes in N days
 [group('tools')]
 [script]
