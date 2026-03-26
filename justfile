@@ -1884,8 +1884,9 @@ lint-docs:
     echo "All documentation checks passed."
 
 # Lint markdown files (line length with backtick-path exemption)
+# Usage: just lint-markdown [fix] [paths...]
 [group('tools')]
-lint-markdown *PATHS:
+lint-markdown *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
     RULE="_private/scripts/markdownlint-rule-line-length.js"
@@ -1898,12 +1899,31 @@ lint-markdown *PATHS:
       echo "SKIP: custom rule not found at $RULE"
       exit 0
     fi
-    PATHS="{{ PATHS }}"
+    ARGS="{{ ARGS }}"
+    FIX=""
+    PATHS=""
+    for arg in $ARGS; do
+      if [ "$arg" = "fix" ]; then
+        FIX="--fix"
+      else
+        PATHS="$PATHS $arg"
+      fi
+    done
     if [ -z "$PATHS" ]; then
       PATHS="_private/docs/"
     fi
+    # Use _private config when scanning _private docs
+    CONFIG=""
+    if [ -f "_private/.markdownlint.json" ]; then
+      CONFIG="-c _private/.markdownlint.json"
+    fi
     echo "═══ Markdown lint (backtick-path exempt) ═══"
-    markdownlint --disable MD013 -r "$RULE" $PATHS
+    if [ -n "$FIX" ]; then
+      echo "  Mode: auto-fix"
+      markdownlint $CONFIG -r "$RULE" $FIX $PATHS
+    else
+      markdownlint $CONFIG -r "$RULE" $PATHS
+    fi
     echo "All markdown checks passed."
 
 # ═══════════════════════════════════════════════════════════════════
