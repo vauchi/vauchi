@@ -21,7 +21,7 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Never put `DisplayHint` on `ScreenModel`** — it's a construction parameter, not screen data
 - **Frontends must never branch on form factor** — core handles form-factor differences via `DisplayHint`
 - **Every `WorkflowEngine` impl must handle all `DisplayHint` variants** — Phone, Watch, Desktop
-- **Use `InlineConfirm` for irrevocable actions, `ShowToast` for reversible** — never modal dialogs (ADR-022 addenda)
+- **Use `InlineConfirm` for irrevocable actions, `ShowToast` for reversible feedback** — `ShowAlert` is for informational messages and errors only, never for destructive confirmations (ADR-022 addenda)
 
 ### Hardware & Platform (ADR-030, ADR-031)
 
@@ -46,7 +46,8 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 
 - **All visual properties** (colors, spacing, typography) **defined in `themes/` or `tokens.json`** — never hardcoded in frontend code
 - **All user-visible strings** in `locales/*.json` via `t("key")` — never hardcoded
-- **All accessibility labels** from core's `accessible_label`/`accessible_hint` fields — not hardcoded in frontends (migration in progress)
+- **`tokens.json` is the single source of truth for design tokens** — Rust `DesignTokens::default()` must match; validated by `check-core-contract.py`
+- **Accessibility labels**: planned for core-driven delivery but not yet implemented — frontends currently own a11y labels
 
 ### Desktop (ADR-027)
 
