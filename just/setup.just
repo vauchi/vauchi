@@ -425,7 +425,7 @@ install-dev-deps:
 
     # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
-    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat cargo-sweep)
+    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat cargo-sweep typos-cli)
     for tool in "${cargo_tools[@]}"; do
         bin_name="$tool"
         if cargo install --list | grep -q "^${tool} "; then
@@ -435,6 +435,38 @@ install-dev-deps:
             cargo binstall "$tool" --no-confirm 2>/dev/null || cargo install "$tool"
         fi
     done
+    echo ""
+
+    # ── npm global tools ────────────────────────────────────────────
+    echo "── npm global tools ──"
+    npm_tools=(markdownlint-cli)
+    for tool in "${npm_tools[@]}"; do
+        # npm ls -g exits non-zero if not found
+        if npm ls -g "$tool" &>/dev/null; then
+            echo "  $tool (already installed)"
+        else
+            echo "  Installing $tool..."
+            npm i -g "$tool"
+        fi
+    done
+    echo ""
+
+    # ── REUSE (SPDX header compliance) ──────────────────────────────
+    echo "── REUSE tool ──"
+    if command -v reuse &>/dev/null; then
+        echo "  reuse (already installed)"
+    else
+        echo "  Installing reuse..."
+        if command -v pipx &>/dev/null; then
+            pipx install reuse
+        elif command -v brew &>/dev/null; then
+            brew install reuse
+        elif command -v pip3 &>/dev/null; then
+            pip3 install --user reuse
+        else
+            echo "  SKIP: no pipx/brew/pip3 — install manually: pipx install reuse"
+        fi
+    fi
     echo ""
 
     # ── iOS targets (macOS only) ───────────────────────────────────
