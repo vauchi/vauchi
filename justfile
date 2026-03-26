@@ -1883,6 +1883,29 @@ lint-docs:
     fi
     echo "All documentation checks passed."
 
+# Lint markdown files (line length with backtick-path exemption)
+[group('tools')]
+lint-markdown *PATHS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    RULE="_private/scripts/markdownlint-rule-line-length.js"
+    if ! command -v markdownlint &>/dev/null; then
+      echo "SKIP: markdownlint not installed"
+      echo "  npm i -g markdownlint-cli"
+      exit 0
+    fi
+    if [ ! -f "$RULE" ]; then
+      echo "SKIP: custom rule not found at $RULE"
+      exit 0
+    fi
+    PATHS="{{ PATHS }}"
+    if [ -z "$PATHS" ]; then
+      PATHS="_private/docs/"
+    fi
+    echo "═══ Markdown lint (backtick-path exempt) ═══"
+    markdownlint --disable MD013 -r "$RULE" $PATHS
+    echo "All markdown checks passed."
+
 # ═══════════════════════════════════════════════════════════════════
 # I18N / LOCALES
 # ═══════════════════════════════════════════════════════════════════
