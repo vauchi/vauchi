@@ -5,7 +5,7 @@
 # GitLab CI/CD Pipeline for Vauchi
 #
 # Pipeline strategy:
-#   - MR: Full validation (reuse-lint, secret detection)
+#   - MR: Full validation (lint:reuse, secret detection)
 #   - Scheduled: Security scans + prerelease cleanup
 #   Main branch is protected and merge-only. All validation happens
 #   during the MR pipeline; post-merge pipelines are unnecessary.

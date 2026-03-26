@@ -82,7 +82,7 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 
 ### Root (`.gitlab-ci.yml`)
 - **Stages**: lint, security
-- **Jobs**: `reuse-lint`, `secret_detection`
+- **Jobs**: `lint:reuse`, `secret_detection`
 - Minimal — delegates to sub-repos
 
 ### Core (`core/.gitlab-ci.yml`) — Most Complex

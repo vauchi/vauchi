@@ -15,7 +15,7 @@ apply: always
 
 ### `_private/features/` — Ideas Only
 
-- **No `.feature` files here** — CI enforces this (`check-no-stale-features` job)
+- **No `.feature` files here** — CI enforces this (`check:no-stale-features` job)
 - Ideas are **prose** markdown in `ideas/`, not Gherkin
 - When ready to implement, create a problem record first
 
