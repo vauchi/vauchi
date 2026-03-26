@@ -380,6 +380,13 @@ archive file status='done' note='':
     DIR=$(dirname "$FULL")
     BASE=$(basename "$FULL")
 
+    # Guard: file must be inside a subdirectory (e.g. planning/todo/), not at top level
+    PARENT=$(dirname "$DIR")
+    if [[ "$PARENT" == "$PRIVATE" ]]; then
+        echo "ERROR: $FULL is not inside a subdirectory — cannot determine archive destination"
+        exit 1
+    fi
+
     # Route by status: deferred → deferred/, everything else → archived/
     case "$STATUS" in
         deferred) DEST_DIR="${DIR%/*}/deferred" ;;
@@ -425,70 +432,75 @@ archive file status='done' note='':
     if [[ ! -f "$REDIRECTS" ]]; then
         echo '{}' > "$REDIRECTS"
     fi
-    python3 -c "
-    import json
+    ARCHIVE_REDIRECTS="$REDIRECTS" \
+    ARCHIVE_OLD_REL="$OLD_REL" \
+    ARCHIVE_NEW_REL="$NEW_REL" \
+    ARCHIVE_STATUS="$STATUS" \
+    ARCHIVE_NOTE="$NOTE" \
+    ARCHIVE_COMPANION="$COMPANION" \
+    python3 -c '
+    import json, os, sys
     from datetime import date
-    with open('$REDIRECTS') as f:
+    redirects = os.environ["ARCHIVE_REDIRECTS"]
+    old_rel = os.environ["ARCHIVE_OLD_REL"]
+    new_rel = os.environ["ARCHIVE_NEW_REL"]
+    status = os.environ["ARCHIVE_STATUS"]
+    note = os.environ.get("ARCHIVE_NOTE", "")
+    companion = os.environ.get("ARCHIVE_COMPANION", "")
+    with open(redirects) as f:
         data = json.load(f)
-    entry = {'to': '$NEW_REL', 'status': '$STATUS', 'date': str(date.today())}
-    note = '''$NOTE'''
+    if old_rel in data:
+        print(f"  WARNING: redirect for {old_rel!r} already exists: {data[old_rel]}", file=sys.stderr)
+        print(f"  Overwriting previous redirect.", file=sys.stderr)
+    entry = {"to": new_rel, "status": status, "date": str(date.today())}
     if note:
-        entry['note'] = note
-    data['$OLD_REL'] = entry
-    companion = '$COMPANION'
+        entry["note"] = note
+    data[old_rel] = entry
     if companion:
-        old_dir = '/'.join('$OLD_REL'.split('/')[:-1])
-        new_dir = '/'.join('$NEW_REL'.split('/')[:-1])
-        data[f'{old_dir}/{companion}'] = dict(entry, to=f'{new_dir}/{companion}')
-    with open('$REDIRECTS', 'w') as f:
+        old_dir = "/".join(old_rel.split("/")[:-1])
+        new_dir = "/".join(new_rel.split("/")[:-1])
+        data[f"{old_dir}/{companion}"] = dict(entry, to=f"{new_dir}/{companion}")
+    with open(redirects, "w") as f:
         json.dump(data, f, indent=2, sort_keys=True)
-        f.write('\n')
-    print(f'  Recorded {len(data)} redirect(s) in .redirects.json')
-    "
+        f.write("\n")
+    print(f"  Recorded {len(data)} redirect(s) in .redirects.json")
+    '
 
     # 3. Update all references across _private/docs/
     UPDATED=0
-    OLD_PATTERNS=("$OLD_REL" "planning/${OLD_REL#planning/}" "_private/docs/$OLD_REL")
-    NEW_PATTERNS=("$NEW_REL" "planning/${NEW_REL#planning/}" "_private/docs/$NEW_REL")
+    OLD_PATTERNS=("$OLD_REL" "_private/docs/$OLD_REL")
+    NEW_PATTERNS=("$NEW_REL" "_private/docs/$NEW_REL")
+
+    # Also fix relative links (e.g. ../todo/file.md → ../archived/file.md)
+    OLD_PARENT=$(basename "$(dirname "$OLD_REL")")
+    NEW_PARENT=$(basename "$(dirname "$NEW_REL")")
+    if [[ "$OLD_PARENT" != "$NEW_PARENT" ]]; then
+        OLD_PATTERNS+=("../$OLD_PARENT/$BASE")
+        NEW_PATTERNS+=("../$NEW_PARENT/$BASE")
+    fi
 
     while IFS= read -r -d '' mdfile; do
-        CHANGED=false
-        for i in "${!OLD_PATTERNS[@]}"; do
-            if grep -qF "${OLD_PATTERNS[$i]}" "$mdfile" 2>/dev/null; then
-                python3 -c "
-    with open('$mdfile') as f:
+        # Single python call per file — pass all patterns via env, avoid injection
+        REWRITE_FILE="$mdfile" \
+        REWRITE_OLD="$(IFS=$'\n'; echo "${OLD_PATTERNS[*]}")" \
+        REWRITE_NEW="$(IFS=$'\n'; echo "${NEW_PATTERNS[*]}")" \
+        python3 -c '
+    import os, sys
+    path = os.environ["REWRITE_FILE"]
+    olds = os.environ["REWRITE_OLD"].splitlines()
+    news = os.environ["REWRITE_NEW"].splitlines()
+    with open(path) as f:
         text = f.read()
-    updated = text.replace('${OLD_PATTERNS[$i]}', '${NEW_PATTERNS[$i]}')
+    updated = text
+    for old, new in zip(olds, news):
+        updated = updated.replace(old, new)
     if updated != text:
-        with open('$mdfile', 'w') as f:
+        with open(path, "w") as f:
             f.write(updated)
-        print(f'  Updated: $mdfile (${OLD_PATTERNS[$i]})')
-    "
-                CHANGED=true
-            fi
-        done
-        # Also fix relative links (e.g. ../todo/file.md → ../archived/file.md)
-        OLD_PARENT=$(basename "$(dirname "$OLD_REL")")
-        NEW_PARENT=$(basename "$(dirname "$NEW_REL")")
-        if [[ "$OLD_PARENT" != "$NEW_PARENT" ]]; then
-            REL_OLD="../$OLD_PARENT/$BASE"
-            REL_NEW="../$NEW_PARENT/$BASE"
-            if grep -qF "$REL_OLD" "$mdfile" 2>/dev/null; then
-                python3 -c "
-    with open('$mdfile') as f:
-        text = f.read()
-    updated = text.replace('$REL_OLD', '$REL_NEW')
-    if updated != text:
-        with open('$mdfile', 'w') as f:
-            f.write(updated)
-        print(f'  Updated: $mdfile ($REL_OLD)')
-    "
-                CHANGED=true
-            fi
-        fi
-        if $CHANGED; then
-            UPDATED=$((UPDATED + 1))
-        fi
+        print(f"  Updated: {path}")
+        sys.exit(0)
+    sys.exit(1)
+    ' 2>/dev/null && UPDATED=$((UPDATED + 1)) || true
     done < <(find "$PRIVATE" -name "*.md" -print0)
 
     echo ""
