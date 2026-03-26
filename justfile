@@ -1365,6 +1365,18 @@ housekeeping:
         echo "  All refs point to main"
     fi
 
+    # 18. Just recipe documentation freshness
+    section "Recipe documentation"
+    doc_output=$(just check-just-docs 2>&1 || true)
+    if echo "$doc_output" | grep -q "^OK"; then
+        echo "  All recipes documented"
+    else
+        undoc=$(echo "$doc_output" | grep -c "^  -" || true)
+        echo "  $undoc undocumented recipe(s)"
+        echo "  -> just check-just-docs fix   (auto-append missing)"
+        ISSUES=$((ISSUES + undoc))
+    fi
+
     # Summary
     echo ""
     echo "──────────────────────────────────────────"
@@ -1689,6 +1701,49 @@ check-lifecycle:
         exit 1
     else
         echo "OK: All scenarios have exactly one lifecycle tag"
+    fi
+
+# Check that just-commands.md documents all public recipes
+# Self-healing: run `just check-just-docs fix` to append missing recipes
+[group('tools')]
+[no-cd]
+check-just-docs action='check':
+    #!/usr/bin/env bash
+    set -uo pipefail
+    DOC="{{ justfile_directory() }}/.claude/docs/just-commands.md"
+    MISSING=()
+    # Extract all public recipe names from just --list
+    while IFS= read -r line; do
+        recipe=$(echo "$line" | sed 's/^[[:space:]]*//' | cut -d' ' -f1)
+        [[ -z "$recipe" ]] && continue
+        [[ "$recipe" =~ ^\[ ]] && continue     # skip [group] headers
+        [[ "$recipe" == "Available" ]] && continue
+        # Check if recipe name appears in docs (word boundary match)
+        if ! grep -qE "(^|[^a-z-])${recipe}([^a-z-]|$)" "$DOC" 2>/dev/null; then
+            MISSING+=("$recipe")
+        fi
+    done < <(just --list --unsorted 2>/dev/null)
+    if [[ ${#MISSING[@]} -eq 0 ]]; then
+        echo "OK: All recipes documented in $DOC"
+    elif [[ "{{ action }}" == "fix" ]]; then
+        echo "Appending ${#MISSING[@]} missing recipes to $DOC..."
+        echo "" >> "$DOC"
+        echo "#### Undocumented (auto-detected)" >> "$DOC"
+        echo "" >> "$DOC"
+        echo '```bash' >> "$DOC"
+        for r in "${MISSING[@]}"; do
+            echo "just $r" >> "$DOC"
+        done
+        echo '```' >> "$DOC"
+        echo "Done. Review and categorize the additions in $DOC"
+    else
+        echo "FAIL: ${#MISSING[@]} recipes not in $DOC:"
+        for r in "${MISSING[@]}"; do
+            echo "  - $r"
+        done
+        echo ""
+        echo "Run 'just check-just-docs fix' to auto-append them."
+        exit 1
     fi
 
 # Find downstream consumers of a core function/type across repos
