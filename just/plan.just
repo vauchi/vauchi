@@ -362,6 +362,200 @@ plan-stale days='30':
     echo ""
     echo "$STALE stale plan(s) found."
 
+# Live v0.2.0 release readiness — generated from master plan (single source of truth)
+[group('tools')]
+[script]
+release-gates:
+    set -euo pipefail
+    python3 << 'PYEOF'
+    import re, sys
+    from datetime import date
+
+    PLAN = "_private/docs/planning/master-plan.plan.md"
+
+    try:
+        with open(PLAN) as f:
+            text = f.read()
+    except FileNotFoundError:
+        print(f"ERROR: {PLAN} not found", file=sys.stderr)
+        sys.exit(1)
+
+    hard = []  # (id, name, done, detail)
+    soft = []  # (id, name, done, detail)
+    seen_ids = set()
+
+    def add_hard(gid, name, done, detail=""):
+        if gid not in seen_ids:
+            seen_ids.add(gid)
+            hard.append((gid, name, done, detail))
+
+    # P0 Audit Hard Gates (items 44-47)
+    # Done: "44. ~~**HARD GATE**: Name~~ **DONE**"
+    for m in re.finditer(
+        r'^(\d+)\.\s+~~\*\*HARD GATE\*\*:\s*(.+?)~~\s*\*\*DONE\*\*',
+        text, re.MULTILINE
+    ):
+        add_hard(m.group(1), m.group(2).strip(), True)
+
+    # Open: "45. **HARD GATE**: Name — status"
+    for m in re.finditer(
+        r'^(\d+)\.\s+\*\*HARD GATE\*\*:\s*(.+?)$',
+        text, re.MULTILINE
+    ):
+        parts = m.group(2).split("\u2014", 1)  # em-dash
+        name = parts[0].strip()
+        detail = parts[1].strip() if len(parts) > 1 else ""
+        add_hard(m.group(1), name, False, detail)
+
+    # Items with ~~text~~ **DONE** but without HARD GATE prefix (e.g. item 47, 48-54)
+    # "47. ~~core/SECURITY.md Wrong Crypto~~ **DONE**"
+    for m in re.finditer(
+        r'^(\d+)\.\s+~~(.+?)~~\s*\*\*DONE\*\*',
+        text, re.MULTILINE
+    ):
+        add_hard(m.group(1), m.group(2).strip().rstrip(":"), True)
+
+    # SP-33 Sealed Mailbox Tokens (skip if already captured under a numbered item)
+    if not any("Sealed Mailbox" in h[1] for h in hard):
+        if re.search(r'~~SP-33.*~~.*\*?\*?DONE', text):
+            add_hard("SP-33", "Sealed Mailbox Tokens", True)
+
+    # Remaining HARD GATES table — only data rows (skip header/separator)
+    in_table = False
+    for line in text.splitlines():
+        if line.startswith("## Remaining HARD GATES"):
+            in_table = True
+            continue
+        if in_table and line.startswith("## "):
+            break
+        if not in_table:
+            continue
+        # Skip header row and separator
+        if re.match(r'^\|\s*#\s*\|', line) or re.match(r'^\|[-\s|]+\|$', line):
+            continue
+        # Split by | and clean up
+        cells = [c.strip() for c in line.split('|')]
+        cells = [c for c in cells if c]  # remove empty from leading/trailing |
+        if len(cells) >= 3:
+            gid = re.sub(r'\*', '', cells[0]).strip()
+            name = re.sub(r'\*', '', cells[1]).strip()
+            status = re.sub(r'[\*`]', '', cells[2]).strip()
+            done = 'done' in status.lower() or 'merged' in status.lower()
+            add_hard(gid, name, done, "" if done else status)
+
+    # Inline hard gates in other sections
+    if "Relay uptime monitoring" not in ' '.join(h[1] for h in hard):
+        if re.search(r'Relay uptime monitoring.*HARD GATE', text):
+            add_hard("SP-25", "Relay uptime monitoring", False, "config done, needs DNS + deploy")
+
+    # Soft gates
+    if re.search(r'SP-11.*soft gate', text, re.IGNORECASE):
+        soft.append(("SP-11", "Accessibility (screen reader)", False, "~50%"))
+    if re.search(r'SP-12c.*SOFT GATE', text):
+        soft.append(("SP-12c", "Performance and Robustness", False, "intake, 0%"))
+
+    # --- Output ---
+    done_hard = [h for h in hard if h[2]]
+    open_hard = [h for h in hard if not h[2]]
+
+    print(f"v0.2.0 Release Readiness — {date.today()}")
+    print(f"Source: master-plan.plan.md (single source of truth)\n")
+
+    print(f"HARD GATES ({len(done_hard)}/{len(hard)} done):")
+    for gid, name, done, detail in hard:
+        icon = "DONE" if done else "TODO"
+        suffix = f"  ({detail})" if detail and not done else ""
+        print(f"  [{icon}]  #{gid:<6s} {name}{suffix}")
+
+    if open_hard:
+        print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
+    else:
+        print(f"\n  All hard gates passed!")
+
+    if soft:
+        done_soft = [s for s in soft if s[2]]
+        print(f"\nSOFT GATES ({len(done_soft)}/{len(soft)} done):")
+        for gid, name, done, detail in soft:
+            icon = "DONE" if done else "    "
+            suffix = f"  ({detail})" if detail else ""
+            print(f"  [{icon}]  #{gid:<6s} {name}{suffix}")
+        print(f"\n  Soft gates are recommended but do not block release.")
+
+    sys.exit(0 if not open_hard else 1)
+    PYEOF
+
+# Detect satellite docs that duplicate master plan status (run in session-init)
+# Only flags docs with **DONE** annotations or gate keywords — not implementation
+# plans that have [x] checkboxes for their own internal tasks.
+[group('tools')]
+[script]
+plan-drift:
+    set -euo pipefail
+    python3 << 'PYEOF'
+    import os, re, sys
+
+    PLAN = "_private/docs/planning/master-plan.plan.md"
+    TODO_DIR = "_private/docs/planning/todo"
+
+    if not os.path.isfile(PLAN):
+        print(f"ERROR: {PLAN} not found", file=sys.stderr)
+        sys.exit(1)
+
+    # Patterns that indicate master plan STATUS duplication (not just task tracking)
+    DRIFT_PATTERNS = [
+        (r'\*\*DONE\*\*', "**DONE** annotations"),
+        (r'HARD GATE|SOFT GATE', "gate classification keywords"),
+        (r'T[0-3]-\d+.*(?:DONE|done|complete)', "tier item status"),
+    ]
+
+    def check_drift(path):
+        """Returns list of (pattern_desc, count) for patterns that indicate drift.
+        Only flags if doc has master-plan-specific patterns (gate keywords or tier status),
+        not just **DONE** annotations which are normal in implementation plans."""
+        with open(path) as f:
+            text = f.read()
+        # Exempt files with explicit reference-only header
+        header = text[:500].lower()
+        if 'reference only' in header or 'canonical in master' in header:
+            return []
+        findings = []
+        has_gate_or_tier = False
+        for pat, desc in DRIFT_PATTERNS:
+            count = len(re.findall(pat, text))
+            if count > 0:
+                findings.append((desc, count))
+                if 'gate' in desc or 'tier' in desc:
+                    has_gate_or_tier = True
+        # Only flag if the doc duplicates master-plan-level concepts (gates or tiers),
+        # not if it just uses **DONE** for its own internal task tracking
+        return findings if has_gate_or_tier else []
+
+    warnings = []
+    for fname in sorted(os.listdir(TODO_DIR)):
+        fpath = os.path.join(TODO_DIR, fname)
+        if not fpath.endswith('.md') or not os.path.isfile(fpath):
+            continue
+        if fname == 'README.md' or fname.endswith('.plan.md'):
+            continue
+        findings = check_drift(fpath)
+        if findings:
+            total = sum(c for _, c in findings)
+            if total >= 3:  # only flag if 3+ drift indicators
+                warnings.append((fname, findings, total))
+
+    if not warnings:
+        print("plan-drift: OK — no satellite docs duplicating master plan status")
+        sys.exit(0)
+
+    print(f"plan-drift: {len(warnings)} satellite doc(s) may duplicate master plan status\n")
+    for fname, findings, total in warnings:
+        print(f"  {TODO_DIR}/{fname} ({total} indicators):")
+        for desc, count in findings:
+            print(f"    {count:3d}x {desc}")
+    print(f"\n  Fix: archive to planning/archived/, or add '> Status canonical in master-plan.plan.md' header.")
+    sys.exit(1)
+    PYEOF
+
 # Risk dashboard — surfaces blockers, stalled plans, recurring failures
 [group('tools')]
 risk *FLAGS:
