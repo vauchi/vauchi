@@ -213,4 +213,223 @@ if [[ -n "$UI_DIR" ]]; then
   fi
 fi
 
+# ── Markdown linting (all repos) ──────────────────────────────────
+if command -v markdownlint &>/dev/null; then
+  # Lint only .md files changed on this branch vs origin/main
+  MD_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  if [[ -n "$MD_BASE" ]]; then
+    MD_FILES=$(git -C "$REPO_DIR" diff --name-only "$MD_BASE"...HEAD -- '*.md' 2>/dev/null | grep -v '^$' || true)
+  else
+    # No merge-base (e.g. new repo) — lint all .md files
+    MD_FILES=$(git -C "$REPO_DIR" ls-files '*.md' 2>/dev/null || true)
+  fi
+
+  if [[ -n "$MD_FILES" ]]; then
+    # Workspace root (parent of sub-repos)
+    WS_ROOT="$REPO_DIR/.."
+
+    # Resolve config: repo-local > _private > workspace root
+    MD_CONFIG=""
+    if [[ -f "$REPO_DIR/.markdownlint.json" ]]; then
+      MD_CONFIG="$REPO_DIR/.markdownlint.json"
+    elif [[ -f "$REPO_DIR/.markdownlint.jsonc" ]]; then
+      MD_CONFIG="$REPO_DIR/.markdownlint.jsonc"
+    elif [[ -f "$WS_ROOT/_private/.markdownlint.json" ]]; then
+      MD_CONFIG="$WS_ROOT/_private/.markdownlint.json"
+    elif [[ -f "$WS_ROOT/.markdownlint.json" ]]; then
+      MD_CONFIG="$WS_ROOT/.markdownlint.json"
+    fi
+
+    MD_ARGS=()
+    if [[ -n "$MD_CONFIG" ]]; then
+      MD_ARGS+=(-c "$MD_CONFIG")
+    fi
+
+    # Use custom line-length rule if available (backtick-path exemption)
+    CUSTOM_RULE="$WS_ROOT/_private/scripts/markdownlint-rule-line-length.js"
+    if [[ -f "$CUSTOM_RULE" ]]; then
+      MD_ARGS+=(-r "$CUSTOM_RULE")
+    fi
+
+    echo "[gate-push] Linting $(echo "$MD_FILES" | wc -l | tr -d ' ') changed .md file(s) ($REPO_NAME)..."
+    # Run from repo dir so paths resolve correctly
+    if ! echo "$MD_FILES" | (cd "$REPO_DIR" && xargs markdownlint "${MD_ARGS[@]}") 2>&1; then
+      echo "" >&2
+      echo "Push blocked: markdownlint found issues in $REPO_NAME. Fix before pushing." >&2
+      exit 2
+    fi
+  fi
+fi
+
+# ── REUSE compliance (all repos) ──────────────────────────────────
+if command -v reuse &>/dev/null; then
+  # Only check if changed files include ones that need SPDX headers
+  REUSE_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  CHANGED_FILES=""
+  if [[ -n "$REUSE_BASE" ]]; then
+    CHANGED_FILES=$(git -C "$REPO_DIR" diff --name-only "$REUSE_BASE"...HEAD 2>/dev/null | grep -v '^$' || true)
+  fi
+
+  if [[ -n "$CHANGED_FILES" ]]; then
+    echo "[gate-push] Checking REUSE compliance ($REPO_NAME)..."
+    if ! (cd "$REPO_DIR" && reuse lint --quiet) 2>&1; then
+      echo "" >&2
+      echo "Push blocked: REUSE compliance check failed in $REPO_NAME. Add SPDX headers." >&2
+      exit 2
+    fi
+  fi
+fi
+
+# ── Typos spellcheck (all repos) ─────────────────────────────────
+if command -v typos &>/dev/null; then
+  TYPOS_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  if [[ -n "$TYPOS_BASE" ]]; then
+    TYPOS_FILES=$(git -C "$REPO_DIR" diff --name-only "$TYPOS_BASE"...HEAD 2>/dev/null | grep -v '^$' || true)
+  else
+    TYPOS_FILES=""
+  fi
+
+  if [[ -n "$TYPOS_FILES" ]]; then
+    # Workspace root for fallback config
+    WS_ROOT="$REPO_DIR/.."
+
+    # Resolve config: repo-local > workspace root
+    TYPOS_ARGS=()
+    if [[ -f "$REPO_DIR/_typos.toml" ]]; then
+      TYPOS_ARGS+=(-c "$REPO_DIR/_typos.toml")
+    elif [[ -f "$WS_ROOT/_typos.toml" ]]; then
+      TYPOS_ARGS+=(-c "$WS_ROOT/_typos.toml")
+    fi
+
+    echo "[gate-push] Spellchecking $(echo "$TYPOS_FILES" | wc -l | tr -d ' ') changed file(s) ($REPO_NAME)..."
+    if ! echo "$TYPOS_FILES" | (cd "$REPO_DIR" && xargs typos "${TYPOS_ARGS[@]}") 2>&1; then
+      echo "" >&2
+      echo "Push blocked: typos found spelling issues in $REPO_NAME. Fix before pushing." >&2
+      exit 2
+    fi
+  fi
+fi
+
+# ── Doc naming convention (repos with doc-naming CI) ─────────────
+# Applies to: _private, features, scripts (repos that include lint-docs.yml)
+DOC_NAMING_REPOS="features:_private:scripts"
+if echo ":$DOC_NAMING_REPOS:" | grep -q ":$REPO_NAME:"; then
+  DN_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  if [[ -n "$DN_BASE" ]]; then
+    DN_FILES=$(git -C "$REPO_DIR" diff --name-only "$DN_BASE"...HEAD -- '*.md' 2>/dev/null | grep -v '^$' || true)
+  fi
+
+  if [[ -n "${DN_FILES:-}" ]]; then
+    DN_ERRORS=0
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      filename=$(basename "$file")
+      dirname=$(dirname "$file")
+
+      # Skip well-known filenames
+      case "$filename" in
+        README.md|CLAUDE.md|CONTRIBUTING.md|roadmap.md|PRINCIPLES.md|VISIBILITY_POLICY.md|INDEX.md) continue ;;
+        assumptions.md|master-plan.plan.md) continue ;;
+        STRUCTURE.md|ARCHITECTURE.md|SECURITY.md|CHECKLIST.md) continue ;;
+        investigation.md|implementation-plan.md|retrospective.md|post-mortem.md|rejected-solutions.md|design.md|plan.md) continue ;;
+        *-audit.md|*-report.md|*-checklist.md|*-analysis.md) continue ;;
+      esac
+
+      # Skip .plan.md task DAG files
+      if echo "$filename" | grep -qE '\.plan\.md$'; then continue; fi
+
+      # Skip directories where date prefix doesn't apply
+      if echo "$dirname" | grep -qE "(diagrams|ideas|strategy|infra|knowledge|audit-review-frameworks|decisions|guides|reference|testing|admin-guides|components)"; then continue; fi
+
+      # Skip root level files
+      if [[ "$dirname" == "." ]]; then continue; fi
+
+      # Check for date prefix (YYYY-MM-DD-)
+      if ! echo "$filename" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-'; then
+        echo "ERROR: $file does not follow YYYY-MM-DD-name.md convention"
+        DN_ERRORS=$((DN_ERRORS + 1))
+      fi
+    done <<< "$DN_FILES"
+
+    if [[ "$DN_ERRORS" -gt 0 ]]; then
+      echo "" >&2
+      echo "Push blocked: $DN_ERRORS file(s) don't follow YYYY-MM-DD-name.md naming in $REPO_NAME." >&2
+      exit 2
+    fi
+  fi
+fi
+
+# ── Zero-assertion test scanner (Rust repos) ─────────────────────
+if [[ -f "$REPO_DIR/Cargo.toml" ]]; then
+  ZA_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  ZA_RS_CHANGED=""
+  if [[ -n "$ZA_BASE" ]]; then
+    ZA_RS_CHANGED=$(git -C "$REPO_DIR" diff --name-only "$ZA_BASE"...HEAD -- '*.rs' 2>/dev/null | grep -v '^$' || true)
+  fi
+
+  if [[ -n "$ZA_RS_CHANGED" ]]; then
+    WS_ROOT="$REPO_DIR/.."
+    ZA_SCRIPT="$WS_ROOT/scripts/scripts/check-zero-assertions.sh"
+    if [[ -x "$ZA_SCRIPT" ]]; then
+      # Find test directories in the repo
+      ZA_DIRS=""
+      for d in "$REPO_DIR/src" "$REPO_DIR/tests"; do
+        [[ -d "$d" ]] && ZA_DIRS="$ZA_DIRS $d"
+      done
+      # Workspace member directories
+      for d in "$REPO_DIR"/*/src "$REPO_DIR"/*/tests; do
+        [[ -d "$d" ]] && ZA_DIRS="$ZA_DIRS $d"
+      done
+
+      if [[ -n "$ZA_DIRS" ]]; then
+        echo "[gate-push] Scanning for zero-assertion tests ($REPO_NAME)..."
+        if ! "$ZA_SCRIPT" $ZA_DIRS 2>&1; then
+          echo "" >&2
+          echo "Push blocked: zero-assertion tests found in $REPO_NAME. Add assertions or suppress." >&2
+          exit 2
+        fi
+      fi
+    fi
+  fi
+fi
+
+# ── Gherkin syntax validation (features repo) ────────────────────
+if [[ "$REPO_NAME" == "features" ]]; then
+  GH_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
+  GH_FILES=""
+  if [[ -n "$GH_BASE" ]]; then
+    GH_FILES=$(git -C "$REPO_DIR" diff --name-only "$GH_BASE"...HEAD -- '*.feature' 2>/dev/null | grep -v '^$' || true)
+  fi
+
+  if [[ -n "$GH_FILES" ]]; then
+    # gherkin-utils: check node_modules, global, or npx fallback
+    GHERKIN_BIN=""
+    if [[ -x "$REPO_DIR/node_modules/.bin/gherkin-utils" ]]; then
+      GHERKIN_BIN="$REPO_DIR/node_modules/.bin/gherkin-utils"
+    elif command -v gherkin-utils &>/dev/null; then
+      GHERKIN_BIN="gherkin-utils"
+    elif command -v npx &>/dev/null; then
+      GHERKIN_BIN="npx --yes @cucumber/gherkin-utils"
+    fi
+
+    if [[ -n "$GHERKIN_BIN" ]]; then
+      echo "[gate-push] Validating $(echo "$GH_FILES" | wc -l | tr -d ' ') changed .feature file(s) ($REPO_NAME)..."
+      GH_ERRORS=0
+      while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+        if ! (cd "$REPO_DIR" && $GHERKIN_BIN format "$file" > /dev/null 2>&1); then
+          echo "ERROR: Invalid Gherkin syntax in $file"
+          GH_ERRORS=$((GH_ERRORS + 1))
+        fi
+      done <<< "$GH_FILES"
+
+      if [[ "$GH_ERRORS" -gt 0 ]]; then
+        echo "" >&2
+        echo "Push blocked: $GH_ERRORS file(s) with Gherkin syntax errors in $REPO_NAME." >&2
+        exit 2
+      fi
+    fi
+  fi
+fi
+
 exit 0
