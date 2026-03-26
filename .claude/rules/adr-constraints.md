@@ -11,6 +11,8 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Always use HKDF domain separation** — every derivation path has a unique info string (ADR-007)
 - **Identity signing key uses raw seed directly** — not HKDF-derived (Ed25519 requirement)
 - **Zeroize key material after use** — all secret keys must implement `ZeroizeOnDrop`
+- **Never expose plaintext to the relay** — relay sees encrypted blobs only (ADR-004)
+- **Always encrypt sensitive fields at rest** — contact cards, shared keys, ratchet states, backup data (ADR-015)
 
 ### Architecture (ADR-021, ADR-022, ADR-023)
 
@@ -18,6 +20,8 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Frontends are pure renderers** — they render `ScreenModel` components natively and forward `UserAction`s to core. No workflow orchestration in frontends
 - **Never put `DisplayHint` on `ScreenModel`** — it's a construction parameter, not screen data
 - **Frontends must never branch on form factor** — core handles form-factor differences via `DisplayHint`
+- **Every `WorkflowEngine` impl must handle all `DisplayHint` variants** — Phone, Watch, Desktop
+- **Use `InlineConfirm` for irrevocable actions, `ShowToast` for reversible** — never modal dialogs (ADR-022 addenda)
 
 ### Hardware & Platform (ADR-030, ADR-031)
 
@@ -25,6 +29,8 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Never create a Platform trait in core** — permanently unnecessary per ADR-030/031
 - **Never reintroduce the Transport generic parameter** — `Box<dyn Transport>` is the final form
 - **All future hardware** (biometrics, WiFi Aware, USB) **follows command/event pattern** — no new hardware traits
+- **Keep `UserAction` and `ExchangeHardwareEvent` on separate dispatch paths** — different concerns (ADR-031)
+- **Exchange tests must be pure input/output** — events in, commands out, no mock traits (ADR-031)
 
 ### Protocol (ADR-028/029)
 
@@ -46,3 +52,11 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 
 - **Desktop = 4 native repos** (`linux-gtk`, `macos`, `windows`, `linux-qt`) — not single `desktop/` Tauri repo (archived)
 - **Never reference** `desktop/`, `SolidJS`, `Tauri`, or ARIA in active plans — these are stale
+
+### Security (ADR-032, ADR-033, ADR-034, ADR-035, ADR-037)
+
+- **Trust level is never user-editable** — pure deterministic derivation from exchange facts (ADR-034)
+- **Duress alerts disguised as card updates** — no special message type, no metadata flag (ADR-032)
+- **SMK derived once at identity creation, stored in SecureStorage, never re-derived** — avoids bootstrap deadlock (ADR-033)
+- **Device link QR codes expire after 5 minutes** — limits exposure window (ADR-035)
+- **OHTTP gateway and relay operators must be distinct entities** — same entity defeats privacy (ADR-037)
