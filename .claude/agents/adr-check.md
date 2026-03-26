@@ -1,5 +1,5 @@
 ---
-name: adr-fitness
+name: adr-check
 description: Evaluates implementation work against ADRs, project rules, and conventions. Use proactively after feature branches, before MRs, or when the user asks to audit work against decisions. Checks architectural compliance, operational correctness, convention adherence, test coverage, and plan alignment.
 tools: Read, Grep, Glob, Bash
 model: opus
