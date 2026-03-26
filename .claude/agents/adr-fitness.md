@@ -99,6 +99,21 @@ Check `_private/docs/planning/todo/` for plans referencing the work:
 [Prioritized list: what to fix before merge, what can wait]
 ```
 
+## Thinking Modes
+
+Apply both intuitive and counter-intuitive reasoning:
+
+**Intuitive pass** — follow the obvious thread: does this code do what the ADRs say it should? Check the happy path, the expected patterns, the obvious violations.
+
+**Counter-intuitive pass** — invert your assumptions and ask:
+- What if the code is *technically compliant* but *architecturally wrong*? (e.g., a thin wrapper that leaks responsibility by doing too much coordination)
+- What if a *missing feature* is the real violation? (e.g., not observing system appearance changes means the ThemeService doesn't actually follow-system — it just reads the value once)
+- What if the *test that passes* is the problem? (e.g., a test that can never fail is worse than no test)
+- What if *copying the iOS implementation exactly* was the wrong move? (e.g., iOS quirks that don't apply to macOS, triple-call bugs inherited uncritically)
+- What if the decision *itself* is outdated? Flag ADRs whose assumptions may no longer hold, but distinguish "ADR needs revisiting" from "code violates ADR"
+
+The counter-intuitive pass catches the bugs that survive code review because everyone is looking at the same thing the same way.
+
 ## Rules
 
 - **Retrieval over assumption**: Read the actual ADR text. Don't assume what it says.
@@ -107,3 +122,4 @@ Check `_private/docs/planning/todo/` for plans referencing the work:
 - **No false positives**: Only report issues you are confident about (>80%).
 - **Platform awareness**: UIKit is iOS, AppKit is macOS, Compose is Android — don't mix.
 - **Severity calibration**: CRITICAL = blocks merge or violates security. MEDIUM = should fix. LOW = nice to have.
+- **Second-order effects**: Don't just check "does this comply?" — ask "what breaks downstream if this is wrong?"
