@@ -8,10 +8,11 @@ Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, d
 ## Quick Start
 
 ```bash
-just setup    # Clone all repos (first time only)
+just setup         # Clone all repos (first time only)
 just session-init  # Sync, fetch, show MR/branch/uncommitted dashboard (every session)
-just build    # Build Rust workspace
-just check    # Run all checks
+just build         # Build Rust workspace
+just check         # Run all checks
+just session-end   # Verify everything pushed, no orphan branches (every session end)
 ```
 
 ## MANDATORY
@@ -51,12 +52,20 @@ Every problem record must have: **status**, **priority**, **owner**, **goals**. 
 ## Shell & Cargo Rules
 
 - Verify correct working directory before sub-repo commands.
+- **CWD gotcha**: `just` recipes use `scripts/scripts/` (double-nested). Recipes fail if CWD is not the workspace root. Always run `just` from the root, never from a sub-repo.
 - Check what's installed before suggesting tool installations.
 - When asked about pricing/hardware/real-world info, use web search.
 
 ## Dependencies & Repo Layout
 
-`vauchi-core` → cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo (git dep). `vauchi-platform` → UniFFI bindings for mobile/macOS (vauchi-platform-swift for SPM; Maven AAR published directly from core). `vauchi-cabi` → C ABI exports for linux-qt, windows. `vauchi-protocol` → relay (shared types only). Downstream uses `branch = "main"` pinning; local dev uses `.cargo/config.toml` path overrides. `vauchi-platform-kotlin` is archived.
+| Crate | Consumers | Notes |
+|-------|-----------|-------|
+| `vauchi-core` | cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo | Git dep, `branch = "main"` |
+| `vauchi-platform` | ios, macos, android | UniFFI bindings (SPM via vauchi-platform-swift; Maven AAR from core) |
+| `vauchi-cabi` | linux-qt, windows | C ABI exports |
+| `vauchi-protocol` | relay | Shared types only (serde) |
+
+Local dev uses `.cargo/config.toml` path overrides. `vauchi-platform-kotlin` is archived.
 
 Repo layout: `.claude/docs/repo-organization.md`. Drift naming: `.claude/docs/drift-naming.md`.
 
@@ -72,12 +81,13 @@ Contributing guide: `docs/docs/developers/contributing.md`.
 
 ## Reference Docs
 
-`.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`
+`.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`, `exchange-protocol.md`
 `_private/docs/testing/`: `manual-testing.md`, `device-automation/`
 
-## Reasoning Error Log
+**Path-scoped rules** (auto-applied when editing matching paths):
+`platform-bindings-rules.md` (android/ios), `scripts-repo-rules.md` (scripts/), `small-repos-rules.md` (relay, drift-detector), `device-testing-rules.md` (device automation)
 
-Maintain `memory/log_reasoning_errors.md` — append an entry whenever a reasoning error, bad decision, wrong assumption, or dead-end debugging path is identified (self-caught or user-corrected). Review the log for recurring pattern tags; promote to a dedicated feedback memory after 3+ occurrences.
+**Error tracking**: `.claude/docs/claude-errors-and-misjudgments.md` — append E## entries when Claude makes reasoning errors. Review for recurring patterns.
 
 ## Exploration
 
