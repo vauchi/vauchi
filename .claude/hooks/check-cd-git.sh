@@ -13,6 +13,21 @@
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
+# Skip git commit/tag commands (message body may contain blocked patterns)
+if echo "$COMMAND" | grep -qE '\bgit\s+((-C\s+\S+\s+)?)?(commit|tag)\b'; then
+  exit 0
+fi
+
+# Block: git -C root (workspace root IS the root repo — no root/ directory)
+if echo "$COMMAND" | grep -qE 'git\s+-C\s+root\b'; then
+  cat >&2 <<'EOF'
+Do not use "git -C root" — the workspace root IS the root repo.
+There is no "root/" subdirectory. Use bare "git ..." (no -C) for the root repo.
+For sub-repos, use "git -C <repo-name> ..." (e.g. git -C core, git -C android).
+EOF
+  exit 2
+fi
+
 log_error() {
   local category="$1" reason="$2"
   local log="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-errors"
@@ -45,7 +60,11 @@ fi
 # Block: cd <path> && <non-git command> without subshell
 # Allow: (cd <path> && ...) — subshells are safe, cwd doesn't leak
 # Allow: cd $CLAUDE_PROJECT_DIR && ... — returning to workspace root is safe
-if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+.*&&' && ! echo "$COMMAND" | grep -qE '^\s*\(' && ! echo "$COMMAND" | grep -qF "$CLAUDE_PROJECT_DIR"; then
+# Block: cd <other-dir> && ... — drifts working directory
+_CD_EXEMPT=false
+if echo "$COMMAND" | grep -qE '^\s*\('; then _CD_EXEMPT=true; fi
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && echo "$COMMAND" | grep -qE "^\s*cd\s+(\"|')?(\\$\{?CLAUDE_PROJECT_DIR\}?|$(printf '%s' "${CLAUDE_PROJECT_DIR}" | sed 's/[.[\*^$/]/\\&/g'))(\"|')?\s"; then _CD_EXEMPT=true; fi
+if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+.*&&' && [[ "$_CD_EXEMPT" == "false" ]]; then
   cat >&2 <<EOF
 [$CLAUDE_PROJECT_DIR/.claude/hooks/check-cd-git.sh]: "cd <dir> && ..." drifts the working directory.
 Wrap in a subshell so cwd resets after: (cd <dir> && <command>)
@@ -57,7 +76,10 @@ fi
 
 # Block: bare "cd <dir>" with no following command
 # Exception: "cd $CLAUDE_PROJECT_DIR" is safe (returns to workspace root)
-if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+\s*$' && ! echo "$COMMAND" | grep -qF "$CLAUDE_PROJECT_DIR"; then
+_BARE_CD_EXEMPT=false
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && echo "$COMMAND" | grep -qF "$CLAUDE_PROJECT_DIR"; then _BARE_CD_EXEMPT=true; fi
+if echo "$COMMAND" | grep -qF '$CLAUDE_PROJECT_DIR'; then _BARE_CD_EXEMPT=true; fi
+if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+\s*$' && [[ "$_BARE_CD_EXEMPT" == "false" ]]; then
   cat >&2 <<EOF
 [$CLAUDE_PROJECT_DIR/.claude/hooks/check-cd-git.sh]: Bare "cd" drifts the working directory permanently.
 Stay at workspace root ($CLAUDE_PROJECT_DIR). Use:
