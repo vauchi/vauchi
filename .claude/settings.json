@@ -1,8 +1,4 @@
 {
-  "statusLine": {
-    "type": "command",
-    "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/statusline.sh"
-  },
   "permissions": {
     "allow": [
       "Bash(git *)",
@@ -72,7 +68,9 @@
       "WebFetch(domain:docs.gtk.org)",
       "WebFetch(domain:crates.io)",
       "WebFetch(domain:just.systems)",
-      "WebFetch(domain:docs.gitlab.com)"
+      "WebFetch(domain:docs.gitlab.com)",
+      "Bash(docker run:*)",
+      "Bash(glab mr:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)"
@@ -159,6 +157,10 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/statusline.sh"
   },
   "enabledPlugins": {
     "rust-analyzer-lsp@claude-plugins-official": true,
