@@ -22,7 +22,7 @@ Fixing stale state is not "going beyond what was asked" — it's maintenance. A 
 
 ### What to Heal
 
-- **Stale problem records**: Status doesn't match code reality → update status, `git mv` to `done/` if resolved, update plan refs
+- **Stale problem records**: Status doesn't match code reality → update status with code evidence (file:line), `git mv` to `done/` if resolved, update plan refs. Always grep for the feature before accepting README claims at face value.
 - **Stale plan items**: `[x]` but code missing from main, or `[ ]` but code merged → update the checkbox, adjust percentage
 - **Outdated references**: Path changed, command renamed, example broken → fix the reference in place
 - **Pre-existing issues in files you touch**: Lint warnings, format violations, dead imports → `tidy:` commit before your change
