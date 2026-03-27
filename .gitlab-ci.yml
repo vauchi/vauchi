@@ -63,13 +63,7 @@ lint:claude-md:
         fi
       done
 
-      # Check _private paths
-      for ref in $(grep -oE '`_private/[^`]*`' "$CLAUDE_MD" | tr -d '`'); do
-        if [ ! -f "$ref" ] && [ ! -d "$ref" ]; then
-          echo "BROKEN REF: $ref (in CLAUDE.md but missing)"
-          errors=$((errors + 1))
-        fi
-      done
+      # Skip _private/ paths — separate repo, not in this checkout
 
       if [ "$errors" -eq 0 ]; then
         echo "CLAUDE.md: all references valid, no orphaned docs"
