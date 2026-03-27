@@ -1562,6 +1562,48 @@ check-cosign-pub action='check':
         echo "  Fixed $divergent divergent copies"
     fi
 
+# Validate CLAUDE.md: check referenced files exist, detect orphaned docs
+# Self-healing: catches stale references and new docs not yet referenced
+# Usage: just check-claude-md
+[group('tools')]
+[no-cd]
+[script]
+check-claude-md:
+    set -euo pipefail
+    CLAUDE_MD="CLAUDE.md"
+    DOCS_DIR=".claude/docs"
+    errors=0
+    # 1. Check all .claude/docs/ and .claude/rules/ paths referenced in CLAUDE.md exist
+    for ref in $(grep -oE '`[^`]*\.md`' "$CLAUDE_MD" | tr -d '`' | grep -E '\.claude/'); do
+        if [[ ! -f "$ref" ]]; then
+            echo "  BROKEN REF: $ref (referenced in CLAUDE.md but missing)"
+            errors=$((errors + 1))
+        fi
+    done
+    # 2. Check for orphaned docs (in .claude/docs/ but not referenced anywhere)
+    for f in "$DOCS_DIR"/*.md; do
+        name=$(basename "$f")
+        # Check CLAUDE.md, rules/, and skills/
+        if ! grep -qr "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ 2>/dev/null; then
+            echo "  ORPHANED: $DOCS_DIR/$name (not referenced from CLAUDE.md, rules, or skills)"
+            errors=$((errors + 1))
+        fi
+    done
+    # 3. Check _private paths referenced in CLAUDE.md exist
+    for ref in $(grep -oE '`_private/[^`]*`' "$CLAUDE_MD" | tr -d '`'); do
+        if [[ ! -f "$ref" ]] && [[ ! -d "$ref" ]]; then
+            echo "  BROKEN REF: $ref (referenced in CLAUDE.md but missing)"
+            errors=$((errors + 1))
+        fi
+    done
+    if [[ "$errors" -eq 0 ]]; then
+        echo "  CLAUDE.md: all references valid, no orphaned docs"
+    else
+        echo ""
+        echo "  $errors issue(s) found. Fix references or add docs to CLAUDE.md."
+        exit 1
+    fi
+
 # Check spelling across all repos (typos — fast, source-code-aware)
 # Usage: just spellcheck
 [group('tools')]

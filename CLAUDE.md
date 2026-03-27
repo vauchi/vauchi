@@ -82,12 +82,17 @@ Contributing guide: `docs/docs/developers/contributing.md`.
 ## Reference Docs
 
 `.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`, `exchange-protocol.md`
-`_private/docs/testing/`: `manual-testing.md`, `device-automation/`
+`_private/docs/testing/`: `manual-testing.md`, `device-automation/`, also `.claude/docs/device-testing.md`
 
-**Path-scoped rules** (auto-applied when editing matching paths):
+**Per-repo docs** (read when working in matching repos — NOT auto-loaded):
 `platform-bindings-rules.md` (android/ios), `scripts-repo-rules.md` (scripts/), `small-repos-rules.md` (relay, drift-detector), `device-testing-rules.md` (device automation)
 
-**Error tracking**: `.claude/docs/claude-errors-and-misjudgments.md` — append E## entries when Claude makes reasoning errors. Review for recurring patterns.
+## Reasoning Error Log
+
+Two complementary systems — use both:
+
+- `memory/log_reasoning_errors.md` — auto-memory, private, quick session entries. Append when self-caught or user-corrected. Promote patterns after 3+ occurrences.
+- `.claude/docs/claude-errors-and-misjudgments.md` — committed, shared, E##-numbered. Append significant patterns for cross-session learning.
 
 ## Exploration
 
