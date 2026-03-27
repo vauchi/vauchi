@@ -284,7 +284,7 @@ fi
 if command -v typos &>/dev/null; then
   TYPOS_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
   if [[ -n "$TYPOS_BASE" ]]; then
-    TYPOS_FILES=$(git -C "$REPO_DIR" diff --name-only "$TYPOS_BASE"...HEAD 2>/dev/null | grep -v '^$' || true)
+    TYPOS_FILES=$(git -C "$REPO_DIR" diff --diff-filter=d --name-only "$TYPOS_BASE"...HEAD 2>/dev/null | grep -v '^$' || true)
   else
     TYPOS_FILES=""
   fi
