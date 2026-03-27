@@ -2051,7 +2051,7 @@ vrt-gallery:
 # Usage: just design-check [--verbose]
 [group('tools')]
 design-check *args:
-    python3 _private/scripts/design-check.py {{ args }}
+    uv run _private/scripts/design-check.py {{ args }}
 
 # ═══════════════════════════════════════════════════════════════════
 # DRIFT DETECTION
