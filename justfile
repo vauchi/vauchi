@@ -175,6 +175,23 @@ test *args:
     done
     print_summary "test" || exit 1
 
+# Run slow / ignored tests (nightly CI, timing-sensitive, property-based)
+[group('daily')]
+test-slow *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    for r in $(resolve_repo "${1:-}" "test"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        case "$tc" in
+            rust)
+                echo "═══ test-slow: $r ═══"
+                (cd "$dir" && cargo test --workspace -- --ignored --nocapture)
+                ;;
+        esac
+    done
+
 # Format code
 [group('daily')]
 [script]
