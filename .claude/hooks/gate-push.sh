@@ -203,11 +203,19 @@ if [[ -n "$UI_DIR" ]]; then
   if [[ -n "$HTMLHINT" ]]; then
     HTML_FILES=$(find "$UI_DIR" -maxdepth 2 -name '*.html' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/playwright-report/*' ! -path '*/test-results/*' 2>/dev/null)
     if [[ -n "$HTML_FILES" ]]; then
-      echo "[gate-push] Running htmlhint ($REPO_NAME)..."
-      if ! echo "$HTML_FILES" | xargs "$HTMLHINT" 2>&1; then
-        echo "" >&2
-        echo "Push blocked: htmlhint found issues in $REPO_NAME. Fix before pushing." >&2
-        exit 2
+      # Build array to avoid xargs empty-input pitfall
+      _HTML_ARGS=()
+      while IFS= read -r f; do
+        [[ -n "$f" ]] && _HTML_ARGS+=("$f")
+      done <<< "$HTML_FILES"
+
+      if [[ ${#_HTML_ARGS[@]} -gt 0 ]]; then
+        echo "[gate-push] Running htmlhint ($REPO_NAME)..."
+        if ! "$HTMLHINT" "${_HTML_ARGS[@]}" 2>&1; then
+          echo "" >&2
+          echo "Push blocked: htmlhint found issues in $REPO_NAME. Fix before pushing." >&2
+          exit 2
+        fi
       fi
     fi
   fi
@@ -251,12 +259,20 @@ if command -v markdownlint &>/dev/null; then
       MD_ARGS+=(-r "$CUSTOM_RULE")
     fi
 
-    echo "[gate-push] Linting $(echo "$MD_FILES" | wc -l | tr -d ' ') changed .md file(s) ($REPO_NAME)..."
-    # Run from repo dir so paths resolve correctly
-    if ! echo "$MD_FILES" | (cd "$REPO_DIR" && xargs markdownlint "${MD_ARGS[@]}") 2>&1; then
-      echo "" >&2
-      echo "Push blocked: markdownlint found issues in $REPO_NAME. Fix before pushing." >&2
-      exit 2
+    # Build array to avoid xargs empty-input pitfall
+    _MD_FILE_ARGS=()
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && _MD_FILE_ARGS+=("$f")
+    done <<< "$MD_FILES"
+
+    if [[ ${#_MD_FILE_ARGS[@]} -gt 0 ]]; then
+      echo "[gate-push] Linting ${#_MD_FILE_ARGS[@]} changed .md file(s) ($REPO_NAME)..."
+      # Run from repo dir so paths resolve correctly
+      if ! (cd "$REPO_DIR" && markdownlint "${MD_ARGS[@]}" "${_MD_FILE_ARGS[@]}") 2>&1; then
+        echo "" >&2
+        echo "Push blocked: markdownlint found issues in $REPO_NAME. Fix before pushing." >&2
+        exit 2
+      fi
     fi
   fi
 fi
@@ -301,11 +317,21 @@ if command -v typos &>/dev/null; then
       TYPOS_ARGS+=(-c "$WS_ROOT/_typos.toml")
     fi
 
-    echo "[gate-push] Spellchecking $(echo "$TYPOS_FILES" | wc -l | tr -d ' ') changed file(s) ($REPO_NAME)..."
-    if ! echo "$TYPOS_FILES" | (cd "$REPO_DIR" && xargs typos "${TYPOS_ARGS[@]}") 2>&1; then
-      echo "" >&2
-      echo "Push blocked: typos found spelling issues in $REPO_NAME. Fix before pushing." >&2
-      exit 2
+    TYPOS_COUNT=$(echo "$TYPOS_FILES" | wc -l | tr -d ' ')
+    echo "[gate-push] Spellchecking $TYPOS_COUNT changed file(s) ($REPO_NAME)..."
+
+    # Build file list as array to avoid xargs empty-input pitfall
+    TYPOS_FILE_ARGS=()
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && TYPOS_FILE_ARGS+=("$f")
+    done <<< "$TYPOS_FILES"
+
+    if [[ ${#TYPOS_FILE_ARGS[@]} -gt 0 ]]; then
+      if ! (cd "$REPO_DIR" && typos "${TYPOS_ARGS[@]}" "${TYPOS_FILE_ARGS[@]}") 2>&1; then
+        echo "" >&2
+        echo "Push blocked: typos found spelling issues in $REPO_NAME. Fix before pushing." >&2
+        exit 2
+      fi
     fi
   fi
 fi
