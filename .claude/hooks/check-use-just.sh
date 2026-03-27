@@ -13,8 +13,8 @@ if echo "$COMMAND" | grep -qE '^\s*just\s'; then
   exit 0
 fi
 
-# Skip commands inside subshells, git commits, heredocs
-if echo "$COMMAND" | grep -qE '^\s*\(|git\s+(commit|tag)|<<'; then
+# Skip commands inside subshells or git commit/tag (which use heredocs for messages)
+if echo "$COMMAND" | grep -qE '^\s*\(|^\s*git\s+((-C\s+\S+\s+)?)?(commit|tag)\s'; then
   exit 0
 fi
 
