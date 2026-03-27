@@ -432,4 +432,13 @@ if [[ "$REPO_NAME" == "features" ]]; then
   fi
 fi
 
+# ── ROADMAP.md guard (killed per F2 — master plan is SSOT) ────────
+if [[ -f "$WORKSPACE_ROOT/ROADMAP.md" ]]; then
+  echo "" >&2
+  echo "Push blocked: ROADMAP.md exists at repo root." >&2
+  echo "master-plan.plan.md is the single source of truth." >&2
+  echo "Delete ROADMAP.md: rm ROADMAP.md" >&2
+  exit 2
+fi
+
 exit 0
