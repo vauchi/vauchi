@@ -411,6 +411,72 @@ test-name pattern repo='core':
 build-release:
     cargo build --workspace --release
 
+# Build vauchi-cabi DLL for Windows (requires Rust + MSVC + CMake + NASM)
+[group('extended')]
+[script]
+build-cabi-windows:
+    set -euo pipefail
+    echo "Building vauchi-cabi for Windows..."
+    cd core && cargo build -p vauchi-cabi --release --features audio
+    cd ..
+    mkdir -p windows/cabi
+    cp core/target/release/vauchi_cabi.dll windows/cabi/vauchi_cabi.dll
+    cp core/vauchi-cabi/include/vauchi.h windows/cabi/vauchi.h
+    echo "✓ DLL copied to windows/cabi/"
+
+# Download pre-built vauchi-cabi DLL from GitLab registry
+[group('extended')]
+[script]
+download-cabi:
+    set -euo pipefail
+    if [ ! -f windows/cabi-version.json ]; then
+      echo "ERROR: windows/cabi-version.json not found"; exit 1
+    fi
+    VERSION=$(python3 -c "import json; print(json.load(open('windows/cabi-version.json'))['version'])")
+    SHA256=$(python3 -c "import json; print(json.load(open('windows/cabi-version.json'))['sha256'])")
+    if [ "$VERSION" = "0.0.0" ]; then
+      echo "CABI version is placeholder — run 'just build-cabi-windows' instead"; exit 1
+    fi
+    if [ -n "${GITLAB_TOKEN:-}" ]; then
+      HEADER="PRIVATE-TOKEN: $GITLAB_TOKEN"
+    elif command -v glab >/dev/null 2>&1; then
+      TOKEN=$(glab auth token 2>/dev/null || echo "")
+      if [ -z "$TOKEN" ]; then
+        echo "ERROR: No GITLAB_TOKEN and glab not authenticated"; exit 1
+      fi
+      HEADER="PRIVATE-TOKEN: $TOKEN"
+    else
+      echo "ERROR: No GITLAB_TOKEN and glab not installed"; exit 1
+    fi
+    PROJECT_ID=$(glab api projects/vauchi%2Fcore --jq '.id' 2>/dev/null || echo "")
+    if [ -z "$PROJECT_ID" ]; then
+      echo "ERROR: Could not resolve core project ID"; exit 1
+    fi
+    BASE_URL="https://gitlab.com/api/v4/projects/$PROJECT_ID/packages/generic/vauchi-cabi-windows/$VERSION"
+    mkdir -p windows/cabi
+    echo "Downloading vauchi_cabi.dll v$VERSION..."
+    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll" -o windows/cabi/vauchi_cabi.dll
+    if command -v sha256sum >/dev/null 2>&1; then
+      ACTUAL=$(sha256sum windows/cabi/vauchi_cabi.dll | cut -d' ' -f1)
+    else
+      ACTUAL=$(shasum -a 256 windows/cabi/vauchi_cabi.dll | cut -d' ' -f1)
+    fi
+    if [ "$ACTUAL" != "$SHA256" ]; then
+      echo "ERROR: SHA-256 mismatch — expected $SHA256, got $ACTUAL"
+      rm windows/cabi/vauchi_cabi.dll; exit 1
+    fi
+    echo "✓ SHA-256 verified"
+    if command -v cosign >/dev/null 2>&1; then
+      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256" -o windows/cabi/vauchi_cabi.dll.sha256
+      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256.bundle" -o windows/cabi/vauchi_cabi.dll.sha256.bundle
+      cosign verify-blob --key windows/cosign.pub --bundle windows/cabi/vauchi_cabi.dll.sha256.bundle windows/cabi/vauchi_cabi.dll.sha256 \
+        && echo "✓ Cosign verified" || echo "⚠ Cosign verification failed (non-fatal for local dev)"
+    else
+      echo "⚠ cosign not installed — skipping signature verification"
+    fi
+    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi.h" -o windows/cabi/vauchi.h 2>/dev/null || true
+    echo "✓ DLL ready at windows/cabi/"
+
 # Create a dev tag for fast CI feedback (lint + test only)
 # Usage: just release-dev [repo] [version]
 [group('extended')]
