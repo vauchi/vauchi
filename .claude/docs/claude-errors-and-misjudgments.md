@@ -3,10 +3,22 @@
 
 # Claude Errors & Misjudgments Log
 
-Track recurring Claude mistakes to identify patterns and reduce token waste.
-Each entry: what happened → root cause → prevention.
+Track recurring mistakes to identify patterns. Each entry:
+what happened → root cause → prevention → **test guard**.
 
-**Numbering**: Global sequential (E1, E2, ...) across all sessions. Check last E## before adding.
+Principle 3: "Errors become rules, rules become understanding."
+A rule without a test is a hope. When possible, add a test
+that makes the error structurally impossible to recur.
+
+**Numbering**: Global sequential (E1, E2, ...). Check last
+E## before adding.
+
+**Format per entry:**
+- **What**: Observable symptom
+- **Root cause**: Why it happened
+- **Prevention**: Rule or behavioral change
+- **Test guard**: Test file:function that prevents recurrence
+  (or `none — manual discipline` if not automatable)
 
 ---
 
@@ -394,13 +406,43 @@ The pattern is NOT "Claude doesn't know the rules." In every case, the rule was 
 and could be cited after the fact. The pattern is that **completion pressure overrides
 process discipline at the moment of action.**
 
+## Session 2026-03-28: Principle Compliance Audit
+
+### E28: Trust level computed but never enforced
+
+**What**: `toggle_recovery_trust()` allowed Standard-trust
+contacts (relay-exchanged, no proximity verification) to
+become recovery contacts. Principle 2 says "people you've
+actually met."
+
+**Root cause**: `accept_relay_exchange()` was added for
+future remote discovery but without the trust-level
+enforcement the feature requires. Trust level was computed
+but never checked at the point of granting capabilities.
+
+**Prevention**: Guard in `toggle_recovery_trust()` rejects
+contacts below `TrustLevel::High`.
+
+**Test guard**:
+`core/vauchi-core/tests/api_relay_exchange_tests.rs:test_relay_contact_cannot_be_recovery_trusted`
+
+**Pattern tag**: `computed-but-unenforced`, `half-measure`
+
+---
+
+## Pattern Analysis (Cumulative)
+
 ### Structural Fixes (Self-Healing)
 
 These turn correct behavior into the default path:
 
-1. **Rule**: `.claude/rules/verify-before-acting.md` — verify code before acting on docs
-2. **Recipe**: `just doc-refs <pattern>` — find all planning doc references for batch update
-3. **Errors doc**: This file — track patterns across sessions, inform future sessions
+1. **Rule**: `.claude/rules/verify-before-acting.md`
+2. **Recipe**: `just doc-refs <pattern>`
+3. **Errors doc**: This file
+4. **Test guard** (NEW): E28 is the first entry with an
+   automated test preventing recurrence. Goal: every
+   future entry includes a test guard or documents why
+   one is not possible.
 
 ### Remaining Gaps (by impact)
 
