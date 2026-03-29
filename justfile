@@ -1385,6 +1385,19 @@ housekeeping:
     fi
 
     # 18. Just recipe documentation freshness
+    section "allow_failure budget"
+    if scripts/scripts/check-allow-failure-budget.sh . >/dev/null 2>&1; then
+        count=$(scripts/scripts/check-allow-failure-budget.sh . 2>&1 | grep "Current count:" | grep -oE '[0-9]+')
+        echo "  $count allow_failure entries (within budget)"
+    else
+        output=$(scripts/scripts/check-allow-failure-budget.sh . 2>&1 || true)
+        count=$(echo "$output" | grep "Current count:" | grep -oE '[0-9]+')
+        budget=$(echo "$output" | grep "Budget:" | grep -oE '[0-9]+')
+        echo "  OVER BUDGET: $count allow_failure entries (budget: $budget)"
+        echo "  -> scripts/scripts/check-allow-failure-budget.sh .   (details)"
+        ISSUES=$((ISSUES + 1))
+    fi
+
     section "Recipe documentation"
     doc_output=$(just check-just-docs 2>&1 || true)
     if echo "$doc_output" | grep -q "^OK"; then
