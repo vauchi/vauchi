@@ -15,6 +15,12 @@ extend-exclude = [
     "*.woff",
     "*.woff2",
     "generated/",
+    # Non-English locale files contain correct foreign words that the
+    # English spell checker flags as typos (e.g. German "Alle", French "Termine")
+    "website/app-files-src/locales/de.json",
+    "website/app-files-src/locales/fr.json",
+    "website/app-files-src/locales/es.json",
+    "website/app-files-src/locales/it.json",
 ]
 
 [default.extend-identifiers]
