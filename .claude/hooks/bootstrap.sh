@@ -105,7 +105,12 @@ for repo in "${REPOS[@]}"; do
   # Stale lock files (auto-heal if older than 1 hour)
   LOCK_FILE="$REPO_DIR/.git/index.lock"
   if [[ -f "$LOCK_FILE" ]]; then
-    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo "0") ))
+    if stat -c %Y /dev/null &>/dev/null; then
+      LOCK_MTIME=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo "0")
+    else
+      LOCK_MTIME=$(stat -f %m "$LOCK_FILE" 2>/dev/null || echo "0")
+    fi
+    LOCK_AGE=$(( $(date +%s) - LOCK_MTIME ))
     if [[ $LOCK_AGE -gt 3600 ]]; then
       rm -f "$LOCK_FILE"
       GIT_ISSUES+=("${repo}/ had stale index.lock (auto-removed, was ${LOCK_AGE}s old)")
