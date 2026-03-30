@@ -27,6 +27,12 @@ These rules constrain AI code generation to produce verifiable, high-quality out
   - Any assertion whose outcome is determined at compile time, not runtime
   - **Required**: Tests must render the actual UI and query elements by accessibility identifier, then assert existence, labels, hints, or traits. If a screen reader label were deleted from production code, the test must fail.
 
+- **CC-21 Chesterton's Fence for Failures**: When a test, lint rule, CI check, or setting flags an issue, the default assumption is the **source code** is wrong — not the check. Before suppressing a lint warning, adding an exclusion, disabling a CI job, loosening a config, or modifying a test to make a failure go away, pass this gate:
+  1. **Find the root cause** in the source code first — diagnose what the check is actually catching.
+  2. **Ask: is the check really wrong?** Or is it catching a real issue that should be fixed in the source?
+  3. **Understand why the check exists** — what was it written to prevent? What regresses if it's removed or weakened?
+  - If after all three checks you are confident the rule/test/setting itself is incorrect (outdated contract, wrong threshold, removed feature), you may change it. Otherwise, fix the source code.
+
 ## Tidy First (Kent Beck)
 
 - **CC-19 Tidy Before Behavior Change**: Before starting a Red-Green cycle, assess whether a small structural improvement (tidying) would make the change easier. Tidyings are structure-only, never change behavior, and get their own `tidy:` commit. Common tidyings: guard clauses, extract helper, explaining variables, delete dead code, normalize symmetries. If the code is already clean, skip straight to RED.
