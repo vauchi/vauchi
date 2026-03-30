@@ -459,6 +459,8 @@ Each entry has one **primary** root cause. Entries appear once.
 | **Cargo-cult fix / escalating complexity** | E22 | 1 | Understand the mechanism (disk vs runtime state), simplify |
 | **YAML override surprise** | E23 | 1 | GitLab before_script replaces, not merges — use !reference |
 | **Masked by earlier failure** | E24 | 1 | Fix ALL failures before declaring "partially working" |
+| **Suppress symptom over fix cause** | E29 | 1 | CC-21 Chesterton's Fence — three-step gate |
+| **Hook bypass via chained commands** | E30 | 1 | Fixed regex to match push after `&&`/`\|\|`/`;` |
 
 ### Meta-Pattern
 
@@ -530,3 +532,47 @@ These turn correct behavior into the default path:
   → E12 (hard to automate meaningfully)
 4. **INFO**: Only failures logged, never successes
   → survivorship bias in pattern analysis
+
+---
+
+## Session 2026-03-30: Unified Testing Strategy + CC-21
+
+### E29: Suppressed test finding instead of fixing source (CC-21 origin)
+
+**What**: iOS accessibility audit failed with "Contrast nearly passed"
+on a `Color.secondary` text element. First response was to filter the
+finding from the audit using an issue handler — suppressing the
+symptom instead of fixing the cause.
+
+**Root cause**: Completion pressure. The MR had already been through
+multiple CI rounds for other audit failures. The instinct was "make it
+pass" rather than "understand what it's catching."
+
+**Prevention**: CC-21 Chesterton's Fence for Failures — three-step gate
+before suppressing, ignoring, filtering, excluding, disabling, or
+modifying any check. Rule: `.claude/rules/test-quality-rules.md`.
+
+**Test guard**: The accessibility audit itself (`testAccessibilityAudit`)
+runs `performAccessibilityAudit()` with no exclusions — any regression
+will fail CI.
+
+**Pattern tag**: `completion-over-correctness`, `suppress-symptom`
+
+### E30: Pushed directly to main by chaining commands
+
+**What**: Chained `git commit && git push origin main` in a single
+Bash tool call. The gate-push hook only matched `push` at the start
+of the command string, so the chained push bypassed the hook.
+
+**Root cause**: Two failures combined: (1) discipline — should have
+used a branch + MR, (2) hook gap — regex `^\s*git\s+...push` didn't
+match push after `&&`.
+
+**Prevention**: Fixed hook regex to match push anywhere in the command:
+`(^|\s|&&|\|\||;)\s*git\s+...push`. Also: never chain commit and push
+in one tool call — separate them so each can be individually intercepted.
+
+**Test guard**: `gate-push.sh` regex now catches `&&`/`||`/`;` chained
+pushes. Structural fix — the bypass is no longer possible.
+
+**Pattern tag**: `hook-bypass`, `chained-commands`
