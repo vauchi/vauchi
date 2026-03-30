@@ -13,8 +13,10 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // "."')
 
-# Only intercept git push commands
-if ! echo "$COMMAND" | grep -qE '^\s*git\s+(-C\s+\S+\s+)?push'; then
+# Only intercept git push commands.
+# Match push anywhere in the command — catches chained commands like
+# "git commit && git push origin main" that bypass start-of-line matching.
+if ! echo "$COMMAND" | grep -qE '(^|\s|&&|\|\||;)\s*git\s+(-C\s+\S+\s+)?push'; then
   exit 0
 fi
 
