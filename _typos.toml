@@ -41,3 +41,6 @@ ratatui = "ratatui"
 ecryption = "ecryption"
 # flate2 is a Rust compression crate name (not a typo for "flat")
 flate = "flate"
+# VRT API field name has upstream typo (diffTollerancePercent)
+Tollerance = "Tollerance"
+tollerance = "tollerance"

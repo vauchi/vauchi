@@ -207,12 +207,31 @@ monitoring-relay-alias:
     echo "Connected $RELAY to monitoring network as 'vauchi-relay-web'"
 
 # ═══════════════════════════════════════════════════════════════════
+# VRT (Visual Regression Tracker)
+# ═══════════════════════════════════════════════════════════════════
+
+# Deploy / update VRT stack (Visual Regression Tracker)
+[group('deploy')]
+deploy-vrt:
+    ./_private/infra/scripts/deploy-vrt.sh
+
+# Show VRT stack status
+[group('deploy')]
+vrt-status:
+    ./_private/infra/scripts/deploy-vrt.sh --status
+
+# Follow VRT logs
+[group('deploy')]
+vrt-logs:
+    ./_private/infra/scripts/deploy-vrt.sh --logs
+
+# ═══════════════════════════════════════════════════════════════════
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy Kamal services + sync mail config + monitoring
+# Deploy Kamal services + sync mail config + monitoring + VRT
 [group('deploy')]
-deploy-all: deploy deploy-mail deploy-monitoring
+deploy-all: deploy deploy-mail deploy-monitoring deploy-vrt
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL MANAGEMENT
