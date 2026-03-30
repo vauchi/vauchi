@@ -51,6 +51,37 @@ if [[ "$HEAD_MSG" == wip:* ]]; then
   exit 2
 fi
 
+# Block direct pushes to main — all repos must use MRs.
+# GitLab Owner role bypasses branch protection; this hook enforces it locally.
+# Exemption: --tags (tag pushes don't modify the branch).
+if ! echo "$COMMAND" | grep -qF -- '--tags'; then
+  CURRENT_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || true)
+  PUSH_TO_MAIN=false
+
+  # Case 1: on main and pushing without explicit refspec (pushes to tracking branch = main)
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    # Check if the command explicitly targets a non-main ref
+    if ! echo "$COMMAND" | grep -qE 'push\s+\S+\s+\S+'; then
+      PUSH_TO_MAIN=true
+    fi
+  fi
+
+  # Case 2: explicit push to main (e.g. "git push origin main", "git push origin HEAD:main")
+  if echo "$COMMAND" | grep -qE 'push\s+\S+\s+(.*:)?main(\s|$)'; then
+    PUSH_TO_MAIN=true
+  fi
+
+  if [[ "$PUSH_TO_MAIN" == "true" ]]; then
+    echo "" >&2
+    echo "Push to main blocked in $REPO_NAME. Use a branch + MR:" >&2
+    echo "  1. git -C $REPO_NAME checkout -b feature/<topic>" >&2
+    echo "  2. ... make changes ..." >&2
+    echo "  3. git -C $REPO_NAME push -u origin feature/<topic>" >&2
+    echo "  4. /create-mr" >&2
+    exit 2
+  fi
+fi
+
 # ── TDD stamp check ──────────────────────────────────────────────────
 # If `just check` already passed for this commit, skip all gate checks.
 STAMP_SH="$REPO_DIR/../scripts/scripts/stamp.sh"
