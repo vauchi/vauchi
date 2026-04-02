@@ -60,10 +60,14 @@ if ! echo "$COMMAND" | grep -qF -- '--tags'; then
   CURRENT_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || true)
   PUSH_TO_MAIN=false
 
-  # Case 1: on main and pushing without explicit refspec (pushes to tracking branch = main)
+  # Case 1: on main and pushing without an explicit non-main branch.
+  # Strip shell redirects/pipes before checking for a refspec — prevents
+  # "2>&1", "| tail", etc. from being mistaken for branch names.
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
-    # Check if the command explicitly targets a non-main ref
-    if ! echo "$COMMAND" | grep -qE 'push\s+\S+\s+\S+'; then
+    # Extract just the git push portion (before any redirect/pipe/semicolon)
+    PUSH_ARGS=$(echo "$COMMAND" | sed 's/[;|&].*//' | sed 's/[0-9]*>&[0-9]*//')
+    # Check if a non-main branch is explicitly named after the remote
+    if ! echo "$PUSH_ARGS" | grep -qE 'push\s+\S+\s+[a-zA-Z]'; then
       PUSH_TO_MAIN=true
     fi
   fi
