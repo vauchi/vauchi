@@ -155,13 +155,14 @@ test *args:
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ test: $r ($tc) ═══"; fi
+        tfeats=$(repo_test_features "$r")
         _do_step() {
             case "$tc" in
                 rust)
                     if command -v cargo-nextest &>/dev/null; then
-                        (cd "$dir" && cargo nextest run --workspace 2>&1)
+                        (cd "$dir" && cargo nextest run --workspace $tfeats 2>&1)
                     else
-                        (cd "$dir" && cargo test --workspace 2>&1)
+                        (cd "$dir" && cargo test --workspace $tfeats 2>&1)
                     fi
                     ;;
                 npm)     (cd "$dir" && npx playwright test --project=chromium --grep-invert "@visual|@a11y" 2>&1) ;;
@@ -184,10 +185,11 @@ test-slow *args:
     for r in $(resolve_repo "${1:-}" "test"); do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
+        tfeats=$(repo_test_features "$r")
         case "$tc" in
             rust)
                 echo "═══ test-slow: $r ═══"
-                (cd "$dir" && cargo test --workspace -- --ignored --nocapture)
+                (cd "$dir" && cargo test --workspace $tfeats -- --ignored --nocapture)
                 ;;
         esac
     done
@@ -339,7 +341,7 @@ commit-repo repo message:
 [group('extended')]
 [working-directory('core')]
 test-crate crate:
-    cargo test -p {{crate}}
+    cargo test -p {{crate}} --features vauchi-core/testing
 
 # Run a single test file by name
 # Usage: just test-file identity_test           (searches core/)
@@ -354,10 +356,11 @@ test-file name repo='core':
     for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
+        tfeats=$(repo_test_features "$r")
         case "$tc" in
             rust)
-                echo "── $r: cargo test --test {{ name }} ──"
-                (cd "$dir" && cargo test --test "{{ name }}" 2>&1) || true
+                echo "── $r: cargo test --test {{ name }} $tfeats ──"
+                (cd "$dir" && cargo test --test "{{ name }}" $tfeats 2>&1) || true
                 ;;
             npm)
                 echo "── $r: npx vitest {{ name }} ──"
@@ -386,10 +389,11 @@ test-name pattern repo='core':
     for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
+        tfeats=$(repo_test_features "$r")
         case "$tc" in
             rust)
-                echo "── $r: cargo test {{ pattern }} ──"
-                (cd "$dir" && cargo test "{{ pattern }}" 2>&1) || true
+                echo "── $r: cargo test {{ pattern }} $tfeats ──"
+                (cd "$dir" && cargo test $tfeats "{{ pattern }}" 2>&1) || true
                 ;;
             npm)
                 echo "── $r: npx vitest -t '{{ pattern }}' ──"
@@ -772,11 +776,12 @@ coverage *args:
     for r in $(resolve_repo "${_QR_REPO:-}" "coverage"); do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
+        tfeats=$(repo_test_features "$r")
         echo "═══ coverage: $r ($tc) ═══"
         _do_step() {
             case "$tc" in
                 rust)
-                    (cd "$dir" && cargo llvm-cov --workspace --html 2>&1)
+                    (cd "$dir" && cargo llvm-cov --workspace --html $tfeats 2>&1)
                     ;;
                 gradle)
                     (cd "$dir" && ./gradlew jacocoDebugTestReport 2>&1)
