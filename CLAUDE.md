@@ -13,6 +13,10 @@ just session-init  # Sync, fetch, show MR/branch/uncommitted dashboard (every se
 just build         # Build Rust workspace
 just check         # Run all checks
 just session-end   # Verify everything pushed, no orphan branches (every session end)
+
+# Local dev feedback loops
+cargo watch -x check           # ~1s incremental with mold — fastest feedback
+cargo watch -x 'nextest run'   # re-run tests on file save
 ```
 
 ## MANDATORY
