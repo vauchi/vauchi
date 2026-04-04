@@ -228,7 +228,7 @@ session-init:
     if [[ -n "$_STALE_REFS" ]]; then
         echo ""
         echo "STALE CARGO BRANCH REFS (CI may be broken):"
-        echo -e "$_STALE_REFS"
+        printf '%b' "$_STALE_REFS"
     fi
 
     # Sweep stale Cargo incremental artifacts (prevents unbounded growth).
