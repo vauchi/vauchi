@@ -183,7 +183,7 @@ fix-branch-refs:
         if [ -n "$BAD" ]; then
             echo "${YELLOW}$repo${NC}: fixing non-main branch refs"
             echo "$BAD" | sed 's/^/  /'
-            sed -i 's/branch = "[^"]*"/branch = "main"/g' "$TOML"
+            sed -i.bak 's/branch = "[^"]*"/branch = "main"/g' "$TOML" && rm -f "$TOML.bak"
             (cd "$ROOT/$repo" && cargo update 2>&1 | tail -1)
             echo "  ${GREEN}→ restored to main${NC}"
             FIXED=$((FIXED + 1))
