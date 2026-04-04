@@ -128,18 +128,24 @@ session-init:
     fi
     ANDROID_PIN=""
     if [[ -f "android/app/build.gradle.kts" ]]; then
-        ANDROID_PIN=$(grep 'app\.vauchi:vauchi-platform:' android/app/build.gradle.kts 2>/dev/null | sed 's/.*:\([0-9].*\)".*/\1/' || echo "?")
+        ANDROID_PIN=$(grep 'app\.vauchi:vauchi-platform:' android/app/build.gradle.kts 2>/dev/null | head -1 | sed 's/.*:\([0-9].*\)".*/\1/' || echo "?")
     fi
     echo "  platform-swift latest: ${SWIFT_LATEST:-?}"
     [[ -n "$IOS_PIN" ]] && echo "  iOS pinned:           $IOS_PIN"
     [[ -n "$MACOS_PIN" ]] && echo "  macOS pinned:         $MACOS_PIN"
     [[ -n "$ANDROID_PIN" ]] && echo "  Android pinned:       $ANDROID_PIN"
-    # Staleness alert: warn if iOS is >2 minor versions behind
-    if [[ -n "$SWIFT_LATEST" && -n "$IOS_PIN" && "$SWIFT_LATEST" != "?" && "$IOS_PIN" != "?" ]]; then
-        if [[ "$SWIFT_LATEST" != *"$IOS_PIN"* && "$IOS_PIN" != *"$SWIFT_LATEST"* ]]; then
-            echo "  NOTE: iOS ($IOS_PIN) differs from latest ($SWIFT_LATEST)"
+    # Staleness alert: warn if any platform differs from latest
+    _check_binding_drift() {
+        local label="$1" pin="$2"
+        if [[ -n "$SWIFT_LATEST" && -n "$pin" && "$SWIFT_LATEST" != "?" && "$pin" != "?" ]]; then
+            if [[ "$SWIFT_LATEST" != *"$pin"* && "$pin" != *"$SWIFT_LATEST"* ]]; then
+                echo "  WARNING: $label ($pin) differs from latest ($SWIFT_LATEST)"
+            fi
         fi
-    fi
+    }
+    _check_binding_drift "iOS" "$IOS_PIN"
+    _check_binding_drift "macOS" "$MACOS_PIN"
+    _check_binding_drift "Android" "$ANDROID_PIN"
 
     echo ""
     echo "OPEN MRs:"
