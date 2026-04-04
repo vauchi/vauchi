@@ -163,3 +163,36 @@ core-freshness:
         echo ""
         echo "For local dev: just bindings-local"
     fi
+
+# ═══════════════════════════════════════════════════════════════════
+# BRANCH REF MAINTENANCE
+# ═══════════════════════════════════════════════════════════════════
+
+# Fix non-main git dependency branch refs across all Rust consumer repos
+[group('dev')]
+[script]
+fix-branch-refs:
+    set -euo pipefail
+    source scripts/scripts/output-helpers.sh
+    ROOT="{{justfile_directory()}}"
+    FIXED=0
+    for repo in cli tui e2e linux-gtk relay; do
+        TOML="$ROOT/$repo/Cargo.toml"
+        [ -f "$TOML" ] || continue
+        BAD=$(grep -E 'branch\s*=\s*"' "$TOML" | grep -v 'branch = "main"' || true)
+        if [ -n "$BAD" ]; then
+            echo "${YELLOW}$repo${NC}: fixing non-main branch refs"
+            echo "$BAD" | sed 's/^/  /'
+            sed -i 's/branch = "[^"]*"/branch = "main"/g' "$TOML"
+            (cd "$ROOT/$repo" && cargo update 2>&1 | tail -1)
+            echo "  ${GREEN}→ restored to main${NC}"
+            FIXED=$((FIXED + 1))
+        fi
+    done
+    if [ "$FIXED" -eq 0 ]; then
+        echo "${GREEN}All repos already point to main${NC}"
+    else
+        echo ""
+        echo "Fixed $FIXED repo(s). Review and commit:"
+        echo "  git diff */Cargo.toml */Cargo.lock"
+    fi
