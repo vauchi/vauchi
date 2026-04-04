@@ -208,6 +208,29 @@ session-init:
         echo "  (none)"
     fi
 
+    # Check for stale Cargo.toml branch refs (self-healing: prevents CI
+    # breakage when a feature branch is merged upstream but downstream
+    # Cargo.toml still tracks the deleted branch name).
+    _STALE_REFS=""
+    for dir in */; do
+        [[ -e "${dir}.git" ]] || continue
+        local_branch=$(git -C "${dir%/}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        [[ "$local_branch" == "main" ]] || continue
+        cargo_file="${dir}Cargo.toml"
+        [[ -f "$cargo_file" ]] || continue
+        while IFS= read -r ref; do
+            [[ "$ref" == "main" ]] && continue
+            _STALE_REFS+="  ${dir%/}: branch = \"$ref\" (expected \"main\")\n"
+            WARN=1
+        done < <(grep -oE 'branch\s*=\s*"[^"]*"' "$cargo_file" 2>/dev/null \
+                 | sed -E 's/branch\s*=\s*"([^"]*)"/\1/' | sort -u)
+    done
+    if [[ -n "$_STALE_REFS" ]]; then
+        echo ""
+        echo "STALE CARGO BRANCH REFS (CI may be broken):"
+        echo -e "$_STALE_REFS"
+    fi
+
     # Sweep stale Cargo incremental artifacts (prevents unbounded growth).
     # Two-pass strategy:
     #   1. Time-based: remove artifacts older than 2 days (keeps same-day builds fast)
