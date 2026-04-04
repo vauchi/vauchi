@@ -134,7 +134,11 @@ build *args:
                 rust)    (cd "$dir" && cargo build --workspace 2>&1) ;;
                 npm)     (cd "$dir" && npm ci --silent && npm run build 2>&1) ;;
                 gradle)  (cd "$dir" && ./gradlew assembleDebug 2>&1) ;;
-                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name={{ ios_simulator }}' -configuration Debug -skipPackageUpdates build -quiet 2>&1) ;;
+                xcode)
+                    local xc_dest='platform=iOS Simulator,name={{ ios_simulator }}'
+                    [[ "$r" == "macos" ]] && xc_dest='platform=macOS'
+                    (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -configuration Debug -skipPackageUpdates build -quiet 2>&1)
+                    ;;
                 mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
                 *)       echo "  (no build step for $tc)"; return 0 ;;
             esac
@@ -167,7 +171,11 @@ test *args:
                     ;;
                 npm)     (cd "$dir" && npx playwright test --project=chromium --grep-invert "@visual|@a11y" 2>&1) ;;
                 gradle)  (cd "$dir" && ./gradlew test 2>&1) ;;
-                xcode)   (cd "$dir" && xcodebuild -scheme Vauchi -destination 'platform=iOS Simulator,name={{ ios_simulator }}' -skipPackageUpdates test -quiet 2>&1) ;;
+                xcode)
+                    local xc_dest='platform=iOS Simulator,name={{ ios_simulator }}'
+                    [[ "$r" == "macos" ]] && xc_dest='platform=macOS'
+                    (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -skipPackageUpdates test -quiet 2>&1)
+                    ;;
                 mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
                 *)       echo "  (no test step for $tc)"; return 0 ;;
             esac
