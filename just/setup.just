@@ -122,7 +122,7 @@ session-init:
         SWIFT_LATEST=$(git -C vauchi-platform-swift ls-remote --tags origin 2>/dev/null \
             | grep -v '\^{}' \
             | sed -n 's|.*refs/tags/v\([0-9][0-9.]*\)$|\1|p' \
-            | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+            | sort -t. -k1,1n -k2,2n -k3,3n | tail -1 || true)
         [[ -n "$SWIFT_LATEST" ]] && SWIFT_LATEST="v$SWIFT_LATEST" || SWIFT_LATEST="?"
     fi
     IOS_PIN=""

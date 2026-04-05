@@ -98,13 +98,14 @@ main mode='':
                 git clean -fd --quiet 2>/dev/null || true
                 save_info="discarded → "
             else
-                git stash push -m "auto-stash before switching to main" --quiet
+                git stash push -m "auto-stash before switching to main" --quiet \
+                    || echo "  WARN: stash failed for $label" >&2
                 save_info="stashed → "
             fi
         fi
         # Checkout main and pull
         if git checkout main --quiet 2>/dev/null; then
-            output=$(git pull --rebase 2>&1 || git pull 2>&1)
+            output=$(git pull --rebase 2>&1 || git pull 2>&1) || true
             if echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
                 progress_ok "$n" "$repo_total" "$label" "${save_info}up to date"
             else
@@ -196,7 +197,7 @@ checkout-main:
     checkout_repo() {
         local label="$1" dir="$2"
         local output
-        output=$(git -C "$dir" checkout main 2>&1)
+        output=$(git -C "$dir" checkout main 2>&1) || true
         if echo "$output" | grep -q "Already on"; then
             out_ok "$label" "already on main"
         elif echo "$output" | grep -q "Switched to"; then
@@ -219,7 +220,7 @@ fetch:
     fetch_repo() {
         local label="$1" dir="$2"
         local output fetched
-        output=$(git -C "$dir" fetch --all 2>&1)
+        output=$(git -C "$dir" fetch --all 2>&1) || true
         fetched=$(echo "$output" | grep -E "^Fetching|^error:|^fatal:" || true)
         if [[ -n "$fetched" ]] && echo "$fetched" | grep -qE "^(error|fatal):"; then
             out_fail "$label" "$fetched"
