@@ -12,6 +12,7 @@
 
 set dotenv-load := true
 set shell := ["bash", "-cu"]
+set script-interpreter := ["bash", "-eu"]
 set windows-shell := ["C:/Program Files/Git/usr/bin/bash.exe", "-cu"]
 
 # Windows: [script] recipes use 'sh' which isn't in Windows PATH by default.

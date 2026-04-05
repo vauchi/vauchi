@@ -228,8 +228,8 @@ session-init:
             [[ "$ref" == "main" ]] && continue
             _STALE_REFS+="  ${dir%/}: branch = \"$ref\" (expected \"main\")\n"
             WARN=1
-        done < <(grep -oE 'branch\s*=\s*"[^"]*"' "$cargo_file" 2>/dev/null \
-                 | sed -E 's/branch\s*=\s*"([^"]*)"/\1/' | sort -u)
+        done < <(grep -oE 'branch[[:space:]]*=[[:space:]]*"[^"]*"' "$cargo_file" 2>/dev/null \
+                 | sed -E 's/branch[[:space:]]*=[[:space:]]*"([^"]*)"/\1/' | sort -u)
     done
     if [[ -n "$_STALE_REFS" ]]; then
         echo ""
