@@ -13,7 +13,7 @@ cleanup mode='dry-run':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
     source scripts/scripts/git-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
 
     MODE="{{ mode }}"
 
@@ -29,7 +29,10 @@ cleanup mode='dry-run':
         echo "(run 'just git cleanup run' to execute)"
     fi
     echo "Fetching all repos first..."
-    _fetch_repo() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    _fetch_repo() {
+        git -C "$2" fetch --all --prune --quiet 2>/dev/null \
+            || echo "  WARN: fetch failed for $1" >&2
+    }
     for_each_repo _fetch_repo
     echo ""
 
@@ -204,12 +207,15 @@ branch-health mode='audit':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
     source scripts/scripts/git-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
 
     echo "── Branch Health Audit ──"
     echo ""
     echo "Fetching..."
-    _bh_fetch() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    _bh_fetch() {
+        git -C "$2" fetch --all --prune --quiet 2>/dev/null \
+            || echo "  WARN: fetch failed for $1" >&2
+    }
     for_each_repo_parallel _bh_fetch
 
     merged=0
@@ -335,7 +341,7 @@ branch-inspect name:
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
     source scripts/scripts/git-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
 
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git branch-inspect <branch-name>" >&2
@@ -346,7 +352,10 @@ branch-inspect name:
     echo "── Branch Inspection: $BRANCH ──"
     echo ""
     echo "Fetching..."
-    _bi_fetch() { git -C "$2" fetch --all --prune --quiet 2>/dev/null; }
+    _bi_fetch() {
+        git -C "$2" fetch --all --prune --quiet 2>/dev/null \
+            || echo "  WARN: fetch failed for $1" >&2
+    }
     for_each_repo_parallel _bi_fetch
     echo ""
 
@@ -417,12 +426,15 @@ stale-branches days='14':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
     source scripts/scripts/git-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     threshold="{{ days }}"
     cutoff=$(date -v-${threshold}d +%s 2>/dev/null || date -d "$threshold days ago" +%s 2>/dev/null)
 
     # Fetch so origin/main is current for status checks
-    _sb_fetch() { git -C "$2" fetch origin main --quiet 2>/dev/null; }
+    _sb_fetch() {
+        git -C "$2" fetch origin main --quiet 2>/dev/null \
+            || echo "  WARN: fetch failed for $1" >&2
+    }
     for_each_repo_parallel _sb_fetch
 
     _SB_C1=20  # repo column

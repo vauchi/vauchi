@@ -340,7 +340,7 @@ push-all mode='full':
 [no-cd]
 [script]
 diff-main repo='':
-    set -uo pipefail
+    set -euo pipefail
     if [[ -n "{{ repo }}" ]]; then
         dir="{{ repo }}"
         [[ "$dir" == "root" || "$dir" == "." ]] && dir="."
@@ -348,7 +348,7 @@ diff-main repo='':
             echo "ERROR: $dir is not a git repo" >&2
             exit 1
         fi
-        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        git -C "$dir" fetch origin main --quiet 2>/dev/null || echo "WARN: fetch failed for $dir" >&2
         label="{{ repo }}"
         [[ "$dir" == "." ]] && label="vauchi (root)"
         echo "── ${label} ──"
@@ -364,9 +364,9 @@ diff-main repo='':
                 label="${dir%/}"
                 dir="${dir%/}"
             fi
-            branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+            branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
             [[ "$branch" == "main" || -z "$branch" ]] && continue
-            git -C "$dir" fetch origin main --quiet 2>/dev/null
+            git -C "$dir" fetch origin main --quiet 2>/dev/null || true
             count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
             [[ "$count" == "0" ]] && continue
             echo "── $label ($branch, $count commits) ──"
@@ -445,11 +445,11 @@ rebase-main repo='':
 [no-cd]
 [script]
 log-branch repo='':
-    set -uo pipefail
+    set -euo pipefail
     log_repo() {
         local label="$1" dir="$2"
         local branch
-        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
         [[ "$branch" == "main" || -z "$branch" ]] && return 0
         local count
         count=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
@@ -467,7 +467,7 @@ log-branch repo='':
         fi
         label="{{ repo }}"
         [[ "$dir" == "." ]] && label="vauchi (root)"
-        git -C "$dir" fetch origin main --quiet 2>/dev/null
+        git -C "$dir" fetch origin main --quiet 2>/dev/null || true
         log_repo "$label" "$dir"
     else
         for dir in . */; do
@@ -487,7 +487,7 @@ log-branch repo='':
 [script]
 sync:
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     timer_start
 
     # Count repos for progress
@@ -499,9 +499,13 @@ sync:
 
     sync_repo() {
         local label="$1" dir="$2" n="$3"
-        git -C "$dir" fetch --all --quiet 2>/dev/null
+        if ! git -C "$dir" fetch --all --quiet 2>/dev/null; then
+            progress_fail "$n" "$repo_total" "$label" "fetch FAILED"
+            fail_count=$((fail_count + 1))
+            return 0
+        fi
         local branch
-        branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+        branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
         if [[ "$branch" == "main" ]]; then
             output=$(git -C "$dir" pull --rebase --quiet 2>&1 || git -C "$dir" pull --quiet 2>&1)
             if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
@@ -537,7 +541,7 @@ sync:
 [script]
 branch-status:
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     _BS_C1=22  # repo column
     _BS_C2=32  # branch column
     _tbl() {
@@ -588,7 +592,7 @@ branch-status:
 [script]
 branch name *repos='':
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git branch <branch-name> [repo1 repo2 ...]" >&2
         exit 1

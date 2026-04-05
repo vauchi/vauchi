@@ -15,7 +15,7 @@
 wip msg='' *repos='':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
-    set -uo pipefail
+    set -euo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
         for r in {{ repos }}; do
@@ -77,7 +77,7 @@ wip msg='' *repos='':
 wip-undo *repos='':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
-    set -uo pipefail
+    set -euo pipefail
     targets=()
     if [[ -n "{{ repos }}" ]]; then
         for r in {{ repos }}; do
@@ -134,7 +134,7 @@ wip-undo *repos='':
 resume name *repos='':
     source scripts/scripts/output-helpers.sh
     source scripts/scripts/for-each-repo.sh
-    set -uo pipefail
+    set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git resume <branch-name> [repo1 repo2 ...]" >&2
         exit 1
@@ -179,16 +179,19 @@ resume name *repos='':
     for dir in "${targets[@]}"; do
         label="$dir"
         [[ "$dir" == "." ]] && label="vauchi (root)"
-        current=$(git -C "$dir" branch --show-current 2>/dev/null)
+        current=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
         if [[ "$current" == "{{ name }}" ]]; then
             status_info "$label" "already on {{ name }}"
             switched+=("$dir")
             continue
         fi
         if git -C "$dir" rev-parse --verify "{{ name }}" &>/dev/null; then
-            git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null
-            status_ok "$label" "switched to {{ name }}"
-            switched+=("$dir")
+            if git -C "$dir" checkout "{{ name }}" --quiet 2>/dev/null; then
+                status_ok "$label" "switched to {{ name }}"
+                switched+=("$dir")
+            else
+                echo "  WARN: checkout failed for $label" >&2
+            fi
         fi
     done
 

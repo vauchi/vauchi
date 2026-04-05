@@ -17,7 +17,7 @@
 [script]
 create name *repos='':
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree create <branch-name> [repo1 repo2 ...]" >&2
         exit 1
@@ -96,7 +96,7 @@ create name *repos='':
 [script]
 list:
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     wt_base=".worktrees"
 
     if [[ ! -d "$wt_base" ]]; then
@@ -154,7 +154,7 @@ list:
 [script]
 remove name:
     source scripts/scripts/output-helpers.sh
-    set -uo pipefail
+    set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree remove <branch-name>" >&2
         exit 1
@@ -240,7 +240,7 @@ remove name:
 [no-cd]
 [script]
 remove-force name:
-    set -uo pipefail
+    set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree remove-force <branch-name>" >&2
         exit 1
