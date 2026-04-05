@@ -179,7 +179,7 @@ fix-branch-refs:
     for repo in cli tui e2e linux-gtk relay; do
         TOML="$ROOT/$repo/Cargo.toml"
         [ -f "$TOML" ] || continue
-        BAD=$(taplo get -f "$TOML" -o json 'dependencies' 2>/dev/null \
+        BAD=$(taplo get -f "$TOML" -o json 2>/dev/null \
             | jq -r '.. | .branch? // empty' | grep -v '^main$' || true)
         if [ -n "$BAD" ]; then
             echo "${YELLOW}$repo${NC}: fixing non-main branch refs"

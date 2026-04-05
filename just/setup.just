@@ -120,17 +120,20 @@ session-init:
         # what's reachable from the local HEAD (git describe fails when HEAD
         # is behind the latest tag).
         SWIFT_LATEST=$(git -C vauchi-platform-swift ls-remote --tags origin 2>/dev/null \
-            | sed -n 's|.*refs/tags/v\([0-9].*\)$|\1|p' \
+            | grep -v '\^{}' \
+            | sed -n 's|.*refs/tags/v\([0-9][0-9.]*\)$|\1|p' \
             | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
         [[ -n "$SWIFT_LATEST" ]] && SWIFT_LATEST="v$SWIFT_LATEST" || SWIFT_LATEST="?"
     fi
     IOS_PIN=""
     if [[ -f "ios/project.yml" ]]; then
         IOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' ios/project.yml 2>/dev/null || echo "?")
+        [[ "$IOS_PIN" == "null" ]] && IOS_PIN="?"
     fi
     MACOS_PIN=""
     if [[ -f "macos/project.yml" ]]; then
         MACOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' macos/project.yml 2>/dev/null || echo "?")
+        [[ "$MACOS_PIN" == "null" ]] && MACOS_PIN="?"
     fi
     ANDROID_PIN=""
     if [[ -f "android/app/build.gradle.kts" ]]; then
@@ -247,7 +250,7 @@ session-init:
             [[ -z "$ref" || "$ref" == "main" ]] && continue
             _STALE_REFS+="  ${dir%/}: branch = \"$ref\" (expected \"main\")\n"
             WARN=1
-        done < <(taplo get -f "$cargo_file" -o json 'dependencies' 2>/dev/null \
+        done < <(taplo get -f "$cargo_file" -o json 2>/dev/null \
                  | jq -r '.. | .branch? // empty' | sort -u)
     done
     if [[ -n "$_STALE_REFS" ]]; then
