@@ -116,15 +116,21 @@ session-init:
     echo "BINDING VERSIONS:"
     SWIFT_LATEST=""
     if [[ -d "vauchi-platform-swift" ]]; then
-        SWIFT_LATEST=$(git -C vauchi-platform-swift describe --tags --abbrev=0 2>/dev/null || echo "?")
+        # Use ls-remote to get the actual latest tag from origin, not just
+        # what's reachable from the local HEAD (git describe fails when HEAD
+        # is behind the latest tag).
+        SWIFT_LATEST=$(git -C vauchi-platform-swift ls-remote --tags origin 2>/dev/null \
+            | sed -n 's|.*refs/tags/v\([0-9].*\)$|\1|p' \
+            | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+        [[ -n "$SWIFT_LATEST" ]] && SWIFT_LATEST="v$SWIFT_LATEST" || SWIFT_LATEST="?"
     fi
     IOS_PIN=""
     if [[ -f "ios/project.yml" ]]; then
-        IOS_PIN=$(grep -E 'from:|version:' ios/project.yml 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/' | tr -d ' ' || echo "?")
+        IOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' ios/project.yml 2>/dev/null || echo "?")
     fi
     MACOS_PIN=""
     if [[ -f "macos/project.yml" ]]; then
-        MACOS_PIN=$(grep -E 'from:|version:' macos/project.yml 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/' | tr -d ' ' || echo "?")
+        MACOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' macos/project.yml 2>/dev/null || echo "?")
     fi
     ANDROID_PIN=""
     if [[ -f "android/app/build.gradle.kts" ]]; then
@@ -180,6 +186,12 @@ session-init:
             count=$(echo "$status" | wc -l | tr -d ' ')
             echo "  $label: $count file(s) modified" >> "$SI_TMP/uncommitted.txt"
         fi
+        # Gone branches (remote deleted, local has unmerged commits — forgotten MRs)
+        while IFS= read -r gone_br; do
+            [[ -z "$gone_br" ]] && continue
+            echo "  $label ($gone_br) — remote GONE, local has unmerged commits" >> "$SI_TMP/gone.txt"
+        done < <(git -C "$d" branch -vv --no-color 2>/dev/null \
+            | grep ': gone\]' | sed 's/^[* ]*//' | awk '{print $1}' || true)
         # Stashes
         scount=$(git -C "$d" stash list 2>/dev/null | wc -l | tr -d ' ')
         if [[ "$scount" -gt 0 ]]; then
@@ -205,6 +217,13 @@ session-init:
         echo "  (none)"
     fi
 
+    if [[ -s "$SI_TMP/gone.txt" ]]; then
+        echo ""
+        echo "GONE BRANCHES (remote deleted, unmerged local commits — re-push or delete):"
+        sort "$SI_TMP/gone.txt"
+        WARN=1
+    fi
+
     echo ""
     echo "STASHES:"
     if [[ -s "$SI_TMP/stashes.txt" ]]; then
@@ -225,11 +244,11 @@ session-init:
         cargo_file="${dir}Cargo.toml"
         [[ -f "$cargo_file" ]] || continue
         while IFS= read -r ref; do
-            [[ "$ref" == "main" ]] && continue
+            [[ -z "$ref" || "$ref" == "main" ]] && continue
             _STALE_REFS+="  ${dir%/}: branch = \"$ref\" (expected \"main\")\n"
             WARN=1
-        done < <(grep -oE 'branch[[:space:]]*=[[:space:]]*"[^"]*"' "$cargo_file" 2>/dev/null \
-                 | sed -E 's/branch[[:space:]]*=[[:space:]]*"([^"]*)"/\1/' | sort -u)
+        done < <(taplo get -f "$cargo_file" -o json 'dependencies' 2>/dev/null \
+                 | jq -r '.. | .branch? // empty' | sort -u)
     done
     if [[ -n "$_STALE_REFS" ]]; then
         echo ""
@@ -804,3 +823,50 @@ git-compact:
     }
     for_each_repo --no-root _compact_repo
     echo "Done!"
+
+# Lint shell scripts for portability (shellcheck + GNU/BSD pattern checker)
+[group('setup')]
+[script]
+shell-lint *files:
+    set -euo pipefail
+    ROOT="{{justfile_directory()}}"
+
+    if [[ -z "{{ files }}" ]]; then
+        echo "Scanning all .sh and .just files..."
+        mapfile -t targets < <(find "$ROOT" -name '*.sh' -not -path '*/.git/*' -not -path '*/target/*' -not -path '*/node_modules/*' | sort)
+        mapfile -t just_targets < <(find "$ROOT/just" -name '*.just' -not -path '*/.git/*' | sort)
+        targets+=("${just_targets[@]}")
+    else
+        IFS=' ' read -ra targets <<< "{{ files }}"
+    fi
+
+    ERRORS=0
+
+    # shellcheck (language-level portability)
+    if command -v shellcheck &>/dev/null; then
+        echo "── shellcheck ──"
+        for f in "${targets[@]}"; do
+            [[ "$f" == *.sh || "$f" == *.bash ]] || continue
+            [[ -f "$f" ]] || continue
+            if ! shellcheck -S warning "$f" 2>&1; then
+                ERRORS=$((ERRORS + 1))
+            fi
+        done
+        echo "  shellcheck done"
+    else
+        echo "  (shellcheck not installed — brew install shellcheck)"
+    fi
+
+    # Custom GNU/BSD portability checks
+    echo "── portable-shell ──"
+    if ! "$ROOT/scripts/hooks/check-portable-shell.sh" "${targets[@]}"; then
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    if [[ "$ERRORS" -gt 0 ]]; then
+        echo ""
+        echo "Shell lint found issues. See .claude/rules/portable-shell.md"
+        exit 1
+    fi
+    echo ""
+    echo "All shell scripts portable ✓"
