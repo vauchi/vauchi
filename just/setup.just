@@ -302,6 +302,30 @@ session-init:
         fi
     fi
 
+    # ── Work board ──
+    echo ""
+    echo "── work board ──"
+    BOARD="_private/docs/work-board.md"
+    if [[ -f "$BOARD" ]]; then
+        IN_PROGRESS=$(sed -n '/^## In Progress$/,/^## /{ /^## /d; /^$/d; /^<!--/d; p; }' "$BOARD")
+        if [[ -n "$IN_PROGRESS" ]]; then
+            echo "IN PROGRESS:"
+            echo "$IN_PROGRESS" | while IFS= read -r line; do echo "  $line"; done
+        fi
+        NEXT=$(sed -n '/^## v0\.5\.0 Next$/,/^## /{ /^## /d; /^$/d; p; }' "$BOARD" | head -5)
+        if [[ -n "$NEXT" ]]; then
+            echo "NEXT:"
+            echo "$NEXT" | while IFS= read -r line; do echo "  $line"; done
+        fi
+        BLOCKED=$(sed -n '/^## v0\.5\.0 Blocked$/,/^## /{ /^## /d; /^$/d; p; }' "$BOARD")
+        if [[ -n "$BLOCKED" ]]; then
+            echo "BLOCKED:"
+            echo "$BLOCKED" | while IFS= read -r line; do echo "  $line"; done
+        fi
+    else
+        echo "  (no work board at $BOARD)"
+    fi
+
     echo ""
     if [[ "$WARN" == "0" ]]; then
         echo "── Ready to work ──"
