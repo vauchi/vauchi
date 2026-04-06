@@ -38,11 +38,13 @@ dt-build-macos:
     rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
     DD_SPM=$(find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -name "Vauchi-*" 2>/dev/null | head -1)
     [[ -n "$DD_SPM" ]] && rm -f "$DD_SPM/SourcePackages/workspace-state.json"
-    xcodebuild -project Vauchi.xcodeproj -scheme Vauchi \
+    # Use -workspace (not -project) so SPM picks up the local
+    # vauchi-platform-swift override declared in the workspace.
+    xcodebuild -workspace Vauchi.xcworkspace -scheme Vauchi \
         -resolvePackageDependencies 2>&1 | tail -3
 
     echo -e "${YELLOW}Building macOS app (Debug)...${NC}"
-    xcodebuild -project Vauchi.xcodeproj -scheme Vauchi \
+    xcodebuild -workspace Vauchi.xcworkspace -scheme Vauchi \
         -configuration Debug -destination "platform=macOS" \
         CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
         build 2>&1 | tail -5

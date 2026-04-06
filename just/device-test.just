@@ -429,7 +429,9 @@ _dt-build-ios:
     # the latest branch tip. The bare repo cache stays warm so this is fast.
     rm -f .spm-packages/workspace-state.json
     rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
-    xcodebuild -project Vauchi.xcodeproj \
+    # Use -workspace (not -project) so SPM picks up the local
+    # vauchi-platform-swift override declared in the workspace.
+    xcodebuild -workspace Vauchi.xcworkspace \
         -scheme Vauchi \
         -configuration Debug \
         -destination "id=$IOS_DEVICE_ID" \
