@@ -30,3 +30,4 @@ Each record: `YYYY-MM-DD-problem-slug/` containing:
 - Every record needs: **status**, **priority**, **owner**, **goals** (measurable)
 - Critical/high: **containment** required before investigation
 - Draft Gherkin lives here until promoted → add `promoted_to:` link in README
+- `Size: small` records: single README.md, no companion files. For items ≤1 focused day. Same fields, same lifecycle. Promote if scope grows.
