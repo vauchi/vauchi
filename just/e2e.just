@@ -12,7 +12,7 @@
 [group('e2e')]
 e2e:
     @echo "Available E2E tests:"
-    @cd e2e && cargo test -- --list --ignored 2>&1 | grep '^test_' | sed 's/: test//'
+    @cd e2e && cargo test -- --list --include-ignored 2>&1 | grep '^test_' | sed 's/: test//'
     @echo ""
     @echo "Run with: just e2e-run <name>  (or 'all' for all tests)"
 
@@ -26,9 +26,9 @@ e2e-build:
 [script]
 e2e-run name: build e2e-build
     if [[ "{{name}}" == "all" ]]; then
-        cd e2e && cargo test -- --ignored --nocapture
+        cd e2e && cargo test -- --include-ignored --nocapture
     else
-        cd e2e && cargo test {{name}} -- --ignored --nocapture
+        cd e2e && cargo test {{name}} -- --include-ignored --nocapture
     fi
 
 # Run E2E smoke tests (fast, for every push)
@@ -36,7 +36,7 @@ e2e-run name: build e2e-build
 [script]
 e2e-smoke: e2e-build
     echo "Running E2E smoke tests..."
-    cd e2e && cargo test smoke_ -- --ignored --nocapture
+    cd e2e && cargo test smoke_ -- --nocapture
     echo ""
     echo "Smoke tests complete."
 
@@ -45,7 +45,7 @@ e2e-smoke: e2e-build
 [script]
 e2e-release: e2e-build
     echo "Running full E2E test suite for release validation..."
-    cd e2e && cargo test -- --ignored --nocapture
+    cd e2e && cargo test -- --include-ignored --nocapture
     echo ""
     echo "Release validation complete."
 
@@ -54,7 +54,7 @@ e2e-release: e2e-build
 [script]
 e2e-integration: e2e-build
     echo "Running E2E integration tests..."
-    cd e2e && cargo test integration_ -- --ignored --nocapture
+    cd e2e && cargo test integration_ -- --nocapture
     echo ""
     echo "Integration tests complete."
 
@@ -92,9 +92,9 @@ e2e-coverage:
     echo "  Total feature files: $feature_count"
     echo ""
     echo "Rust E2E Tests:"
-    rust_tests=$(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^smoke_\|^integration_" || echo 0)
-    echo "  Smoke tests: $(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^smoke_" || echo 0)"
-    echo "  Integration tests: $(cd e2e && cargo test -- --list --ignored 2>&1 | grep -c "^integration_" || echo 0)"
+    rust_tests=$(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^smoke_\|^integration_" || echo 0)
+    echo "  Smoke tests: $(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^smoke_" || echo 0)"
+    echo "  Integration tests: $(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^integration_" || echo 0)"
     echo ""
     echo "YAML Scenarios:"
     yaml_smoke=$(find e2e/scenarios/smoke -name "*.yaml" 2>/dev/null | wc -l)
@@ -230,7 +230,7 @@ e2e-mobile: e2e-build
 [script]
 e2e-all: e2e-build
     echo "Running full E2E suite (all platforms)..."
-    cd e2e && cargo test -- --ignored --nocapture
+    cd e2e && cargo test -- --include-ignored --nocapture
     echo ""
     echo "Full E2E suite complete."
 
