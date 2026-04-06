@@ -9,10 +9,10 @@ Privacy-focused updatable contact cards via in-person exchange. E2E encrypted, d
 
 ```bash
 just setup         # Clone all repos (first time only)
-just session-init  # Sync, fetch, show MR/branch/uncommitted dashboard (every session)
+just session-init  # Sync, fetch, show work board + dashboard (every session)
 just build         # Build Rust workspace
 just check         # Run all checks
-just session-end   # Verify everything pushed, no orphan branches (every session end)
+just session-end   # Verify pushed, release board claims, check staleness (every session end)
 
 # Local dev feedback loops
 cargo watch -x check           # ~1s incremental with mold — fastest feedback
