@@ -139,12 +139,12 @@ session-init:
     fi
     IOS_PIN=""
     if [[ -f "ios/project.yml" ]]; then
-        IOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' ios/project.yml 2>/dev/null || echo "?")
+        IOS_PIN=$(yq -r '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' ios/project.yml 2>/dev/null || echo "?")
         [[ "$IOS_PIN" == "null" ]] && IOS_PIN="?"
     fi
     MACOS_PIN=""
     if [[ -f "macos/project.yml" ]]; then
-        MACOS_PIN=$(yq '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' macos/project.yml 2>/dev/null || echo "?")
+        MACOS_PIN=$(yq -r '.packages.VauchiPlatform.version // .packages.VauchiPlatform.from' macos/project.yml 2>/dev/null || echo "?")
         [[ "$MACOS_PIN" == "null" ]] && MACOS_PIN="?"
     fi
     ANDROID_PIN=""
@@ -159,7 +159,9 @@ session-init:
     _check_binding_drift() {
         local label="$1" pin="$2"
         if [[ -n "$SWIFT_LATEST" && -n "$pin" && "$SWIFT_LATEST" != "?" && "$pin" != "?" ]]; then
-            if [[ "$SWIFT_LATEST" != *"$pin"* && "$pin" != *"$SWIFT_LATEST"* ]]; then
+            local latest_num="${SWIFT_LATEST#v}"
+            local pin_num="${pin#v}"
+            if [[ "$latest_num" != "$pin_num" ]]; then
                 echo "  WARNING: $label ($pin) differs from latest ($SWIFT_LATEST)"
             fi
         fi
