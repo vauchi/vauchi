@@ -75,9 +75,19 @@ mr-create repo='' title='':
     else
         mr_title=$(git log origin/main..HEAD --reverse --format=%s | head -1)
     fi
-    # Build description from commit bodies, escaping @ to prevent mentions
+    # Build description from commit bodies:
+    # 1. Strip Co-Authored-By trailers (added once at the bottom instead)
+    # 2. Escape @ to prevent GitLab mentions
+    # 3. Collapse repeated blank lines
     mr_body=$(git log origin/main..HEAD --reverse --format="- %s%n%n%b" \
-        | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g')
+        | grep -v '^Co-Authored-By:' \
+        | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g' \
+        | cat -s)
+    # Append single co-author credit if any commit had one
+    if git log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
+        coauthor=$(git log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+        mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
+    fi
     ARGS=(--yes --target-branch main --push -R "vauchi/$r")
     ARGS+=(--title "$mr_title")
     ARGS+=(--description "$mr_body")
@@ -223,6 +233,12 @@ mr-create-all title='':
             local mr_desc
             mr_desc=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s" \
                 | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g')
+            # Append single co-author credit if any commit had one
+            if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
+                local coauthor
+                coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+                mr_desc=$(printf '%s\n\n%s' "$mr_desc" "$coauthor")
+            fi
             PUSH_OPTS+=(-o "merge_request.description=$mr_desc")
 
             echo "  Pushing and creating MR..."
@@ -273,7 +289,14 @@ mr-create-all title='':
                 other_mrs="${other_mrs}- vauchi/${ogl}!${oiid}\n"
             done
 
-            desc="## Summary\n\n${commits}\n\n## Related MRs\n\n${other_mrs}\n---\n_${files}_"
+            # Append single co-author credit if any commit had one
+            coauthor_line=""
+            if git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep -q '^Co-Authored-By:'; then
+                local ca
+                ca=$(git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep '^Co-Authored-By:' | head -1)
+                coauthor_line="\n${ca}"
+            fi
+            desc="## Summary\n\n${commits}\n\n## Related MRs\n\n${other_mrs}\n---\n_${files}_${coauthor_line}"
 
             # Mark downstream repos as Draft if upstream has an MR
             is_downstream=false
