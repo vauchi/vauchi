@@ -452,6 +452,64 @@ session-end:
         echo "  No hook blocks recorded"
     fi
 
+    # ── Work board claim check ──
+    echo ""
+    echo "── work board claims ──"
+    BOARD="_private/docs/work-board.md"
+    if [[ -f "$BOARD" ]]; then
+        IN_PROGRESS=$(sed -n '/^## In Progress$/,/^## /{ /^## /d; /^$/d; /^<!--/d; p; }' "$BOARD")
+        if [[ -n "$IN_PROGRESS" ]]; then
+            echo "  Items still In Progress on the board:"
+            echo "$IN_PROGRESS" | while IFS= read -r line; do
+                echo "    $line"
+            done
+            echo "  → Release or move them before ending session"
+        else
+            echo "  No active claims"
+        fi
+    fi
+
+    # ── Doc staleness check ──
+    echo ""
+    echo "── doc staleness check ──"
+    SESSION_HEADS=".claude/.session-heads"
+    if [[ -f "$SESSION_HEADS" ]]; then
+        CHANGED_REPOS=""
+        while IFS=' ' read -r label old_head; do
+            [[ "$label" == "root" ]] && dir="." || dir="$label"
+            [[ -d "$dir/.git" ]] || continue
+            new_head=$(git -C "$dir" rev-parse HEAD 2>/dev/null || echo "unknown")
+            if [[ "$old_head" != "$new_head" ]]; then
+                CHANGED_REPOS="$CHANGED_REPOS $label"
+            fi
+        done < "$SESSION_HEADS"
+
+        if [[ -n "$CHANGED_REPOS" ]]; then
+            echo "  Changed repos:$CHANGED_REPOS"
+            MATCHES=""
+            for repo in $CHANGED_REPOS; do
+                [[ "$repo" == "root" || "$repo" == "_private" ]] && continue
+                while IFS= read -r f; do
+                    MATCHES="$MATCHES  $f (references $repo/)\n"
+                done < <(grep -rl "${repo}/" \
+                    _private/docs/problems/*/README.md \
+                    _private/docs/planning/todo/*.md 2>/dev/null \
+                    | grep -v '/done/' \
+                    | head -5)
+            done
+            if [[ -n "$MATCHES" ]]; then
+                echo "  Docs referencing changed repos — review for staleness:"
+                printf '%b' "$MATCHES" | head -10
+            else
+                echo "  No matching docs found"
+            fi
+        else
+            echo "  No repos changed this session"
+        fi
+    else
+        echo "  (no session heads — run session-init first)"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"
