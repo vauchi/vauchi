@@ -33,7 +33,7 @@ fi
 
 # Determine the repo directory
 REPO_DIR="$CWD"
-if REL_DIR=$(echo "$COMMAND" | sed -n 's/.*git[[:space:]]\+-C[[:space:]]\+\([^[:space:]]\+\).*/\1/p') && [[ -n "$REL_DIR" ]]; then
+if REL_DIR=$(echo "$COMMAND" | sed -n 's/.*git[[:space:]][[:space:]]*-C[[:space:]][[:space:]]*\([^[:space:]][^[:space:]]*\).*/\1/p') && [[ -n "$REL_DIR" ]]; then
   true  # REL_DIR already set by sed above
   if [[ "$REL_DIR" = /* ]]; then
     REPO_DIR="$REL_DIR"
