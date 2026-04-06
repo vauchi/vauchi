@@ -402,7 +402,7 @@ if echo ":$DOC_NAMING_REPOS:" | grep -q ":$REPO_NAME:"; then
       if echo "$filename" | grep -qE '\.plan\.md$'; then continue; fi
 
       # Skip directories where date prefix doesn't apply
-      if echo "$dirname" | grep -qE "(diagrams|ideas|strategy|infra|knowledge|audit-review-frameworks|decisions|guides|reference|testing|admin-guides|components)"; then continue; fi
+      if echo "$dirname" | grep -qE "(diagrams|ideas|strategy|infra|knowledge|audit-review-frameworks|decisions|guides|reference|testing|admin-guides|components|legal)"; then continue; fi
 
       # Skip root level files
       if [[ "$dirname" == "." ]]; then continue; fi
