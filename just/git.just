@@ -500,24 +500,48 @@ sync:
 
     sync_repo() {
         local label="$1" dir="$2" n="$3"
+
+        # Pre-flight: detect unmerged files (stale merge/rebase conflicts)
+        local unmerged
+        unmerged=$(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null || true)
+        if [[ -n "$unmerged" ]]; then
+            local file_list
+            file_list=$(echo "$unmerged" | head -3 | tr '\n' ', ' | sed 's/,$//')
+            progress_fail "$n" "$repo_total" "$label" "unmerged files: $file_list — resolve or run: git -C $dir restore --staged --worktree $file_list"
+            fail_count=$((fail_count + 1))
+            return 0
+        fi
+
         if ! git -C "$dir" fetch --all --quiet 2>/dev/null; then
-            progress_fail "$n" "$repo_total" "$label" "fetch FAILED"
+            progress_fail "$n" "$repo_total" "$label" "fetch FAILED — check network or remote URL"
             fail_count=$((fail_count + 1))
             return 0
         fi
         local branch
         branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
         if [[ "$branch" == "main" ]]; then
-            output=$(git -C "$dir" pull --rebase --quiet 2>&1 || git -C "$dir" pull --quiet 2>&1)
-            if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
-                progress_ok "$n" "$repo_total" "$label" "fetched, main up to date"
+            local output
+            # Use subshell to prevent set -e from aborting on pull failure
+            if output=$(git -C "$dir" pull --rebase --quiet 2>&1); then
+                if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
+                    progress_ok "$n" "$repo_total" "$label" "fetched, main up to date"
+                else
+                    progress_ok "$n" "$repo_total" "$label" "fetched, pulled main"
+                fi
                 ok_count=$((ok_count + 1))
-            elif echo "$output" | grep -qE "^error:|^fatal:|CONFLICT"; then
-                progress_fail "$n" "$repo_total" "$label" "fetched, pull failed"
-                fail_count=$((fail_count + 1))
             else
-                progress_ok "$n" "$repo_total" "$label" "fetched, pulled main"
-                ok_count=$((ok_count + 1))
+                # Rebase failed — abort it and report
+                git -C "$dir" rebase --abort 2>/dev/null || true
+                local reason="pull --rebase failed"
+                if echo "$output" | grep -q "CONFLICT"; then
+                    reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
+                elif echo "$output" | grep -q "uncommitted changes"; then
+                    reason="dirty working tree — commit or stash first"
+                elif echo "$output" | grep -q "unmerged"; then
+                    reason="unmerged files — resolve or: git -C $dir restore --staged --worktree <file>"
+                fi
+                progress_fail "$n" "$repo_total" "$label" "$reason"
+                fail_count=$((fail_count + 1))
             fi
         else
             local ahead behind
