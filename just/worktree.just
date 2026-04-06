@@ -200,25 +200,41 @@ remove name:
 
     # Remove worktrees from each parent repo
     removed=()
+    wt_failed=()
     for repo_dir in "$wt_base"/*/; do
         [[ ! -d "$repo_dir" ]] && continue
         repo=$(basename "$repo_dir")
         abs_path="$(cd "$repo_dir" && pwd)"
         if [[ -d "$repo/.git" ]]; then
-            git -C "$repo" worktree remove "$abs_path" --force 2>/dev/null && removed+=("$repo") || true
+            if git -C "$repo" worktree remove "$abs_path" --force 2>/dev/null; then
+                removed+=("$repo")
+            else
+                wt_failed+=("$repo")
+            fi
         elif [[ "$repo" == "root" && -d ".git" ]]; then
-            git worktree remove "$abs_path" --force 2>/dev/null && removed+=("root") || true
+            if git worktree remove "$abs_path" --force 2>/dev/null; then
+                removed+=("root")
+            else
+                wt_failed+=("root")
+            fi
         fi
     done
     if [[ -f "$wt_base/.git" ]]; then
         abs_path="$(cd "$wt_base" && pwd)"
-        git worktree remove "$abs_path" --force 2>/dev/null && removed+=("root") || true
+        if git worktree remove "$abs_path" --force 2>/dev/null; then
+            removed+=("root")
+        else
+            wt_failed+=("root")
+        fi
     fi
 
     rm -rf "$wt_base"
     rmdir .worktrees 2>/dev/null || true
 
     echo "Removed worktree '{{ name }}' (${#removed[@]} repos: ${removed[*]:-none})"
+    if [[ ${#wt_failed[@]} -gt 0 ]]; then
+        echo "WARNING: git worktree remove failed for: ${wt_failed[*]} — run: git worktree prune in those repos"
+    fi
 
     # Optionally delete the branch too
     if [[ -t 0 ]]; then
@@ -256,21 +272,37 @@ remove-force name:
 
     # Remove worktrees from each parent repo
     removed=()
+    wt_failed=()
     for repo_dir in "$wt_base"/*/; do
         [[ ! -d "$repo_dir" ]] && continue
         repo=$(basename "$repo_dir")
         abs_path="$(cd "$repo_dir" && pwd)"
         if [[ -d "$repo/.git" ]]; then
-            git -C "$repo" worktree remove "$abs_path" --force 2>/dev/null && removed+=("$repo") || true
+            if git -C "$repo" worktree remove "$abs_path" --force 2>/dev/null; then
+                removed+=("$repo")
+            else
+                wt_failed+=("$repo")
+            fi
         elif [[ "$repo" == "root" && -d ".git" ]]; then
-            git worktree remove "$abs_path" --force 2>/dev/null && removed+=("root") || true
+            if git worktree remove "$abs_path" --force 2>/dev/null; then
+                removed+=("root")
+            else
+                wt_failed+=("root")
+            fi
         fi
     done
     if [[ -f "$wt_base/.git" ]]; then
         abs_path="$(cd "$wt_base" && pwd)"
-        git worktree remove "$abs_path" --force 2>/dev/null && removed+=("root") || true
+        if git worktree remove "$abs_path" --force 2>/dev/null; then
+            removed+=("root")
+        else
+            wt_failed+=("root")
+        fi
     fi
 
     rm -rf "$wt_base"
     rmdir .worktrees 2>/dev/null || true
     echo "Removed worktree '{{ name }}' (${#removed[@]} repos: ${removed[*]:-none})"
+    if [[ ${#wt_failed[@]} -gt 0 ]]; then
+        echo "WARNING: git worktree remove failed for: ${wt_failed[*]} — run: git worktree prune in those repos"
+    fi

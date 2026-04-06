@@ -162,13 +162,17 @@ mr-create-all title='':
         rebased=no
         if [[ "$behind" -gt 0 ]]; then
             printf "  ↓ %s commits behind — rebasing...\n" "$behind"
-            if ! git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
-                echo "  ✗ CONFLICT — skipping (resolve manually)"
+            local rebase_output
+            if rebase_output=$(git -C "$dir" rebase origin/main 2>&1); then
+                echo "$rebase_output" | sed 's/^/  /'
+                rebased=yes
+            else
+                echo "$rebase_output" | sed 's/^/  /'
+                echo "  ✗ CONFLICT — skipping (resolve manually: git -C $dir rebase --continue)"
                 git -C "$dir" rebase --abort 2>/dev/null
                 failed+=("$label")
                 return 0
             fi
-            rebased=yes
         fi
 
         export SKIP_TESTS=1
@@ -177,10 +181,13 @@ mr-create-all title='':
             # MR exists — force-push if rebased, otherwise up-to-date
             if [[ "$rebased" == "yes" ]]; then
                 echo "  MR exists (!${existing_iid}) — force-pushing rebased branch..."
-                if git -C "$dir" push --force-with-lease origin "$branch" 2>&1 | sed 's/^/  /'; then
+                local push_output
+                if push_output=$(git -C "$dir" push --force-with-lease origin "$branch" 2>&1); then
+                    echo "$push_output" | sed 's/^/  /'
                     updated+=("$label")
                 else
-                    echo "  Force-push failed"
+                    echo "$push_output" | sed 's/^/  /'
+                    echo "  ✗ Force-push failed — check branch protection or remote state"
                     failed+=("$label")
                     return 0
                 fi
@@ -204,14 +211,17 @@ mr-create-all title='':
             PUSH_OPTS+=(-o "merge_request.title=$mr_title")
 
             echo "  Pushing and creating MR..."
-            if git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1 | sed 's/^/  /'; then
+            local push_mr_output
+            if push_mr_output=$(git -C "$dir" push "${PUSH_OPTS[@]}" 2>&1); then
+                echo "$push_mr_output" | sed 's/^/  /'
                 created+=("$label")
                 # Fetch the new MR IID
                 new_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
                   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
                 [[ -n "$new_iid" ]] && mr_registry+=("${label}:${gl_name}:${new_iid}")
             else
-                echo "  Push failed"
+                echo "$push_mr_output" | sed 's/^/  /'
+                echo "  ✗ Push failed — check branch protection or network"
                 failed+=("$label")
             fi
         fi

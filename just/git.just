@@ -104,12 +104,34 @@ main mode='':
             fi
         fi
         # Checkout main and pull
+        # Pre-flight: detect unmerged files
+        local unmerged
+        unmerged=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+        if [[ -n "$unmerged" ]]; then
+            local files
+            files=$(echo "$unmerged" | head -3 | tr '\n' ', ' | sed 's/,$//')
+            progress_fail "$n" "$repo_total" "$label" "${save_info}unmerged files: $files — run: git restore --staged --worktree $files"
+            echo $(( $(cat "$fail_file") + 1 )) > "$fail_file"
+            return
+        fi
         if git checkout main --quiet 2>/dev/null; then
-            output=$(git pull --rebase 2>&1 || git pull 2>&1) || true
-            if echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
-                progress_ok "$n" "$repo_total" "$label" "${save_info}up to date"
+            local output
+            if output=$(git pull --rebase --quiet 2>&1); then
+                if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
+                    progress_ok "$n" "$repo_total" "$label" "${save_info}up to date"
+                else
+                    progress_ok "$n" "$repo_total" "$label" "${save_info}pulled main"
+                fi
             else
-                progress_ok "$n" "$repo_total" "$label" "${save_info}$(echo "$output" | tail -1)"
+                git rebase --abort 2>/dev/null || true
+                local reason="pull --rebase failed"
+                if echo "$output" | grep -q "CONFLICT"; then
+                    reason="rebase conflict — resolve manually"
+                elif echo "$output" | grep -q "uncommitted changes"; then
+                    reason="dirty working tree — commit or stash first"
+                fi
+                progress_fail "$n" "$repo_total" "$label" "${save_info}$reason"
+                echo $(( $(cat "$fail_file") + 1 )) > "$fail_file"
             fi
         else
             progress_fail "$n" "$repo_total" "$label" "${save_info}FAILED (no main branch?)"
@@ -262,14 +284,33 @@ pull-all:
     out_begin
     pull_repo() {
         local label="$1" dir="$2"
+        # Pre-flight: detect unmerged files
+        local unmerged
+        unmerged=$(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null || true)
+        if [[ -n "$unmerged" ]]; then
+            local files
+            files=$(echo "$unmerged" | head -3 | tr '\n' ', ' | sed 's/,$//')
+            out_fail "$label" "unmerged files: $files — run: git -C $dir restore --staged --worktree $files"
+            return 0
+        fi
         local output
-        output=$(git -C "$dir" pull --rebase 2>&1 || git -C "$dir" pull 2>&1) || output="FAILED"
-        if echo "$output" | grep -qE "Already up to date|is up to date"; then
-            out_ok "$label" "up to date"
-        elif echo "$output" | grep -qE "^(error|fatal):|FAILED"; then
-            out_fail "$label" "$(echo "$output" | tail -1)"
+        if output=$(git -C "$dir" pull --rebase --quiet 2>&1); then
+            if echo "$output" | grep -qE "Already up to date|is up to date"; then
+                out_ok "$label" "up to date"
+            else
+                out_ok "$label" "pulled"
+            fi
         else
-            out_ok "$label" "$(echo "$output" | tail -1)"
+            git -C "$dir" rebase --abort 2>/dev/null || true
+            local reason
+            if echo "$output" | grep -q "CONFLICT"; then
+                reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
+            elif echo "$output" | grep -q "uncommitted changes"; then
+                reason="dirty working tree — commit or stash first"
+            else
+                reason="pull failed — $(echo "$output" | tail -1)"
+            fi
+            out_fail "$label" "$reason"
         fi
     }
     source scripts/scripts/for-each-repo.sh
@@ -390,6 +431,15 @@ rebase-main repo='':
         if [[ "$branch" == "main" || -z "$branch" ]]; then
             return 0
         fi
+        # Pre-flight: detect unmerged files
+        local unmerged
+        unmerged=$(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null || true)
+        if [[ -n "$unmerged" ]]; then
+            local files
+            files=$(echo "$unmerged" | head -3 | tr '\n' ', ' | sed 's/,$//')
+            status_fail "$label" "unmerged files: $files — run: git -C $dir restore --staged --worktree $files"
+            return 1
+        fi
         echo ""
         echo "── $label ($branch) ──"
         git -C "$dir" fetch origin main --quiet 2>/dev/null
@@ -400,9 +450,12 @@ rebase-main repo='':
             return 0
         fi
         printf "  ${YELLOW}↓${NC} %s commits behind origin/main — rebasing...\n" "$behind"
-        if git -C "$dir" rebase origin/main 2>&1 | sed 's/^/  /'; then
+        local rebase_output
+        if rebase_output=$(git -C "$dir" rebase origin/main 2>&1); then
+            echo "$rebase_output" | sed 's/^/  /'
             status_ok "$label" "rebase OK"
         else
+            echo "$rebase_output" | sed 's/^/  /'
             status_fail "$label" "CONFLICT — resolve manually, then run: git -C $dir rebase --continue" >&2
             git -C "$dir" rebase --abort 2>/dev/null
             return 1
