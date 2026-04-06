@@ -364,7 +364,7 @@ if command -v typos &>/dev/null; then
     done <<< "$TYPOS_FILES"
 
     if [[ ${#TYPOS_FILE_ARGS[@]} -gt 0 ]]; then
-      if ! (cd "$REPO_DIR" && typos "${TYPOS_ARGS[@]}" "${TYPOS_FILE_ARGS[@]}") 2>&1; then
+      if ! (cd "$REPO_DIR" && typos --force-exclude "${TYPOS_ARGS[@]}" "${TYPOS_FILE_ARGS[@]}") 2>&1; then
         echo "" >&2
         echo "Push blocked: typos found spelling issues in $REPO_NAME. Fix before pushing." >&2
         exit 2
