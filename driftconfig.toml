@@ -27,7 +27,6 @@ repos = [
   { name = "macos", path = "macos/" },
   { name = "windows", path = "windows/" },
   { name = "web-demo", path = "web-demo/" },
-  { name = "vauchi-platform-kotlin", path = "vauchi-platform-kotlin/" },
   { name = "vauchi-platform-swift", path = "vauchi-platform-swift/" },
   { name = "drift-detector", path = "drift-detector/" },
 ]
@@ -40,7 +39,6 @@ ignore = [
   "**/_private/strategy/**",
   "**/drift-detector/**",
   "**/builds/**",
-  "**/vauchi-platform-kotlin/vauchi-platform-kotlin-*/**",
   "**/vauchi-platform-swift/VauchiPlatform*/**",
 ]
 
