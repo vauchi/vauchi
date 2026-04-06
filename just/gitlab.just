@@ -67,10 +67,20 @@ mr-create repo='' title='':
     if ! git rev-parse --abbrev-ref "@{u}" &>/dev/null; then
         git push -u origin "$branch"
     fi
-    ARGS=(--fill --yes --target-branch main --push -R "vauchi/$r")
+    # Build title and description explicitly to sanitize @ mentions.
+    # --fill passes commit body verbatim, which may contain @tags that
+    # ping people on GitLab (e.g., Co-Authored-By: ... <noreply@anthropic.com>).
     if [[ -n "{{ title }}" ]]; then
-        ARGS+=(--title "{{ title }}")
+        mr_title="{{ title }}"
+    else
+        mr_title=$(git log origin/main..HEAD --reverse --format=%s | head -1)
     fi
+    # Build description from commit bodies, escaping @ to prevent mentions
+    mr_body=$(git log origin/main..HEAD --reverse --format="- %s%n%n%b" \
+        | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g')
+    ARGS=(--yes --target-branch main --push -R "vauchi/$r")
+    ARGS+=(--title "$mr_title")
+    ARGS+=(--description "$mr_body")
     glab mr create "${ARGS[@]}"
 
 # Approve a merge request
@@ -209,6 +219,11 @@ mr-create-all title='':
                 mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
             fi
             PUSH_OPTS+=(-o "merge_request.title=$mr_title")
+            # Build description with @ escaped to prevent GitLab mentions
+            local mr_desc
+            mr_desc=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s" \
+                | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g')
+            PUSH_OPTS+=(-o "merge_request.description=$mr_desc")
 
             echo "  Pushing and creating MR..."
             local push_mr_output
