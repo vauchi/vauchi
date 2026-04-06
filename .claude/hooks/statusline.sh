@@ -31,8 +31,9 @@ git_dir="${project_dir:-$cwd}"
 branch=$(git -C "$git_dir" branch --show-current 2>/dev/null)
 last_commit=$(git -C "$git_dir" log -1 --format='%s:%ct' 2>/dev/null)
 
-# Uncommitted changes (for session nudges, ~10ms)
-dirty_count=$(git -C "$git_dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+# Modified/staged tracked files (for session nudges, ~10ms)
+# Exclude untracked (??) files — they're intentionally untracked, not forgotten commits
+dirty_count=$(git -C "$git_dir" status --porcelain 2>/dev/null | grep -v '^??' | wc -l | tr -d ' ')
 
 # Unpushed commits (for session nudges, ~5ms)
 unpushed=0
