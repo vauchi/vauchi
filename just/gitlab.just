@@ -646,3 +646,106 @@ published:
     IOS_VER=$(git -C "$WS/ios" show origin/main:Vauchi.xcodeproj/project.pbxproj 2>/dev/null | grep -E 'version.*=.*"[0-9]' | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "(uses spm tag)")
     printf "%-22s %-22s\n" "ios (consumer)" "$IOS_VER"
     echo ""
+
+# ── Work item claims (atomic lock via GitLab branch creation) ──
+#
+# Prevents duplicate work when multiple sessions pick up the same
+# work board item. Branch creation is atomic on the server — two
+# workers racing to create the same branch get one 201 and one 409.
+#
+# Claims auto-expire after 4 hours (stale claims can be force-claimed).
+# The lock repo is _private (vauchi/private on GitLab).
+
+_claim_repo := "vauchi%2Fprivate"
+_claim_prefix := "claim/"
+_claim_expiry_hours := "4"
+
+# Claim a work item (atomic). Fails if already claimed.
+# Usage: just gitlab claim "problem-triage"
+[no-cd]
+[script]
+claim slug:
+    just gitlab _check-auth
+    set -euo pipefail
+    SLUG="{{ slug }}"
+    BRANCH="{{ _claim_prefix }}${SLUG}"
+    REPO="{{ _claim_repo }}"
+    EXPIRY_H="{{ _claim_expiry_hours }}"
+
+    # Check for existing claim
+    EXISTING=$(glab api "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" 2>/dev/null || true)
+    if echo "$EXISTING" | jq -e '.name' &>/dev/null; then
+        # Branch exists — check if stale
+        COMMITTED=$(echo "$EXISTING" | jq -r '.commit.committed_date')
+        COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
+            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
+        NOW=$(date +%s)
+        AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
+        if [[ "$AGE_H" -ge "$EXPIRY_H" ]]; then
+            echo "⚠ Stale claim (${AGE_H}h old) — force-claiming..."
+            glab api -X DELETE "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" &>/dev/null || true
+        else
+            AUTHOR=$(echo "$EXISTING" | jq -r '.commit.author_name // "unknown"')
+            echo "BLOCKED: '$SLUG' already claimed by $AUTHOR (${AGE_H}h ago)"
+            echo "Wait for release, or force-claim after ${EXPIRY_H}h."
+            exit 1
+        fi
+    fi
+
+    # Atomic create — races here: loser gets 400 "Branch already exists"
+    if RESULT=$(glab api -X POST "projects/${REPO}/repository/branches" \
+        -f branch="$BRANCH" -f ref="main" 2>&1); then
+        echo "✓ Claimed '$SLUG'"
+    else
+        echo "BLOCKED: '$SLUG' was just claimed by another session (race lost)"
+        exit 1
+    fi
+
+# Release a work item claim.
+# Usage: just gitlab release "problem-triage"
+[no-cd]
+[script]
+release slug:
+    just gitlab _check-auth
+    set -euo pipefail
+    SLUG="{{ slug }}"
+    BRANCH="{{ _claim_prefix }}${SLUG}"
+    REPO="{{ _claim_repo }}"
+    glab api -X DELETE "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" &>/dev/null \
+        && echo "✓ Released '$SLUG'" \
+        || echo "  (no active claim for '$SLUG')"
+
+# List all active work item claims.
+# Usage: just gitlab claims
+[no-cd]
+[script]
+claims:
+    just gitlab _check-auth
+    set -euo pipefail
+    REPO="{{ _claim_repo }}"
+    PREFIX="{{ _claim_prefix }}"
+    EXPIRY_H="{{ _claim_expiry_hours }}"
+    NOW=$(date +%s)
+
+    # Project only the fields we need (commit messages may contain control chars)
+    CLAIMS=$(glab api "projects/${REPO}/repository/branches?search=claim/" 2>/dev/null \
+        | jq '[.[] | {name: .name, author: .commit.author_name, date: .commit.committed_date}]' 2>/dev/null \
+        || echo "[]")
+    COUNT=$(echo "$CLAIMS" | jq 'length')
+    if [[ "$COUNT" == "0" ]]; then
+        echo "  (no active claims)"
+        exit 0
+    fi
+    printf "%-30s %-20s %s\n" "ITEM" "CLAIMED BY" "AGE"
+    printf "%-30s %-20s %s\n" "──────────────────────────────" "────────────────────" "───"
+    echo "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
+        NAME=$(echo "$b" | jq -r '.name' | sed "s|^${PREFIX}||")
+        AUTHOR=$(echo "$b" | jq -r '.author // "unknown"')
+        COMMITTED=$(echo "$b" | jq -r '.date')
+        COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
+            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
+        AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
+        STALE=""
+        [[ "$AGE_H" -ge "$EXPIRY_H" ]] && STALE=" (STALE)"
+        printf "%-30s %-20s %s\n" "$NAME" "$AUTHOR" "${AGE_H}h${STALE}"
+    done
