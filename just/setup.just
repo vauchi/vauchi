@@ -306,8 +306,10 @@ session-init:
 
     # ── Active claims (atomic locks on work items) ──
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+        MY_SESSION=$(printf '%s:%s' "$(hostname -s)" "${CLAUDE_PROJECT_DIR:-$(pwd)}" | shasum -a 256 | cut -c1-12)
         CLAIMS=$(glab api "projects/vauchi%2Fprivate/repository/branches?search=claim/" 2>/dev/null \
-            | jq '[.[] | {name: .name, author: .commit.author_name}]' 2>/dev/null \
+            | tr -d '\000-\010\013-\037' \
+            | jq '[.[] | {name: .name, msg: .commit.message}]' 2>/dev/null \
             || echo "[]")
         CLAIM_COUNT=$(echo "$CLAIMS" | jq 'length' 2>/dev/null || echo "0")
         if [[ "$CLAIM_COUNT" -gt 0 ]]; then
@@ -315,8 +317,11 @@ session-init:
             echo "ACTIVE CLAIMS (do not duplicate this work):"
             echo "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
                 NAME=$(echo "$b" | jq -r '.name' | sed 's|^claim/||')
-                AUTHOR=$(echo "$b" | jq -r '.author // "unknown"')
-                echo "  ⚡ $NAME (by $AUTHOR)"
+                MSG=$(echo "$b" | jq -r '.msg // ""')
+                OWNER=$(echo "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
+                MARKER=""
+                [[ "${OWNER:-}" == "$MY_SESSION" ]] && MARKER=" ← you"
+                echo "  ⚡ $NAME (session:${OWNER:-unknown}${MARKER})"
             done
         fi
     fi

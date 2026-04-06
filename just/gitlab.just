@@ -660,7 +660,12 @@ _claim_repo := "vauchi%2Fprivate"
 _claim_prefix := "claim/"
 _claim_expiry_hours := "4"
 
-# Claim a work item (atomic). Fails if already claimed.
+# Session ID: deterministic hash of hostname + workspace path.
+# Same workspace = same ID. Different worktrees/machines = different IDs.
+_session_id := `printf '%s:%s' "$(hostname -s)" "${CLAUDE_PROJECT_DIR:-$(pwd)}" | shasum -a 256 | cut -c1-12`
+
+# Claim a work item (atomic). Fails if already claimed by another session.
+# Idempotent: re-claiming your own item succeeds silently.
 # Usage: just gitlab claim "problem-triage"
 [no-cd]
 [script]
@@ -671,22 +676,29 @@ claim slug:
     BRANCH="{{ _claim_prefix }}${SLUG}"
     REPO="{{ _claim_repo }}"
     EXPIRY_H="{{ _claim_expiry_hours }}"
+    SESSION="{{ _session_id }}"
 
     # Check for existing claim
     EXISTING=$(glab api "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" 2>/dev/null || true)
     if echo "$EXISTING" | jq -e '.name' &>/dev/null; then
-        # Branch exists — check if stale
+        # Branch exists — check owner via commit message
+        CLAIM_MSG=$(echo "$EXISTING" | tr -d '\000-\010\013-\037' | jq -r '.commit.message // ""')
+        OWNER=$(echo "$CLAIM_MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
+        if [[ "$OWNER" == "$SESSION" ]]; then
+            echo "✓ Already claimed by this session ($SESSION)"
+            exit 0
+        fi
+        # Check if stale
         COMMITTED=$(echo "$EXISTING" | jq -r '.commit.committed_date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
             || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
         NOW=$(date +%s)
         AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
         if [[ "$AGE_H" -ge "$EXPIRY_H" ]]; then
-            echo "⚠ Stale claim (${AGE_H}h old) — force-claiming..."
+            echo "⚠ Stale claim (${AGE_H}h old, session:${OWNER:-unknown}) — force-claiming..."
             glab api -X DELETE "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" &>/dev/null || true
         else
-            AUTHOR=$(echo "$EXISTING" | jq -r '.commit.author_name // "unknown"')
-            echo "BLOCKED: '$SLUG' already claimed by $AUTHOR (${AGE_H}h ago)"
+            echo "BLOCKED: '$SLUG' claimed by session:${OWNER:-unknown} (${AGE_H}h ago)"
             echo "Wait for release, or force-claim after ${EXPIRY_H}h."
             exit 1
         fi
@@ -695,7 +707,13 @@ claim slug:
     # Atomic create — races here: loser gets 400 "Branch already exists"
     if RESULT=$(glab api -X POST "projects/${REPO}/repository/branches" \
         -f branch="$BRANCH" -f ref="main" 2>&1); then
-        echo "✓ Claimed '$SLUG'"
+        # Stamp with session ID via a commit on the claim branch
+        jq -n --arg br "$BRANCH" --arg sid "$SESSION" --arg slug "$SLUG" '{
+            branch: $br,
+            commit_message: ("claim: " + $slug + " session:" + $sid),
+            actions: [{action:"create", file_path:".claim", content:("session:" + $sid + "\n")}]
+        }' | glab api -X POST "projects/${REPO}/repository/commits" --input - &>/dev/null || true
+        echo "✓ Claimed '$SLUG' (session:$SESSION)"
     else
         echo "BLOCKED: '$SLUG' was just claimed by another session (race lost)"
         exit 1
@@ -725,27 +743,32 @@ claims:
     REPO="{{ _claim_repo }}"
     PREFIX="{{ _claim_prefix }}"
     EXPIRY_H="{{ _claim_expiry_hours }}"
+    SESSION="{{ _session_id }}"
     NOW=$(date +%s)
 
-    # Project only the fields we need (commit messages may contain control chars)
+    # Strip control chars before jq (commit messages may contain them)
     CLAIMS=$(glab api "projects/${REPO}/repository/branches?search=claim/" 2>/dev/null \
-        | jq '[.[] | {name: .name, author: .commit.author_name, date: .commit.committed_date}]' 2>/dev/null \
+        | tr -d '\000-\010\013-\037' \
+        | jq '[.[] | {name: .name, msg: .commit.message, date: .commit.committed_date}]' 2>/dev/null \
         || echo "[]")
     COUNT=$(echo "$CLAIMS" | jq 'length')
     if [[ "$COUNT" == "0" ]]; then
         echo "  (no active claims)"
         exit 0
     fi
-    printf "%-30s %-20s %s\n" "ITEM" "CLAIMED BY" "AGE"
-    printf "%-30s %-20s %s\n" "──────────────────────────────" "────────────────────" "───"
+    printf "%-25s %-14s %s\n" "ITEM" "SESSION" "AGE"
+    printf "%-25s %-14s %s\n" "─────────────────────────" "──────────────" "───"
     echo "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
         NAME=$(echo "$b" | jq -r '.name' | sed "s|^${PREFIX}||")
-        AUTHOR=$(echo "$b" | jq -r '.author // "unknown"')
+        MSG=$(echo "$b" | jq -r '.msg // ""')
+        OWNER=$(echo "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
         COMMITTED=$(echo "$b" | jq -r '.date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
             || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
         AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
         STALE=""
         [[ "$AGE_H" -ge "$EXPIRY_H" ]] && STALE=" (STALE)"
-        printf "%-30s %-20s %s\n" "$NAME" "$AUTHOR" "${AGE_H}h${STALE}"
+        MARKER=""
+        [[ "${OWNER:-}" == "$SESSION" ]] && MARKER=" (you)"
+        printf "%-25s %-14s %s\n" "$NAME" "${OWNER:-unknown}${MARKER}" "${AGE_H}h${STALE}"
     done
