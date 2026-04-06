@@ -12,6 +12,7 @@ settings.local.json
 .session-errors
 .session-reads
 .session-edits
+.session-heads
 
 # Agent-specific memory/cache (machine-local)
 agent-memory/

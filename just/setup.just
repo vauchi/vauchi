@@ -84,6 +84,18 @@ session-init:
     for_each_repo_parallel _fetch_repo
     echo "  All repos fetched + pruned"
 
+    # Record repo HEADs for staleness check
+    SESSION_HEADS=".claude/.session-heads"
+    : > "$SESSION_HEADS"
+    _record_head() {
+        local label="$1" dir="$2"
+        [[ "$dir" == "." ]] && label="root"
+        local head
+        head=$(git -C "$dir" rev-parse HEAD 2>/dev/null || echo "unknown")
+        echo "$label $head" >> "$SESSION_HEADS"
+    }
+    for_each_repo _record_head
+
     # ── Dashboard ──
     SI_TMP=$(mktemp -d)
     trap 'rm -rf "$SI_TMP"' EXIT
