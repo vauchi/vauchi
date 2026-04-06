@@ -109,6 +109,7 @@ service-account*.json
 
 
 /markdown-plan/
+/kanban-todo/
 
 # Device testing screenshots
 screenshot-*.png
