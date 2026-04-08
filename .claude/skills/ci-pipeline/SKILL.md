@@ -110,9 +110,6 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 - Standard trio: `lint:format`, `lint:clippy`, `test:unit`, `security:audit`
 - Minimal pipelines
 
-### Desktop (ARCHIVED)
-The Tauri desktop app (`desktop/`) has been archived and replaced by native platform frontends (macos, windows, linux-gtk, linux-qt, web-demo). Its CI pipeline is no longer active.
-
 ### Android (`android/.gitlab-ci.yml`)
 - Gradle-based: `lint`, `build:debug/release`, `test:unit`
 - `update:bindings-version` — triggered by upstream, creates MR to bump dependency
@@ -179,7 +176,6 @@ See `_private/docs/reference/2026-02-25-branch-protection-config.md` for full de
 | Cold Cargo rebuild (15-25 min) | Cargo.lock changed, cache miss | Fallback cache keys handle this |
 | sccache missing | Linux runner without sccache | Auto-installs via cargo-binstall |
 | Clippy fails on git dep | Core version ahead of downstream | `allow_failure: true` + manual retry |
-| ~~`build:frontend-dist` missing~~ | ~~Tauri clippy needs built frontend~~ | **Obsolete** — desktop archived per ADR-027 |
 | macOS no iOS runtime | Xcode not updated on runner | `before_script` checks + error message |
 | Maven analyzer fails | Android test-only deps | `DS_EXCLUDED_ANALYZERS: "gemnasium-maven"` |
 | Snapshot baselines missing | First run | `allow_failure: true` |
