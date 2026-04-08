@@ -70,7 +70,15 @@
       "WebFetch(domain:just.systems)",
       "WebFetch(domain:docs.gitlab.com)",
       "Bash(docker run:*)",
-      "Bash(glab mr:*)"
+      "Bash(glab mr:*)",
+      "Bash(uv run:*)",
+      "Bash(pacman -Q libgit2)",
+      "Bash(ldconfig -p)",
+      "Read(//usr/lib/**)",
+      "Bash(markdown-plan/python/.venv/bin/python --version)",
+      "Bash(markdown-plan/python/.venv/bin/python -c \"import pygit2; print\\(''ok''\\)\")",
+      "Bash(markdown-plan/python/.venv/bin/python -m pytest markdown-plan/python/src/mdplan/tests/test_parse.py -v -k \"multiline\")",
+      "Bash(markdown-plan/python/.venv/bin/python -m pip install pytest)"
     ],
     "deny": [
       "Bash(rm -rf:*)"
