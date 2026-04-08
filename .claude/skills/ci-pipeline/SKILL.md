@@ -81,18 +81,22 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 ## Per-Repo Pipeline Summary
 
 ### Root (`.gitlab-ci.yml`)
+
 - **Stages**: lint, security
 - **Jobs**: `lint:reuse`, `secret_detection`
 - Minimal — delegates to sub-repos
 
 ### Core (`core/.gitlab-ci.yml`) — Most Complex
+
 **MR Pipeline** (change-based):
+
 - `lint:format`, `lint:clippy`
 - `test:core` (coverage with llvm-cov)
 - `test:mobile` (coverage for UniFFI bindings)
 - `security:audit`, `security:licenses`
 
 **Release Pipeline** (tag `v*.*.*`):
+
 1. `release:verify` — confirm tag on main
 2. `build:ios` (macOS), `build:android` (Linux+NDK), `build:validate-bindings`
 3. `package:xcframework` (macOS), `package:android` (Linux)
@@ -102,30 +106,35 @@ Fallback keys prevent cold rebuilds on Cargo.lock changes.
 7. `trigger:ios` + `trigger:macos` + `trigger:android` — triggers consumer app repos directly
 
 ### Relay (`relay/.gitlab-ci.yml`)
+
 - Lint + test + security + Docker build
 - Container scanning on main/tags
 - `build:docker` pushes to CI_REGISTRY_IMAGE
 
 ### CLI, TUI (`cli/`, `tui/`)
+
 - Standard trio: `lint:format`, `lint:clippy`, `test:unit`, `security:audit`
 - Minimal pipelines
 
 ### Android (`android/.gitlab-ci.yml`)
+
 - Gradle-based: `lint`, `build:debug/release`, `test:unit`
 - `update:bindings-version` — triggered by upstream, creates MR to bump dependency
 
 ### iOS (`ios/.gitlab-ci.yml`)
+
 - Xcode + SPM: `lint:swiftlint`, `lint:swiftformat`, `lint:xcodegen`
 - `build:debug` (simulator), `test:unit`, `test:snapshots`
 - `update:bindings-version` — triggered by upstream, creates MR with auto-merge
 
 ### Distribution Repos
+
 **vauchi-platform-swift**: `validate:package` + `update:version` (triggered by core's `update:swift-bindings`)
 **vauchi-platform-kotlin**: **Archived** — Maven AAR now published directly from core
 
 ## Mobile Distribution Flow (2-hop)
 
-```
+```text
 core tag v*.*.* →
   build iOS/Android bindings →
     publish to GitLab packages →
@@ -165,7 +174,7 @@ See `_private/docs/reference/2026-02-25-branch-protection-config.md` for full de
 | `ios` | `ios`, `core`, `vauchi-platform-swift` |
 | `macos` | `macos`, `core` |
 | `android` | `android`, `core` |
-| `desktop` | `vauchi` (root), `core`, `desktop` | **ARCHIVED** (ADR-027) — allowlist kept for historical pipelines |
+| `desktop` (ARCHIVED) | `vauchi` (root), `core`, `desktop` — allowlist kept for historical pipelines |
 | `cli` | `vauchi` (root), `core`, `cli` |
 | `tui` | `vauchi` (root), `core`, `tui` |
 
@@ -227,7 +236,6 @@ just release-history  # Show promotion chain
 | core | yes | yes | `just release-dev` | N/A (is upstream) |
 | cli | yes | yes | `just release-dev cli` | yes |
 | tui | yes | yes | `just release-dev tui` | yes |
-| ~~desktop~~ | — | — | — | — | **ARCHIVED** (ADR-027) |
 | relay | yes | yes | `just release-dev relay` | N/A (no core dep) |
 
 ### Core Downstream Triggers
