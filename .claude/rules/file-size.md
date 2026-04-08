@@ -16,6 +16,7 @@ paths:
 ### Structural Exemptions (do NOT split)
 
 These file types are large by design — splitting would create worse problems:
+
 - **UniFFI facades** (`vauchi-platform/lib.rs`): splitting breaks binding generation
 - **Migration ledgers** (`storage/migration.rs`): version history must be co-located
 - **State machines** (`exchange/session.rs`): scattered transitions create protocol bugs
