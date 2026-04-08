@@ -24,10 +24,10 @@ cargo watch -x 'nextest run'   # re-run tests on file save
 - **Principles**: All work must align with [docs/about/principles.md](docs/docs/about/principles.md)
 - **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
-- **Test Quality & Design**: CC-03 through CC-20 in `.claude/rules/test-quality-rules.md`. Full reference: `.claude/docs/test-quality-rules.md`
-- **Session Hygiene**: See `.claude/rules/session-hygiene.md` — `session-init` at start, `session-end` before ending, always push before switching machines
+- **Test Quality & Design**: See `.claude/rules/test-quality-rules.md`. Full reference: `.claude/docs/test-quality-rules.md`
+- **Session Hygiene**: See `.claude/rules/session-hygiene.md`
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
-- **File Size**: See `.claude/rules/file-size.md` — src <1000, test <1200, functions <100 lines
+- **File Size**: See `.claude/rules/file-size.md`
 - **Public docs**: `docs/` is the public mkdocs site — never write plans or private content there
 
 ## Tool Usage (MANDATORY)

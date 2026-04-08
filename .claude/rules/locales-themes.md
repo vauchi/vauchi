@@ -2,7 +2,6 @@
 paths:
   - "locales/**"
   - "themes/**"
-apply: always
 ---
 
 ## Locales

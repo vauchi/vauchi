@@ -1,5 +1,8 @@
 ---
-apply: always
+paths:
+  - ".claude/.workcontext"
+  - "_private/docs/problems/**"
+  - "_private/docs/work-board.md"
 ---
 
 ## Work Context Tracking (MANDATORY)

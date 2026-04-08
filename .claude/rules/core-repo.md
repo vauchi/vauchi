@@ -1,7 +1,6 @@
 ---
 paths:
   - "core/**"
-apply: always
 ---
 
 ## Core Repo

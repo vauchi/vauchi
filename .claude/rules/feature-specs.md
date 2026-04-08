@@ -2,7 +2,6 @@
 paths:
   - "features/**"
   - "_private/features/**"
-apply: always
 ---
 
 ## Feature Specifications

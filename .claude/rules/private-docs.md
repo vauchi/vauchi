@@ -1,7 +1,6 @@
 ---
 paths:
   - "_private/docs/**"
-apply: always
 ---
 
 ## Internal Documentation

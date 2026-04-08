@@ -1,7 +1,6 @@
 ---
 paths:
   - "**/*.rs"
-apply: always
 ---
 ## File Size Convention
 
