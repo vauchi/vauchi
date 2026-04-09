@@ -1,0 +1,4 @@
+# Junie agent files have YAML frontmatter that must be first in file,
+# but REUSE/SPDX hook prepends license headers — causing false positives
+# for MD003 (heading style) and MD022 (blanks around headings).
+.junie/agents/
