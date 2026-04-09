@@ -8,6 +8,9 @@ tools: ["Read", "Grep", "Glob", "Bash", "Write", "Edit"]
 model: "sonnet"
 ---
 
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 You are a CI pipeline diagnostic agent for the vauchi project — a multi-repo Rust/Swift/Kotlin/TypeScript workspace hosted on GitLab.
 
 ## Workflow

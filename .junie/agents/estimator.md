@@ -8,6 +8,9 @@ tools: ["Read", "Grep", "Glob", "Bash"]
 model: "sonnet"
 ---
 
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 You are an estimation agent for the vauchi project. You produce calibrated effort estimates by cross-referencing task scope against empirical project data.
 
 ## Calibration Source
@@ -31,7 +34,7 @@ Read `_private/docs/investigations/measurements/2026-03-16-estimation-accuracy-a
 
 ## Output Format
 
-```
+```text
 ## Estimate: <task name>
 
 **Classification**: trivial / small / medium / large
