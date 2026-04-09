@@ -1,0 +1,8 @@
+{
+  "model": "opus",
+  "brave": false,
+  "agent-locations": ["./.junie/agents"],
+  "mcp-locations": ["./.junie/mcp"],
+  "mcp-default-locations": true,
+  "guidelines-location": "./.junie/AGENTS.md"
+}
