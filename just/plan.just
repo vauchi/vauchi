@@ -123,11 +123,16 @@ plan-list dir='_private/docs':
     remaining = count_remaining_tasks(text)
     done = total - remaining
     pct = int(100 * done / total) if total > 0 else 0
-    print(f'{done}/{total} done ({pct}%)')
+    marker = ""
+    if "planning/done/" in '$file' and pct < 75:
+        marker = " [ANOMALY: LOW COMPLETION]"
+    elif "planning/todo/" in '$file' and total > 0 and pct == 100:
+        marker = " [ANOMALY: SHOULD BE IN DONE]"
+    print(f'{done}/{total} done ({pct}%){marker}')
     PYEOF
         ) 2>/dev/null || echo "parse error"
         _pl_row "$relpath" "$stats"
-    done < <(find "{{dir}}" -name "*.plan.md" -print0 | sort -z)
+    done < <(find "{{dir}}" \( -name "*.plan.md" -o -name "plan.md" \) -print0 | sort -z)
 
 # Show remaining tasks from master plan
 [group('tools')]
