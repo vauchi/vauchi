@@ -88,6 +88,21 @@ deploy-check:
     echo "Fetch latest: just git fetch"
 
 # ═══════════════════════════════════════════════════════════════════
+# PROXY MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════
+
+# Upgrade kamal-proxy to latest version (brief downtime ~2-3s)
+[group('deploy')]
+[confirm('This will restart kamal-proxy with brief downtime. Continue?')]
+proxy-upgrade:
+    kamal proxy reboot -c _private/infra/config/deploy.combined.yml --confirmed
+
+# Show kamal-proxy routing table
+[group('deploy')]
+proxy-list:
+    ssh {{ssh_target}} "docker exec kamal-proxy kamal-proxy list"
+
+# ═══════════════════════════════════════════════════════════════════
 # KAMAL DEPLOYMENT (relay + landing)
 # ═══════════════════════════════════════════════════════════════════
 
