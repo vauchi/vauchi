@@ -758,6 +758,11 @@ fix repo='':
         esac
     done
 
+# Serve the website locally (http://localhost:3000)
+[group('extended')]
+run-website *args:
+    cd website && npx serve public {{args}}
+
 # Watch for changes and run tests (core only)
 [group('extended')]
 [working-directory('core')]
