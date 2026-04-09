@@ -76,6 +76,8 @@
 
 # IDE configs
 .cody/
+# AI memory and local session state
+.junie/
 .continue/
 .cursor/
 .kamal/
