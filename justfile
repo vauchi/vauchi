@@ -504,6 +504,9 @@ bump-core version:
     cd core
     sed -i.bak 's/^version = ".*"/version = "{{ version }}"/' Cargo.toml && rm Cargo.toml.bak
     cargo generate-lockfile 2>&1 | tail -3
+    echo "Regenerating cargo-vet exemptions..."
+    cargo vet regenerate exemptions 2>&1
+    cargo vet fmt 2>&1
     echo "Regenerating golden fixtures..."
     cargo nextest run -p vauchi-core -E 'test(regenerate)' -- --ignored 2>&1 | tail -3
     echo "Regenerating JSON schemas..."
