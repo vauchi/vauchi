@@ -759,6 +759,39 @@ audit repo='':
         (cd "$dir" && cargo deny check 2>&1) || true
     done
 
+# Regenerate cargo-vet exemptions (mirrors CI: remove path overrides, resolve git deps, vet)
+# Usage: just vet-fix [repo]   e.g. just vet-fix cli
+[group('extended')]
+[script]
+vet-fix repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    VET_REPOS="cli tui relay ohttp-relay core"
+    if [[ -n "{{repo}}" ]]; then
+        VET_REPOS="{{repo}}"
+    fi
+    for r in $VET_REPOS; do
+        dir=$(repo_dir "$r")
+        echo "═══ vet-fix: $r ═══"
+        config="$dir/.cargo/config.toml"
+        had_config=false
+        if [[ -f "$config" ]]; then
+            had_config=true
+            mv "$config" "$config.bak"
+        fi
+        (
+            cd "$dir"
+            cargo generate-lockfile 2>&1 | tail -3
+            cargo vet regenerate exemptions 2>&1
+            cargo vet fmt 2>&1
+            cargo vet 2>&1 && echo "✓ $r passed" || echo "✗ $r failed"
+        )
+        if $had_config; then
+            mv "$config.bak" "$config"
+        fi
+        echo ""
+    done
+
 # Auto-fix lint issues
 [group('extended')]
 [script]
