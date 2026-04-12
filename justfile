@@ -490,6 +490,28 @@ download-cabi:
     curl -sSfL -H "$HEADER" "$BASE_URL/vauchi.h" -o windows/cabi/vauchi.h 2>/dev/null || true
     echo "✓ DLL ready at windows/cabi/"
 
+# Bump core workspace version, regenerate Cargo.lock, fixtures, and schemas.
+# Usage: just bump-core <version>   e.g. just bump-core 0.19.9
+[group('core')]
+[script]
+bump-core version:
+    set -euo pipefail
+    if [ -z "{{ version }}" ]; then
+        echo "Usage: just bump-core <version>"
+        exit 1
+    fi
+    echo "Bumping core workspace to {{ version }}..."
+    cd core
+    sed -i.bak 's/^version = ".*"/version = "{{ version }}"/' Cargo.toml && rm Cargo.toml.bak
+    cargo generate-lockfile 2>&1 | tail -3
+    echo "Regenerating golden fixtures..."
+    cargo nextest run -p vauchi-core -E 'test(regenerate)' -- --ignored 2>&1 | tail -3
+    echo "Regenerating JSON schemas..."
+    cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored 2>&1 | tail -3
+    echo "Verifying .version file..."
+    grep -q "{{ version }}" vauchi-core/tests/fixtures/golden/.version || echo "WARN: .version not updated"
+    echo "✓ Core bumped to {{ version }}. Review changes and commit."
+
 # Create a dev tag for fast CI feedback (lint + test only)
 # Usage: just release-dev [repo] [version]
 [group('extended')]
