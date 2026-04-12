@@ -759,7 +759,9 @@ audit repo='':
         (cd "$dir" && cargo deny check 2>&1) || true
     done
 
-# Regenerate cargo-vet exemptions (mirrors CI: remove path overrides, resolve git deps, vet)
+# Regenerate cargo-vet exemptions to match each repo's CI strategy.
+# Repos with custom CI scripts (cli, tui, relay): regenerate lockfile without path overrides.
+# Repos using the shared template (core, ohttp-relay): vet against committed lockfile (--locked).
 # Usage: just vet-fix [repo]   e.g. just vet-fix cli
 [group('extended')]
 [script]
@@ -767,6 +769,8 @@ vet-fix repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     VET_REPOS="cli tui relay ohttp-relay core"
+    # Repos whose CI uses `cargo vet --locked` (shared template, no lockfile regeneration)
+    LOCKED_REPOS="core ohttp-relay"
     if [[ -n "{{repo}}" ]]; then
         VET_REPOS="{{repo}}"
     fi
@@ -779,12 +783,23 @@ vet-fix repo='':
             had_config=true
             mv "$config" "$config.bak"
         fi
+        is_locked=false
+        for lr in $LOCKED_REPOS; do [[ "$r" == "$lr" ]] && is_locked=true; done
         (
             cd "$dir"
-            cargo generate-lockfile 2>&1 | tail -3
-            cargo vet regenerate exemptions 2>&1
-            cargo vet fmt 2>&1
-            cargo vet 2>&1 && echo "✓ $r passed" || echo "✗ $r failed"
+            if $is_locked; then
+                echo "  (--locked mode: vetting committed lockfile)"
+                cargo generate-lockfile 2>&1 | tail -3
+                cargo vet regenerate exemptions 2>&1
+                cargo vet fmt 2>&1
+                cargo vet --locked 2>&1 && echo "✓ $r passed" || echo "✗ $r failed"
+            else
+                echo "  (regenerate mode: fresh lockfile without path overrides)"
+                cargo generate-lockfile 2>&1 | tail -3
+                cargo vet regenerate exemptions 2>&1
+                cargo vet fmt 2>&1
+                cargo vet 2>&1 && echo "✓ $r passed" || echo "✗ $r failed"
+            fi
         )
         if $had_config; then
             mv "$config.bak" "$config"
