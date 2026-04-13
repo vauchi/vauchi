@@ -1,6 +1,6 @@
 ## ADR Constraints (MANDATORY)
 
-Extracted from ADR-001 through ADR-038. These are hard rules — not guidelines.
+Extracted from ADR-001 through ADR-042. These are hard rules — not guidelines.
 Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify compliance.
 
 ### Crypto (ADR-002, ADR-019)
@@ -53,6 +53,12 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 
 - **Desktop = 4 native repos** (`linux-gtk`, `macos`, `windows`, `linux-qt`) — not single `desktop/` Tauri repo (archived)
 - **Never reference** `desktop/`, `SolidJS`, `Tauri`, or ARIA in active plans — these are stale
+
+### Avatars (ADR-042)
+
+- **All avatars must be WebP format, ≤ 32 KB** — shared, custom, and own card. No exceptions.
+- **Core converts incoming avatars** — `set_avatar()` accepts any common format (PNG, JPEG, BMP, WebP), converts + resizes to WebP ≤ 32 KB internally
+- **Frontends pass raw image bytes** — no frontend-side conversion needed, core owns the pipeline
 
 ### Security (ADR-032, ADR-033, ADR-034, ADR-035, ADR-037)
 
