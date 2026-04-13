@@ -44,3 +44,5 @@ flate = "flate"
 # VRT API field name has upstream typo (diffTollerancePercent)
 Tollerance = "Tollerance"
 tollerance = "tollerance"
+# MIS is a tracker prefix (MIS-5, MIS-7, etc.)
+MIS = "MIS"
