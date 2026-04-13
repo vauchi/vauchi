@@ -76,13 +76,12 @@
 
 # IDE / AI agent configs
 .cody/
-# AI memory and local session state
-.junie/
 .continue/
 .cursor/
 .kamal/
 .idea/
 .ai/
+# AI memory and local session state
 .junie/
 AGENTS.md
 # .claude/ is tracked (skills, agents, shared settings)
