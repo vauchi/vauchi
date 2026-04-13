@@ -74,7 +74,7 @@
 # - CLAUDE.md (symlink)
 # - CONTRIBUTING.md (symlink)
 
-# IDE configs
+# IDE / AI agent configs
 .cody/
 # AI memory and local session state
 .junie/
@@ -83,6 +83,8 @@
 .kamal/
 .idea/
 .ai/
+.junie/
+AGENTS.md
 # .claude/ is tracked (skills, agents, shared settings)
 # .claude/settings.local.json is excluded via .claude/.gitignore
 
