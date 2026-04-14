@@ -670,6 +670,44 @@ dt-deploy-android:
     just _dt-install-android
     just dt-relaunch-android
 
+# Uninstall Vauchi from all connected devices (clean slate)
+[group('device-test')]
+[script]
+dt-clean-devices:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║     Clean Devices — Uninstall Vauchi          ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    # Android (all connected devices)
+    ANDROID_SERIALS=$(adb devices 2>/dev/null | grep -E "^\S+\s+device$" | awk '{print $1}')
+    if [[ -n "$ANDROID_SERIALS" ]]; then
+        while IFS= read -r SERIAL; do
+            echo -e "${BLUE}Uninstalling from Android ($SERIAL)...${NC}"
+            adb -s "$SERIAL" uninstall app.vauchi 2>/dev/null && \
+                echo -e "${GREEN}  Android app uninstalled${NC}" || \
+                echo -e "${YELLOW}  Android app not installed (skipped)${NC}"
+        done <<< "$ANDROID_SERIALS"
+    else
+        echo -e "${YELLOW}No Android device connected (skipped)${NC}"
+    fi
+
+    # iOS
+    if UDID=$(dt_detect_ios_device 2>/dev/null); then
+        echo -e "${BLUE}Uninstalling from iOS ($UDID)...${NC}"
+        pymobiledevice3 apps uninstall app.vauchi.ios 2>/dev/null && \
+            echo -e "${GREEN}  iOS app uninstalled${NC}" || \
+            echo -e "${YELLOW}  iOS app not installed (skipped)${NC}"
+    else
+        echo -e "${YELLOW}No iOS device connected (skipped)${NC}"
+    fi
+
+    echo ""
+    echo -e "${GREEN}Devices cleaned. Run 'just prepare-device-test' to install fresh.${NC}"
+
 # ─── iOS UI Automation (WebDriverAgent) ──────────────────────────
 
 # Start WebDriverAgent on connected iPhone (builds if needed)
