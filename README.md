@@ -23,7 +23,7 @@ Vauchi solves this:
 
 ## Core Principles
 
-1. **Privacy is a right, not an option** — E2E encryption, zero-knowledge relay, no tracking
+1. **Privacy is a right, not an option** — E2E encryption, oblivious privacy-preserving relay, no tracking
 2. **Trust is earned in person** — QR exchange with physical proximity, not platform-mediated
 3. **Quality through rigor** — Test-driven development, threat modeling, no shortcuts
 

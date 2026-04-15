@@ -113,7 +113,7 @@ For each applicable category, search the codebase for the patterns described. Us
 
 ### 6. Transport & Relay Security
 
-**Source**: Vauchi architecture, zero-knowledge relay principles
+**Source**: Vauchi architecture, oblivious privacy-preserving relay principles
 
 | ID | Check | How to Verify |
 |----|-------|---------------|

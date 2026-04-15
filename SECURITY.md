@@ -66,13 +66,13 @@ We will not take legal action against researchers who:
 
 - **Device is identity**: No accounts, no passwords
 - **In-person exchange**: Trust established via physical presence
-- **Zero-knowledge relay**: Server sees only encrypted blobs
+- **Oblivious relay**: Server sees only encrypted blobs, sender/recipient identity minimized
 - **Forward secrecy**: Compromised keys don't expose past messages
 
 ### Threat Model
 
 Key threats we defend against:
-- **Relay compromise**: Cannot decrypt messages (zero-knowledge design)
+- **Relay compromise**: Cannot decrypt messages (oblivious privacy-preserving design)
 - **Device theft**: Local data encrypted, keys in secure enclave
 - **MITM attacks**: X3DH provides authenticated key exchange
 - **Replay attacks**: Double Ratchet with message counters
