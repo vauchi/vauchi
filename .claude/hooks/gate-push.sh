@@ -130,9 +130,27 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
 
   echo "[gate-push] Checking formatting ($REPO_NAME)..."
   if ! cargo fmt --all -- --check 2>&1; then
-    echo "" >&2
-    echo "Push blocked: format check failed in $REPO_NAME. Run 'just fmt $REPO_NAME' to fix." >&2
-    exit 2
+    # On Windows, cargo fmt --all may fail with "filename too long" (os error 206).
+    # Fall back to per-package format checks.
+    PACKAGES=$(cargo metadata --no-deps --format-version=1 2>/dev/null \
+      | jq -r '.packages[].name' 2>/dev/null || true)
+    if [[ -n "$PACKAGES" ]]; then
+      FMT_FAIL=0
+      for pkg in $PACKAGES; do
+        if ! cargo fmt -p "$pkg" -- --check 2>/dev/null; then
+          FMT_FAIL=1
+        fi
+      done
+      if [[ $FMT_FAIL -ne 0 ]]; then
+        echo "" >&2
+        echo "Push blocked: format check failed in $REPO_NAME. Run 'just fmt $REPO_NAME' to fix." >&2
+        exit 2
+      fi
+    else
+      echo "" >&2
+      echo "Push blocked: format check failed in $REPO_NAME. Run 'just fmt $REPO_NAME' to fix." >&2
+      exit 2
+    fi
   fi
 
   echo "[gate-push] Running clippy ($REPO_NAME)..."
