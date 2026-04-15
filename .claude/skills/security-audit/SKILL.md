@@ -158,6 +158,7 @@ After running the checklist, produce a summary table:
 ```
 
 For each FAIL:
+
 - File path and line number
 - Description of the issue
 - Suggested fix
@@ -174,6 +175,7 @@ For each FAIL:
 ## Phase 4: Problem Records
 
 For P0 and P1 findings, create problem records in `_private/docs/problems/YYYY-MM-DD-<slug>/`:
+
 - Follow the problem record template (see existing records for structure)
 - Include containment assessment
 - Include test strategy (CC-14: adversarial test data for security boundaries)
@@ -182,11 +184,13 @@ For P0 and P1 findings, create problem records in `_private/docs/problems/YYYY-M
 ## Maintaining This Skill
 
 When new security research surfaces patterns not covered by this checklist:
+
 1. Add a new check ID under the appropriate category
 2. Note the source in the category header
 3. If it's a new category, add it with its own section
 
 Known sources to watch (from `_private/docs/2026-02-03-websites-to-monitor.md`):
+
 - Soatok / Dhole Moments — protocol analysis
 - Trail of Bits — audit methodology, constant-time
 - SimpleX Chat — closest architectural cousin

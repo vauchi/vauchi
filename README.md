@@ -10,11 +10,13 @@ Exchange contact info with people you meet in person. Update your details anytim
 ## Why Vauchi?
 
 Traditional contact sharing has problems:
+
 - **Business cards** go stale the moment your number changes
 - **Contact apps** require accounts and store your data on their servers
 - **QR codes** are static — you can't update them after sharing
 
 Vauchi solves this:
+
 - **Exchange in person** — scan a QR code when you meet someone
 - **Always current** — update your card, everyone sees the change
 - **End-to-end encrypted** — only your contacts can read your info
@@ -31,7 +33,7 @@ See [Principles](https://docs.vauchi.app/about/principles/) for the full philoso
 
 ## Architecture
 
-```
+```text
 ┌─────────────┐     ┌─────────────┐
 │   Phone A   │     │   Phone B   │
 │  (Alice)    │     │   (Bob)     │
@@ -101,6 +103,7 @@ just help     # Show all available commands
 ## Security
 
 Vauchi uses:
+
 - **X3DH** key agreement (Signal protocol)
 - **Double Ratchet** for forward secrecy
 - **XChaCha20-Poly1305** for symmetric encryption
@@ -127,6 +130,7 @@ For security issues, see [SECURITY.md](SECURITY.md).
 ## Contributing
 
 We welcome contributions. Please read:
+
 - [Contributing Guide](https://docs.vauchi.app/developers/contributing/) — Development workflow
 - [Principles](https://docs.vauchi.app/about/principles/) — Core principles (mandatory)
 
@@ -145,6 +149,7 @@ If you believe in privacy-respecting software:
 - **Liberapay**: [liberapay.com/Vauchi](https://liberapay.com/Vauchi/donate)
 
 Funds go toward:
+
 - Development hardware and testing devices
 - Infrastructure costs (relay server)
 - Security audits

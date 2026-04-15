@@ -14,6 +14,7 @@ If you discover a security vulnerability in Vauchi, please report it responsibly
 Email: security@vauchi.app
 
 Include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -28,6 +29,7 @@ Include:
 ### Safe Harbor
 
 We will not take legal action against researchers who:
+
 - Report vulnerabilities in good faith
 - Avoid privacy violations, data destruction, or service disruption
 - Give us reasonable time to fix issues before public disclosure
@@ -72,6 +74,7 @@ We will not take legal action against researchers who:
 ### Threat Model
 
 Key threats we defend against:
+
 - **Relay compromise**: Cannot decrypt messages (oblivious privacy-preserving design)
 - **Device theft**: Local data encrypted, keys in secure enclave
 - **MITM attacks**: X3DH provides authenticated key exchange
