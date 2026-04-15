@@ -50,14 +50,29 @@ run platform="" *args:
         relay)
             cd relay && cargo run -- {{args}}
             ;;
+        windows)
+            # Build vauchi-cabi if the DLL is missing
+            CABI_DLL="windows/cabi/vauchi_cabi.dll"
+            if [ ! -f "$CABI_DLL" ]; then
+                echo "Building vauchi-cabi..."
+                cd core && cargo build --release -p vauchi-cabi && cd ..
+                mkdir -p windows/cabi
+                cp core/target/release/vauchi_cabi.dll "$CABI_DLL"
+            fi
+            # Build and run
+            cd windows
+            dotnet build Vauchi.sln -c Release -v quiet
+            ./Vauchi/bin/x64/Release/net8.0-windows10.0.22621.0/win-x64/Vauchi.exe {{args}}
+            ;;
         *)
-            echo "Usage: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]"
+            echo "Usage: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay|windows]"
             echo ""
             echo "Platforms:"
             echo "  cli         Run CLI (pass args after platform)"
             echo "  tui         Run TUI terminal interface"
             echo "  linux-gtk   Run Linux GTK4 app"
             echo "  linux-qt    Run Linux Qt6 app (builds vauchi-cabi if needed)"
+            echo "  windows     Run Windows WinUI 3 app (builds vauchi-cabi if needed)"
             echo "  android     Build and install on Android emulator"
             echo "  ios         Build and install on iOS simulator"
             echo "  relay       Start relay server"
@@ -67,6 +82,7 @@ run platform="" *args:
             echo "  just run tui"
             echo "  just run linux-gtk"
             echo "  just run linux-qt"
+            echo "  just run windows"
             echo "  just run relay --port 8080"
             exit 1
             ;;
