@@ -13,11 +13,13 @@ TDD applies to ALL repos and ALL languages — Rust, Swift, Kotlin, C++, C#, Pyt
 ## Checks to Run
 
 ### CC-01: Test Is the Specification
+
 - Verify `test:` commits appear before corresponding `feat:`/`fix:` commits in git log
 - Flag any production code committed without a preceding test commit
 - This applies regardless of language — Swift views, Kotlin composables, and TS components need tests first too
 
 ### CC-03: Assertions Must Be Specific
+
 Scan test files for forbidden patterns (language-aware):
 
 **Rust** (`*.rs`): `assert!(result.is_ok())` without value check, `assert!(output.contains(...))`, `assert!(collection.len() > 0)`, `if let Ok(x) = result { assert!(...) }`
@@ -31,7 +33,9 @@ Scan test files for forbidden patterns (language-aware):
 Flag: zero-assertion test functions in any language.
 
 ### CC-07: Behavior-Describing Test Names
+
 Verify test names follow language conventions:
+
 - Rust/Python: `test_<subject>_<scenario>_<expected_outcome>`
 - Swift: `test<Subject><Scenario><ExpectedOutcome>()`
 - Kotlin: backtick-enclosed descriptive names
@@ -42,10 +46,13 @@ Verify test names follow language conventions:
 Flag generic names like `test_it_works`, `test_basic`, `test_1`, `testExample`, `testSuccess`.
 
 ### CC-11: Test Failure Paths
+
 - For each function with tests, check at least one failure-path test exists
 
 ### CC-17: Every Test Has Assertions
+
 Scan test functions for language-appropriate assertions:
+
 - Rust: `assert*!`, `prop_assert*!`, `.expect()`, `#[should_panic]`
 - Swift: `XCTAssert*`, `XCTFail`, `#expect`
 - Kotlin: `assert*()`, `assertThrows`
@@ -57,6 +64,7 @@ Scan test functions for language-appropriate assertions:
 ## Output Format
 
 Report as a checklist:
+
 - [PASS] or [FAIL] for each rule checked
 - For failures: file:line, what's wrong, how to fix
 - Summary: X/Y rules passing
