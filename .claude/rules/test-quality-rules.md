@@ -8,10 +8,10 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
 
 ### Critical (project-specific)
 
-- **CC-03 Specific Assertions**: Assert exact values. Forbidden: `assert!(result.is_ok())` without value check, `if let Ok(x)` (silently skips Err), zero-assertion tests, tautological asserts. Assert both positive and negative cases in security code.
-- **CC-04 Property-Based Tests**: `proptest` for crypto, serialization roundtrips, parsers, non-trivial input spaces.
+- **CC-03 Specific Assertions**: Assert exact values in every language. Forbidden: success-only checks without value verification (e.g., `assert!(result.is_ok())`, `XCTAssertNotNil(x)` alone, `assertTrue(result)` alone), silently-passing error paths (e.g., `if let Ok(x)`), zero-assertion tests, tautological asserts. Assert both positive and negative cases in security code.
+- **CC-04 Property-Based Tests**: Use property-based testing for crypto, serialization roundtrips, parsers, non-trivial input spaces. Tools: Rust=`proptest`, TS=`fast-check`, Kotlin=`kotest-property`.
 - **CC-05 Cross-Boundary Contracts**: When modifying core API / vauchi-protocol / UniFFI exports, run `just consumers <pattern>` to list all consumers and document contract impact.
-- **CC-06 No Real-Time Waits**: Never `sleep()` in tests. Use mockable time or event sync.
+- **CC-06 No Real-Time Waits**: Never `sleep()` or equivalent in tests. Use mockable time or event sync.
 - **CC-13 Stateful Property Tests**: For state machines (identity, contacts, exchange, sync, backup), verify invariants across random operation sequences.
 - **CC-14 Adversarial Test Data**: Security boundaries need parameterized tests with adversarial payloads (empty, max-length, unicode, null bytes, injection, tampered signatures).
 
@@ -22,7 +22,7 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
 - **CC-10**: Never bulk-update snapshots. Review each with `cargo insta review`. Separate commit.
 - **CC-11**: Test at least one failure path per function.
 - **CC-15**: Run `just check [repo]` before every push.
-- **CC-17**: Every `#[test]` must contain `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`.
+- **CC-17**: Every test function must contain assertions appropriate to its language (see full reference in `.claude/docs/test-quality-rules.md`).
 - **CC-18**: Never retry a failed pipeline without fixing the root cause.
 - **CC-19**: Tidy before RED (see `tdd-and-code-rules.md` §Tidy First).
 - **CC-20 No Tautological Accessibility Tests**: Accessibility tests must query the live view hierarchy (XCUITest, Espresso, AT-SPI). Forbidden: asserting compile-time constants (`Identifiers.X.count > 0`), asserting minimum clickable node counts (`>= 1 clickable`), any assertion that cannot fail. A11y tests must verify that labeled elements exist in the rendered UI, not that string constants are non-empty.

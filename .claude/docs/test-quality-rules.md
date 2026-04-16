@@ -7,13 +7,27 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 
 - **CC-01 Test Is the Specification**: Never generate production code without a failing test first. Test commit (`test:`) before implementation commit (`feat:`/`fix:`/`refactor:`). Push back if asked to skip.
 - **CC-02 Small Atomic Commits**: One behavior per commit. If a feature requires N behaviors, that's N red-green cycles. Flag if a change would touch > 5 production files in one commit.
-- **CC-03 Assertions Must Be Specific**: Every test must verify a specific behavioral property.
-  - **Forbidden**: `assert!(result.is_ok())` without value check, `assert!(output.contains("generic"))`, `assert!(collection.len() > 0)`, tautological asserts on unsigned types, `if let Ok(x) = result { assert!(...) }` (silently skips Err), zero-assertion tests.
+- **CC-03 Assertions Must Be Specific**: Every test must verify a specific behavioral property, in every language.
+  - **Forbidden (all languages)**: Success-only checks without value verification, silently-passing error paths, zero-assertion tests, tautological asserts.
+  - **Forbidden examples by language**:
+    - Rust: `assert!(result.is_ok())` without value check, `if let Ok(x) = result { assert!(...) }` (silently skips Err)
+    - Swift: `XCTAssertNotNil(x)` alone without checking the value, `XCTAssertTrue(result)` without specificity
+    - Kotlin: `assertTrue(result.isSuccess)` alone, `assertNotNull(x)` without value check
+    - C#: `Assert.True(result.IsSuccess)` alone, `Assert.NotNull(x)` without value check
+    - C++: `ASSERT_TRUE(result)` alone, `ASSERT_NE(ptr, nullptr)` without value check
+    - Python: `assert result is not None` alone, `assert len(items) > 0` without checking content
+    - TypeScript: `expect(result).toBeTruthy()` alone, `expect(items.length).toBeGreaterThan(0)` without content check
   - **Required**: Assert the specific value, assert error conditions explicitly, assert both positive and negative cases in security code, assert specific absence (not just container size).
 - **CC-04 Property-Based Tests for Complex Functions**: Include `proptest` tests for crypto operations, serialization roundtrips, data transformations, parsers, and any function with non-trivial input spaces. Tools: Rust=`proptest`, TS=`fast-check`, Kotlin=`kotest-property`.
 - **CC-05 Cross-Boundary Contract Consideration**: When modifying core API, vauchi-protocol types, or UniFFI exports, run `just consumers <pattern>` to list all consumers and document contract impact.
 - **CC-06 No Real-Time Waits in Tests**: Never use `sleep()` or equivalent for synchronization. Use mockable time, polling with short timeouts, or explicit event synchronization. Exception: load tests simulating real-world timing.
-- **CC-07 Behavior-Describing Test Names**: Follow `test_<subject>_<scenario>_<expected_outcome>`. Name must accurately describe what is verified.
+- **CC-07 Behavior-Describing Test Names**: Names must accurately describe what is verified. Conventions by language:
+  - Rust/Python: `test_<subject>_<scenario>_<expected_outcome>`
+  - Swift: `test<Subject><Scenario><ExpectedOutcome>()` (camelCase)
+  - Kotlin: `` `subject scenario returns expected outcome`() `` (backtick-enclosed)
+  - C#: `<Subject>_<Scenario>_<ExpectedOutcome>()` (PascalCase segments)
+  - C++: `TEST(<Suite>, <Subject>_<Scenario>_<ExpectedOutcome>)`
+  - TypeScript: `it("should <expected outcome> when <scenario>")`
 - **CC-08 Plans Must Include Test Strategy**: Every implementation plan must address: unit tests, property-based tests, contract tests, affected existing tests, and mutation testing impact.
 - **CC-09 Counterexamples Become Regression Tests**: When a property-based test finds a counterexample, capture the exact input as a permanent `test_<fn>_regression_<description>` test.
 - **CC-10 Snapshot Updates Require Review**: Never bulk-update snapshots without reviewing each with `cargo insta review`. Flag if > 10 snapshots change from one code change. Snapshot updates go in a separate commit.
@@ -43,7 +57,14 @@ Derived from post-mortem analysis of pipeline history (2026-02-20).
 
 - **CC-15 Run Checks Before Pushing**: Before every `git push`, run `just check [repo]` and fix all failures. Never push code that hasn't passed local linting and formatting.
 - **CC-16 Cross-Repo Push Order**: Use `just git push-all` to push repos with commits ahead (runs checks automatically). When a feature spans multiple repos, only push the **upstream** repo first (e.g., `core/` before `cli/`, `android/`, `ios/`). Mark downstream MRs as **Draft** and note in the description that they depend on the upstream MR being merged and bindings published. Do not push consumer branches that call APIs not yet on `main`.
-- **CC-17 Verify Assertions in Every Test**: Before committing a test file, verify every `#[test]` function contains at least one `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`. Zero-assertion tests are rejected by CI.
+- **CC-17 Verify Assertions in Every Test**: Before committing a test file, verify every test function contains language-appropriate assertions. Zero-assertion tests are rejected by CI.
+  - Rust: `assert*!`, `prop_assert*!`, `.expect()`, or `#[should_panic]`
+  - Swift: `XCTAssert*`, `XCTFail`, or `#expect` (Swift Testing)
+  - Kotlin: `assert*()`, `assertThrows`, or Compose `assert*()` semantics
+  - C#: `Assert.*()` (xUnit)
+  - C++: `ASSERT_*`, `EXPECT_*` (Google Test)
+  - Python: `assert` statements or `pytest.raises`
+  - TypeScript: `expect()` chains (Vitest/Jest/Playwright)
 - **CC-18 Never Retry Without Fixing**: If a pipeline fails, read the job log and fix the root cause before re-running. Never retry the same commit expecting a different result.
 
 ## Testing Best Practices
@@ -65,7 +86,7 @@ Derived from post-mortem analysis of pipeline history (2026-02-20).
 ### Test Organization
 
 - **Mirror source structure**: Test file structure should mirror production code structure
-- **Naming convention**: `*_test.rs`, `test_*.py`, `*.test.ts`, `*.spec.ts` based on language
+- **Naming convention**: `*_test.rs`, `test_*.py`, `*.test.ts`, `*Tests.swift`, `*Test.kt`, `*Tests.cs`, `*.test.cpp` based on language
 - **Group related tests**: Use describe/context blocks or test modules to group related tests
 - **Fixtures and factories**: Use fixtures for test data setup, factories for complex objects
 
