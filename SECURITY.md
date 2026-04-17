@@ -83,9 +83,11 @@ Key threats we defend against:
 
 ## Security Audits
 
-- **Last audit**: 2026-01-22 (internal)
-- **cargo-audit**: 0 vulnerabilities
+- **Last formal review**: 2026-01-22 (internal)
+- **Continuous coverage**: cargo-audit, cargo-deny, cargo-vet enforced on every push
+- **Periodic multi-persona audit cycle**: latest 2026-04-17 (internal)
 - **External audit**: Planned (seeking funding)
+- **Supply chain status**: 0 known vulnerabilities (cargo-audit)
 
 ## Acknowledgments
 
