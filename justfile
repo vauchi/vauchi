@@ -960,6 +960,15 @@ lint-file-size repo='':
     done
     if [[ $FAILED -ne 0 ]]; then exit 1; fi
 
+# Forbid `allow_direct: true` overrides outside the documented allow-list
+# (ADR-037 privacy regression — see
+# `_private/docs/problems/2026-04-17-ohttp-allow-direct-fallback/`).
+[group('tools')]
+[script]
+check-no-allow-direct:
+    set -euo pipefail
+    scripts/scripts/check-no-allow-direct.sh core cli tui
+
 # Show file churn + size correlation (highest-risk files)
 [group('tools')]
 [script]
