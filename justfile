@@ -2254,6 +2254,16 @@ design-check *args:
 drift *args:
     set -euo pipefail
     cd drift-detector
+    # Self-heal: ensure dependencies and native modules match current Node ABI.
+    # Without this, a Node upgrade silently breaks `just drift` (audit finding F3,
+    # 2026-04-17): better-sqlite3's prebuilt .node file is ABI-versioned.
+    if [[ ! -d node_modules ]]; then
+        echo "Installing drift-detector dependencies..."
+        npm install --silent
+    elif ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+        echo "Rebuilding drift-detector native modules (Node ABI mismatch)..."
+        npm rebuild better-sqlite3 --silent
+    fi
     # Rebuild if dist/ missing or any source file is newer than dist/
     if [[ ! -d dist ]] || [[ -n "$(find src -newer dist/index.js -name '*.ts' 2>/dev/null | head -1)" ]]; then
         echo "Building drift-detector..."
@@ -2281,6 +2291,14 @@ drift *args:
 drift-ci *args:
     set -euo pipefail
     cd drift-detector
+    # Self-heal: see comment in `drift` recipe above.
+    if [[ ! -d node_modules ]]; then
+        echo "Installing drift-detector dependencies..."
+        npm install --silent
+    elif ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+        echo "Rebuilding drift-detector native modules (Node ABI mismatch)..."
+        npm rebuild better-sqlite3 --silent
+    fi
     # Rebuild if dist/ missing or any source file is newer than dist/
     if [[ ! -d dist ]] || [[ -n "$(find src -newer dist/index.js -name '*.ts' 2>/dev/null | head -1)" ]]; then
         echo "Building drift-detector..."
