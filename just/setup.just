@@ -442,12 +442,17 @@ session-end:
         TOTAL=$(wc -l < "$SESSION_LOG" | tr -d ' ')
         echo "  $TOTAL hook block(s) recorded:"
 
-        # Summarize by category
-        jq -r '.category' "$SESSION_LOG" 2>/dev/null | sort | uniq -c | sort -rn | while read -r count cat; do
-            echo "    $count × $cat"
-        done
+        # Summarize by category. `jq -R 'fromjson?'` skips malformed lines
+        # silently so one bad entry can't kill the whole pipeline under
+        # `set -euo pipefail` and leave the log uncleared next session.
+        # `|| true` on each sub-pipeline guards the same failure path.
+        (jq -rR 'fromjson? | .category' "$SESSION_LOG" 2>/dev/null \
+            | sort | uniq -c | sort -rn \
+            | while read -r count cat; do echo "    $count × $cat"; done) || true
 
-        # Append to durable ledger (one JSONL file, append-only)
+        # Append to durable ledger (one JSONL file, append-only).
+        # Malformed lines are appended verbatim — the ledger is for forensics,
+        # not programmatic reads.
         LEDGER="_private/docs/reference/error-ledger.jsonl"
         if [[ -d "_private/docs/reference" ]]; then
             cat "$SESSION_LOG" >> "$LEDGER"
@@ -458,9 +463,11 @@ session-end:
         if [[ -f "$LEDGER" ]]; then
             echo ""
             echo "── pattern detection (all sessions) ──"
-            PATTERNS=$(jq -r '.category' "$LEDGER" 2>/dev/null | sort | uniq -c | sort -rn | head -5)
+            PATTERNS=$(jq -rR 'fromjson? | .category' "$LEDGER" 2>/dev/null \
+                | sort | uniq -c | sort -rn | head -5 || true)
             echo "$PATTERNS" | while read -r count cat; do
-                if [[ "$count" -ge 3 ]]; then
+                if [[ -z "$count" || -z "$cat" ]]; then continue; fi
+                if [[ "$count" -ge 3 ]] 2>/dev/null; then
                     echo "  ⚠ $cat ($count occurrences) — consider a hook fix (3-strike rule)"
                 else
                     echo "    $cat ($count)"
@@ -468,7 +475,8 @@ session-end:
             done
         fi
 
-        # Clear session logs
+        # Clear session logs — must always run so a malformed line in one
+        # session doesn't lock the log forever.
         rm -f "$SESSION_LOG"
         rm -f ".claude/.session-reads"
         rm -f ".claude/.session-edits"

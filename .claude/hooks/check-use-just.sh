@@ -21,8 +21,14 @@ fi
 log_error() {
   local category="$1" reason="$2"
   local log="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-errors"
+  # Replace double quotes with single quotes in the captured command so the
+  # JSONL stays parseable (see log-bash-errors.sh for the same convention).
+  # Without this, any `"..."` inside COMMAND breaks `jq` at session-end,
+  # which then fails before the log-cleanup step runs.
   printf '{"ts":"%s","hook":"check-use-just","category":"%s","command":"%s","reason":"%s"}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$category" "$(echo "$COMMAND" | head -c 200)" "$reason" >> "$log" 2>/dev/null
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$category" \
+    "$(echo "$COMMAND" | head -c 200 | tr '"' "'")" \
+    "$reason" >> "$log" 2>/dev/null
 }
 
 # --- cargo build/test/fmt/clippy → just build/test/check ---
