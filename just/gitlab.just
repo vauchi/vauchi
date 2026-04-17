@@ -88,7 +88,11 @@ mr-create repo='' title='':
         coauthor=$(git log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
-    ARGS=(--yes --target-branch main --push -R "vauchi/$r")
+    # Derive the GitLab project path from the git remote so non-vauchi/
+    # namespaces (e.g. tooling repos like megloff1/drift-detector) work.
+    project=$(git remote get-url origin \
+        | sed -E 's#.*gitlab\.com[:/]([^.]+)\.git$#\1#')
+    ARGS=(--yes --target-branch main --push -R "$project")
     ARGS+=(--title "$mr_title")
     ARGS+=(--description "$mr_body")
     glab mr create "${ARGS[@]}"
