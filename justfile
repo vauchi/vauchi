@@ -1619,6 +1619,63 @@ grep pattern glob='':
     }
     for_each_repo _grep_repo
 
+# Fix Cargo.lock entries missing `source = "git+..."` after path-override
+# contamination. Scopes to one repo. Re-resolves vauchi-* deps cleanly by
+# moving .cargo/config.toml aside, resetting Cargo.lock from origin/main,
+# running cargo update, then restoring config.toml.
+#
+# Usage: just fix-lockfile-sources <repo>
+[group('tools')]
+[no-cd]
+[script]
+fix-lockfile-sources repo:
+    set -euo pipefail
+    dir="{{repo}}"
+    if [[ ! -f "$dir/Cargo.lock" ]]; then
+        echo "  Skipping $dir: no Cargo.lock"
+        exit 0
+    fi
+    if [[ ! -f "$dir/Cargo.toml" ]]; then
+        echo "  Skipping $dir: no Cargo.toml"
+        exit 0
+    fi
+    # Find git dependencies in Cargo.toml
+    deps=$(awk '
+        /^\[/ { in_dep = /^\[(dependencies|dev-dependencies|build-dependencies|workspace\.dependencies)\]/ }
+        in_dep && /^[a-zA-Z0-9_-]+ *=.*[^a-zA-Z_]git *=/ { print $1 }
+    ' "$dir/Cargo.toml" | sort -u)
+    if [[ -z "$deps" ]]; then
+        echo "  No git dependencies in $dir/Cargo.toml — nothing to fix"
+        exit 0
+    fi
+    echo "═══ fix-lockfile-sources: $dir ═══"
+    # Move path-override config aside (if present)
+    config="$dir/.cargo/config.toml"
+    moved=0
+    if [[ -f "$config" ]]; then
+        mv "$config" "$config.bak"
+        moved=1
+    fi
+    # Reset Cargo.lock to origin/main so we start from a known-good state
+    if git -C "$dir" show origin/main:Cargo.lock > /tmp/cargo-lock-main.$$ 2>/dev/null; then
+        cp /tmp/cargo-lock-main.$$ "$dir/Cargo.lock"
+        rm -f /tmp/cargo-lock-main.$$
+    fi
+    # Run cargo update per dep (ignore failures — some deps may already be correct)
+    update_args=""
+    for dep in $deps; do
+        update_args="$update_args -p $dep"
+    done
+    echo "  cargo update$update_args"
+    (cd "$dir" && cargo update $update_args 2>&1 | tail -10) || true
+    # Restore config.toml
+    if [[ $moved -eq 1 ]]; then
+        mv "$config.bak" "$config"
+    fi
+    echo ""
+    echo "  Verify: git -C $dir diff Cargo.lock"
+    echo "  Commit: git -C $dir add Cargo.lock && git -C $dir commit --amend --no-edit"
+
 # Verify Cargo.toml branch refs point to main
 # Usage: just check-refs
 [group('tools')]
