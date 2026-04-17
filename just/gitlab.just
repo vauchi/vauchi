@@ -32,7 +32,8 @@ mr-list repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr list -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr list -R "$p"
 
 # View merge request details
 [no-cd]
@@ -42,7 +43,8 @@ mr-view id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr view "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr view "{{id}}" -R "$p"
 
 # Create merge request from current branch
 # Usage: just gitlab mr-create [repo] [title]
@@ -55,6 +57,7 @@ mr-create repo='' title='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
     cd "$dir"
     branch=$(git branch --show-current)
@@ -88,11 +91,7 @@ mr-create repo='' title='':
         coauthor=$(git log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
-    # Derive the GitLab project path from the git remote so non-vauchi/
-    # namespaces (e.g. tooling repos like megloff1/drift-detector) work.
-    project=$(git remote get-url origin \
-        | sed -E 's#.*gitlab\.com[:/]([^.]+)\.git$#\1#')
-    ARGS=(--yes --target-branch main --push -R "$project")
+    ARGS=(--yes --target-branch main --push -R "$p")
     ARGS+=(--title "$mr_title")
     ARGS+=(--description "$mr_body")
     glab mr create "${ARGS[@]}"
@@ -105,7 +104,8 @@ mr-approve id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr approve "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr approve "{{id}}" -R "$p"
 
 # Merge a merge request
 [no-cd]
@@ -115,7 +115,8 @@ mr-merge id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr merge "{{id}}" --yes -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr merge "{{id}}" --yes -R "$p"
 
 # Close a merge request
 [no-cd]
@@ -125,7 +126,8 @@ mr-close id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab mr close "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr close "{{id}}" -R "$p"
 
 # Create or update MRs for all repos on the same feature branch
 # Idempotent: creates MR if none exists, rebases + force-pushes if one does.
@@ -350,9 +352,10 @@ pipeline-status repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
     branch=$(cd "$dir" && git branch --show-current)
-    glab ci status --branch "$branch" -R "vauchi/$r"
+    glab ci status --branch "$branch" -R "$p"
 
 # List recent pipelines
 [no-cd]
@@ -362,7 +365,8 @@ pipeline-list repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci list -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab ci list -R "$p"
 
 # List jobs in a pipeline
 [no-cd]
@@ -372,7 +376,8 @@ pipeline-jobs id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci list -R "vauchi/$r" --pipeline "{{id}}"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab ci list -R "$p" --pipeline "{{id}}"
 
 # View job log output
 [no-cd]
@@ -382,7 +387,8 @@ pipeline-log job_id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci trace "{{job_id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab ci trace "{{job_id}}" -R "$p"
 
 # Retry a failed pipeline
 [no-cd]
@@ -392,7 +398,8 @@ pipeline-retry id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci retry "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab ci retry "{{id}}" -R "$p"
 
 # Cancel a running pipeline
 [no-cd]
@@ -402,7 +409,8 @@ pipeline-cancel id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab ci cancel "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab ci cancel "{{id}}" -R "$p"
 
 # ── Issue Operations ───────────────────────────────────────────────
 
@@ -414,7 +422,8 @@ issue-list repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab issue list -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab issue list -R "$p"
 
 # View issue details
 [no-cd]
@@ -424,7 +433,8 @@ issue-view id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab issue view "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab issue view "{{id}}" -R "$p"
 
 # Create an issue
 [no-cd]
@@ -434,7 +444,8 @@ issue-create title repo='' *args='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab issue create --title "{{title}}" --no-editor --yes -R "vauchi/$r" {{args}}
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab issue create --title "{{title}}" --no-editor --yes -R "$p" {{args}}
 
 # Close an issue
 [no-cd]
@@ -444,7 +455,8 @@ issue-close id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
-    glab issue close "{{id}}" -R "vauchi/$r"
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab issue close "{{id}}" -R "$p"
 
 # ── Status & Wait ─────────────────────────────────────────────────
 
@@ -456,6 +468,7 @@ mr-status repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
     branch=$(cd "$dir" && git branch --show-current)
     if [[ "$branch" == "main" ]]; then
@@ -463,16 +476,16 @@ mr-status repo='':
         exit 0
     fi
     # Find MR for this branch
-    mr_json=$(glab mr list -R "vauchi/$r" --source-branch "$branch" --json iid,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
+    mr_json=$(glab mr list -R "$p" --source-branch "$branch" --json iid,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
     count=$(echo "$mr_json" | jq 'length')
     if [[ "$count" == "0" ]]; then
-        echo "No MR found for branch '$branch' in vauchi/$r"
+        echo "No MR found for branch '$branch' in $p"
         exit 0
     fi
     echo "$mr_json" | jq -r '.[] | "MR !\(.iid): \(.title)\n  State: \(.state)\n  URL:   \(.webUrl)\n"'
     # Show pipeline status
     echo "Pipeline:"
-    glab ci status --branch "$branch" -R "vauchi/$r" 2>/dev/null || echo "  No pipeline found"
+    glab ci status --branch "$branch" -R "$p" 2>/dev/null || echo "  No pipeline found"
 
 # Wait for pipeline to complete on current branch
 # Usage: just gitlab pipeline-wait [repo]
@@ -484,14 +497,15 @@ pipeline-wait repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
     branch=$(cd "$dir" && git branch --show-current)
-    echo "Waiting for pipeline on $branch in vauchi/$r..."
+    echo "Waiting for pipeline on $branch in $p..."
     echo "(polling every 30s, Ctrl+C to stop)"
     echo ""
     while true; do
         # Get pipeline status via glab ci status
-        output=$(glab ci status --branch "$branch" -R "vauchi/$r" 2>&1 || true)
+        output=$(glab ci status --branch "$branch" -R "$p" 2>&1 || true)
         # Check for terminal states
         if echo "$output" | grep -qiE "passed|success"; then
             echo "$output"
