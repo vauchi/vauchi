@@ -81,10 +81,12 @@ runners-health:
         fi
 
         # Parse ISO8601 to epoch (portable: works on macOS and Linux)
+        # GitLab returns UTC timestamps (trailing Z) — must parse in UTC
         CLEAN=${CONTACTED%%.*}  # strip fractional seconds
-        CLEAN=${CLEAN%%+*}      # strip timezone offset
-        CONTACT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$CLEAN" +%s 2>/dev/null \
-            || date -d "$CONTACTED" +%s 2>/dev/null \
+        CLEAN=${CLEAN%%Z}       # strip Z suffix
+        CLEAN=${CLEAN%%+*}      # strip timezone offset if present
+        CONTACT_EPOCH=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%S" "$CLEAN" +%s 2>/dev/null \
+            || date -ud "$CONTACTED" +%s 2>/dev/null \
             || echo "0")
 
         AGE=$((NOW - CONTACT_EPOCH))
