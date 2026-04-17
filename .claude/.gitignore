@@ -14,5 +14,9 @@ settings.local.json
 .session-edits
 .session-heads
 
+# Scheduled-task coordination lock (runtime artifact of ScheduleWakeup,
+# managed by Claude Code itself — must not be committed)
+scheduled_tasks.lock
+
 # Agent-specific memory/cache (machine-local)
 agent-memory/
