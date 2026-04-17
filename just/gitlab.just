@@ -585,6 +585,55 @@ metrics-status:
     echo ""
     echo "Dashboard: https://grafana.vauchi.app/d/vauchi-engineering-metrics/engineering-metrics"
 
+# ── Resource Group Operations ─────────────────────────────────────
+
+# Reset a stuck resource group lock (GitLab bug: cancelled pipelines
+# can fail to release resource_group locks, leaving jobs stuck in
+# waiting_for_resource). Cancels stuck jobs to release the lock.
+# Fallback: rename the group suffix in .gitlab-ci.yml (e.g. v2 → v3).
+#
+# Usage: just gitlab resource-group-reset ios ios-spm-v2
+[no-cd]
+[script]
+resource-group-reset repo key:
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    encoded=$(echo "vauchi/$r" | sed 's|/|%2F|g')
+
+    echo "── Resource group '{{key}}' in vauchi/$r ──"
+    echo ""
+
+    # List upcoming (stuck) jobs
+    JOBS=$(glab api "projects/${encoded}/resource_groups/{{key}}/upcoming_jobs" 2>/dev/null || echo "[]")
+    COUNT=$(echo "$JOBS" | jq 'length')
+    echo "Queued/stuck jobs: $COUNT"
+
+    if [[ "$COUNT" == "0" ]]; then
+        echo "  No stuck jobs — lock is clean."
+        exit 0
+    fi
+
+    echo "$JOBS" | jq -r '.[] | "  \(.id): \(.name) [\(.status)]"'
+    echo ""
+
+    # Cancel each stuck job to release the lock
+    echo "$JOBS" | jq -r '.[].id' | while read -r job_id; do
+        printf "  Cancelling job %s..." "$job_id"
+        if glab api --method POST "projects/${encoded}/jobs/${job_id}/cancel" >/dev/null 2>&1; then
+            echo " done"
+        else
+            echo " (already finished or cannot cancel)"
+        fi
+    done
+
+    echo ""
+    echo "✓ Reset complete — new pipelines should get a fresh lock."
+    echo ""
+    echo "If jobs are still stuck, rename the resource_group in .gitlab-ci.yml:"
+    echo "  resource_group: {{key}} → {{key}}-v2"
+
 # ── Package Registry ──────────────────────────────────────────────
 
 # Show latest published binding versions across all distribution channels
