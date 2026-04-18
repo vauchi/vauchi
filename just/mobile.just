@@ -59,6 +59,51 @@ bindings-local: bindings
 bindings-remote:
     ./scripts/wire-bindings-remote.sh
 
+# Build and install iOS app on a connected device using local bindings
+# Uses the build keychain for code signing (avoids login keychain prompts)
+[group('mobile')]
+[script]
+build-ios-device mode="debug":
+    set -e
+    # Unlock the build keychain for code signing
+    security unlock-keychain -p "build" ~/Library/Keychains/build.keychain-db
+    security set-keychain-settings -t 300 ~/Library/Keychains/build.keychain-db
+
+    # Detect build source: workspace (local bindings) or project (remote)
+    if [ -d "ios/Vauchi.xcworkspace" ]; then
+        SRC="-workspace Vauchi.xcworkspace"
+        echo "── iOS: Building from workspace (local bindings) ──"
+    else
+        SRC="-project Vauchi.xcodeproj"
+        echo "── iOS: Building from project (remote bindings) ──"
+    fi
+
+    MODE="{{ capitalize(mode) }}"
+    cd ios
+    xcodebuild $SRC -scheme Vauchi \
+      -destination 'generic/platform=iOS' \
+      -configuration "$MODE" \
+      -derivedDataPath build \
+      build
+
+    echo ""
+    echo "── iOS: Installing on device ──"
+    APP_PATH="build/Build/Products/${MODE}-iphoneos/Vauchi.app"
+    if [ ! -d "$APP_PATH" ]; then
+        echo "ERROR: $APP_PATH not found"
+        exit 1
+    fi
+    DEVICE_LIST=$(xcrun devicectl list devices 2>&1 || true)
+    DEVICE_ID=$(echo "$DEVICE_LIST" | grep 'available' | head -1 | sed -n 's/.*\([0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}\).*/\1/p')
+    if [ -z "$DEVICE_ID" ]; then
+        echo "ERROR: No connected iOS device found"
+        echo "$DEVICE_LIST"
+        exit 1
+    fi
+    echo "  Device: $DEVICE_ID"
+    xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH"
+    echo "── iOS: Installed ──"
+
 # ═══════════════════════════════════════════════════════════════════
 # MOBILE CHECKS (pre-MR validation)
 # ═══════════════════════════════════════════════════════════════════
