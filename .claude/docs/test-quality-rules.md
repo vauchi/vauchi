@@ -102,3 +102,76 @@ Derived from post-mortem analysis of pipeline history (2026-02-20).
 - **DRY in tests (carefully)**: Extract common setup, but keep tests readable
 - **Delete obsolete tests**: Remove tests for deleted features
 - **Flaky test policy**: Fix or quarantine flaky tests immediately
+
+## Frontend Correctness Strategy — Four Layers
+
+Source: `_private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md`.
+Catches bugs that unit/integration/snapshot tests miss at the
+`core ↔ binding ↔ frontend ↔ device` seam. Each layer catches a
+bug class the layer above cannot see.
+
+### Layer 1 — ScreenModel reachability (`just reachability`)
+
+**Catches**: orphan handler arms (declared but no affordance
+emits them) and orphan affordances (ScreenActions nothing
+consumes). Single-file smoking gun: an onboarding handler arm
+the UI cannot reach yet the app ships, leaving a silently-dead
+code path users can never hit.
+
+**When it fires**: `cargo nextest run -p vauchi-app
+--features vauchi-app/test-support --test reachability`. Required
+by `just check core` and the CI `test:reachability` job.
+
+**When you must update it (rule CC-22)**: any MR adding a new
+`WorkflowEngine` impl or a new `UserAction` / `ScreenAction` id
+ships or updates a `core/vauchi-app/tests/reachability/<engine>.rs`
+declaring the engine's handler `action_id` set. `walk_actions`
+emits one `UserAction` per affordance; the harness diffs the
+walker set against the declared set.
+
+### Layer 2 — UniFFI ABI parity (`just check-binding-abi`)
+
+**Catches**: stale bindings or stale artifact — symbols the
+Kotlin/Swift bindings reference but the packaged `.so` / `.a`
+does not export (or vice versa). Shifts the failure from
+`UnsatisfiedLinkError` on first-touch device call to an
+exit-1 before the artifact leaves the build host. Triggered by
+the 2026-04-20 Android startup crash.
+
+**When it fires**: `scripts/check-binding-abi.sh
+--platform {android|ios|macos} --artifact <path> --bindings <path>`.
+Invoked automatically inside `_dt-package-android` /
+`_dt-package-ios`; top-level `just check-binding-abi {android|ios}`
+for ad-hoc debugging.
+
+### Layer 3 — Device-level E2E per critical flow (Maestro)
+
+**Catches**: rendering divergence across frontends, missing
+affordances, platform-specific input focus bugs, navigation
+regressions — things the Humble-UI invariant says can't
+happen but historically do, per-platform.
+
+**Status**: Phase 3 in the plan; not yet fully gated on
+MRs. The repo already ships ~20 Maestro flows under
+`e2e/maestro/{ios,android}/`; Phase 3 extends five of them
+with post-state assertions and adds an `add_custom_group`
+flow.
+
+### Layer 4 — Two-device protocol harness
+
+**Catches**: protocol invariants that require two participants
+— unilateral exchange completion, sync convergence, device-link
+pairing, duress-alert propagation. The invariant the
+`2026-03-31-unilateral-exchange-race` record calls out.
+
+**Status**: Phase 4 in the plan. Highest CI cost; starts
+hand-run, promotes to nightly.
+
+---
+
+Each layer has its own regression test to prove it catches its
+bug class. Layer 1's proof is the `ToyEngine` meta-tests in
+`core/vauchi-app/src/ui/testing/reachability.rs`. Layer 2's
+proof: running it against the current iOS artifact pair
+exposes two real orphan symbols (`diagnostic_scan_qr`) — a
+naturally-occurring deliberately-stale case.
