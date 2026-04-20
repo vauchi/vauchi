@@ -17,7 +17,8 @@
 - Run `just session-end` — all work must be committed + pushed, or `just git wip`-saved
 - **Review staleness warnings** from session-end output
 - **Update documentation** before declaring done:
-  - Work board (`_private/docs/work-board.md`): release claims, move done items to `## Done`, incomplete items back to a `Next` section. Commit.
+  - Work board (`_private/docs/work-board.md`): release claims, move done
+    items to `## Done`, incomplete items back to a `Next` section. Commit.
   - Problem records (`_private/docs/problems/`): update status, last_updated, notes
   - Plans (`_private/docs/planning/todo/`): tick completed items, update percentages
   - Work context: clear or update `.claude/.workcontext`

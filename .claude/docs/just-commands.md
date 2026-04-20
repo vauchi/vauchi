@@ -3,8 +3,9 @@
 
 ## Tool Usage: Always Use Just Recipes (MANDATORY)
 
-**Run all commands from the workspace root** (the `vauchi` directory containing the justfile).
-Just recipes handle correct working directories, toolchain detection, and multi-repo orchestration.
+**Run all commands from the workspace root** (the `vauchi` directory
+containing the justfile). Just recipes handle correct working directories,
+toolchain detection, and multi-repo orchestration.
 
 ### Build, Test, Lint
 
@@ -33,7 +34,8 @@ Reduces tokens, avoids permission prompts, searches all repos at once.
 | `grep -P` (Perl regex) | `just grep <pattern>` (uses ripgrep, supports full regex) |
 | Multiple Grep calls | Single `just grep <pattern>` (searches all repos at once) |
 
-**When to use built-in Grep/Glob instead:** Only for a single known file or very narrow path. For cross-repo or broad searches, always use just recipes.
+**When to use built-in Grep/Glob instead:** Only for a single known file or
+very narrow path. For cross-repo or broad searches, always use just recipes.
 
 ### GitLab & Git
 
@@ -54,7 +56,8 @@ Reduces tokens, avoids permission prompts, searches all repos at once.
 
 ### Repo argument rules
 
-- **Omit** → auto-detect from pwd (inside sub-repo) or run all (from workspace root)
+- **Omit** → auto-detect from pwd (inside sub-repo) or run all (from
+  workspace root)
 - **Explicit name** → `just test core`, `just lint relay`, `just check ios`
 - **`all`** → `just test all` runs across all applicable repos
 

@@ -2,10 +2,19 @@
 
 ## TDD, Code Structure & Crypto (MANDATORY)
 
-- **TDD applies to ALL repos** — Rust, Swift, Kotlin, C++, C#, Python, TypeScript. The discipline is language-agnostic:
-  - Tidy→Commit→Red→Green→Commit→Refactor→Commit. Test FIRST. Tests trace to `features/*.feature`
-  - **Tidy First** (optional): small structural-only improvement before starting a cycle — guard clauses, extract helper, rename, delete dead code. Own `tidy:` commit. No behavior change.
-  - **Tidy Phase for large changes**: Before significant refactors, extractions, or architectural changes, plan a dedicated Phase 0 of `tidy:` commits that create clean seams — move types to shared locations, break circular deps, merge small modules, tighten visibility. Make the change easy, then make the easy change. Each tidy step is independently verifiable (`just check`).
+- **TDD applies to ALL repos** — Rust, Swift, Kotlin, C++, C#, Python,
+  TypeScript. The discipline is language-agnostic:
+  - Tidy→Commit→Red→Green→Commit→Refactor→Commit. Test FIRST. Tests trace
+    to `features/*.feature`
+  - **Tidy First** (optional): small structural-only improvement before
+    starting a cycle — guard clauses, extract helper, rename, delete dead
+    code. Own `tidy:` commit. No behavior change.
+  - **Tidy Phase for large changes**: Before significant refactors,
+    extractions, or architectural changes, plan a dedicated Phase 0 of
+    `tidy:` commits that create clean seams — move types to shared
+    locations, break circular deps, merge small modules, tighten
+    visibility. Make the change easy, then make the easy change. Each
+    tidy step is independently verifiable (`just check`).
   - Commit immediately when tests go green
   - Commit after each refactor if tests still green
 - **Structure**: Keep production code and test code separate. Never mix.
@@ -25,5 +34,6 @@
 | Python | linux-gtk, linux-qt | pytest, AT-SPI | — (no per-repo doc yet) |
 | TypeScript | web-demo, drift-detector | Vitest, Playwright | `.claude/docs/small-repos-rules.md` |
 
-When working in a frontend repo, read the matching per-repo doc for framework-specific conventions.
+When working in a frontend repo, read the matching per-repo doc for
+framework-specific conventions.
 Repos without a per-repo doc follow the general rules in `.claude/docs/test-quality-rules.md`.

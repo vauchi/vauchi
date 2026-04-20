@@ -1,6 +1,8 @@
 ---
 name: platform-bindings
-description: UniFFI binding generation, packaging, CI-driven distribution to iOS (SPM) and Android (Maven), and consumer integration. Use when modifying platform bindings or debugging platform build issues.
+description: UniFFI binding generation, packaging, CI-driven distribution
+  to iOS (SPM) and Android (Maven), and consumer integration. Use when
+  modifying platform bindings or debugging platform build issues.
 model: haiku
 ---
 
@@ -11,7 +13,7 @@ model: haiku
 
 ## Overview
 
-```
+```text
 core/vauchi-platform (UniFFI crate)
     ↓ CI builds on tag v*.*.*
     ├── iOS: XCFramework + Swift bindings
@@ -27,7 +29,8 @@ core/vauchi-platform (UniFFI crate)
             android/ (consumer app, auto-MR)
 ```
 
-**Distribution repos are NOT manually edited.** CI generates and pushes everything.
+**Distribution repos are NOT manually edited.** CI generates and pushes
+everything.
 
 ## vauchi-platform Crate
 
@@ -47,7 +50,7 @@ path = "uniffi-bindgen.rs"  # Calls uniffi::uniffi_bindgen_main()
 
 ### Source Structure
 
-```
+```text
 src/
 ├── lib.rs        # uniffi::setup_scaffolding!(), exported functions + VauchiPlatform object
 ├── types.rs      # Mobile* wrapper types with From/Into conversions
@@ -127,7 +130,8 @@ cargo run -p vauchi-platform --bin uniffi-bindgen --release -- generate \
   --language kotlin --out-dir target/bindings/android/kotlin
 ```
 
-**PITFALL**: Symbol stripping removes UniFFI metadata. Always build with `-Cstrip=none` before generating Kotlin bindings.
+**PITFALL**: Symbol stripping removes UniFFI metadata. Always build with
+`-Cstrip=none` before generating Kotlin bindings.
 
 Output: `uniffi/vauchi_platform/vauchi_platform.kt`
 
@@ -143,6 +147,7 @@ xcodebuild -create-xcframework \
 ```
 
 Produces:
+
 - `VauchiPlatformFFI.xcframework.zip` (binary for SPM)
 - `VauchiPlatform-{version}.zip` (framework + Swift bindings)
 - SHA256 checksums
@@ -150,6 +155,7 @@ Produces:
 ### Android: `package-android.sh`
 
 Produces:
+
 - `vauchi-platform-kotlin-{version}.zip` containing:
   - `jniLibs/arm64-v8a/libvauchi_platform.so`
   - `jniLibs/x86_64/libvauchi_platform.so`
@@ -160,16 +166,20 @@ Produces:
 On tag `v*.*.*`:
 
 1. **release:verify** — confirm tag is on main
-2. **build:ios** (macOS runner) + **build:android** (Linux+NDK) + **build:validate-bindings**
+2. **build:ios** (macOS runner) + **build:android** (Linux+NDK) +
+   **build:validate-bindings**
 3. **package:xcframework** + **package:android**
 4. **publish:packages** → GitLab Generic Packages registry
 5. **publish:maven** — builds AAR + publishes to group Maven registry
-6. **update:swift-bindings** — pushes updated Package.swift + bindings to platform-swift
-7. **trigger:ios** + **trigger:macos** + **trigger:android** — triggers consumer app repos directly
+6. **update:swift-bindings** — pushes updated Package.swift + bindings to
+   platform-swift
+7. **trigger:ios** + **trigger:macos** + **trigger:android** — triggers
+   consumer app repos directly
 
 ### Binding Validation
 
 `validate-bindings.sh` checks:
+
 - Swift bindings: min 3500 lines
 - Kotlin bindings: min 5000 lines
 - Grep for 47 expected types (MobileContact, MobileError, etc.)
@@ -179,6 +189,7 @@ On tag `v*.*.*`:
 ### vauchi-platform-swift
 
 **Package.swift**:
+
 ```swift
 let version = "0.1.4"
 let checksum = "319802bc..."
@@ -192,15 +203,22 @@ let checksum = "319802bc..."
 ```
 
 **CI `update:version` job** (triggered by core's `update:swift-bindings`):
+
 1. Receives updated Package.swift + bindings via git push from core
 2. Validates package structure
 3. Tags new version
 
-Note: Core's `update:swift-bindings` job handles downloading, updating, and pushing bindings directly to platform-swift. The platform-swift CI no longer triggers ios/macos — core does that directly via `trigger:ios`/`trigger:macos`.
+Note: Core's `update:swift-bindings` job handles downloading, updating,
+and pushing bindings directly to platform-swift. The platform-swift CI no
+longer triggers ios/macos — core does that directly via
+`trigger:ios`/`trigger:macos`.
 
 ### vauchi-platform-kotlin (ARCHIVED)
 
-**Archived** — Maven AAR is now published directly from core's `publish:maven` job. The AAR is built using a Gradle wrapper embedded in `core/ci/maven-publish/` and published to the group-level Maven registry. Android resolves it from the group Maven URL.
+**Archived** — Maven AAR is now published directly from core's
+`publish:maven` job. The AAR is built using a Gradle wrapper embedded in
+`core/ci/maven-publish/` and published to the group-level Maven registry.
+Android resolves it from the group Maven URL.
 
 ## Consumer Integration
 
@@ -233,7 +251,8 @@ val vauchi = VauchiPlatform(storagePath = filesDir.resolve("vauchi.db").absolute
 
 ## Local Development
 
-Always use `just` recipes for local development. The raw `cargo build` commands in sections above document what CI does internally.
+Always use `just` recipes for local development. The raw `cargo build`
+commands in sections above document what CI does internally.
 
 ```bash
 just bindings           # Generate UniFFI bindings locally
@@ -250,5 +269,7 @@ just check-mobile       # Both
 2. **vauchi-platform-swift/android are auto-generated** — don't edit manually
 3. **rustls required** — adding OpenSSL deps breaks Android/iOS builds
 4. **XCFramework needs macOS** — iOS packaging can't run on Linux
-5. **Native `trigger:` keyword** used to pass UPSTREAM_VERSION (CI_JOB_TOKEN lacks `api` scope for Pipeline API)
-6. **Version mismatch** — if tag != Cargo.toml version, CI auto-creates MR to sync
+5. **Native `trigger:` keyword** used to pass UPSTREAM_VERSION
+   (CI_JOB_TOKEN lacks `api` scope for Pipeline API)
+6. **Version mismatch** — if tag != Cargo.toml version, CI auto-creates MR
+   to sync

@@ -4,10 +4,12 @@ apply: always
 
 ---
 paths:
-  - "**/*.sh"
-  - "**/*.bash"
-  - ".claude/hooks/**"
-  - "scripts/**"
+
+- "**/*.sh"
+- "**/*.bash"
+- ".claude/hooks/**"
+- "scripts/**"
+
 ---
 
 ## Portable Shell (MANDATORY)

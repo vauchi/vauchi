@@ -1,6 +1,8 @@
 ## Self-Healing (MANDATORY)
 
-Leave the codebase healthier than you found it. Heal what you encounter, not what you imagine — fix things in your path (files you read, commands you run, docs you consult).
+Leave the codebase healthier than you found it. Heal what you encounter,
+not what you imagine — fix things in your path (files you read, commands
+you run, docs you consult).
 
 ### Three Tiers
 
@@ -12,10 +14,12 @@ Leave the codebase healthier than you found it. Heal what you encounter, not wha
 
 ### What to Heal
 
-- **Stale problem records**: status vs code reality → update status, `git mv` to `done/` if resolved
+- **Stale problem records**: status vs code reality → update status,
+  `git mv` to `done/` if resolved
 - **Stale plan items**: `[x]` but code missing, or `[ ]` but code merged → fix checkbox
 - **Outdated references**: path changed, command renamed → fix in place
-- **Pre-existing lint/format issues in files you touch** → `tidy:` commit before your change
+- **Pre-existing lint/format issues in files you touch** → `tidy:` commit
+  before your change
 - **Inconsistent docs**: reconcile to source of truth
 - **Workflow artifacts**: stale `.workcontext`, orphan branches → clean up
 
