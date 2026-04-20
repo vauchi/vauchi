@@ -432,6 +432,87 @@ e2e-maestro platform="all":
     esac
     echo "All Maestro flows completed."
 
+# Run the MVP-critical Maestro flows (Layer 3 gate subset).
+# Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md
+# Task 3.3. Runs the five user-critical flows only (not the full
+# e2e/maestro tree), suitable for nightly CI without burning the
+# full ~20-flow budget every run.
+#
+# Flows:
+#   add_field.yaml           — text input commit + "my info" roundtrip
+#   add_custom_group.yaml    — regression for `submit_custom_group` bug
+#   generate_qr.yaml         — QR exchange single-device hand-off point
+#   sync.yaml                — sync trigger + post-state
+#   create_identity.yaml     — prerequisite for the others
+[group('e2e')]
+[script]
+e2e-maestro-critical platform="all":
+    set -euo pipefail
+    if ! command -v maestro &>/dev/null; then
+        echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
+        exit 1
+    fi
+
+    MVP_FLOWS=(
+        create_identity
+        add_field
+        add_custom_group
+        generate_qr
+        sync
+    )
+
+    run_critical() {
+        local plat="$1"
+        local dir="e2e/maestro/$plat"
+        echo "═══ Running MVP-critical $plat Maestro flows ═══"
+        for name in "${MVP_FLOWS[@]}"; do
+            local flow="$dir/$name.yaml"
+            if [[ ! -f "$flow" ]]; then
+                echo "  SKIP: $name (not present on $plat)"
+                continue
+            fi
+            echo "  → $name"
+            if maestro test "$flow" --platform "$plat"; then
+                echo "  ✓ $name"
+            else
+                echo "  ✗ FAILED: $name"
+                return 1
+            fi
+        done
+    }
+
+    case "{{platform}}" in
+        ios)     run_critical ios ;;
+        android) run_critical android ;;
+        all)
+            run_critical ios
+            run_critical android
+            ;;
+        *)
+            echo "Error: Unknown platform '{{platform}}'. Use: ios, android, or all"
+            exit 1
+            ;;
+    esac
+    echo "Critical Maestro flows completed."
+
+# Run a two-device protocol scenario via the Phase 4 orchestrator.
+# Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md
+# Task 4.4. Boots two Android emulators (VAUCHI_AVD_{A,B}),
+# installs `android/app/build/outputs/apk/debug/app-debug.apk` on
+# both, and runs the requested scenario from
+# `e2e/two-device/scenarios/`. Tears down cleanly on exit.
+#
+# Status: SCAFFOLD. Configure two AVDs named `vauchi-test-0` and
+# `vauchi-test-1` (or override via env), then:
+#   just e2e-two-device symmetric_exchange
+# See the runbook at
+# `_private/docs/reference/2026-04-20-two-device-test-runbook.md`.
+[group('e2e')]
+[script]
+e2e-two-device scenario:
+    set -euo pipefail
+    ./e2e/two-device/orchestrator.sh "{{scenario}}"
+
 # ─── Relay ──────────────────────────────────────────────────────
 
 # Start local TLS relay for E2E testing
