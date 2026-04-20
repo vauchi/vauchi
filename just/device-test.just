@@ -266,6 +266,16 @@ _dt-package-ios core_dir:
         exit 1
     fi
 
+    # Layer 2 ABI parity gate: bindings and artifact must agree
+    # before packaging. Catches stale-artifact bugs like the
+    # 2026-04-20 Android startup crash (cached dylib → bindings
+    # referenced a removed UniFFI symbol).
+    echo "  Verifying iOS binding/artifact ABI parity..."
+    "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
+        --platform ios \
+        --artifact "$DEVICE_LIB" \
+        --bindings "$BINDINGS_DIR/vauchi_platform.swift"
+
     # Ensure xcframework directory structure exists
     echo -e "${YELLOW}Packaging iOS xcframework...${NC}"
     DEVICE_FW="$XCFW_DIR/ios-arm64/VauchiPlatformFFI.framework"
@@ -410,6 +420,16 @@ _dt-package-android core_dir:
         echo -e "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt${NC}"
         exit 1
     fi
+
+    # Layer 2 ABI parity gate: the freshly-packaged .so must
+    # export every UniFFI symbol the freshly-copied Kotlin
+    # bindings reference. Pre-install failure point for the
+    # 2026-04-20 UnsatisfiedLinkError class of bugs.
+    echo "  Verifying Android binding/artifact ABI parity..."
+    "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
+        --platform android \
+        --artifact "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so" \
+        --bindings "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
 
     echo -e "${GREEN}  Android packaging complete${NC}"
     ls -lh "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so"

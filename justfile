@@ -186,6 +186,34 @@ test *args:
     done
     print_summary "test" || exit 1
 
+# Check binding/artifact UniFFI ABI parity (Layer 2 gate).
+# Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 2.1.
+#
+# Usage: just check-binding-abi android | just check-binding-abi ios
+# Checks the freshly-copied device-test artifacts against their
+# bindings. Run after `just rebuild-android` / `just rebuild-ios`;
+# the device-test packaging recipes invoke this automatically.
+[group('daily')]
+[script]
+check-binding-abi platform:
+    set -euo pipefail
+    WORKSPACE_ROOT="$(pwd)"
+    case "{{ platform }}" in
+        android)
+            "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
+                --platform android \
+                --artifact "$WORKSPACE_ROOT/android/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so" \
+                --bindings "$WORKSPACE_ROOT/android/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
+            ;;
+        ios)
+            "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
+                --platform ios \
+                --artifact "$WORKSPACE_ROOT/core/target/aarch64-apple-ios/release/libvauchi_platform.a" \
+                --bindings "$WORKSPACE_ROOT/ios/Vauchi/Generated/vauchi_platform.swift"
+            ;;
+        *) echo "usage: just check-binding-abi {android|ios}" >&2; exit 2 ;;
+    esac
+
 # Run Layer 1 ScreenModel reachability tests (core, test-support feature).
 # Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 1.4.
 [group('daily')]
