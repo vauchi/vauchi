@@ -186,6 +186,18 @@ test *args:
     done
     print_summary "test" || exit 1
 
+# Run Layer 1 ScreenModel reachability tests (core, test-support feature).
+# Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 1.4.
+[group('daily')]
+[script]
+reachability:
+    set -euo pipefail
+    if command -v cargo-nextest &>/dev/null; then
+        (cd core && cargo nextest run --manifest-path vauchi-app/Cargo.toml --test reachability --features vauchi-app/test-support)
+    else
+        (cd core && cargo test --manifest-path vauchi-app/Cargo.toml --test reachability --features vauchi-app/test-support)
+    fi
+
 # Run slow / ignored tests (nightly CI, timing-sensitive, property-based)
 [group('daily')]
 test-slow *args:
