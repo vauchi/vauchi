@@ -53,6 +53,25 @@ record or design doc.
 
 *New entries below this line. Newest first.*
 
+### 2026-04-20 — Fixed justfile recipe, forgot the CI had its own inlined copy
+
+- **What**: `lint:claude-md` CI job failed on MR 360 flagging
+  `just-commands-reference.md` as orphan. Fixed the `check-claude-md`
+  recipe in `justfile` (include `.claude/docs/` as search root), pushed,
+  expected CI to pass. CI didn't even re-run because my change didn't
+  touch the paths in the job's `rules: changes:` filter — and the CI
+  script is a copy-paste of the recipe inlined directly in
+  `.gitlab-ci.yml`, not a `just check-claude-md` call.
+- **Trigger**: Self-caught by reading `.gitlab-ci.yml` after the new
+  push failed to produce a pipeline.
+- **Root cause**: Assumed the CI invoked the just recipe. Didn't grep
+  `.gitlab-ci.yml` for the failure message before "fixing" the recipe.
+- **Lesson**: When a CI job fails, first `grep` the failing string in
+  `.gitlab-ci.yml` — inline scripts are a common pattern here. Before
+  claiming a CI fix is done, verify the job's `rules: changes:` filter
+  will actually trigger on the committed paths.
+- **Recurrence**: 1
+
 ### 2026-04-20 — Auto-link regex matched its own marker inside commit bodies
 
 - **What**: Wrote a regex to strip a previous auto-generated "## Related
