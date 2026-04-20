@@ -52,3 +52,19 @@ record or design doc.
 ---
 
 *New entries below this line. Newest first.*
+
+### 2026-04-20 — Auto-link regex matched its own marker inside commit bodies
+
+- **What**: Wrote a regex to strip a previous auto-generated "## Related
+  MRs (auto-linked)" section from MR descriptions before re-writing it.
+  The regex matched the FIRST occurrence — but the literal text
+  "## Related MRs (auto-linked)" also appeared in the commit body of
+  the very feature that introduced the marker. Result: the description
+  was silently truncated mid-sentence after the first match.
+- **Trigger**: Self-caught while inspecting the resulting MR description.
+- **Root cause**: Section markers chosen from natural prose — easy to
+  collide with documentation about the marker itself.
+- **Lesson**: Use machine-only markers (HTML comments) for any region a
+  script needs to find/replace inside human-edited content. Treat
+  prose-shaped markers as user-visible labels only.
+- **Recurrence**: 1

@@ -152,8 +152,10 @@ mr-create repo='' title='':
         IFS=: read -r el egl eiid <<< "$entry"
         cur_desc=$(glab api "projects/vauchi%2F${egl}/merge_requests/${eiid}" 2>/dev/null \
           | python3 -c "import sys,json; print(json.load(sys.stdin).get('description') or '')" 2>/dev/null || true)
-        # Strip prior auto-generated section so re-runs are idempotent
-        cleaned=$(printf '%s' "$cur_desc" | python3 -c "import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r'\n*## Related MRs \(auto-linked\).*?(?=\n## |\n---|\Z)', '', t, flags=re.DOTALL).rstrip())")
+        # Strip prior auto-generated section so re-runs are idempotent.
+        # Uses HTML-comment markers so the regex cannot accidentally match
+        # prose mentioning "Related MRs" inside commit bodies.
+        cleaned=$(printf '%s' "$cur_desc" | python3 -c "import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r'\n*<!-- mr-auto-link-start -->.*?<!-- mr-auto-link-end -->', '', t, flags=re.DOTALL).rstrip())")
         others=""
         for other in "${mr_registry[@]}"; do
             IFS=: read -r ol ogl oiid <<< "$other"
@@ -161,7 +163,7 @@ mr-create repo='' title='':
             [[ "$ogl" == "$egl" ]] && continue
             others="${others}- vauchi/${ogl}!${oiid}"$'\n'
         done
-        new_desc="${cleaned}"$'\n\n''## Related MRs (auto-linked)'$'\n\n'"${others}"
+        new_desc="${cleaned}"$'\n\n''<!-- mr-auto-link-start -->'$'\n''## Related MRs (auto-linked)'$'\n\n'"${others}"$'\n''<!-- mr-auto-link-end -->'
         if glab api -X PUT "projects/vauchi%2F${egl}/merge_requests/${eiid}" -f "description=${new_desc}" >/dev/null 2>&1; then
             printf "  ✓ %s !%s — linked %d sibling(s)\n" "$egl" "$eiid" "$(( ${#mr_registry[@]} - 1 ))"
         else
