@@ -196,9 +196,14 @@ test *args:
 # Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 2.1.
 #
 # Usage: just check-binding-abi android | just check-binding-abi ios
-# Checks the freshly-copied device-test artifacts against their
-# bindings. Run after `just rebuild-android` / `just rebuild-ios`;
-# the device-test packaging recipes invoke this automatically.
+#
+# Checks the freshly-built pair in `core/target/bindings/` — same
+# pair CI's `check:binding-abi-*` validates and `_dt-package-*`
+# runs. Run after `just bindings` / `just rebuild-{android,ios}`.
+# The previous version pointed at the local-dev mirrors under
+# `android/app/src/...` and `ios/Vauchi/Generated/` which are
+# populated by a separate copy step; those can drift when only
+# `just bindings` runs, producing false-positive pass/fail.
 [group('daily')]
 [script]
 check-binding-abi platform:
@@ -208,14 +213,14 @@ check-binding-abi platform:
         android)
             "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
                 --platform android \
-                --artifact "$WORKSPACE_ROOT/android/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so" \
-                --bindings "$WORKSPACE_ROOT/android/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
+                --artifact "$WORKSPACE_ROOT/core/target/aarch64-linux-android/release/libvauchi_platform.so" \
+                --bindings "$WORKSPACE_ROOT/core/target/bindings/android/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
             ;;
         ios)
             "$WORKSPACE_ROOT/scripts/scripts/check-binding-abi.sh" \
                 --platform ios \
                 --artifact "$WORKSPACE_ROOT/core/target/aarch64-apple-ios/release/libvauchi_platform.a" \
-                --bindings "$WORKSPACE_ROOT/ios/Vauchi/Generated/vauchi_platform.swift"
+                --bindings "$WORKSPACE_ROOT/core/target/bindings/ios/generated/vauchi_platform.swift"
             ;;
         *) echo "usage: just check-binding-abi {android|ios}" >&2; exit 2 ;;
     esac
