@@ -50,6 +50,12 @@ mr-view id repo='':
 # Usage: just gitlab mr-create [repo] [title]
 #   just gitlab mr-create core                    # auto-fill from commits
 #   just gitlab mr-create core "feat: my feature" # custom title
+#
+# After creating, scans sibling repos on the same branch and auto-links
+# any open MRs into a "## Related MRs (auto-linked)" section. Prevents
+# the "forgot to mention related MR" cascade (E13→E14→E15 in
+# .claude/docs/claude-errors-and-misjudgments.md). Set MR_NO_AUTOLINK=1
+# to skip the auto-link pass.
 [no-cd]
 [script]
 mr-create repo='' title='':
@@ -59,16 +65,16 @@ mr-create repo='' title='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
-    cd "$dir"
-    branch=$(git branch --show-current)
+    workspace_root=$(pwd)
+    branch=$(git -C "$dir" branch --show-current)
     if [[ "$branch" == "main" ]]; then
         echo "ERROR: cannot create MR from main branch"
         exit 1
     fi
     # Push branch if not tracking remote (skip tests — CI runs them)
     export SKIP_TESTS=1
-    if ! git rev-parse --abbrev-ref "@{u}" &>/dev/null; then
-        git push -u origin "$branch"
+    if ! git -C "$dir" rev-parse --abbrev-ref "@{u}" &>/dev/null; then
+        git -C "$dir" push -u origin "$branch"
     fi
     # Build title and description explicitly to sanitize @ mentions.
     # --fill passes commit body verbatim, which may contain @tags that
@@ -76,25 +82,78 @@ mr-create repo='' title='':
     if [[ -n "{{ title }}" ]]; then
         mr_title="{{ title }}"
     else
-        mr_title=$(git log origin/main..HEAD --reverse --format=%s | head -1)
+        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
     fi
     # Build description from commit bodies:
     # 1. Strip Co-Authored-By trailers (added once at the bottom instead)
     # 2. Escape @ to prevent GitLab mentions
     # 3. Collapse repeated blank lines
-    mr_body=$(git log origin/main..HEAD --reverse --format="- %s%n%n%b" \
+    mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
         | grep -v '^Co-Authored-By:' \
         | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g' \
         | cat -s)
     # Append single co-author credit if any commit had one
-    if git log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-        coauthor=$(git log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+    if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
+        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
-    ARGS=(--yes --target-branch main --push -R "$p")
-    ARGS+=(--title "$mr_title")
-    ARGS+=(--description "$mr_body")
-    glab mr create "${ARGS[@]}"
+    (
+        cd "$dir"
+        ARGS=(--yes --target-branch main --push -R "$p")
+        ARGS+=(--title "$mr_title")
+        ARGS+=(--description "$mr_body")
+        glab mr create "${ARGS[@]}"
+    )
+
+    # ── Auto-link Related MRs (E13/E14/E15 fix) ────────────────────
+    # Scan sibling repos for the same branch with open MRs, then
+    # cross-link them all. Idempotent: re-running rewrites the
+    # auto-generated section instead of duplicating.
+    if [[ "${MR_NO_AUTOLINK:-0}" == "1" ]]; then
+        exit 0
+    fi
+    self_iid=$(glab api "projects/vauchi%2F${r}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
+    if [[ -z "$self_iid" ]]; then
+        echo "Note: could not detect new MR IID — skipping auto-link"
+        exit 0
+    fi
+    mr_registry=("${dir}:${r}:${self_iid}")
+    for sibling_dir in "$workspace_root"/*/; do
+        sib_name=$(basename "${sibling_dir%/}")
+        [[ "$sib_name" == "$dir" ]] && continue
+        [[ ! -e "${sibling_dir}.git" ]] && continue
+        sib_branch=$(git -C "$sibling_dir" branch --show-current 2>/dev/null || true)
+        [[ "$sib_branch" != "$branch" ]] && continue
+        sib_gl=$(_dir_to_gitlab_name "$sib_name")
+        sib_iid=$(glab api "projects/vauchi%2F${sib_gl}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+          | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
+        [[ -n "$sib_iid" ]] && mr_registry+=("${sib_name}:${sib_gl}:${sib_iid}")
+    done
+    if [[ ${#mr_registry[@]} -le 1 ]]; then
+        exit 0
+    fi
+    echo ""
+    echo "── Auto-linking ${#mr_registry[@]} MRs on branch '${branch}' ──"
+    for entry in "${mr_registry[@]}"; do
+        IFS=: read -r el egl eiid <<< "$entry"
+        cur_desc=$(glab api "projects/vauchi%2F${egl}/merge_requests/${eiid}" 2>/dev/null \
+          | python3 -c "import sys,json; print(json.load(sys.stdin).get('description') or '')" 2>/dev/null || true)
+        # Strip prior auto-generated section so re-runs are idempotent
+        cleaned=$(printf '%s' "$cur_desc" | python3 -c "import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r'\n*## Related MRs \(auto-linked\).*?(?=\n## |\n---|\Z)', '', t, flags=re.DOTALL).rstrip())")
+        others=""
+        for other in "${mr_registry[@]}"; do
+            IFS=: read -r ol ogl oiid <<< "$other"
+            [[ "$ol" == "$el" ]] && continue
+            others="${others}- vauchi/${ogl}!${oiid}"$'\n'
+        done
+        new_desc="${cleaned}"$'\n\n''## Related MRs (auto-linked)'$'\n\n'"${others}"
+        if glab api -X PUT "projects/vauchi%2F${egl}/merge_requests/${eiid}" -f "description=${new_desc}" >/dev/null 2>&1; then
+            printf "  ✓ %s !%s — linked %d sibling(s)\n" "$el" "$eiid" "$(( ${#mr_registry[@]} - 1 ))"
+        else
+            printf "  ✗ %s !%s — link update failed\n" "$el" "$eiid"
+        fi
+    done
 
 # Approve a merge request
 [no-cd]
