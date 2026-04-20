@@ -100,6 +100,29 @@ if [[ -f "$STAMP_SH" ]]; then
   fi
 fi
 
+# ── Platform-limit gate (E16) ────────────────────────────────────────
+# Some repos can only be built on specific OSes. Skip Rust/lint checks
+# when pushing from an incompatible host — CI will run them on a matching
+# runner. Without this gate, the hook spuriously fails on cross-platform
+# pushes (e.g. linux-gtk on macOS, macos repo on Linux).
+case "$REPO_NAME:$(uname -s)" in
+  linux-gtk:Darwin|linux-qt:Darwin)
+    echo "[gate-push] Skipping checks — $REPO_NAME requires Linux (running on $(uname -s))." >&2
+    echo "  CI will enforce checks on a Linux runner." >&2
+    exit 0
+    ;;
+  macos:Linux|ios:Linux)
+    echo "[gate-push] Skipping checks — $REPO_NAME requires macOS (running on $(uname -s))." >&2
+    echo "  CI will enforce checks on a macOS runner." >&2
+    exit 0
+    ;;
+  windows:Linux|windows:Darwin)
+    echo "[gate-push] Skipping checks — $REPO_NAME requires Windows (running on $(uname -s))." >&2
+    echo "  CI will enforce checks on a Windows runner." >&2
+    exit 0
+    ;;
+esac
+
 # Find a Node tool binary by walking up from a directory to the nearest node_modules/.bin.
 find_node_bin() {
   local tool="$1" dir="$2"

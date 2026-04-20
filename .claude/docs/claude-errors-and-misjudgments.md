@@ -30,8 +30,10 @@ Counter: `verify-before-acting.md`, CC-21 Chesterton's Fence.
 
 1. **MEDIUM**: `just gitlab mr-create` doesn't auto-populate Related MRs
    from branch inspection (caused E13→E14→E15 cascade)
-2. **LOW**: Pre-push hook doesn't handle platform-limited repos
-   (linux-gtk on macOS) — E16
+2. ~~**LOW**: Pre-push hook doesn't handle platform-limited repos
+   (linux-gtk on macOS) — E16~~ *Resolved 2026-04-20: platform-limit
+   gate added to `.claude/hooks/gate-push.sh` (skips checks when host
+   OS can't build the repo; CI enforces on matching runner).*
 
 ---
 
