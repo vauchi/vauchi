@@ -1826,7 +1826,7 @@ check-cosign-pub action='check':
 [group('tools')]
 [no-cd]
 check-claude-md:
-    ./scripts/check-claude-md.sh
+    ./scripts/scripts/check-claude-md.sh
 
 # Check spelling across all repos (typos — fast, source-code-aware)
 # Usage: just spellcheck
