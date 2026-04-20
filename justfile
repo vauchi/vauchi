@@ -1839,9 +1839,10 @@ check-claude-md:
     # 2. Check for orphaned docs (in .claude/docs/ but not referenced anywhere)
     for f in "$DOCS_DIR"/*.md; do
         name=$(basename "$f")
-        # Check CLAUDE.md, rules/, and skills/
-        if ! grep -qr "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ 2>/dev/null; then
-            echo "  ORPHANED: $DOCS_DIR/$name (not referenced from CLAUDE.md, rules, or skills)"
+        # Check CLAUDE.md, rules/, skills/, and sibling docs (transitive refs)
+        # --exclude="$name" prevents a file from appearing to reference itself
+        if ! grep -qr --exclude="$name" "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null; then
+            echo "  ORPHANED: $DOCS_DIR/$name (not referenced from CLAUDE.md, rules, skills, or sibling docs)"
             errors=$((errors + 1))
         fi
     done
