@@ -54,10 +54,11 @@ lint:claude-md:
         fi
       done
 
-      # Detect orphaned docs
+      # Detect orphaned docs (also searches sibling docs for transitive refs;
+      # --exclude prevents a file from appearing to reference itself)
       for f in "$DOCS_DIR"/*.md; do
         name=$(basename "$f")
-        if ! grep -qr "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ 2>/dev/null; then
+        if ! grep -qr --exclude="$name" "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null; then
           echo "ORPHANED: $DOCS_DIR/$name"
           errors=$((errors + 1))
         fi
