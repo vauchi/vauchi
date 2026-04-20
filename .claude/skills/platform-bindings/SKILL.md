@@ -21,8 +21,8 @@ core/vauchi-platform (UniFFI crate)
     │       ios/ (consumer app, auto-MR)
     │
     └── Android: JNI .so + Kotlin bindings
-        ↓ published to GitLab packages
-        vauchi-platform-kotlin (Maven distribution)
+        ↓ core publish:maven → group-level Maven registry
+        (vauchi-platform-kotlin archived; AAR published from core directly)
             ↓ triggers
             android/ (consumer app, auto-MR)
 ```

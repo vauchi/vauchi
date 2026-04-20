@@ -37,4 +37,6 @@ Always use `git -C "$CLAUDE_PROJECT_DIR/<repo>"` for git commands — never `cd`
 
 ## Sub-repo Names
 
-core, relay, cli, tui, android, ios, macos, windows, linux-gtk, linux-qt, web-demo, e2e, features, docs, website, scripts, locales, themes, assets, _private, drift-detector, vauchi-platform-kotlin, vauchi-platform-swift, gitlab-profile
+core, relay, cli, tui, android, ios, macos, windows, linux-gtk, linux-qt, web-demo, e2e, features, docs, website, scripts, locales, themes, assets, _private, drift-detector, vauchi-platform-swift, gitlab-profile
+
+(`vauchi-platform-kotlin` is archived — Maven AAR now published from `core/`.)
