@@ -53,6 +53,27 @@ record or design doc.
 
 *New entries below this line. Newest first.*
 
+### 2026-04-20 — Used GNU-only `grep --exclude=` in alpine-CI shell script
+
+- **What**: After fixing the `check-claude-md` orphan-detector, I used
+  `grep --exclude="$name"` to prevent a file from matching itself. Works
+  locally (GNU grep). In CI the job runs in `alpine:3.21`, whose default
+  `grep` is BusyBox — `--exclude` is unrecognized, the recursive search
+  silently short-circuited, and *all 18 docs* were reported orphan on
+  pipeline 2464648339.
+- **Trigger**: User escalation ("fix this!!!!") after the pipeline went
+  red again with a worse failure than the original.
+- **Root cause**: Did not apply `portable-shell.md` rules before writing
+  a shell script that runs on alpine. Verified the fix only against the
+  host's GNU grep.
+- **Lesson**: For any shell script that runs in `alpine:*` CI images,
+  test inside the same image (`docker run --rm -v "$PWD":/work -w /work
+  alpine:3.21 sh -c '...'`) before pushing. `portable-shell.md` lists
+  the GNU-vs-BSD gotchas but BusyBox is a third dialect — when the CI
+  image is alpine, trust only options listed in `grep --help` on that
+  image (or switch to a portable two-step: `grep -rl` + `grep -v`).
+- **Recurrence**: 1
+
 ### 2026-04-20 — Fixed justfile recipe, forgot the CI had its own inlined copy
 
 - **What**: `lint:claude-md` CI job failed on MR 360 flagging
