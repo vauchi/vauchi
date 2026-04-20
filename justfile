@@ -1820,48 +1820,13 @@ check-cosign-pub action='check':
 
 # Validate CLAUDE.md: check referenced files exist, detect orphaned docs
 # Self-healing: catches stale references and new docs not yet referenced
+# Delegates to scripts/check-claude-md.sh so CI and local runs share
+# exactly one implementation. Portable to BusyBox (alpine CI).
 # Usage: just check-claude-md
 [group('tools')]
 [no-cd]
-[script]
 check-claude-md:
-    set -euo pipefail
-    CLAUDE_MD="CLAUDE.md"
-    DOCS_DIR=".claude/docs"
-    errors=0
-    # 1. Check all .claude/docs/ and .claude/rules/ paths referenced in CLAUDE.md exist
-    for ref in $(grep -oE '`[^`]*\.md`' "$CLAUDE_MD" | tr -d '`' | grep -E '\.claude/'); do
-        if [[ ! -f "$ref" ]]; then
-            echo "  BROKEN REF: $ref (referenced in CLAUDE.md but missing)"
-            errors=$((errors + 1))
-        fi
-    done
-    # 2. Check for orphaned docs (in .claude/docs/ but not referenced anywhere)
-    # Search CLAUDE.md, rules/, skills/, and sibling docs (transitive refs).
-    # Filter self-matches from the list. Portable: BusyBox grep (used by
-    # alpine in CI) lacks --exclude, so we use -rl + grep -v instead.
-    for f in "$DOCS_DIR"/*.md; do
-        name=$(basename "$f")
-        matches=$(grep -rl "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null | grep -v "^$DOCS_DIR/$name\$" || true)
-        if [ -z "$matches" ]; then
-            echo "  ORPHANED: $DOCS_DIR/$name (not referenced from CLAUDE.md, rules, skills, or sibling docs)"
-            errors=$((errors + 1))
-        fi
-    done
-    # 3. Check _private paths referenced in CLAUDE.md exist
-    for ref in $(grep -oE '`_private/[^`]*`' "$CLAUDE_MD" | tr -d '`'); do
-        if [[ ! -f "$ref" ]] && [[ ! -d "$ref" ]]; then
-            echo "  BROKEN REF: $ref (referenced in CLAUDE.md but missing)"
-            errors=$((errors + 1))
-        fi
-    done
-    if [[ "$errors" -eq 0 ]]; then
-        echo "  CLAUDE.md: all references valid, no orphaned docs"
-    else
-        echo ""
-        echo "  $errors issue(s) found. Fix references or add docs to CLAUDE.md."
-        exit 1
-    fi
+    ./scripts/check-claude-md.sh
 
 # Check spelling across all repos (typos — fast, source-code-aware)
 # Usage: just spellcheck

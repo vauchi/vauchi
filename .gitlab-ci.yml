@@ -33,48 +33,26 @@ stages:
 
 # REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
-# Validate CLAUDE.md references and detect orphaned .claude/docs/
+# Validate CLAUDE.md references and detect orphaned .claude/docs/.
+# Script lives in vauchi/scripts — fetched via API because the main
+# repo's CI checkout does not include sub-repos. Same script runs
+# locally via `just check-claude-md` against the scripts/ sub-repo
+# checkout. Pattern mirrors android/ios check:design-tokens.
+# Portable to BusyBox grep (alpine) — see portable-shell.md §BusyBox.
 lint:claude-md:
   stage: lint
   image: alpine:3.21
   tags: [docker]
   needs: []
+  before_script:
+    - apk add --no-cache curl
   script:
     - |
-      set -euo pipefail
-      CLAUDE_MD="CLAUDE.md"
-      DOCS_DIR=".claude/docs"
-      errors=0
-
-      # Check .claude/ paths referenced in CLAUDE.md exist
-      for ref in $(grep -oE '`[^`]*\.md`' "$CLAUDE_MD" | tr -d '`' | grep -E '\.claude/'); do
-        if [ ! -f "$ref" ]; then
-          echo "BROKEN REF: $ref (in CLAUDE.md but file missing)"
-          errors=$((errors + 1))
-        fi
-      done
-
-      # Detect orphaned docs. Searches CLAUDE.md, rules/, skills/, and
-      # sibling docs (transitive refs); filters the self-file from the
-      # matches list to avoid false self-references. Portable: BusyBox
-      # grep (alpine) lacks --exclude, so we use -rl + grep -v instead.
-      for f in "$DOCS_DIR"/*.md; do
-        name=$(basename "$f")
-        matches=$(grep -rl "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null | grep -v "^$DOCS_DIR/$name\$" || true)
-        if [ -z "$matches" ]; then
-          echo "ORPHANED: $DOCS_DIR/$name"
-          errors=$((errors + 1))
-        fi
-      done
-
-      # Skip _private/ paths — separate repo, not in this checkout
-
-      if [ "$errors" -eq 0 ]; then
-        echo "CLAUDE.md: all references valid, no orphaned docs"
-      else
-        echo "$errors issue(s). Run 'just check-claude-md' locally."
-        exit 1
-      fi
+      curl --silent --fail \
+        "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2Fcheck-claude-md.sh/raw?ref=main" \
+        -o /tmp/check-claude-md.sh
+    - chmod +x /tmp/check-claude-md.sh
+    - sh /tmp/check-claude-md.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -82,6 +60,8 @@ lint:claude-md:
         - .claude/docs/**/*
         - .claude/rules/**/*
         - .claude/skills/**/*
+        - justfile
+        - .gitlab-ci.yml
 
 # Secret detection (MR + scheduled)
 secret_detection:
