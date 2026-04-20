@@ -128,6 +128,26 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   # The git pre-push hook (scripts/hooks/pre-push) uses the same raw commands for the same reason.
   # For interactive use, always prefer: just fmt <repo>, just lint <repo>, just check <repo>.
 
+  # Skip fmt + clippy when the push touches no Rust source. Prevents
+  # pre-existing workspace compile issues (e.g. Linux-only deps failing
+  # to build on macOS dev machines) from blocking docs/CI/YAML-only
+  # pushes that never exercise the Rust build graph. Rust-touching
+  # pushes still get fully gated.
+  UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+  if [[ -n "$UPSTREAM" ]]; then
+    DIFF_RANGE="$UPSTREAM..HEAD"
+  else
+    DIFF_RANGE="origin/main..HEAD"
+  fi
+  CHANGED_FILES=$(git diff --name-only "$DIFF_RANGE" 2>/dev/null || true)
+  _SKIP_RUST_GATES=0
+  if [[ -n "$CHANGED_FILES" ]] && ! echo "$CHANGED_FILES" \
+      | grep -qE '\.(rs|toml)$|(^|/)rust-toolchain\b|(^|/)\.cargo/'; then
+    echo "[gate-push] No Rust changes in $DIFF_RANGE — skipping fmt + clippy for $REPO_NAME."
+    _SKIP_RUST_GATES=1
+  fi
+
+  if [[ "$_SKIP_RUST_GATES" != "1" ]]; then
   echo "[gate-push] Checking formatting ($REPO_NAME)..."
   if ! cargo fmt --all -- --check 2>&1; then
     # On Windows, cargo fmt --all may fail with "filename too long" (os error 206).
@@ -165,6 +185,8 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   # Write dedup marker so pre-push hook can skip fmt+clippy
   _DEDUP_FILE="/tmp/.vauchi-gate-${REPO_NAME}-$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo none)"
   touch "$_DEDUP_FILE" 2>/dev/null || true
+
+  fi  # close: _SKIP_RUST_GATES guard
 
 # ── Swift/iOS repo ──────────────────────────────────────────────────
 elif [[ "$REPO_NAME" == "ios" ]]; then
