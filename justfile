@@ -1837,11 +1837,13 @@ check-claude-md:
         fi
     done
     # 2. Check for orphaned docs (in .claude/docs/ but not referenced anywhere)
+    # Search CLAUDE.md, rules/, skills/, and sibling docs (transitive refs).
+    # Filter self-matches from the list. Portable: BusyBox grep (used by
+    # alpine in CI) lacks --exclude, so we use -rl + grep -v instead.
     for f in "$DOCS_DIR"/*.md; do
         name=$(basename "$f")
-        # Check CLAUDE.md, rules/, skills/, and sibling docs (transitive refs)
-        # --exclude="$name" prevents a file from appearing to reference itself
-        if ! grep -qr --exclude="$name" "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null; then
+        matches=$(grep -rl "$name" "$CLAUDE_MD" .claude/rules/ .claude/skills/ "$DOCS_DIR" 2>/dev/null | grep -v "^$DOCS_DIR/$name\$" || true)
+        if [ -z "$matches" ]; then
             echo "  ORPHANED: $DOCS_DIR/$name (not referenced from CLAUDE.md, rules, skills, or sibling docs)"
             errors=$((errors + 1))
         fi
