@@ -56,6 +56,14 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
   prevent? If after all three checks you are confident the rule/test/
   setting itself is incorrect, you may change it. Otherwise, fix the
   source.
+- **CC-22 Humble-UI reachability**: Any MR adding a new `WorkflowEngine`
+  impl or a new `UserAction`/`ScreenAction` id must ship (or update) a
+  reachability test in `core/vauchi-app/tests/reachability/<engine>.rs`
+  declaring the engine's handler `action_id` set. `just reachability`
+  then diffs the declared set against the walker-emitted set and fails
+  on orphan handlers or orphan affordances. Rationale + failure-mode
+  examples: `_private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md`
+  Phase 1.
 
 Full test design guidelines (AAA, coverage, mocking, organization):
 `.claude/docs/test-quality-rules.md`
