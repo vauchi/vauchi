@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Verify Before Acting (MANDATORY)
 
 Code is the source of truth. Plans, problem records, and search results become stale.

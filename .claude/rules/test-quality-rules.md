@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Test Quality Rules (MANDATORY)
 
 CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-rules.md`

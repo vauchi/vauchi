@@ -1,3 +1,9 @@
+---
+paths:
+  - "**/supply-chain/**"
+  - "**/cargo-vet*"
+---
+
 ## Cargo Vet (MANDATORY)
 
 ### No AI-Generated Audits

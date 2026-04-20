@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Visibility Boundary (CRITICAL)
 
 - **Design documents** (`*-design.md`) → go in `_private/docs/designs/`

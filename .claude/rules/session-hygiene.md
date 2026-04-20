@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Session Hygiene (MANDATORY)
 
 ### Session Start
@@ -14,25 +10,18 @@ apply: always
 - If continuing work from a previous session, use `just git resume <branch>`
 - Never start new work if there's existing in-flight work on the same topic
 - **Claim work** on the board before starting: edit `_private/docs/work-board.md`,
-  move the item from `## v0.5.0 Next` to `## In Progress` with your session identifier
+  move the item from a `## ... — Next` section to `## In Progress` with your session identifier
 
 ### Session End
 
-- Run `just session-end` before ending every session
-- All work must be either: committed + pushed, or explicitly abandoned
-- Never leave uncommitted changes across sessions
-- If work is incomplete, save with `just git wip` and push
-- **Release board claims**: move completed items to `## v0.5.0 Done`
-  (or back to Next if incomplete) in `_private/docs/work-board.md`.
-  Commit the board update.
-- **Review staleness warnings** from `session-end` output — if docs reference
-  repos you changed, verify they're still accurate
-- **Update documentation** before declaring housekeeping complete:
-  - Work board: release claims, move done items (`_private/docs/work-board.md`)
-  - Problem records: update status, last_updated, add notes (`_private/docs/problems/`)
-  - Plans: check off completed items, update percentages (`_private/docs/planning/todo/`)
+- Run `just session-end` — all work must be committed + pushed, or `just git wip`-saved
+- **Review staleness warnings** from session-end output
+- **Update documentation** before declaring done:
+  - Work board (`_private/docs/work-board.md`): release claims, move done items to `## Done`, incomplete items back to a `Next` section. Commit.
+  - Problem records (`_private/docs/problems/`): update status, last_updated, notes
+  - Plans (`_private/docs/planning/todo/`): tick completed items, update percentages
   - Work context: clear or update `.claude/.workcontext`
-  - Review auto-memory for stale entries (`~/.claude/projects/*/memory/`)
+  - Auto-memory: review for stale entries (`~/.claude/projects/*/memory/`)
 
 ### Cross-Machine Sync (CRITICAL)
 

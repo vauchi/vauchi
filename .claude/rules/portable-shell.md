@@ -2,6 +2,14 @@
 apply: always
 ---
 
+---
+paths:
+  - "**/*.sh"
+  - "**/*.bash"
+  - ".claude/hooks/**"
+  - "scripts/**"
+---
+
 ## Portable Shell (MANDATORY)
 
 All shell scripts and Bash tool commands must work on both macOS and Linux.

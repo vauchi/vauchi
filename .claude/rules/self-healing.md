@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Self-Healing (MANDATORY)
 
 Leave the codebase healthier than you found it. Heal what you encounter, not what you imagine — fix things in your path (files you read, commands you run, docs you consult).

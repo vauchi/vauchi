@@ -1,7 +1,3 @@
----
-apply: always
----
-
 <!-- SSOT: docs/developers/tdd-rules.md (public docs site) -->
 
 ## TDD, Code Structure & Crypto (MANDATORY)

@@ -1,7 +1,3 @@
----
-apply: always
----
-
 ## Multi-Repo Awareness & Git Conventions
 
 - This is a **multi-repo project** — each subdirectory is its own git repo
@@ -24,7 +20,7 @@ apply: always
 - Keep `Cargo.toml` git dependency branch refs pointing to `main`
 - Push upstream repos first (core → cli/tui/e2e and other downstream), mark downstream MRs as Draft
 - iOS/Android binding repos are auto-generated — never edit manually
-- **Branch inspection: ALWAYS check ALL repos** — never check a single repo in isolation. Branches are cross-repo (same name spans many repos). A branch may appear empty in one repo but have real commits in another. Before reporting status, recommending deletion, or taking any action on a branch, use `just git branch-inspect <name>` to see the branch across all repos (ahead/behind/age/status). For broader audit use `just git branch-health`. Acting on a single repo's state risks destroying work in other repos.
+- **Branch inspection: ALWAYS check all repos** — same branch name spans many repos; one may be empty while another has real work. Use `just git branch-inspect <name>` before any action (status, delete, etc.); `just git branch-health` for broader audits. Acting on a single repo's view risks destroying work elsewhere.
 
 Full recipe reference: `.claude/docs/just-commands.md`
 MR template, multi-repo examples: `.claude/docs/commit-conventions.md`
