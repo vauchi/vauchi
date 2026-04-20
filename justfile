@@ -112,6 +112,12 @@ check *args:
         just lint ${_QR_REPO:-}
         just test ${_QR_REPO:-}
     fi
+    # Layer 1 reachability gate — core-scoped, so only runs when
+    # the caller targeted core (or all repos). Keeps `just check
+    # <non-core-repo>` fast. Plan Task 1.4 Step 3.
+    if [ -z "${_QR_REPO:-}" ] || [ "${_QR_REPO:-}" = "core" ]; then
+        just reachability
+    fi
     # Write TDD stamps for repos that passed all checks
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/stamp.sh
