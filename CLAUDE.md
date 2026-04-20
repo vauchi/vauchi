@@ -59,6 +59,7 @@ Every problem record must have: **status**, **priority**, **owner**, **goals**. 
 - **CWD gotcha**: `just` recipes use `scripts/scripts/` (double-nested). Recipes fail if CWD is not the workspace root. Always run `just` from the root, never from a sub-repo.
 - Check what's installed before suggesting tool installations.
 - When asked about pricing/hardware/real-world info, use web search.
+- Cargo-vet rules + portable-shell rules auto-load when relevant paths are touched (see `.claude/rules/cargo-vet.md`, `.claude/rules/portable-shell.md`).
 
 ## Dependencies & Repo Layout
 
@@ -95,8 +96,8 @@ Contributing guide: `docs/docs/developers/contributing.md`.
 
 Two complementary systems — use both:
 
-- `memory/log_reasoning_errors.md` — auto-memory, private, quick session entries. Append when self-caught or user-corrected. Promote patterns after 3+ occurrences.
-- `.claude/docs/claude-errors-and-misjudgments.md` — committed, shared, E##-numbered. Append significant patterns for cross-session learning.
+- `.claude/docs/log_reasoning_errors.md` — committed, shared, lightweight session entries. Append when self-caught, user-corrected, or when reviewing past work reveals a wrong claim/implementation/tool usage. Saves tokens for future sessions by short-circuiting known dead ends. Promote patterns after 3+ occurrences.
+- `.claude/docs/claude-errors-and-misjudgments.md` — committed, shared, E##-numbered. Distilled patterns for cross-session learning.
 
 ## Exploration
 
