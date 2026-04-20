@@ -3,14 +3,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # SessionStart hook: environment health check for vauchi workspace.
-# Outputs a structured summary that Claude sees as context.
+# Silent on success — emits a structured summary only when something
+# needs attention (FAIL/FIX/NOTE), or when BOOTSTRAP_VERBOSE=1.
 
 set -euo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 ISSUES=0
+VERBOSE="${BOOTSTRAP_VERBOSE:-0}"
 
-echo "=== Vauchi Environment Bootstrap ==="
+# Output buffer — collects all check output, emitted at end with banner.
+OUT=""
+say() { OUT+="$1"$'\n'; }
 
 # ---------- 0. Self-heal settings.local.json ----------
 # Prevents junk accumulation from one-off "Allow" clicks.
@@ -27,7 +31,7 @@ if [[ -f "$LOCAL_SETTINGS" ]]; then
   CURRENT_PERMS=$(jq -r '.permissions.allow // [] | length' "$LOCAL_SETTINGS" 2>/dev/null || echo "0")
   if [[ "$CURRENT_PERMS" -gt 0 ]]; then
     echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
-    echo "[FIX ] Settings: reset settings.local.json (had $CURRENT_PERMS accumulated permissions)"
+    say "[FIX ] Settings: reset settings.local.json (had $CURRENT_PERMS accumulated permissions)"
   fi
 else
   echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
@@ -58,14 +62,15 @@ for tool in "${TOOLS[@]}"; do
 done
 
 if [[ ${#MISSING[@]} -gt 0 ]]; then
-  echo "[FAIL] CLI tools: missing: ${MISSING[*]}"
+  say "[FAIL] CLI tools: missing: ${MISSING[*]}"
   ISSUES=$((ISSUES + ${#MISSING[@]}))
-else
-  echo "[PASS] CLI tools: ${VERSIONS[*]}"
+elif [[ "$VERBOSE" == "1" ]]; then
+  say "[PASS] CLI tools: ${VERSIONS[*]}"
 fi
 
 # ---------- 2. Expected repos present ----------
-REPOS=(core cli tui relay ohttp-relay e2e features docs scripts _private locales themes assets website android ios macos windows linux-gtk linux-qt web-demo vauchi-platform-kotlin vauchi-platform-swift drift-detector gitlab-profile markdown-plan)
+# Note: vauchi-platform-kotlin is archived (see CLAUDE.md) — excluded from list.
+REPOS=(core cli tui relay ohttp-relay e2e features docs scripts _private locales themes assets website android ios macos windows linux-gtk linux-qt web-demo vauchi-platform-swift drift-detector gitlab-profile markdown-plan)
 MISSING_REPOS=()
 
 for repo in "${REPOS[@]}"; do
@@ -76,10 +81,10 @@ done
 
 PRESENT_COUNT=$(( ${#REPOS[@]} - ${#MISSING_REPOS[@]} ))
 if [[ ${#MISSING_REPOS[@]} -gt 0 ]]; then
-  echo "[FAIL] Repos: ${PRESENT_COUNT}/${#REPOS[@]} present — missing: ${MISSING_REPOS[*]} — run \`just setup\`"
+  say "[FAIL] Repos: ${PRESENT_COUNT}/${#REPOS[@]} present — missing: ${MISSING_REPOS[*]} — run \`just setup\`"
   ISSUES=$((ISSUES + 1))
-else
-  echo "[PASS] Repos: ${PRESENT_COUNT}/${#REPOS[@]} present"
+elif [[ "$VERBOSE" == "1" ]]; then
+  say "[PASS] Repos: ${PRESENT_COUNT}/${#REPOS[@]} present"
 fi
 
 # ---------- 3. Git state ----------
@@ -122,16 +127,16 @@ done
 
 if [[ ${#GIT_ISSUES[@]} -gt 0 || ${#BRANCH_NOTES[@]} -gt 0 ]]; then
   if [[ ${#BRANCH_NOTES[@]} -gt 0 ]]; then
-    echo "[NOTE] Git: ${BRANCH_NOTES[*]}"
+    say "[NOTE] Git: ${BRANCH_NOTES[*]}"
   fi
   if [[ ${#GIT_ISSUES[@]} -gt 0 ]]; then
     for issue in "${GIT_ISSUES[@]}"; do
-      echo "[FAIL] Git: ${issue}"
+      say "[FAIL] Git: ${issue}"
     done
     ISSUES=$((ISSUES + ${#GIT_ISSUES[@]}))
   fi
-else
-  echo "[PASS] Git: all repos on main, tracking origin"
+elif [[ "$VERBOSE" == "1" ]]; then
+  say "[PASS] Git: all repos on main, tracking origin"
 fi
 
 # ---------- 4. Drift detector ----------
@@ -140,14 +145,14 @@ MCP_ISSUES=()
 # Check drift-detector is built — auto-fix if missing
 if [[ ! -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
   if [[ -f "$PROJECT_DIR/drift-detector/package.json" ]]; then
-    echo "[FIX ] MCP: drift-detector not built — auto-building..."
+    say "[FIX ] MCP: drift-detector not built — auto-building..."
     (
       cd "$PROJECT_DIR/drift-detector"
       [[ ! -d node_modules ]] && npm install --silent 2>/dev/null
       ./node_modules/.bin/tsc 2>/dev/null
     )
     if [[ -f "$PROJECT_DIR/drift-detector/dist/index.js" ]]; then
-      echo "[FIX ] MCP: drift-detector built successfully"
+      say "[FIX ] MCP: drift-detector built successfully"
     else
       MCP_ISSUES+=("drift-detector auto-build failed — run \`cd drift-detector && npm install && npx tsc\`")
     fi
@@ -158,33 +163,33 @@ fi
 
 if [[ ${#MCP_ISSUES[@]} -gt 0 ]]; then
   for issue in "${MCP_ISSUES[@]}"; do
-    echo "[FAIL] MCP: ${issue}"
+    say "[FAIL] MCP: ${issue}"
   done
   ISSUES=$((ISSUES + ${#MCP_ISSUES[@]}))
-else
-  echo "[PASS] MCP: drift-detector built"
+elif [[ "$VERBOSE" == "1" ]]; then
+  say "[PASS] MCP: drift-detector built"
 fi
 
 # ---------- 5. GitLab auth ----------
 if command -v glab &>/dev/null; then
   GLAB_USER=$(glab auth status 2>&1 | sed -n 's/.*Logged in to .* as \([^ ]*\).*/\1/p' | head -1)
   if [[ -n "$GLAB_USER" ]]; then
-    echo "[PASS] GitLab: authenticated as ${GLAB_USER}"
+    [[ "$VERBOSE" == "1" ]] && say "[PASS] GitLab: authenticated as ${GLAB_USER}"
   else
-    echo "[FAIL] GitLab: not authenticated — run \`glab auth login\`"
+    say "[FAIL] GitLab: not authenticated — run \`glab auth login\`"
     ISSUES=$((ISSUES + 1))
   fi
-else
-  echo "[FAIL] GitLab: glab not installed"
-  # Already counted in CLI tools check
 fi
 
-# ---------- Summary ----------
-echo ""
-if [[ $ISSUES -eq 0 ]]; then
-  echo "Environment ready. 0 issues found."
-else
-  echo "Environment has ${ISSUES} issue(s). See above."
+# ---------- Emit (silent on success) ----------
+if [[ -n "$OUT" || "$VERBOSE" == "1" ]]; then
+  echo "=== Vauchi Environment Bootstrap ==="
+  printf "%s" "$OUT"
+  if [[ $ISSUES -ne 0 ]]; then
+    echo "Environment has ${ISSUES} issue(s). See above."
+  elif [[ "$VERBOSE" == "1" ]]; then
+    echo "Environment ready. 0 issues found."
+  fi
 fi
 
 exit 0
