@@ -118,18 +118,31 @@ mr-create repo='' title='':
         echo "Note: could not detect new MR IID — skipping auto-link"
         exit 0
     fi
-    mr_registry=("${dir}:${r}:${self_iid}")
-    for sibling_dir in "$workspace_root"/*/; do
-        sib_name=$(basename "${sibling_dir%/}")
-        [[ "$sib_name" == "$dir" ]] && continue
-        [[ ! -e "${sibling_dir}.git" ]] && continue
-        sib_branch=$(git -C "$sibling_dir" branch --show-current 2>/dev/null || true)
-        [[ "$sib_branch" != "$branch" ]] && continue
-        sib_gl=$(_dir_to_gitlab_name "$sib_name")
-        sib_iid=$(glab api "projects/vauchi%2F${sib_gl}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+    # Self entry uses the gitlab name (r) as the label so identity is
+    # stable regardless of how `dir` was resolved (absolute vs basename).
+    mr_registry=("${r}:${r}:${self_iid}")
+    _add_sibling_mr() {
+        local s_dir="$1"
+        [[ ! -e "${s_dir}/.git" ]] && return
+        local s_branch
+        s_branch=$(git -C "$s_dir" branch --show-current 2>/dev/null || true)
+        [[ "$s_branch" != "$branch" ]] && return
+        local s_name s_gl
+        s_name=$(basename "$s_dir")
+        s_gl=$(_dir_to_gitlab_name "$s_name")
+        # Skip self by gitlab name (the authoritative repo identifier)
+        [[ "$s_gl" == "$r" ]] && return
+        local s_iid
+        s_iid=$(glab api "projects/vauchi%2F${s_gl}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
           | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
-        [[ -n "$sib_iid" ]] && mr_registry+=("${sib_name}:${sib_gl}:${sib_iid}")
+        [[ -n "$s_iid" ]] && mr_registry+=("${s_gl}:${s_gl}:${s_iid}")
+    }
+    # Scan sub-directories
+    for sibling_dir in "$workspace_root"/*/; do
+        _add_sibling_mr "${sibling_dir%/}"
     done
+    # Also include the workspace root itself (it's a git repo too)
+    [[ -e "${workspace_root}/.git" ]] && _add_sibling_mr "$workspace_root"
     if [[ ${#mr_registry[@]} -le 1 ]]; then
         exit 0
     fi
@@ -144,14 +157,15 @@ mr-create repo='' title='':
         others=""
         for other in "${mr_registry[@]}"; do
             IFS=: read -r ol ogl oiid <<< "$other"
-            [[ "$ol" == "$el" ]] && continue
+            # Compare by gitlab name (egl/ogl) — stable identity per repo
+            [[ "$ogl" == "$egl" ]] && continue
             others="${others}- vauchi/${ogl}!${oiid}"$'\n'
         done
         new_desc="${cleaned}"$'\n\n''## Related MRs (auto-linked)'$'\n\n'"${others}"
         if glab api -X PUT "projects/vauchi%2F${egl}/merge_requests/${eiid}" -f "description=${new_desc}" >/dev/null 2>&1; then
-            printf "  ✓ %s !%s — linked %d sibling(s)\n" "$el" "$eiid" "$(( ${#mr_registry[@]} - 1 ))"
+            printf "  ✓ %s !%s — linked %d sibling(s)\n" "$egl" "$eiid" "$(( ${#mr_registry[@]} - 1 ))"
         else
-            printf "  ✗ %s !%s — link update failed\n" "$el" "$eiid"
+            printf "  ✗ %s !%s — link update failed\n" "$egl" "$eiid"
         fi
     done
 
