@@ -1605,9 +1605,12 @@ grep pattern glob='':
     fi
     _grep_repo() {
         local label="$1" dir="$2"
-        # Skip generated/vendor dirs
+        # Skip generated/vendor dirs. --hidden includes dotfiles
+        # (.gitlab-ci.yml, .github/, .cargo/config.toml, .dockerignore, …)
+        # which rg otherwise skips by default. The explicit !.git/ glob
+        # keeps git's own metadata out.
         results=$(rg "{{ pattern }}" "$dir" \
-            --no-heading --color=never \
+            --hidden --no-heading --color=never \
             --glob '!target/' --glob '!node_modules/' --glob '!dist/' \
             --glob '!*.lock' --glob '!.git/' \
             ${GLOB_ARGS[@]+"${GLOB_ARGS[@]}"} 2>/dev/null || true)
