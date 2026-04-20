@@ -42,16 +42,25 @@ if [ -n "$branch" ] && [ "$branch" != "main" ]; then
 fi
 
 # TDD discipline ratio: count commit types on branch since main (~15ms)
+# Cached by HEAD sha — only re-tallies when the branch tip moves.
 tdd_tests=0; tdd_feats=0; tdd_refactors=0; tdd_tidies=0
 if [ -n "$branch" ] && [ "$branch" != "main" ]; then
-  while IFS= read -r msg; do
-    case "$msg" in
-      test:*|test\(*) tdd_tests=$((tdd_tests + 1)) ;;
-      feat:*|feat\(*|fix:*|fix\(*) tdd_feats=$((tdd_feats + 1)) ;;
-      refactor:*|refactor\(*) tdd_refactors=$((tdd_refactors + 1)) ;;
-      tidy:*|tidy\(*) tdd_tidies=$((tdd_tidies + 1)) ;;
-    esac
-  done < <(git -C "$git_dir" log --oneline --format='%s' main..HEAD 2>/dev/null)
+  head_sha=$(git -C "$git_dir" rev-parse HEAD 2>/dev/null)
+  cache_file="/tmp/.vauchi-statusline-tdd-${head_sha}"
+  if [ -n "$head_sha" ] && [ -f "$cache_file" ]; then
+    IFS=$'\t' read -r tdd_tests tdd_feats tdd_refactors tdd_tidies < "$cache_file"
+  else
+    while IFS= read -r msg; do
+      case "$msg" in
+        test:*|test\(*) tdd_tests=$((tdd_tests + 1)) ;;
+        feat:*|feat\(*|fix:*|fix\(*) tdd_feats=$((tdd_feats + 1)) ;;
+        refactor:*|refactor\(*) tdd_refactors=$((tdd_refactors + 1)) ;;
+        tidy:*|tidy\(*) tdd_tidies=$((tdd_tidies + 1)) ;;
+      esac
+    done < <(git -C "$git_dir" log --oneline --format='%s' main..HEAD 2>/dev/null)
+    # Best-effort cache write; old entries naturally evicted by /tmp cleanup.
+    [ -n "$head_sha" ] && printf '%s\t%s\t%s\t%s' "$tdd_tests" "$tdd_feats" "$tdd_refactors" "$tdd_tidies" > "$cache_file" 2>/dev/null
+  fi
 fi
 
 # === Work context file (~1ms) ===
