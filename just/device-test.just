@@ -191,11 +191,12 @@ _dt-generate-bindings-kotlin core_dir:
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
 
-    # Build native library if not already built (needed for metadata extraction)
-    if [[ ! -f "target/release/libvauchi_platform.dylib" ]]; then
-        echo -e "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
-        RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
-    fi
+    # Always rebuild the native library — cargo is a no-op when nothing
+    # changed, but skipping entirely means a stale dylib can leak removed
+    # UniFFI symbols into the Kotlin bindings while the fresh Android .so
+    # no longer exports them, causing UnsatisfiedLinkError on app startup.
+    echo -e "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
+    RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
 
     echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
     BINDINGS_OUT="target/bindings/android/kotlin"
