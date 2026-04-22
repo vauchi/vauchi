@@ -31,6 +31,10 @@ These rules constrain AI code generation to produce verifiable, high-quality out
 - **CC-08 Plans Must Include Test Strategy**: Every implementation plan must address: unit tests, property-based tests, contract tests, affected existing tests, and mutation testing impact.
 - **CC-09 Counterexamples Become Regression Tests**: When a property-based test finds a counterexample, capture the exact input as a permanent `test_<fn>_regression_<description>` test.
 - **CC-10 Snapshot Updates Require Review**: Never bulk-update snapshots without reviewing each with `cargo insta review`. Flag if > 10 snapshots change from one code change. Snapshot updates go in a separate commit.
+  - **Visual Regression (VRT) baselines** follow the same rule but with an extra structural split: every frontend repo with pixel baselines exposes TWO CI jobs —
+    - `test:snapshots` (or `test:vrt`): automatic, **blocking** on MR + main. Diffs current render against committed baselines; fails on regression.
+    - `test:snapshots:record`: `when: manual`, `allow_failure: true`, requires `PROJECT_ACCESS_TOKEN`. Regenerates baselines AND commits them to the MR branch. Triggered via the GitLab UI after an intentional UI change.
+  - **Never** use a single VRT job that regenerates-and-commits on every run (`--update-snapshots` in the verify script) — it silently passes every time and hides real regressions. See `scripts/ci-templates/vrt-upload.yml` for the shared `.vrt-upload-script` after-script helper.
 - **CC-11 Test Failure Paths**: For every function, test at least one failure path: invalid input, missing dependency, boundary conditions, and network errors for network code.
 - **CC-12 Beware Test-Code Correlation Trap**: Write the test FIRST, commit it, verify it fails, THEN write code. Never "write tests for this function" after the function exists. Mutation testing is the automated defense.
 - **CC-13 Stateful Property Tests for Lifecycles**: For domain objects with state machines (identity, contacts, exchange, sync, backup), write stateful property tests that verify invariants across random operation sequences.
