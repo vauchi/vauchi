@@ -25,6 +25,15 @@ LOG="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-errors"
 case "$COMMAND" in
   # Pure file reads (no pipe, no redirection) → should use Read tool
   "cat "*|"head "*|"tail "*)
+    # Block (not just log) when the target is an Agent task output file —
+    # Read is always correct there, and the path pattern is unambiguous.
+    if echo "$COMMAND" | grep -qE '/tmp/claude-[^/[:space:]]+/tasks/[^[:space:]]+\.output'; then
+      echo "Use Read for Agent task output files, not ${COMMAND%% *}." >&2
+      printf '{"ts":"%s","hook":"bash-obs","category":"wrong-tool","detail":"blocked %s on /tmp Agent output","command":"%s"}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${COMMAND%% *}" "$(echo "$COMMAND" | head -c 200 | tr '"' "'")" \
+        >> "$LOG" 2>/dev/null
+      exit 2
+    fi
     # Only flag if it's a simple file read (no pipe)
     if ! echo "$COMMAND" | grep -qE '\||>|<|&&|\$\('; then
       printf '{"ts":"%s","hook":"bash-obs","category":"wrong-tool","detail":"use Read not %s","command":"%s"}\n' \

@@ -31,7 +31,10 @@ if [[ "$TOOL_NAME" == "Edit" ]]; then
   TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
   echo "$FILE_PATH" >> "$TRACKER" 2>/dev/null
   EDIT_COUNT=$(grep -cF "$FILE_PATH" "$TRACKER" 2>/dev/null || echo "1")
-  if [[ "$EDIT_COUNT" -ge 4 ]]; then
+  if [[ "$EDIT_COUNT" -eq 3 ]]; then
+    # Soft nudge before crossing the threshold — visible to Claude, non-blocking.
+    echo "Note: 3rd Edit to $FILE_PATH this session. If more changes are coming, consider Write or batching them in fewer Edit calls." >&2
+  elif [[ "$EDIT_COUNT" -ge 4 ]]; then
     log_error "excessive-reedit" "$FILE_PATH" "edited $EDIT_COUNT times this session"
   fi
 fi
