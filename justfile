@@ -319,8 +319,25 @@ lint *args:
             case "$tc" in
                 rust)    (cd "$dir" && cargo clippy --workspace -- -D warnings 2>&1) ;;
                 npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) ;;
-                gradle)  (cd "$dir" && ./gradlew lint 2>&1) ;;
-                xcode)   (cd "$dir" && swiftlint lint --strict --quiet 2>&1 && swiftformat --lint . 2>&1) ;;
+                gradle)
+                    (cd "$dir" && ./gradlew lint 2>&1)
+                    # §1A pure-renderer guard — fences view-layer
+                    # `.isImported` reads. Only meaningful for the
+                    # `android` repo (scope: app/src/main/kotlin/app/vauchi/ui/).
+                    if [[ "$r" == "android" ]]; then
+                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                    fi
+                    ;;
+                xcode)
+                    (cd "$dir" && swiftlint lint --strict --quiet 2>&1 && swiftformat --lint . 2>&1)
+                    # §1A pure-renderer guard — fences view-layer
+                    # `.isImported` reads. Only meaningful for the
+                    # `ios` repo (scope: ios/Vauchi/Views/). macOS / other
+                    # xcode repos don't carry the duplication.
+                    if [[ "$r" == "ios" ]]; then
+                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                    fi
+                    ;;
                 mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
                 python)
                     if [[ -f "$dir/scripts/validate.py" ]]; then
