@@ -54,7 +54,7 @@ esac
 if [[ "$EXIT_CODE" != "0" && -n "$EXIT_CODE" ]]; then
   # Skip expected non-zero exits
   case "$COMMAND" in
-    *"grep -q"*|*"diff --quiet"*|*"git diff --quiet"*) exit 0 ;;
+    *"grep -q"*|*"diff --quiet"*) exit 0 ;;
     *"command -v"*|*"which "*) exit 0 ;;
     *"|| true"*|*"|| echo"*) exit 0 ;;  # explicit error handling
   esac
