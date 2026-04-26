@@ -1020,6 +1020,20 @@ check-no-allow-direct:
     set -euo pipefail
     scripts/scripts/check-no-allow-direct.sh core cli tui
 
+# Forbid view-layer reads of MobileContact.is_imported / .isImported.
+# Core's ContactDetailEngine + vauchi-platform 0.24.0's
+# `contact_detail_footer_action_id(contact_id)` own the choice; views
+# dispatch on the returned action id instead. §1A pure-renderer rule —
+# `_private/docs/problems/2026-04-25-isimported-frontend-cleanup/`.
+# Scope: ios/Vauchi/Views/ + android/app/src/main/kotlin/app/vauchi/ui/.
+# Pattern: `\.isImported\b` (member access only — initializer labels
+# in struct/data-class constructors and #Preview fixtures are exempt).
+[group('tools')]
+[script]
+lint-no-isimported-in-views:
+    set -euo pipefail
+    scripts/scripts/check-no-isimported-in-views.sh "$(pwd)"
+
 # Show file churn + size correlation (highest-risk files)
 [group('tools')]
 [script]
