@@ -267,7 +267,7 @@ flame-list:
 flame-clean:
     set -euo pipefail
     cleared=0
-    for dir in e2e/artifacts/flame relay/artifacts/flame ohttp-relay/artifacts/flame; do
+    for dir in e2e/artifacts/flame core/vauchi-core/artifacts/flame relay/artifacts/flame ohttp-relay/artifacts/flame; do
         if [[ -d "$dir" ]]; then
             rm -rf "$dir"
             echo "Cleared $dir/"
