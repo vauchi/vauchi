@@ -292,7 +292,7 @@ flame-core test_filter='':
     OUT="$PWD/core/vauchi-core/artifacts/flame/core-$(date +%s).folded"
     cd core && \
         VAUCHI_FLAME_OUT="$OUT" \
-        cargo test -p vauchi-core --features flame,testing --test it -- --test-threads=1 "{{test_filter}}"
+        cargo test --release -p vauchi-core --features flame,testing --test it -- --test-threads=1 "{{test_filter}}"
     echo ""
     echo "Wrote: $OUT"
     echo "Render: just flame-render"
@@ -310,15 +310,16 @@ samply-core test_filter='':
     echo "── samply: vauchi-core (filter='{{test_filter}}') ──"
     mkdir -p core/vauchi-core/artifacts/samply
     OUT="$PWD/core/vauchi-core/artifacts/samply/core-$(date +%s).profile.json"
-    cd core && \
+    # Override workspace `[profile.release].strip = true` so samples resolve to symbols.
+    CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=line-tables-only \
         RUSTFLAGS="-C force-frame-pointers=yes" \
-        cargo test -p vauchi-core --release --no-run
-    BIN=$(ls -t core/target/release/deps/vauchi_core-* 2>/dev/null | grep -v '\.d$' | head -1)
+        cargo test --manifest-path core/Cargo.toml -p vauchi-core --release --features testing --test it --no-run
+    BIN=$(ls -t core/target/release/deps/it-* 2>/dev/null | grep -v '\.d$' | head -1)
     if [[ -z "${BIN:-}" ]]; then
-        echo "Error: could not locate release test binary"
+        echo "Error: could not locate release test binary (core/target/release/deps/it-*)"
         exit 1
     fi
-    samply record --save-only -o "$OUT" -- \
+    samply record --save-only --unstable-presymbolicate -o "$OUT" -- \
         "$BIN" --test-threads=1 "{{test_filter}}"
     echo "Wrote: $OUT"
     echo "Open: samply load \"$OUT\""
@@ -374,7 +375,12 @@ flame-ohttp-relay duration_secs='30':
 #
 # samply works without any tracing instrumentation — it samples the
 # kernel-reported call stack at fixed intervals. Output opens in the
-# Firefox Profiler. Works at perf_event_paranoid=2 (no sudo needed).
+# Firefox Profiler.
+#
+# Linux: requires `perf_event_paranoid <= 1` (some recent kernels reject 2).
+# Set with: sudo sysctl kernel.perf_event_paranoid=1
+# Profiles are emitted with a `.syms.json` sidecar (`--unstable-presymbolicate`)
+# so symbols resolve even if the binary is later rebuilt or moved.
 #
 # Output: <repo>/artifacts/samply/<name>-<ts>.profile.json
 # (gitignored alongside flame/)
@@ -392,15 +398,16 @@ samply-e2e test='five_user_exchange':
     echo "── samply: e2e test '{{test}}' ──"
     mkdir -p e2e/artifacts/samply
     OUT="e2e/artifacts/samply/e2e-{{test}}-$(date +%s).profile.json"
-    # Build release with debug info for resolvable stacks.
-    RUSTFLAGS="-C force-frame-pointers=yes" \
+    # Override workspace `[profile.release].strip = true` so samples resolve to symbols.
+    CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=line-tables-only \
+        RUSTFLAGS="-C force-frame-pointers=yes" \
         cargo test --manifest-path e2e/Cargo.toml --release --test it --no-run
     BIN=$(ls -t e2e/target/release/deps/it-* 2>/dev/null | grep -v '\.d$' | head -1)
     if [[ -z "${BIN:-}" ]]; then
         echo "Error: could not locate release test binary"
         exit 1
     fi
-    samply record --save-only -o "$OUT" -- \
+    samply record --save-only --unstable-presymbolicate -o "$OUT" -- \
         "$BIN" --test-threads=1 --include-ignored "{{test}}"
     echo "Wrote: $OUT"
     echo "Open: samply load \"$OUT\""
@@ -418,9 +425,11 @@ samply-relay duration_secs='30':
     echo "── samply: relay (duration={{duration_secs}}s) ──"
     mkdir -p relay/artifacts/samply
     OUT="relay/artifacts/samply/relay-$(date +%s).profile.json"
-    RUSTFLAGS="-C force-frame-pointers=yes" \
+    # Override `[profile.release].strip = true` so samples resolve to symbols.
+    CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=line-tables-only \
+        RUSTFLAGS="-C force-frame-pointers=yes" \
         cargo build --manifest-path relay/Cargo.toml --release
-    samply record --save-only -o "$OUT" --duration "{{duration_secs}}" -- \
+    samply record --save-only --unstable-presymbolicate -o "$OUT" --duration "{{duration_secs}}" -- \
         relay/target/release/vauchi-relay &
     PID=$!
     wait "$PID" 2>/dev/null || true
@@ -440,9 +449,11 @@ samply-ohttp-relay duration_secs='30':
     echo "── samply: ohttp-relay (duration={{duration_secs}}s) ──"
     mkdir -p ohttp-relay/artifacts/samply
     OUT="ohttp-relay/artifacts/samply/ohttp-relay-$(date +%s).profile.json"
-    RUSTFLAGS="-C force-frame-pointers=yes" \
+    # Override `[profile.release].strip = true` so samples resolve to symbols.
+    CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=line-tables-only \
+        RUSTFLAGS="-C force-frame-pointers=yes" \
         cargo build --manifest-path ohttp-relay/Cargo.toml --release
-    samply record --save-only -o "$OUT" --duration "{{duration_secs}}" -- \
+    samply record --save-only --unstable-presymbolicate -o "$OUT" --duration "{{duration_secs}}" -- \
         ohttp-relay/target/release/vauchi-ohttp-relay &
     PID=$!
     wait "$PID" 2>/dev/null || true
