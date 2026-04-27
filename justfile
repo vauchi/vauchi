@@ -326,6 +326,11 @@ lint *args:
                     # `android` repo (scope: app/src/main/kotlin/app/vauchi/ui/).
                     if [[ "$r" == "android" ]]; then
                         scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                        # G5 lint guard — fences view-layer reads of
+                        # isVerified / isRecoveryTrusted / isHidden /
+                        # reciprocity / trustLevel / isFailed. Pairs with
+                        # G1–G4 typed view-state APIs.
+                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
                     fi
                     ;;
                 xcode)
@@ -336,6 +341,8 @@ lint *args:
                     # xcode repos don't carry the duplication.
                     if [[ "$r" == "ios" ]]; then
                         scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                        # G5 lint guard — see android arm above.
+                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
                     fi
                     ;;
                 mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
@@ -1050,6 +1057,21 @@ check-no-allow-direct:
 lint-no-isimported-in-views:
     set -euo pipefail
     scripts/scripts/check-no-isimported-in-views.sh "$(pwd)"
+
+# G5 (ScreenModel API gaps): forbid view-layer reads of MobileContact /
+# MobileDeliveryRecord domain conditionals that should be decided in
+# core. Pairs with the G1–G4 typed view-state APIs (visible_fields,
+# label_contacts, getFailedDeliveryRecords, contactDetailViewState).
+# Scope: ios/Vauchi/Views/, ios/Vauchi/CoreUI/,
+# android/app/src/main/kotlin/app/vauchi/ui/. Patterns: member-access
+# `.isVerified` / `.isRecoveryTrusted` / `.isHidden` / `.isFailed`,
+# equality comparisons against `.reciprocity` and `.trustLevel`.
+# `_private/docs/problems/2026-04-27-screenmodel-api-gaps-symmetric-frontend-violations/`.
+[group('tools')]
+[script]
+lint-no-domain-conditionals-in-views:
+    set -euo pipefail
+    scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)"
 
 # Show file churn + size correlation (highest-risk files)
 [group('tools')]
