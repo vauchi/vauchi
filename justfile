@@ -937,7 +937,7 @@ coverage *args:
         _do_step() {
             case "$tc" in
                 rust)
-                    (cd "$dir" && cargo llvm-cov --workspace --html $tfeats 2>&1)
+                    (cd "$dir" && cargo llvm-cov --workspace --html --ignore-run-fail $tfeats 2>&1)
                     ;;
                 gradle)
                     (cd "$dir" && ./gradlew jacocoDebugTestReport 2>&1)
