@@ -108,3 +108,31 @@ record or design doc.
   script needs to find/replace inside human-edited content. Treat
   prose-shaped markers as user-visible labels only.
 - **Recurrence**: 1
+
+### 2026-04-27 — "Local verification" of CI script meant `--help`/`--list`, not the real flag combo
+
+- **What**: Fixed `mutation:nightly` failure by moving `--jobs $(nproc)`
+  from a GitLab variable into `before_script` (so bash would actually
+  evaluate `$(nproc)`). Claimed local verification by running
+  `cargo mutants --jobs '$(nproc)' --help`, `cargo mutants --list
+  --in-place --exclude-re theme.rs`, and a stubbed-shell simulation.
+  Pushed to `core!673`, which merged. The next scheduled pipeline
+  failed in ~10s with `error: the argument '--in-place' cannot be
+  used with '--jobs <JOBS>'` — cargo-mutants 26.x rejects that
+  combination, and we need `--in-place` to keep
+  `include_bytes!("../../../themes/...")` resolving.
+- **Trigger**: User pointed it out: "this means you have not tested
+  the script locally before push."
+- **Root cause**: `--help` and `--list` only exercise argument parsing.
+  Many tools (cargo-mutants among them) defer flag-conflict checks
+  until the action actually runs, so flag-incompatibility doesn't
+  surface in either probe. The shell-substitution simulation also
+  passed because it never invoked the real binary.
+- **Lesson**: For a CI fix, run the real command with the same flag
+  set the CI job will use, for at least one real iteration. Ctrl-C
+  after the parse/startup phase is fine — flag-conflict errors
+  surface in seconds. Captured as auto-memory
+  `feedback_local_verification_real_flags.md` and as a soft hook at
+  `.claude/hooks/check-ci-yaml-tested.sh` (blocks `git push` of CI
+  yaml unless the command line carries `CLAUDE_CI_TESTED=...`).
+- **Recurrence**: 1
