@@ -122,6 +122,12 @@
           },
           {
             "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-ci-yaml-tested.sh",
+            "timeout": 10,
+            "statusMessage": "Checking CI yaml changes..."
+          },
+          {
+            "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-bash-grep.sh",
             "timeout": 5
           },
