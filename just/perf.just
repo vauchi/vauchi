@@ -186,3 +186,282 @@
     else
         echo "No baseline found."
     fi
+
+# ═══════════════════════════════════════════════════════════════
+# RUNTIME PROFILING — tracing-flame on E2E tests
+# ═══════════════════════════════════════════════════════════════
+#
+# Captures `tracing` spans emitted in-process by vauchi-core,
+# vauchi-app, and the e2e orchestrator. Renders to an SVG flamegraph
+# via `inferno-flamegraph`. Subprocess CLIs/relays are NOT captured
+# (they are separate processes); for those, attach `samply` per-pid.
+#
+# Output: e2e/artifacts/flame/  (gitignored)
+# Override path: VAUCHI_FLAME_OUT=/path/to/trace.folded
+# Override filter: VAUCHI_FLAME_FILTER='vauchi_core=trace,...'
+
+# Run an E2E test with the tracing-flame layer; emits a `.folded` trace
+[group('perf')]
+[script]
+flame-e2e test='five_user_exchange':
+    set -euo pipefail
+    echo "── tracing-flame: e2e test '{{test}}' ──"
+    mkdir -p e2e/artifacts/flame
+    cd e2e && cargo test --release --features flame --test it -- \
+        --test-threads=1 --nocapture --include-ignored "{{test}}"
+    echo ""
+    echo "Latest trace:"
+    ls -t e2e/artifacts/flame/*.folded 2>/dev/null | head -1 || echo "  (none)"
+    echo ""
+    echo "Render: just flame-render"
+
+# Render the most recent folded trace (any source) to SVG via inferno-flamegraph
+[group('perf')]
+[script]
+flame-render:
+    set -euo pipefail
+    if ! command -v inferno-flamegraph &>/dev/null; then
+        echo "Error: inferno-flamegraph not installed."
+        echo "  Install: cargo install inferno"
+        exit 1
+    fi
+    LATEST=$(ls -t e2e/artifacts/flame/*.folded \
+                  core/vauchi-core/artifacts/flame/*.folded \
+                  relay/artifacts/flame/*.folded \
+                  ohttp-relay/artifacts/flame/*.folded 2>/dev/null | head -1)
+    if [[ -z "${LATEST:-}" ]]; then
+        echo "Error: no .folded trace found in any artifacts/flame/ dir"
+        echo "  Generate: just flame-e2e <test> | just flame-relay | just flame-ohttp-relay"
+        exit 1
+    fi
+    OUT="${LATEST%.folded}.svg"
+    inferno-flamegraph < "$LATEST" > "$OUT"
+    echo "Rendered: $OUT"
+    echo "Open with: xdg-open \"$OUT\""
+
+# Run an E2E test and immediately render the resulting flamegraph
+[group('perf')]
+flame-e2e-svg test='five_user_exchange': (flame-e2e test) flame-render
+
+# List captured flame traces across all sources (folded + rendered SVGs)
+[group('perf')]
+[script]
+flame-list:
+    set -euo pipefail
+    found=0
+    for dir in e2e/artifacts/flame core/vauchi-core/artifacts/flame relay/artifacts/flame ohttp-relay/artifacts/flame; do
+        if [[ -d "$dir" ]] && [[ -n "$(ls -A "$dir" 2>/dev/null)" ]]; then
+            echo "── $dir ──"
+            ls -lht "$dir" 2>/dev/null | tail -n +2 | head -10
+            echo ""
+            found=1
+        fi
+    done
+    if [[ $found -eq 0 ]]; then
+        echo "(no traces captured yet)"
+    fi
+
+# Remove all captured flame traces (e2e + core + relay + ohttp-relay)
+[group('perf')]
+[script]
+flame-clean:
+    set -euo pipefail
+    cleared=0
+    for dir in e2e/artifacts/flame relay/artifacts/flame ohttp-relay/artifacts/flame; do
+        if [[ -d "$dir" ]]; then
+            rm -rf "$dir"
+            echo "Cleared $dir/"
+            cleared=$((cleared + 1))
+        fi
+    done
+    if [[ $cleared -eq 0 ]]; then
+        echo "(nothing to clean)"
+    fi
+
+# ── Flame profiling for vauchi-core tests ──────────────────────
+
+# Run vauchi-core tests with tracing-flame; output: core/vauchi-core/artifacts/flame/
+# `testing` feature is required to compile the `it` integration test binary,
+# which is where most callers of instrumented core APIs live.
+[group('perf')]
+[script]
+flame-core test_filter='':
+    set -euo pipefail
+    echo "── tracing-flame: vauchi-core (filter='{{test_filter}}') ──"
+    mkdir -p core/vauchi-core/artifacts/flame
+    OUT="$PWD/core/vauchi-core/artifacts/flame/core-$(date +%s).folded"
+    cd core && \
+        VAUCHI_FLAME_OUT="$OUT" \
+        cargo test -p vauchi-core --features flame,testing --test it -- --test-threads=1 "{{test_filter}}"
+    echo ""
+    echo "Wrote: $OUT"
+    echo "Render: just flame-render"
+
+# Profile vauchi-core tests under samply (CPU sampling)
+[group('perf')]
+[script]
+samply-core test_filter='':
+    set -euo pipefail
+    if ! command -v samply &>/dev/null; then
+        echo "Error: samply not installed."
+        echo "  Install: cargo install samply"
+        exit 1
+    fi
+    echo "── samply: vauchi-core (filter='{{test_filter}}') ──"
+    mkdir -p core/vauchi-core/artifacts/samply
+    OUT="$PWD/core/vauchi-core/artifacts/samply/core-$(date +%s).profile.json"
+    cd core && \
+        RUSTFLAGS="-C force-frame-pointers=yes" \
+        cargo test -p vauchi-core --release --no-run
+    BIN=$(ls -t core/target/release/deps/vauchi_core-* 2>/dev/null | grep -v '\.d$' | head -1)
+    if [[ -z "${BIN:-}" ]]; then
+        echo "Error: could not locate release test binary"
+        exit 1
+    fi
+    samply record --save-only -o "$OUT" -- \
+        "$BIN" --test-threads=1 "{{test_filter}}"
+    echo "Wrote: $OUT"
+    echo "Open: samply load \"$OUT\""
+
+# ── Flame profiling for relay services ─────────────────────────
+
+# Run vauchi-relay under tracing-flame for `duration_secs`, then SIGTERM (default 30s)
+[group('perf')]
+[script]
+flame-relay duration_secs='30':
+    set -euo pipefail
+    echo "── tracing-flame: relay (duration={{duration_secs}}s) ──"
+    mkdir -p relay/artifacts/flame
+    OUT="relay/artifacts/flame/relay-$(date +%s).folded"
+    cargo build --manifest-path relay/Cargo.toml --release --features flame
+    VAUCHI_FLAME_OUT="$PWD/$OUT" \
+        relay/target/release/vauchi-relay &
+    PID=$!
+    trap 'kill -TERM "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+    sleep "{{duration_secs}}"
+    kill -TERM "$PID" 2>/dev/null || true
+    wait "$PID" 2>/dev/null || true
+    trap - EXIT
+    echo "Wrote: $OUT"
+    echo "Render: just flame-render"
+
+# Run vauchi-ohttp-relay under tracing-flame for `duration_secs`, then SIGTERM (default 30s)
+[group('perf')]
+[script]
+flame-ohttp-relay duration_secs='30':
+    set -euo pipefail
+    echo "── tracing-flame: ohttp-relay (duration={{duration_secs}}s) ──"
+    mkdir -p ohttp-relay/artifacts/flame
+    OUT="ohttp-relay/artifacts/flame/ohttp-relay-$(date +%s).folded"
+    cargo build --manifest-path ohttp-relay/Cargo.toml --release --features flame
+    VAUCHI_FLAME_OUT="$PWD/$OUT" \
+        ohttp-relay/target/release/vauchi-ohttp-relay &
+    PID=$!
+    trap 'kill -TERM "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+    sleep "{{duration_secs}}"
+    kill -TERM "$PID" 2>/dev/null || true
+    wait "$PID" 2>/dev/null || true
+    trap - EXIT
+    echo "Wrote: $OUT"
+    echo "Render: just flame-render"
+
+# Update flame-render to find the most recent trace across all three sources.
+# (Original recipe only looked at e2e/artifacts/flame.)
+
+# ═══════════════════════════════════════════════════════════════
+# RUNTIME PROFILING — samply (CPU sampling, no instrumentation)
+# ═══════════════════════════════════════════════════════════════
+#
+# samply works without any tracing instrumentation — it samples the
+# kernel-reported call stack at fixed intervals. Output opens in the
+# Firefox Profiler. Works at perf_event_paranoid=2 (no sudo needed).
+#
+# Output: <repo>/artifacts/samply/<name>-<ts>.profile.json
+# (gitignored alongside flame/)
+
+# Profile an E2E test under samply (CPU sampling)
+[group('perf')]
+[script]
+samply-e2e test='five_user_exchange':
+    set -euo pipefail
+    if ! command -v samply &>/dev/null; then
+        echo "Error: samply not installed."
+        echo "  Install: cargo install samply"
+        exit 1
+    fi
+    echo "── samply: e2e test '{{test}}' ──"
+    mkdir -p e2e/artifacts/samply
+    OUT="e2e/artifacts/samply/e2e-{{test}}-$(date +%s).profile.json"
+    # Build release with debug info for resolvable stacks.
+    RUSTFLAGS="-C force-frame-pointers=yes" \
+        cargo test --manifest-path e2e/Cargo.toml --release --test it --no-run
+    BIN=$(ls -t e2e/target/release/deps/it-* 2>/dev/null | grep -v '\.d$' | head -1)
+    if [[ -z "${BIN:-}" ]]; then
+        echo "Error: could not locate release test binary"
+        exit 1
+    fi
+    samply record --save-only -o "$OUT" -- \
+        "$BIN" --test-threads=1 --include-ignored "{{test}}"
+    echo "Wrote: $OUT"
+    echo "Open: samply load \"$OUT\""
+
+# Profile vauchi-relay under samply for duration_secs
+[group('perf')]
+[script]
+samply-relay duration_secs='30':
+    set -euo pipefail
+    if ! command -v samply &>/dev/null; then
+        echo "Error: samply not installed."
+        echo "  Install: cargo install samply"
+        exit 1
+    fi
+    echo "── samply: relay (duration={{duration_secs}}s) ──"
+    mkdir -p relay/artifacts/samply
+    OUT="relay/artifacts/samply/relay-$(date +%s).profile.json"
+    RUSTFLAGS="-C force-frame-pointers=yes" \
+        cargo build --manifest-path relay/Cargo.toml --release
+    samply record --save-only -o "$OUT" --duration "{{duration_secs}}" -- \
+        relay/target/release/vauchi-relay &
+    PID=$!
+    wait "$PID" 2>/dev/null || true
+    echo "Wrote: $OUT"
+    echo "Open: samply load \"$OUT\""
+
+# Profile vauchi-ohttp-relay under samply for duration_secs
+[group('perf')]
+[script]
+samply-ohttp-relay duration_secs='30':
+    set -euo pipefail
+    if ! command -v samply &>/dev/null; then
+        echo "Error: samply not installed."
+        echo "  Install: cargo install samply"
+        exit 1
+    fi
+    echo "── samply: ohttp-relay (duration={{duration_secs}}s) ──"
+    mkdir -p ohttp-relay/artifacts/samply
+    OUT="ohttp-relay/artifacts/samply/ohttp-relay-$(date +%s).profile.json"
+    RUSTFLAGS="-C force-frame-pointers=yes" \
+        cargo build --manifest-path ohttp-relay/Cargo.toml --release
+    samply record --save-only -o "$OUT" --duration "{{duration_secs}}" -- \
+        ohttp-relay/target/release/vauchi-ohttp-relay &
+    PID=$!
+    wait "$PID" 2>/dev/null || true
+    echo "Wrote: $OUT"
+    echo "Open: samply load \"$OUT\""
+
+# Remove all samply profiles
+[group('perf')]
+[script]
+samply-clean:
+    set -euo pipefail
+    cleared=0
+    for dir in e2e/artifacts/samply core/vauchi-core/artifacts/samply relay/artifacts/samply ohttp-relay/artifacts/samply; do
+        if [[ -d "$dir" ]]; then
+            rm -rf "$dir"
+            echo "Cleared $dir/"
+            cleared=$((cleared + 1))
+        fi
+    done
+    if [[ $cleared -eq 0 ]]; then
+        echo "(nothing to clean)"
+    fi
