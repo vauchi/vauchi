@@ -59,9 +59,30 @@ run platform="" *args:
                 mkdir -p windows/cabi
                 cp core/target/release/vauchi_cabi.dll "$CABI_DLL"
             fi
+            # WinUI 3 needs Visual Studio's MSBuild — the dotnet CLI's
+            # bundled MSBuild lacks Microsoft.Build.Packaging.Pri.Tasks.dll
+            # so the PRI/MRT resource step fails. Locate VS via vswhere
+            # (handles 2022 / 18.x / future versions) and use its MSBuild.
+            VSWHERE="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+            if [ ! -x "$VSWHERE" ]; then
+                echo "ERROR: vswhere.exe not found — install Visual Studio 2022+ with the"
+                echo "  '.NET desktop development' + 'Universal Windows Platform' workloads."
+                exit 1
+            fi
+            VS_INSTALL=$("$VSWHERE" -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath)
+            if [ -z "$VS_INSTALL" ]; then
+                echo "ERROR: no Visual Studio install with MSBuild found. Install the"
+                echo "  '.NET desktop development' workload."
+                exit 1
+            fi
+            MSBUILD="$VS_INSTALL/MSBuild/Current/Bin/MSBuild.exe"
+            if [ ! -x "$MSBUILD" ]; then
+                echo "ERROR: MSBuild not found at $MSBUILD"
+                exit 1
+            fi
             # Build and run
             cd windows
-            dotnet build Vauchi.sln -c Release -v quiet
+            "$MSBUILD" Vauchi.sln -p:Configuration=Release -p:Platform=x64 -restore -v:quiet -nologo
             ./Vauchi/bin/x64/Release/net8.0-windows10.0.22621.0/win-x64/Vauchi.exe {{args}}
             ;;
         *)
