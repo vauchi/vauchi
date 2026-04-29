@@ -9,7 +9,13 @@
 - **Branches**: `feature/`, `bugfix/`, `refactor/`, `tidy/`, `investigation/`
 - **Pre-MR rebase**: Always `git fetch origin main && git rebase origin/main` before creating an MR
 - **No direct push to main**: Merge via MR only. Sync branch names across repos.
-- **No `@` in MR descriptions**: Wrap Gherkin tags in backticks (`` `@duress` ``).
+- **No `@` in MR descriptions** (enforced by `.claude/hooks/check-mr-mentions.sh`):
+  bare `@word` becomes a GitLab/GitHub user mention and emails the wrong person.
+  Wrap every Gherkin tag, ADR ref, or `@`-marker in backticks
+  (`` `@duress` ``, `` `@implemented` ``). Hook blocks `glab mr create/update`,
+  `gh pr create/edit`, and `just gitlab mr-(create|update)` if any unescaped
+  `@tag` is found in the description body. Emails (`foo@bar.tld`) are
+  allowlisted.
 - **NEVER `cd` into sub-repo directories** — use `git -C <dir>` for git
   commands and `just <recipe> [repo]` for everything else. `cd` drifts the
   working directory and causes wrong-repo commits/pushes.

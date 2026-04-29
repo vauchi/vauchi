@@ -145,6 +145,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-stale-commit.sh",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-mr-mentions.sh",
+            "timeout": 5
           }
         ]
       }
