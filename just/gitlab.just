@@ -86,16 +86,29 @@ mr-create repo='' title='':
     fi
     # Build description from commit bodies:
     # 1. Strip Co-Authored-By trailers (added once at the bottom instead)
-    # 2. Escape @ to prevent GitLab mentions
+    # 2. Escape `@word` to prevent GitLab mentions — markdown-aware so
+    #    references already inside code spans (e.g. `@Published var x`)
+    #    are NOT double-wrapped (which produces broken nesting that
+    #    GitLab parses as a bare mention — see vauchi/ios!370).
     # 3. Collapse repeated blank lines
     mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
         | grep -v '^Co-Authored-By:' \
-        | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g' \
+        | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
         | cat -s)
     # Append single co-author credit if any commit had one
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
+    fi
+    # Defence in depth: validate that no bare `@word` survives the
+    # escape pass before reaching GitLab. Catches edge cases the
+    # escaper misses (e.g. fenced code blocks, mid-paragraph `@` that
+    # the markdown parser interprets differently from our walker).
+    if ! printf '%s' "$mr_body" \
+       | "$workspace_root/scripts/scripts/escape-mr-mentions.py" --check; then
+        echo 'ERROR: aborting glab mr create — body has unsafe @-mentions.'
+        echo '       (See script output above for the offending tags.)'
+        exit 1
     fi
     (
         cd "$dir"
