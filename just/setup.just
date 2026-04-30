@@ -554,6 +554,13 @@ session-end:
         echo "── Session end: all clear ──"
     fi
 
+# Generate a draft PreToolUse hook from observed patterns in
+# .claude/.session-errors. Use after session-end flags a category
+# under the 3-strike rule.
+[group('setup')]
+gen-hook-from-pattern category="" force="":
+    @bash scripts/scripts/gen-hook-from-pattern.sh {{category}} {{force}}
+
 # Install development dependencies (macOS via Homebrew + Cargo)
 [group('setup')]
 [script]
