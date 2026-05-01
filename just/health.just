@@ -332,6 +332,140 @@ check-e2e-ignores:
 # Run all self-healing checks. Continues through all checks,
 # reports combined result at end.
 
+# ── Disk usage survey ────────────────────────────────────────────
+# Reports current disk consumption hot spots in the dev environment:
+# workspace target/.build/.spm-packages dirs, plus the largest of the
+# global Xcode/SwiftPM/sccache caches. Read-only; does not delete.
+# Use `just disk-clean` to reclaim.
+
+[group('health')]
+[script]
+disk:
+    set -euo pipefail
+    echo "── Disk usage survey ──"
+    echo ""
+    df -h /System/Volumes/Data 2>/dev/null | tail -1 || df -h / | tail -1
+    echo ""
+    echo "── Workspace target/ (Rust build artifacts) ──"
+    du -sh */target 2>/dev/null | sort -hr | head -10 || true
+    echo ""
+    echo "── Workspace .build / .spm-packages / .derived-data ──"
+    du -sh */{.build,.spm-packages,.derived-data} 2>/dev/null | sort -hr | head -10 || true
+    echo ""
+    echo "── Global caches (~/Library) ──"
+    for path in \
+        ~/Library/Caches/Mozilla.sccache \
+        ~/Library/Caches/org.swift.swiftpm \
+        ~/Library/Developer/CoreSimulator \
+        ~/Library/Developer/Xcode/DerivedData \
+        ~/Library/Caches/Homebrew \
+        ~/Library/Caches/cargo-vet \
+        ~/Library/Caches/pip; do
+        if [[ -d "$path" ]]; then
+            du -sh "$path" 2>/dev/null
+        fi
+    done | sort -hr | head -15
+    echo ""
+    echo "── sccache size config ──"
+    grep '^size' ~/Library/Application\ Support/Mozilla.sccache/config 2>/dev/null \
+        || cat ~/.config/sccache/config 2>/dev/null \
+        || echo "  (no config — using defaults; consider capping via SCCACHE_CACHE_SIZE)"
+
+# ── Disk cleanup (tiered, dry-run by default) ────────────────────
+# Default tier=1: safe regeneratable caches only (SwiftPM artifacts,
+# Xcode ModuleCache, orphaned WebDriverAgent, Homebrew old downloads).
+# Reclaim ~10-15 GB; next iOS/macOS build is slightly slower while
+# caches re-warm.
+#
+# tier=2 also clears Xcode DerivedData (slower next build, ~5 min)
+# and per-project .build/.spm-packages (slower next SPM resolve).
+#
+# tier=3 also nukes Rust target/ dirs and resets sccache. Reclaim
+# ~25 GB but next `cargo build` is a full rebuild (~30 min for core).
+#
+# Always dry-run unless --apply passed. Examples:
+#   just disk-clean              # tier 1, dry-run
+#   just disk-clean --apply      # tier 1, actually delete
+#   just disk-clean --tier=2 --apply
+#   just disk-clean --tier=3 --apply  # destructive, full rebuild after
+
+[group('health')]
+[script]
+disk-clean *args:
+    set -euo pipefail
+    TIER=1
+    APPLY=0
+    for arg in {{ args }}; do
+        case "$arg" in
+            --tier=1) TIER=1 ;;
+            --tier=2) TIER=2 ;;
+            --tier=3) TIER=3 ;;
+            --apply) APPLY=1 ;;
+            *) echo "Unknown arg: $arg"; exit 2 ;;
+        esac
+    done
+
+    PATHS=()
+
+    # Tier 1: safe regeneratable caches
+    [[ -d ~/Library/Caches/org.swift.swiftpm/artifacts ]] && PATHS+=(~/Library/Caches/org.swift.swiftpm/artifacts)
+    [[ -d ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex)
+    [[ -d ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex)
+    [[ -d ~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex)
+    for wda in ~/Library/Developer/Xcode/DerivedData/WebDriverAgent-*; do
+        [[ -d "$wda" ]] && PATHS+=("$wda")
+    done
+
+    # Tier 2: full Xcode DerivedData + per-project SPM caches
+    if [[ "$TIER" -ge 2 ]]; then
+        [[ -d ~/Library/Developer/Xcode/DerivedData ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData)
+        for d in */{.build,.spm-packages,.derived-data}; do
+            [[ -d "$d" ]] && PATHS+=("$d")
+        done
+    fi
+
+    # Tier 3: Rust target/ + full sccache reset
+    if [[ "$TIER" -ge 3 ]]; then
+        for d in */target; do
+            [[ -d "$d" ]] && PATHS+=("$d")
+        done
+        [[ -d ~/Library/Caches/Mozilla.sccache ]] && PATHS+=(~/Library/Caches/Mozilla.sccache)
+    fi
+
+    echo "── disk-clean tier $TIER ($([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)) ──"
+    echo ""
+    if [[ "${#PATHS[@]}" -eq 0 ]]; then
+        echo "Nothing to clean at tier $TIER"
+        exit 0
+    fi
+    TOTAL_K=0
+    for p in "${PATHS[@]}"; do
+        SIZE=$(du -sk "$p" 2>/dev/null | awk '{print $1}')
+        TOTAL_K=$((TOTAL_K + SIZE))
+        printf "  %8s  %s\n" "$(du -sh "$p" 2>/dev/null | awk '{print $1}')" "$p"
+    done
+    TOTAL_GB=$(awk "BEGIN { printf \"%.1f\", $TOTAL_K / 1024 / 1024 }")
+    echo ""
+    echo "Total reclaimable: ${TOTAL_GB} GB"
+
+    if [[ "$APPLY" -ne 1 ]]; then
+        echo ""
+        echo "(Dry-run. Pass --apply to actually delete.)"
+        exit 0
+    fi
+
+    echo ""
+    echo "Brew cleanup (always safe)…"
+    brew cleanup --prune=all -s 2>&1 | tail -3 || true
+    echo ""
+    for p in "${PATHS[@]}"; do
+        echo "rm -rf $p"
+        rm -rf "$p"
+    done
+    echo ""
+    echo "── after ──"
+    df -h /System/Volumes/Data 2>/dev/null | tail -1 || df -h / | tail -1
+
 [group('health')]
 [script]
 health:
