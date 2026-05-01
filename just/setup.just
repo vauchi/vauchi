@@ -542,6 +542,23 @@ session-end:
         echo "  (no session heads — run session-init first)"
     fi
 
+    # ── Disk pressure ──
+    # Warn at >=90% — past that, agents start hitting "disk full" writing
+    # to /tmp and Xcode/SPM rebuilds get unpredictable. Survey + reclaim
+    # via `just disk` / `just disk-clean`.
+    echo ""
+    echo "── disk pressure ──"
+    USE_PCT=$(df -P . 2>/dev/null | awk 'NR==2 {gsub("%",""); print $5}')
+    if [[ -z "${USE_PCT:-}" ]]; then
+        echo "  (could not read disk usage)"
+    elif [[ "$USE_PCT" -ge 90 ]] 2>/dev/null; then
+        AVAIL=$(df -h . 2>/dev/null | awk 'NR==2 {print $4}')
+        echo "  WARN: workspace filesystem ${USE_PCT}% full (${AVAIL} free)"
+        echo "  → \`just disk\` to survey, \`just disk-clean\` to reclaim"
+    else
+        echo "  ${USE_PCT}% used (OK)"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"
