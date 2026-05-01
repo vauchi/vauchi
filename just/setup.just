@@ -485,11 +485,15 @@ session-end:
     fi
 
     # ── Work board claim check ──
+    # Only `- [ ]` / `- [x]` items count as claims. Prose like
+    # "(none — ...)" inside the In Progress section is a status comment
+    # written by maintainers and must NOT be reported as an active claim.
     echo ""
     echo "── work board claims ──"
     BOARD="_private/docs/work-board.md"
     if [[ -f "$BOARD" ]]; then
-        IN_PROGRESS=$(sed -n '/^## In Progress$/,/^## /{ /^## /d; /^$/d; /^<!--/d; p; }' "$BOARD")
+        IN_PROGRESS=$(sed -n '/^## In Progress$/,/^## /p' "$BOARD" \
+            | grep -E '^- \[[ x]\]' || true)
         if [[ -n "$IN_PROGRESS" ]]; then
             echo "  Items still In Progress on the board:"
             echo "$IN_PROGRESS" | while IFS= read -r line; do
