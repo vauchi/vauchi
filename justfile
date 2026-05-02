@@ -1058,6 +1058,17 @@ lint-no-isimported-in-views:
     set -euo pipefail
     scripts/scripts/check-no-isimported-in-views.sh "$(pwd)"
 
+# Verify every hand-rolled frontend ScreenModel parser
+# (linux-gtk, linux-qt, windows, android) covers every Component
+# variant declared in core/vauchi-app/src/ui/component.rs. iOS / macOS
+# come from UniFFI and are sync-by-construction.
+# `_private/docs/problems/2026-05-01-screenmodel-parser-symmetry-gate/`.
+[group('tools')]
+[script]
+lint-parser-parity:
+    set -euo pipefail
+    python3 scripts/scripts/check-component-parser-parity.py
+
 # G5 (ScreenModel API gaps): forbid view-layer reads of MobileContact /
 # MobileDeliveryRecord domain conditionals that should be decided in
 # core. Pairs with the G1–G4 typed view-state APIs (visible_fields,
