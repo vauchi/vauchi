@@ -331,6 +331,10 @@ lint *args:
                         # reciprocity / trustLevel / isFailed. Pairs with
                         # G1–G4 typed view-state APIs.
                         scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
+                        # Clipboard protection — fences view-layer
+                        # direct setPrimaryClip(). Routes must go
+                        # through ClipboardUtils.copy{,WithAutoClear}.
+                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
                     fi
                     ;;
                 xcode)
@@ -343,6 +347,10 @@ lint *args:
                         scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
                         # G5 lint guard — see android arm above.
                         scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
+                        # Clipboard protection — fences view-layer
+                        # direct UIPasteboard.general writes. Routes
+                        # must go through ContactActions.copyToClipboard.
+                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
                     fi
                     ;;
                 mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
@@ -1057,6 +1065,20 @@ check-no-allow-direct:
 lint-no-isimported-in-views:
     set -euo pipefail
     scripts/scripts/check-no-isimported-in-views.sh "$(pwd)"
+
+# Forbid view-layer direct writes to the system clipboard. Routes
+# must go through the per-frontend helper:
+# - iOS:     ContactActions.copyToClipboard(_:)
+# - Android: ClipboardUtils.copy{,WithAutoClear}(...)
+# Reference + threat model:
+# `_private/docs/reference/2026-05-02-clipboard-protection.md`.
+# Scope: ios/Vauchi/Views/, ios/Vauchi/CoreUI/,
+# android/app/src/main/kotlin/app/vauchi/ui/.
+[group('tools')]
+[script]
+lint-no-direct-clipboard-writes:
+    set -euo pipefail
+    scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)"
 
 # Verify every hand-rolled frontend ScreenModel parser
 # (linux-gtk, linux-qt, windows, android) covers every Component
