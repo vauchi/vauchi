@@ -358,6 +358,13 @@ lint *args:
                         # must go through ContactActions.copyToClipboard.
                         scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
                     fi
+                    # Humble UI ratchet — fences any new domain-named
+                    # view files in Vauchi/Views/ outside the per-repo
+                    # allow-list. Drives the iOS / macOS retirement
+                    # records (2026-05-02-{ios,macos}-humble-ui-{deep-,}retirement).
+                    if [[ "$r" == "ios" || "$r" == "macos" ]]; then
+                        scripts/scripts/check-domain-named-views.sh "$dir" 2>&1
+                    fi
                     ;;
                 mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
                 python)
