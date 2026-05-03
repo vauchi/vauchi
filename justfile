@@ -1168,6 +1168,56 @@ lint-no-domain-imports-in-views *args:
     set -euo pipefail
     scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" {{args}}
 
+# Count caller sites for a method on a frontend repo, with the corrected
+# pattern that excludes Kotlin/Swift extension-method **declaration**
+# signatures (which silently inflated the Phase 4a Android audit's
+# caller counts and masked ~1040 LOC of orphan code — see
+# `_private/docs/investigations/measurements/2026-05-03-android-mainviewmodel-orphan-audit.md`).
+#
+# Usage:
+#   just orphan-callers android tryTriggerAhaMoment
+#   just orphan-callers ios     tryTriggerAhaMoment
+#
+# Output: one line per caller site, plus a header reporting the count
+# and an explicit "ORPHAN" verdict at zero. Exit code 0 always (this is
+# a measurement, not a gate).
+[group('tools')]
+[script]
+orphan-callers repo method:
+    set -euo pipefail
+    case "{{repo}}" in
+        android)
+            roots="android/app/src/main android/app/src/test android/app/src/androidTest android/app/src/screenshotTest"
+            ext_filter='--include=*.kt'
+            # ViewModel-mediated callers only — excludes the
+            # PlatformAppEngineDomainDispatch.kt extension declarations.
+            # `\b` rejects substring matches: `viewModel.sync` must not
+            # match `viewModel.syncState`.
+            pattern='viewModel\.{{method}}\b\|coreAppViewModel\.{{method}}\b\|mainViewModel\.{{method}}\b'
+            ;;
+        ios)
+            roots="ios/Vauchi ios/VauchiTests ios/VauchiSnapshotTests ios/VauchiUITests"
+            ext_filter='--include=*.swift'
+            pattern='viewModel\.{{method}}\b\|appViewModel\.{{method}}\b\|coreAppViewModel\.{{method}}\b'
+            ;;
+        *)
+            echo "Usage: just orphan-callers (android|ios) <method>"
+            exit 2
+            ;;
+    esac
+    # Note the deliberately omitted `\.{{method}}(` form: it would
+    # match `func PlatformAppEngine.{{method}}(...)` extension
+    # declarations and break the audit (see referenced note).
+    matches=$(grep -rn "$pattern" $roots $ext_filter 2>/dev/null \
+                | grep -v "Generated/\|local-bindings/" || true)
+    count=$(printf '%s\n' "$matches" | grep -c . || true)
+    if [[ "$count" == "0" ]]; then
+        printf "ORPHAN: 0 view-layer callers of %s in %s.\n" "{{method}}" "{{repo}}"
+    else
+        printf "%d view-layer caller site(s) of %s in %s:\n" "$count" "{{method}}" "{{repo}}"
+        printf '%s\n' "$matches"
+    fi
+
 # Show file churn + size correlation (highest-risk files)
 [group('tools')]
 [script]
