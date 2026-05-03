@@ -335,6 +335,12 @@ lint *args:
                         # direct setPrimaryClip(). Routes must go
                         # through ClipboardUtils.copy{,WithAutoClear}.
                         scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
+                        # Phase 1 of 2026-05-01-android-humble-ui-deep-retirement.
+                        # Warn-only (no --strict) until Phase 4.6 closes.
+                        # Fences new Mobile* imports + identity/biometric
+                        # branches in views; allowlist covers coreui/,
+                        # MainViewModel.kt, MainActivity.kt.
+                        scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" 2>&1
                     fi
                     ;;
                 xcode)
@@ -1105,6 +1111,17 @@ lint-parser-parity:
 lint-no-domain-conditionals-in-views:
     set -euo pipefail
     scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)"
+
+# Phase 1 of 2026-05-01-android-humble-ui-deep-retirement. Forbid
+# Mobile* imports and identity/biometric conditionals in the Android
+# view layer. Default warn-only; pass `--strict` to fail CI. Allowlist:
+# coreui/, MainViewModel.kt, MainActivity.kt. Flips to default-strict
+# at Phase 4.6 closeout.
+[group('tools')]
+[script]
+lint-no-domain-imports-in-views *args:
+    set -euo pipefail
+    scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" {{args}}
 
 # Show file churn + size correlation (highest-risk files)
 [group('tools')]
