@@ -136,19 +136,27 @@ mr-create repo='' title='':
     mr_registry=("${r}:${r}:${self_iid}")
     _add_sibling_mr() {
         local s_dir="$1"
-        [[ ! -e "${s_dir}/.git" ]] && return
+        [[ ! -e "${s_dir}/.git" ]] && return 0
         local s_branch
         s_branch=$(git -C "$s_dir" branch --show-current 2>/dev/null || true)
-        [[ "$s_branch" != "$branch" ]] && return
+        [[ "$s_branch" != "$branch" ]] && return 0
         local s_name s_gl
         s_name=$(basename "$s_dir")
         s_gl=$(_dir_to_gitlab_name "$s_name")
         # Skip self by gitlab name (the authoritative repo identifier)
-        [[ "$s_gl" == "$r" ]] && return
+        [[ "$s_gl" == "$r" ]] && return 0
         local s_iid
         s_iid=$(glab api "projects/vauchi%2F${s_gl}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
           | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
-        [[ -n "$s_iid" ]] && mr_registry+=("${s_gl}:${s_gl}:${s_iid}")
+        # Sibling has the branch but no MR yet — silently skip. Wrapping
+        # in `if/fi` (rather than `[[ … ]] && …`) ensures the function
+        # always returns 0; otherwise the implicit non-zero exit
+        # propagates under `set -e` and kills the recipe AFTER the MR
+        # has already been created (E13/E14/E15-style false-failure).
+        if [[ -n "$s_iid" ]]; then
+            mr_registry+=("${s_gl}:${s_gl}:${s_iid}")
+        fi
+        return 0
     }
     # Scan sub-directories
     for sibling_dir in "$workspace_root"/*/; do
