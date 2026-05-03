@@ -365,6 +365,22 @@ lint *args:
                     if [[ "$r" == "ios" || "$r" == "macos" ]]; then
                         scripts/scripts/check-domain-named-views.sh "$dir" 2>&1
                     fi
+                    # Humble UI G3/G4 ratchet — caps the count of
+                    # hardcoded `Text("Foo")` literals at the per-repo
+                    # `.text-literal-baseline` integer. Each retirement
+                    # / localisation MR ratchets the number down. iOS
+                    # scope is `Vauchi/Views/`; macOS extends to
+                    # `Vauchi/CoreUI/` and `Vauchi/VauchiApp.swift`
+                    # (matches the audit grep).
+                    if [[ "$r" == "ios" ]]; then
+                        scripts/scripts/check-text-literal-count.sh \
+                            "$dir" Vauchi/Views/ 2>&1
+                    fi
+                    if [[ "$r" == "macos" ]]; then
+                        scripts/scripts/check-text-literal-count.sh \
+                            "$dir" Vauchi/Views/ Vauchi/CoreUI/ \
+                            Vauchi/VauchiApp.swift 2>&1
+                    fi
                     ;;
                 mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
                 python)
