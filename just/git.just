@@ -305,8 +305,13 @@ pull-all:
             local reason
             if echo "$output" | grep -q "CONFLICT"; then
                 reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
-            elif echo "$output" | grep -q "uncommitted changes"; then
-                reason="dirty working tree — commit or stash first"
+            elif echo "$output" | grep -qE "unstaged changes|uncommitted changes"; then
+                if grep -q '^# >>> setup-path-overrides BEGIN' "$dir/Cargo.toml" 2>/dev/null \
+                   || grep -q '^# >>> setup-path-overrides BEGIN' "$dir/wasm/Cargo.toml" 2>/dev/null; then
+                    reason="path-override dirt — run: just clean-path-overrides && just git pull-all && just setup-path-overrides"
+                else
+                    reason="dirty working tree — commit or stash first"
+                fi
             else
                 reason="pull failed — $(echo "$output" | tail -1)"
             fi
@@ -588,8 +593,17 @@ sync:
                 local reason="pull --rebase failed"
                 if echo "$output" | grep -q "CONFLICT"; then
                     reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
-                elif echo "$output" | grep -q "uncommitted changes"; then
-                    reason="dirty working tree — commit or stash first"
+                elif echo "$output" | grep -qE "unstaged changes|uncommitted changes"; then
+                    # Detect the path-override fence so we can point at the
+                    # exact recovery path instead of the generic "stash first"
+                    # hint — the fenced [patch] block + regenerated Cargo.lock
+                    # are local-only and cannot be stashed away.
+                    if grep -q '^# >>> setup-path-overrides BEGIN' "$dir/Cargo.toml" 2>/dev/null \
+                       || grep -q '^# >>> setup-path-overrides BEGIN' "$dir/wasm/Cargo.toml" 2>/dev/null; then
+                        reason="path-override dirt — run: just clean-path-overrides && just git sync && just setup-path-overrides"
+                    else
+                        reason="dirty working tree — commit or stash first"
+                    fi
                 elif echo "$output" | grep -q "unmerged"; then
                     reason="unmerged files — resolve or: git -C $dir restore --staged --worktree <file>"
                 fi
