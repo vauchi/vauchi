@@ -599,15 +599,37 @@ bump-core version:
     fi
     echo "Bumping core workspace to {{ version }}..."
     cd core
+    # 1. [workspace.package].version (top-level `version = "X.Y.Z"`).
     sed -i.bak 's/^version = ".*"/version = "{{ version }}"/' Cargo.toml && rm Cargo.toml.bak
+    # 2. [workspace.dependencies] hardcoded version refs for the
+    #    intra-workspace crates. Each line looks like:
+    #      vauchi-core = { path = "vauchi-core", version = "0.X.Y", ... }
+    #    Cargo refuses `cargo generate-lockfile` if these aren't kept in
+    #    lockstep with the workspace version (it can't resolve a path-
+    #    member at the published version).
+    for crate in vauchi-core vauchi-app vauchi-protocol; do
+        sed -i.bak "s|^\\($crate = { path = \"$crate\", version = \"\\)[^\"]*\\(\".*\\)|\\1{{ version }}\\2|" Cargo.toml && rm Cargo.toml.bak
+    done
     cargo generate-lockfile 2>&1 | tail -3
     echo "Regenerating cargo-vet exemptions..."
     cargo vet regenerate exemptions 2>&1
     cargo vet fmt 2>&1
     echo "Regenerating golden fixtures..."
-    cargo nextest run -p vauchi-core -E 'test(regenerate)' -- --ignored 2>&1 | tail -3
+    # Engine fixtures and JSON schemas are gated behind their own
+    # features ("testing" / "schema-gen") and use #[ignore] so they only
+    # run when explicitly invoked. The original glob filter
+    # 'test(regenerate)' missed them — name the binaries directly.
+    cargo nextest run -p vauchi-core --features testing --test it \
+        regenerate_all_engine_fixtures --run-ignored=ignored-only 2>&1 | tail -3
     echo "Regenerating JSON schemas..."
     cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored 2>&1 | tail -3
+    # 3. Golden fixture metadata (`core_version` in
+    #    vauchi-core/tests/fixtures/golden/.version) is read by the
+    #    engine_golden_fixtures::*_fixture_is_fresh tests as a parity
+    #    gate. The regenerate_all_engine_fixtures test does not touch
+    #    this file, so update it inline.
+    sed -i.bak "s/\"core_version\": \"[^\"]*\"/\"core_version\": \"{{ version }}\"/" \
+        vauchi-core/tests/fixtures/golden/.version && rm vauchi-core/tests/fixtures/golden/.version.bak
     echo "Verifying .version file..."
     grep -q "{{ version }}" vauchi-core/tests/fixtures/golden/.version || echo "WARN: .version not updated"
     echo "✓ Core bumped to {{ version }}. Review changes and commit."
