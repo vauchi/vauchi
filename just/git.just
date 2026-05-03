@@ -116,9 +116,14 @@ main mode='':
         fi
         if git checkout main --quiet 2>/dev/null; then
             local output
-            if output=$(git pull --rebase --quiet 2>&1); then
+            # `--autostash` keeps `git main` working when a consumer
+            # Cargo.toml/Cargo.lock has local-only edits; mirrors the
+            # `git sync` recipe.
+            if output=$(git pull --rebase --autostash --quiet 2>&1); then
                 if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
                     progress_ok "$n" "$repo_total" "$label" "${save_info}up to date"
+                elif echo "$output" | grep -q "Applied autostash"; then
+                    progress_ok "$n" "$repo_total" "$label" "${save_info}pulled main (autostash applied)"
                 else
                     progress_ok "$n" "$repo_total" "$label" "${save_info}pulled main"
                 fi
@@ -127,6 +132,8 @@ main mode='':
                 local reason="pull --rebase failed"
                 if echo "$output" | grep -q "CONFLICT"; then
                     reason="rebase conflict — resolve manually"
+                elif echo "$output" | grep -q "Applying autostash resulted in conflicts"; then
+                    reason="autostash conflict — resolve in worktree; recovery: git stash pop"
                 elif echo "$output" | grep -q "uncommitted changes"; then
                     reason="dirty working tree — commit or stash first"
                 fi
@@ -294,9 +301,13 @@ pull-all:
             return 0
         fi
         local output
-        if output=$(git -C "$dir" pull --rebase --quiet 2>&1); then
+        # `--autostash` keeps `pull-all` working when a consumer
+        # Cargo.toml/Cargo.lock has local-only edits; mirrors `git sync`.
+        if output=$(git -C "$dir" pull --rebase --autostash --quiet 2>&1); then
             if echo "$output" | grep -qE "Already up to date|is up to date"; then
                 out_ok "$label" "up to date"
+            elif echo "$output" | grep -q "Applied autostash"; then
+                out_ok "$label" "pulled (autostash applied)"
             else
                 out_ok "$label" "pulled"
             fi
@@ -305,6 +316,8 @@ pull-all:
             local reason
             if echo "$output" | grep -q "CONFLICT"; then
                 reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
+            elif echo "$output" | grep -q "Applying autostash resulted in conflicts"; then
+                reason="autostash conflict — resolve in worktree; recovery: git -C $dir stash pop"
             elif echo "$output" | grep -qE "unstaged changes|uncommitted changes"; then
                 if grep -q '^# >>> setup-path-overrides BEGIN' "$dir/Cargo.toml" 2>/dev/null \
                    || grep -q '^# >>> setup-path-overrides BEGIN' "$dir/wasm/Cargo.toml" 2>/dev/null; then
@@ -579,20 +592,42 @@ sync:
         branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "")
         if [[ "$branch" == "main" ]]; then
             local output
+            # `--autostash` keeps sync working when the consumer Cargo.toml/
+            # Cargo.lock have local-only edits (e.g. path-override fences
+            # written by `setup-path-overrides`, or transient build
+            # artifacts): the stash is auto-applied after rebase. If the
+            # pop conflicts, git leaves markers in the worktree but the
+            # rebase itself returns 0 — we post-check for unmerged files
+            # so the conflict is reported as a failure, not a silent ok.
             # Use subshell to prevent set -e from aborting on pull failure
-            if output=$(git -C "$dir" pull --rebase --quiet 2>&1); then
-                if [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
+            if output=$(git -C "$dir" pull --rebase --autostash --quiet 2>&1); then
+                # Post-check: did `--autostash` leave unmerged files?
+                local post_unmerged
+                post_unmerged=$(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null || true)
+                if [[ -n "$post_unmerged" ]]; then
+                    local nfiles
+                    nfiles=$(echo "$post_unmerged" | wc -l | tr -d ' ')
+                    progress_fail "$n" "$repo_total" "$label" "autostash pop conflicted on $nfiles file(s); recovery: git -C $dir checkout --theirs <files> or stash list"
+                    fail_count=$((fail_count + 1))
+                elif [[ -z "$output" ]] || echo "$output" | grep -qE "Already up to date|up to date|Current branch .* is up to date"; then
                     progress_ok "$n" "$repo_total" "$label" "fetched, main up to date"
+                    ok_count=$((ok_count + 1))
+                elif echo "$output" | grep -q "Applied autostash"; then
+                    progress_ok "$n" "$repo_total" "$label" "fetched, pulled main (autostash applied)"
+                    ok_count=$((ok_count + 1))
                 else
                     progress_ok "$n" "$repo_total" "$label" "fetched, pulled main"
+                    ok_count=$((ok_count + 1))
                 fi
-                ok_count=$((ok_count + 1))
             else
-                # Rebase failed — abort it and report
+                # Rebase failed — abort it and report. With --autostash,
+                # if pop conflicts the stash is preserved at stash@{0}.
                 git -C "$dir" rebase --abort 2>/dev/null || true
                 local reason="pull --rebase failed"
                 if echo "$output" | grep -q "CONFLICT"; then
                     reason="rebase conflict — run: git -C $dir pull --rebase and resolve"
+                elif echo "$output" | grep -q "Applying autostash resulted in conflicts"; then
+                    reason="autostash conflict — resolve in worktree; recovery: git -C $dir stash pop"
                 elif echo "$output" | grep -qE "unstaged changes|uncommitted changes"; then
                     # Detect the path-override fence so we can point at the
                     # exact recovery path instead of the generic "stash first"
