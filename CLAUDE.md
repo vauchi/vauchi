@@ -81,7 +81,12 @@ Track Gherkin promotion with `promoted_to:` links.
 | `vauchi-cabi` | linux-qt, windows | C ABI exports |
 | `vauchi-protocol` | relay | Shared types only (serde) |
 
-Local dev uses `.cargo/config.toml` path overrides. `vauchi-platform-kotlin` is archived.
+Local dev uses `[patch]` blocks injected into each consumer's
+`Cargo.toml` by `just setup-path-overrides`; `just check-path-overrides`
+(also run on `session-init`) verifies cargo actually picked them up.
+The fenced block is local-only — a pre-commit hook blocks staging the
+fence or the resulting Cargo.lock churn. `vauchi-platform-kotlin` is
+archived.
 
 Repo layout: `.claude/docs/repo-organization.md`. Drift naming: `.claude/docs/drift-naming.md`.
 
