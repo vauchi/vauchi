@@ -2509,6 +2509,47 @@ sync-locales:
 sync-locales-strict:
     ./scripts/scripts/sync-locales.sh --strict
 
+# Sync vendored golden ScreenModel fixtures into a consumer repo's tree.
+# Source of truth is `core/vauchi-core/tests/fixtures/golden/`. Consumers
+# vendor a copy under `<repo>/tests/fixtures/golden/` so their snapshot
+# tests don't depend on a sibling `vauchi/core` checkout being present
+# on the CI runner — the latent break that hid behind cli's golden tests
+# until cli!233 (Wire Humble Tier 1) finally exercised them on CI.
+#
+# Usage:
+#   just sync-golden-fixtures cli       Replace cli/tests/fixtures/golden/
+#                                       with the current core source
+#
+# After running: review snapshot churn with `cargo insta review` and
+# commit fixtures + snapshots together.
+[group('tools')]
+[script]
+sync-golden-fixtures repo:
+    set -euo pipefail
+    src="core/vauchi-core/tests/fixtures/golden"
+    dst="{{repo}}/tests/fixtures/golden"
+    if [[ ! -d "$src" ]]; then
+        echo "ERROR: source fixtures missing: $src" >&2
+        exit 1
+    fi
+    if [[ ! -d "$dst" ]]; then
+        echo "ERROR: vendored dir missing: $dst (create it first to opt in)" >&2
+        exit 1
+    fi
+    # Wipe stale .json (preserve README.md and any hand-written extras).
+    find "$dst" -maxdepth 1 -name '*.json' -delete
+    cp "$src"/*.json "$dst/"
+    count=$(ls "$dst"/*.json 2>/dev/null | wc -l | tr -d ' ')
+    echo "Synced $count fixture(s) into $dst"
+    if ! git diff --quiet -- "$dst"; then
+        echo ""
+        echo "Drift from previous vendor — review with:"
+        echo "  git diff -- $dst"
+        echo "Then re-run snapshot tests and commit fixtures + snapshot updates together:"
+        echo "  just check {{repo}}"
+        echo "  cargo insta review"
+    fi
+
 # ═══════════════════════════════════════════════════════════════════
 # VISUAL REGRESSION TESTING
 # ═══════════════════════════════════════════════════════════════════
