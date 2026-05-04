@@ -1,6 +1,6 @@
 ## ADR Constraints (MANDATORY)
 
-Extracted from ADR-001 through ADR-043. These are hard rules — not guidelines.
+Extracted from ADR-001 through ADR-044. These are hard rules — not guidelines.
 Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify compliance.
 
 ### Crypto (ADR-002, ADR-019)
@@ -14,11 +14,12 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Never expose plaintext to the relay** — relay sees encrypted blobs only (ADR-004)
 - **Always encrypt sensitive fields at rest** — contact cards, shared keys, ratchet states, backup data (ADR-015)
 
-### Architecture — The Humble UI (ADR-021, ADR-022, ADR-023, ADR-043)
+### Architecture — The Humble UI (ADR-021, ADR-022, ADR-023, ADR-043, ADR-044)
 
 - **Every frontend is a Humble Object** — it renders `ScreenModel`, forwards `UserAction`s, executes `ExchangeCommand`s, and reports `ExchangeHardwareEvent`s. All testable behavior lives in core. If a frontend needs a conditional that is not purely about native presentation, the condition was computed in the wrong place (ADR-043)
 - **Core owns all business logic** — frontends never duplicate data logic, filtering, validation, or computation. If two clients need the same logic, it belongs in core
 - **Frontends are pure renderers** — they render `ScreenModel` components natively and forward `UserAction`s to core. No workflow orchestration in frontends
+- **CoreUI wire types carry presentation only** (ADR-044, Wire Humble) — type names + JSON keys are UI-shaped (`Item`, `Field`, `Component::List`, `items`, `variants`, `variant_id`, `selected_variant`); never `ContactItem`/`FieldDisplay`/`Component::ContactList`/`Component::CardPreview`/`GroupCardView`/`contacts`/`group_views`/`selected_group`/`group_name`/`searchable_fields`. Engine input never crosses serde — sidecar in the engine. Enforced by `core/vauchi-app/tests/it/wire_humble_keys_tests.rs`. Full discipline: `.claude/rules/wire-humble.md`
 - **Never put `DisplayHint` on `ScreenModel`** — it's a construction parameter, not screen data
 - **Frontends must never branch on form factor** — core handles form-factor differences via `DisplayHint`
 - **Every `WorkflowEngine` impl must handle all `DisplayHint` variants** — Phone, Watch, Desktop
