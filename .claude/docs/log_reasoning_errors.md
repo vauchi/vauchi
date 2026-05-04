@@ -136,3 +136,85 @@ record or design doc.
   `.claude/hooks/check-ci-yaml-tested.sh` (blocks `git push` of CI
   yaml unless the command line carries `CLAUDE_CI_TESTED=...`).
 - **Recurrence**: 1
+
+### 2026-05-04 — Trilogy MRs already landed via different SHAs; opened MR for ghost work
+
+- **What**: At session-init the bootstrap reported three feature
+  branches (relay/feat/version-changed-at-env-override,
+  e2e/docs/f11-smoke-ignore-update-f13,
+  _private/problem/ohttp-gateway-decap-unsupported-2026-05-04)
+  each "1 commit ahead of origin/main." Treated them as a
+  trilogy of open work needing MRs. **After `git fetch` two of
+  the three were already merged**: relay's commit became the
+  HEAD of relay/main (same SHA), and _private's F13 record had
+  been committed directly to main with a different SHA but
+  identical content. The "ahead/behind" snapshot at the start
+  of the session was already stale by the time I read it.
+- **Trigger**: Self-caught after running `git fetch origin` for
+  the pre-MR rebase, when ahead/behind flipped from `0 1 / 0 1`
+  to `0 0 / 3 1` for those two repos.
+- **Root cause**: The session-init bootstrap caches branch
+  state at session start. It can be 30+ minutes stale by the
+  time I read it. Auto-merge / direct-to-main pushes flip the
+  state under us with no warning.
+- **Lesson**: Before assuming a "1 commit ahead" branch is
+  unmerged work, run `git -C <repo> fetch origin` AND
+  `git -C <repo> cherry origin/main <branch>`. The former
+  refreshes ahead/behind; the latter detects squash-merged or
+  duplicate-SHA content (`-` markers = content already on main,
+  even with different SHA). `git rev-list --left-right --count
+  origin/main...HEAD` alone misses the squash-merge case.
+- **Recurrence**: 1
+
+### 2026-05-04 — Deleted local branch with unmerged MR-bound commit
+
+- **What**: After opening _private!1132, ran a batched cleanup
+  that deleted the local `tidy/work-board-2026-05-04-housekeeping`
+  branch alongside other already-merged branches. The MR was
+  still OPEN — the commit was on origin (pushed) but not yet on
+  origin/main, so deleting the local branch lost it from local
+  history. Recovered via `git fetch origin <branch> && git
+  switch -c <branch> origin/<branch>` (origin still had it).
+- **Trigger**: Self-caught when `git pull --ff-only origin main`
+  said "Already up to date" — meaning the commit hadn't reached
+  main yet, contradicting the assumption that it was safe to
+  delete.
+- **Root cause**: Conflated "MR opened (commit pushed)" with "MR
+  merged (commit on main)." Sequence-of-events conflation —
+  branches are safe to delete only after their MR lands and
+  origin/main advances past their tip.
+- **Lesson**: Before `git branch -D <feature>`, verify ONE of:
+  (a) MR state via `glab mr view <num>` shows `merged`, OR
+  (b) `git cherry origin/main <feature>` returns ALL `-`
+  markers (no `+`). The cleanup audit's `branch-health` output
+  is a snapshot from `glab mr list` and lags merge events; do
+  not trust its `RECOVER`/`DELETE` recommendations without a
+  per-branch verify when an MR was opened in the same session.
+- **Recurrence**: 1
+
+### 2026-05-04 — Killed mid-flight SSH push, created hung process
+
+- **What**: First `git push` invocation went into background and
+  appeared to hang. Killed the SSH child process (`kill 3253080`)
+  and retried. The kill orphaned the remote receive-pack
+  transaction — gitlab held the connection waiting, which made
+  subsequent retries also stall on SSH negotiation. Eventually
+  resolved by `pkill -9 -f "ssh.*gitlab.com"` and re-running
+  with verbose logging, which revealed the pre-push hook was
+  running 137 e2e tests (~7min). The push itself wasn't hung —
+  the hook was.
+- **Trigger**: Self-caught after the third stall when ps
+  showed the SSH child holding zero CPU.
+- **Root cause**: Conflated "command not producing output" with
+  "command stuck." Long-running pre-push hooks (just check,
+  test, fmt, clippy) produce no output until they finish. The
+  pipe `2>&1 | tail -30` buffers everything until the head
+  exits, so even progress lines didn't appear.
+- **Lesson**: Before killing a `git push`, redirect to a file
+  with `>/tmp/push.log 2>&1` and `tail -f /tmp/push.log` to see
+  real-time progress. Use `SKIP_TESTS=1 git push` for
+  docs/tidy MRs where the test suite isn't relevant. Look at
+  `scripts/hooks/pre-push` for available bypass envs
+  (`SKIP_TESTS`, `_SKIP_FMT`, `_SKIP_CLIPPY_TEST`,
+  `ALLOW_MERGED_BRANCH`) before killing the process.
+- **Recurrence**: 1
