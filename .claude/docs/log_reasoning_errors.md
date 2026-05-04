@@ -146,7 +146,7 @@ record or design doc.
   each "1 commit ahead of origin/main." Treated them as a
   trilogy of open work needing MRs. **After `git fetch` two of
   the three were already merged**: relay's commit became the
-  HEAD of relay/main (same SHA), and _private's F13 record had
+  HEAD of relay/main (same SHA), and `_private`'s F13 record had
   been committed directly to main with a different SHA but
   identical content. The "ahead/behind" snapshot at the start
   of the session was already stale by the time I read it.
