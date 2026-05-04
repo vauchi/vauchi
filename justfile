@@ -2536,9 +2536,13 @@ sync-golden-fixtures repo:
         echo "ERROR: vendored dir missing: $dst (create it first to opt in)" >&2
         exit 1
     fi
-    # Wipe stale .json (preserve README.md and any hand-written extras).
-    find "$dst" -maxdepth 1 -name '*.json' -delete
+    # Wipe stale fixtures (preserve README.md and any hand-written
+    # extras). `.version` is core's manifest of the fixture set —
+    # vendor it alongside the JSON files so consumers can read the
+    # sourced core revision without a separate lookup.
+    find "$dst" -maxdepth 1 \( -name '*.json' -o -name '.version' \) -delete
     cp "$src"/*.json "$dst/"
+    [[ -f "$src/.version" ]] && cp "$src/.version" "$dst/"
     count=$(ls "$dst"/*.json 2>/dev/null | wc -l | tr -d ' ')
     echo "Synced $count fixture(s) into $dst"
     if ! git diff --quiet -- "$dst"; then
