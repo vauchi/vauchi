@@ -171,6 +171,30 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   fi
 
   if [[ "$_SKIP_RUST_GATES" != "1" ]]; then
+  # Path-override source freshness — surface stale local core/ before
+  # the cargo gates validate against it. Same pathology that hid
+  # Wire Humble Tier 0 from cli/tui until auto-vet sync surfaced it
+  # on CI: local clippy passes against a behind-main `core/`, CI sees
+  # latest `core/main`, and rejects the push. session-init runs the
+  # same check at session start, but a session can outlast many local
+  # core/ branch switches; pushing is the moment of truth.
+  #
+  # Advisory only — never blocks. Loud header so it's hard to miss
+  # in scrolling cargo output.
+  WORKSPACE_ROOT=$(cd "$REPO_DIR/.." 2>/dev/null && pwd)
+  FRESHNESS_SCRIPT="$WORKSPACE_ROOT/scripts/scripts/path-overrides.sh"
+  if [[ -n "$WORKSPACE_ROOT" && -x "$FRESHNESS_SCRIPT" ]]; then
+    FRESHNESS_OUT=$(cd "$WORKSPACE_ROOT" && bash "$FRESHNESS_SCRIPT" freshness 2>/dev/null || true)
+    if echo "$FRESHNESS_OUT" | grep -q '^  WARN:'; then
+      echo "" >&2
+      echo "[gate-push] ⚠ Path-override source drift detected in $WORKSPACE_ROOT" >&2
+      echo "[gate-push] Local clippy below may pass on stale APIs that CI will reject:" >&2
+      echo "$FRESHNESS_OUT" | sed 's/^/[gate-push]   /' >&2
+      echo "[gate-push] (advisory — not blocking; clippy continues)" >&2
+      echo "" >&2
+    fi
+  fi
+
   echo "[gate-push] Checking formatting ($REPO_NAME)..."
   if ! cargo fmt --all -- --check 2>&1; then
     # On Windows, cargo fmt --all may fail with "filename too long" (os error 206).
