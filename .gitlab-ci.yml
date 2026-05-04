@@ -41,7 +41,7 @@ stages:
 # Portable to BusyBox grep (alpine) — see portable-shell.md §BusyBox.
 lint:claude-md:
   stage: lint
-  image: alpine:3.21
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
   tags: [docker]
   needs: []
   before_script:
@@ -75,7 +75,7 @@ secret_detection:
 # Fetches cleanup script from vauchi/scripts at runtime.
 cleanup:prerelease:
   stage: deploy
-  image: python:3.12-slim
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/python:3.12-slim
   tags: [docker]
   needs: []
   variables:
