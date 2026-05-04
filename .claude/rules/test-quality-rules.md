@@ -64,6 +64,28 @@ CC rules constrain AI code generation. Full details: `.claude/docs/test-quality-
   on orphan handlers or orphan affordances. Rationale + failure-mode
   examples: `_private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md`
   Phase 1.
+- **CC-23 No system-modal process polling**: UI tests must never verify
+  that a system-owned modal (UIDocumentPickerViewController, PHPicker,
+  AVCaptureUI, NSOpenPanel, share-sheet, AirDrop, Settings deep-link)
+  *actually presented* by polling a foreign-process `XCUIApplication`
+  (e.g. `XCUIApplication(bundleIdentifier: "com.apple.DocumentManagerUICore").state`)
+  or its localised chrome labels (`buttons["Cancel"]`, `buttons["Browse"]`).
+  Two structural failure modes: (1) the system modal covers any
+  in-app sentinel before XCTest can query it, so block-based
+  predicates time out even when the bridge fired correctly;
+  (2) the system bundle id and chrome label set drift across
+  iOS / macOS versions, so a test that passed on iOS 17
+  silently regresses on iOS 26. Test the **state that drives the
+  presentation** (an `@Published` flag, a `pendingFilePick`
+  value, an injected hardware-event callback) at the unit layer
+  instead. SwiftUI's job to present the modal once the state
+  flips is OS-tested. Upstream coverage (the engine emits the
+  matching `ExchangeCommand` on the matching action) belongs in
+  the engine's `tests/it/*_wiring_tests.rs`. Failure-mode
+  history: `ios!401` pivot from
+  `FilePickerReachabilityUITests.swift` to
+  `VauchiTests/CoreUI/ExchangeCommandBridgeTests.swift`
+  (2026-05-04).
 
 Full test design guidelines (AAA, coverage, mocking, organization):
 `.claude/docs/test-quality-rules.md`

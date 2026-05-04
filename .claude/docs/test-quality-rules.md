@@ -51,6 +51,49 @@ These rules constrain AI code generation to produce verifiable, high-quality out
   3. **Understand why the check exists** — what was it written to prevent? What regresses if it's removed or weakened?
   - If after all three checks you are confident the rule/test/setting itself is incorrect (outdated contract, wrong threshold, removed feature), you may change it. Otherwise, fix the source code.
 
+- **CC-23 No System-Modal Process Polling**: UI tests must never verify
+  that a system-owned modal *actually presented* by polling a foreign-process
+  `XCUIApplication` (e.g.
+  `XCUIApplication(bundleIdentifier: "com.apple.DocumentManagerUICore").state`)
+  or its localised chrome labels (`buttons["Cancel"]`, `buttons["Browse"]`).
+  Applies to: `UIDocumentPickerViewController` (`.fileImporter`),
+  `PHPickerViewController` (photo library), `UIImagePickerController`
+  (camera), `NSOpenPanel` / `NSSavePanel` (macOS), share sheet, AirDrop,
+  Settings deep-link, any extension-hosted UI.
+
+  **Two structural failure modes:**
+
+  1. **Race**: when the in-app `@Published` flag flips, SwiftUI presents
+     the system modal synchronously on the main queue. Any in-app
+     sentinel overlay rendered on the same flip is covered before the
+     XCTest predicate runloop can fire. Bumping the timeout does not
+     help — the sentinel is never queryable while the modal is up.
+  2. **Drift**: the system bundle id and chrome label set drift across
+     iOS / macOS versions (DocumentManagerUICore in iOS 17+,
+     DocumentPickerUI before; PHPicker in iOS 14+; localised Cancel /
+     Browse / Recents). A test that passes on iOS 17 silently regresses
+     on iOS 26 with no source change.
+
+  **Required pattern**: test the **state that drives the presentation**
+  (an `@Published` flag, a `pendingFilePick` value, an injected
+  hardware-event callback) at the unit layer instead. SwiftUI's job to
+  present the modal once the state flips is OS-tested. Upstream
+  coverage (the engine emits the matching `ExchangeCommand` on the
+  matching action) belongs in
+  `core/vauchi-app/tests/it/*_wiring_tests.rs`. Two boundaries, two
+  test layers, no race surface in between.
+
+  **Failure-mode history**: `ios!401` cycle (2026-05-04). The
+  `FilePickerReachabilityUITests.swift` UI test was rewritten three
+  times trying to make the polling-based detector reliable
+  (state predicate, accessibility sentinel via `.background`, then
+  `.overlay`) before the team accepted that the entire approach was
+  structurally broken. Replacement:
+  `ios/VauchiTests/CoreUI/ExchangeCommandBridgeTests.swift` drives
+  `handleExchangeCommands` directly with synthetic
+  `ExchangeCommandDTO` variants and asserts the matching @Published
+  state — same coverage, no race, OS-version-independent.
+
 ## Tidy First (Kent Beck)
 
 - **CC-19 Tidy Before Behavior Change**: Before starting a Red-Green cycle, assess whether a small structural improvement (tidying) would make the change easier. Tidyings are structure-only, never change behavior, and get their own `tidy:` commit. Common tidyings: guard clauses, extract helper, explaining variables, delete dead code, normalize symmetries. If the code is already clean, skip straight to RED.
