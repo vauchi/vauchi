@@ -112,6 +112,14 @@ session-init:
         else
             echo "  OK: all consumers resolve vauchi-* via local paths"
         fi
+        # Freshness check: surface drift between local override sources
+        # (core/, relay/) and origin/main. Stale shipped APIs are how
+        # "local-passes / CI-fails" silent breaks survive — the same
+        # pathology that hid Wire Humble Tier 0 until cli/tui auto-vet
+        # surfaced it on CI. Advisory only; show output verbatim so
+        # WARN lines + recovery hints reach the developer.
+        bash scripts/scripts/path-overrides.sh freshness 2>/dev/null \
+            | sed 's/^/  /'
     else
         echo "  (path-overrides.sh missing — scripts/ out of date?)"
     fi
