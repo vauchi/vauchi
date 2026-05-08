@@ -162,15 +162,15 @@ Contributing guide: `docs/docs/developers/contributing.md`.
 
 ## Reasoning Error Log
 
-Two complementary systems — use both:
-
 - `.claude/docs/log_reasoning_errors.md` — committed, shared,
   lightweight session entries. Append when self-caught, user-corrected,
   or when reviewing past work reveals a wrong claim / implementation /
   tool usage. Saves tokens for future sessions by short-circuiting
-  known dead ends. Promote patterns after 3+ occurrences.
-- `.claude/docs/claude-errors-and-misjudgments.md` — committed, shared,
-  E##-numbered. Distilled patterns for cross-session learning.
+  known dead ends. Promote a one-liner to "Common waste patterns"
+  below after 3+ occurrences. (The earlier two-tier model via
+  `claude-errors-and-misjudgments.md` was retired 2026-05-08; that
+  E## file sat empty below E30 while real promotions went straight
+  from the log to this section.)
 
 ### Common waste patterns (pattern-match before acting)
 
