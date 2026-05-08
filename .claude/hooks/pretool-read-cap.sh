@@ -38,7 +38,12 @@ READS_TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-reads"
 EDITS_TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
 
 COUNT=0
-[[ -f "$READS_TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$READS_TRACKER" 2>/dev/null || echo "0")
+# `grep -c` exits 1 with stdout "0" when there are no matches; `|| echo "0"`
+# in that case appended a second "0" line to the substitution, producing a
+# multi-line COUNT that broke the `[[ … -ge 3 ]]` arithmetic. `|| true`
+# swallows the non-zero exit and keeps the substitution single-line.
+[[ -f "$READS_TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$READS_TRACKER" 2>/dev/null || true)
+[[ -z "$COUNT" ]] && COUNT=0
 
 # Allow the next Read if there has been an Edit/Write to this file
 # AFTER the most recent Read (file genuinely changed; verify-after-edit

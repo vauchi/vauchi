@@ -30,7 +30,11 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 
 TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
 COUNT=0
-[[ -f "$TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$TRACKER" 2>/dev/null || echo "0")
+# Same `grep -c || echo "0"` multi-line bug as pretool-read-cap.sh —
+# `grep -c` exits 1 with stdout "0" on no matches, the fallback echo
+# appended a second "0" line, producing a multi-line COUNT.
+[[ -f "$TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$TRACKER" 2>/dev/null || true)
+[[ -z "$COUNT" ]] && COUNT=0
 
 if [[ "$COUNT" -ge 4 ]]; then
   cat >&2 <<EOF
