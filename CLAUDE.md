@@ -164,6 +164,44 @@ Two complementary systems — use both:
 - `.claude/docs/claude-errors-and-misjudgments.md` — committed, shared,
   E##-numbered. Distilled patterns for cross-session learning.
 
+### Common waste patterns (pattern-match before acting)
+
+Recurring failure modes drawn from the archive
+(`archive/claude-errors-2026-03.md`, 30 patterns; bias note: Claude
+"optimizes for task completion over process compliance under friction"
+drove 15 of those 30) and the active log. Each costs 5–50 K tokens per
+occurrence — preventing one outweighs this section's load cost many
+times over.
+
+- **Process-bypass under friction.** A failing test, blocked hook, or
+  red CI tempts a "make it pass" shortcut (`--no-verify`, exclude file
+  from lint, mock the check, suppress the warning). Default: fix the
+  source first. Read CC-21 (Chesterton's Fence) before muting any
+  check.
+- **"Works on host" assumption.** GNU coreutils on a Linux host does
+  not predict BusyBox on `alpine:3.21` CI. For shell that runs in
+  alpine, test inside the same image
+  (`docker run --rm -v "$PWD":/work -w /work alpine:3.21 sh -c '…'`).
+  Same shape: macOS BSD vs Linux GNU.
+- **Header-comment-as-spec.** Comments age faster than the code they
+  describe; an inverted-intent header is common. Trust the body. Run a
+  sentinel-input test before wiring an unfamiliar script into CI.
+- **Wrong-layer audit.** Optimizing at file/config layer when the cost
+  lives in behavior (Agent calls, large `Read`s, retry cycles). Sample
+  empirically where tokens actually go (jsonl logs, hook counts) before
+  optimizing.
+- **Retry-instead-of-think.** If the second attempt at a problem isn't
+  right, STOP and re-read carefully. Attempt 3+ costs more tokens than
+  the planning time it skipped — this is the dominant in-session waste
+  pattern by frequency.
+- **Memory-loaded-but-unused.** A relevant memory entry is in context,
+  yet the next action ignores it (e.g. reflexive `cd` despite the
+  `git -C` memory). When starting a multi-step action, scan the
+  loaded memory for entries that name the action verb.
+
+When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
+a clear recurrence with worked example, promote a one-liner here.
+
 ## Exploration
 
 `just tell-me-about "<topic>"` — uses local LLM to search and summarize codebase.
