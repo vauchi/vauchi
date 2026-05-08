@@ -24,6 +24,9 @@ cargo watch -x 'nextest run'   # re-run tests on file save
 
 - **Principles**: All work must align with
   [docs/about/principles.md](docs/docs/about/principles.md)
+- **Vocabulary**: Canonical glossary at `_private/docs/CONTEXT.md` —
+  domain, CoreUI, crypto, repos, workspace terms with `_Avoid_`
+  aliases. When prose drifts from these names, prose is wrong.
 - **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
 - **Test Quality & Design**: See `.claude/rules/test-quality-rules.md`.
