@@ -2526,6 +2526,27 @@ sync-locales:
 sync-locales-strict:
     ./scripts/scripts/sync-locales.sh --strict
 
+# Verify literal i18n keys referenced in source exist in en.json.
+# Catches typos in `get_string("foo.bar")` at MR time instead of
+# the runtime fallback `Missing: <key>` at
+# core/vauchi-app/src/i18n.rs:134. CI runs the same check via
+# `lint:locale-key-coverage` in core/.gitlab-ci.yml.
+#
+# Variable-key call sites (`get_string(locale, &computed_key)`)
+# are statically unreachable and not validated here — covered by
+# test discipline + runtime fallback.
+#
+# Usage:
+#   just lint-locale-keys                          # core/vauchi-app/src, rust
+#   just lint-locale-keys core/vauchi-app/src rust # explicit
+#   just lint-locale-keys ios/Vauchi swift         # frontend (Phase 4)
+[group('tools')]
+lint-locale-keys repo='core/vauchi-app/src' language='rust':
+    bash locales/scripts/check-locale-key-coverage.sh \
+        --language {{ language }} \
+        --locales-dir locales \
+        {{ repo }}
+
 # Sync vendored golden ScreenModel fixtures into a consumer repo's tree.
 # Source of truth is `core/vauchi-core/tests/fixtures/golden/`. Consumers
 # vendor a copy under `<repo>/tests/fixtures/golden/` so their snapshot
