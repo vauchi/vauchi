@@ -477,8 +477,11 @@ if echo ":$DOC_NAMING_REPOS:" | grep -q ":$REPO_NAME:"; then
       dirname=$(dirname "$file")
 
       # Skip well-known filenames
+      # NOTE: keep this list in sync with `_private/docs/scripts/check-doc-naming.sh`
+      # EXCEPTIONS — they enforce the same convention at different stages
+      # (this hook runs pre-push; the script runs in CI).
       case "$filename" in
-        README.md|CLAUDE.md|CONTRIBUTING.md|roadmap.md|PRINCIPLES.md|VISIBILITY_POLICY.md|INDEX.md) continue ;;
+        README.md|CLAUDE.md|CONTEXT.md|CONTRIBUTING.md|roadmap.md|PRINCIPLES.md|VISIBILITY_POLICY.md|INDEX.md) continue ;;
         assumptions.md|master-plan.plan.md|work-board.md) continue ;;
         STRUCTURE.md|ARCHITECTURE.md|SECURITY.md|CHECKLIST.md) continue ;;
         investigation.md|implementation-plan.md|retrospective.md|post-mortem.md|rejected-solutions.md|design.md|plan.md) continue ;;
