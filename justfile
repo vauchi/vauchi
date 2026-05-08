@@ -227,10 +227,18 @@ check-binding-abi platform:
 
 # Run Layer 1 ScreenModel reachability tests (core, test-support feature).
 # Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 1.4.
+#
+# Two CC-22 gates run before the test suite (closes audit R-4 / F4):
+#   (1) every `impl WorkflowEngine` has a matching
+#       `tests/reachability/<snake>.rs` or sits on
+#       `tests/reachability/.coverage-baseline`
+#   (2) every baseline entry has NO matching test (the list ratchets
+#       down only — landing a test forces removal in the same MR)
 [group('daily')]
 [script]
 reachability:
     set -euo pipefail
+    ./scripts/scripts/check-reachability-coverage.sh
     if command -v cargo-nextest &>/dev/null; then
         (cd core && cargo nextest run --manifest-path vauchi-app/Cargo.toml --test reachability --features vauchi-app/test-support)
     else
