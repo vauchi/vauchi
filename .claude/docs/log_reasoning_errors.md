@@ -302,3 +302,74 @@ record or design doc.
   `verify-before-acting.md`: trust the smallest concrete check
   over the docs.
 - **Recurrence**: 1
+
+### 2026-05-08 — Inlined a CI fix per-repo instead of fixing the shared template
+
+- **What**: Hit a stale-clone failure mode in `lint:locale-key-
+  coverage` across linux-gtk → ios → android tighten MRs and
+  shipped three near-identical inline `before_script` rewrites
+  (always-fetch+reset on `../locales`) before discovering the
+  shared template `scripts/ci-templates/content-fetch.yml`
+  carried the same anti-pattern in `.clone-locales` /
+  `.clone-themes`. The template's `pull --ff-only 2>/dev/null
+  || true` silently fails on shallow clones and `2>/dev/null`
+  hides it. core/.gitlab-ci.yml extends the template (15+
+  references) and inherits the bug; linux-gtk / ios / android
+  inline because their CI configs don't include
+  `content-fetch.yml`. Fixing only the inlines left core
+  exposed; fixing only the template left the inlines untouched.
+  The right move is both, in two commits — but the *order*
+  matters: fix the template first so future inlines start from
+  a working baseline, then fix the leaves. I fixed leaves
+  first because the leaves were what was failing in CI, then
+  noticed the template afterwards.
+- **Trigger**: Self-caught after the third inline copy, when
+  the user asked "what is next? think intuitively and counter-
+  intuitively" — the question forced an audit pass that found
+  the shared template.
+- **Root cause**: Reactive debugging (fix what's failing now)
+  can blind you to where the failure pattern *originates*. Each
+  individual leaf fix looks correct in isolation; the template
+  is upstream of every leaf and was the actual root.
+- **Lesson**: When the same fix appears in 2+ places in one
+  session, stop and search for a shared upstream before doing
+  the third. `just grep "<the-anti-pattern>"` is a 10-second
+  check that prevents 3× the diff and keeps the fix DRY at the
+  source. Counter-intuitively, the third copy of "the same
+  fix" is a stronger signal than the second — the second can
+  be coincidence; the third is a pattern.
+- **Cross-ref**: `verify-before-acting.md` ("when a recipe
+  fails, debug the recipe; don't bypass it"). Same shape
+  one-level-up: when a CI pattern fails, debug the template;
+  don't bypass it with inlines.
+- **Recurrence**: 1
+
+### 2026-05-08 — Conflated `git pull --ff-only` semantics on shallow clones
+
+- **What**: Initial mental model: `git pull --ff-only` on a
+  shallow `--depth=1` clone fails noisily with "fast-forward
+  not possible" so the wrapping `2>/dev/null || true` swallows
+  a single specific error. Actual behaviour observed: shallow
+  pull-ff-only can succeed-as-no-op (returning exit 0) when the
+  remote tip has new commits past the shallow boundary, leaving
+  HEAD on the cached SHA. The `|| true` then never fires, and
+  the job runs against a stale tree without any signal — there
+  is no failure to retry on, no warning to grep for, no
+  alarming exit code.
+- **Trigger**: Investigated after `linux-gtk!120` retried twice
+  with the same 19-key failure even though `locales/main` had
+  shipped the keys hours earlier.
+- **Root cause**: Used a heuristic mental model ("ff-only
+  always errors when divergent") instead of running the actual
+  command against a shallow repo. The behaviour is more
+  permissive than the heuristic suggests; shallow refs let pull
+  decide it has nothing to fast-forward and exit 0.
+- **Lesson**: For git operations on shallow / cached state,
+  mental models drift fast — verify with a small reproduction
+  (`git clone --depth=1 ...; git pull --ff-only; git log -1`)
+  before relying on error-propagation as a contract. The fix
+  pattern that *is* contract-stable across shallow / cached /
+  divergent / corrupted state is `fetch + reset --hard
+  origin/main`: explicit destination state regardless of
+  starting state.
+- **Recurrence**: 1
