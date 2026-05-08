@@ -277,9 +277,11 @@ record or design doc.
   into CI based on the script's header comment ("Catches missing
   keys BEFORE merge — not at runtime fallback"). The script's
   load-bearing line is:
+
   ```bash
   if echo "$EN_KEYS" | grep -qFx "$key"; then echo "$key"; fi
   ```
+
   which **filters out** any candidate not in `en.json`. A
   misspelled key (e.g. `"contact.add_btn_x"` rather than
   `"contact.add_button"`) is dropped from the candidate set
