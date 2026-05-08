@@ -68,6 +68,27 @@ every config-level optimization combined. Rules:
 - **Parallelize before delegating.** Two `Grep` calls in one message
   are cheaper than one `Agent` call.
 
+**Tool output discipline (MANDATORY)** — a single noisy command
+(`git log`, `cargo check`, `just test`, large `Read`) routinely dumps
+10–40 K tokens into context. Default to narrow output; widen only when
+the narrow form was inconclusive.
+
+- `git log` → always `--oneline -N` first; widen only if you need the
+  body. Same for `git diff` — `--stat` first, full diff when needed.
+- `cargo check` / `just test` failures → pipe through `tail -50` once
+  you know there's a failure; the first error is usually the only one
+  that matters. Re-run targeted (`cargo check -p <crate>`,
+  `just test-name <pat> <repo>`) instead of the full workspace.
+- `Read` a large file → check `wc -l` or use `Glob` to confirm size
+  first. For files >500 lines, always pass `offset` + `limit`. Default
+  2000-line read is wasteful when you know which region you need.
+- **Never re-read the same file in one session.** The `log-read-patterns`
+  hook flags 3rd+ reads — it exists because this is the dominant waste
+  pattern. Read once, hold the relevant region in your head, edit from
+  there.
+- For wide searches, prefer one well-formed `Grep` with `-A`/`-B`
+  context over multiple narrow greps that each return only a line.
+
 ## Problem Workflow (MANDATORY)
 
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
