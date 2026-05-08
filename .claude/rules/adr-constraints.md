@@ -51,9 +51,9 @@ glossary owns *what the words mean*.
 
 ### Design (ADR-038)
 
-- **All visual properties** (colors, spacing, typography) **defined in `themes/` or `tokens.json`** — never hardcoded in frontend code
+- **All visual properties** (colors, spacing, typography) **defined in `themes/` or `tokens.json` for properties already exposed via UniFFI** — never hardcoded in frontend code for those. ADR-038:48 acknowledges "Mobile: not yet exposed via UniFFI" — properties without a UniFFI surface today (font sizes, paddings on iOS/macOS/Android) are *not yet* in violation; new properties must land in `tokens.json` first when their bridge is added.
 - **All user-visible strings** in `locales/*.json` via `t("key")` — never hardcoded
-- **`tokens.json` is the single source of truth for design tokens** — Rust `DesignTokens::default()` must match; validated by `check-core-contract.py`
+- **`tokens.json` is the single source of truth for design tokens** — Rust `DesignTokens::default()` must match; validated by `themes/scripts/check-core-contract.py`
 - **Accessibility labels**: planned for core-driven delivery but not yet implemented — frontends currently own a11y labels
 
 ### Desktop (ADR-027)
