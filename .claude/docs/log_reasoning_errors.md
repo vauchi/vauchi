@@ -395,3 +395,53 @@ record or design doc.
   origin/main`: explicit destination state regardless of
   starting state.
 - **Recurrence**: 1
+
+### 2026-05-08 — Resumed an "in progress" claim without checking `git status` was clean against origin
+
+- **What**: `session-init` reported the work board's only "In
+  Progress" item was the Windows humble-UI retirement, claimed
+  by `@claude-2026-05-08`, and the README still showed `[ ]
+  Phase 5`. I read those, made a plan ("extract inline lint to
+  sibling script"), wrote the script + CI rewire, pushed two
+  branches, opened `vauchi/scripts!343` (ready) and
+  `vauchi/windows!86` (Draft), and updated the README — all
+  before noticing that `git -C _private status` had said
+  "behind 3" the whole time. The 3 unfetched commits were:
+  (1) the same-day prior session shipping Phase 5 inline
+  via `windows!85`, (2) the close-out commit explicitly
+  rejecting the sibling-script form with the rationale
+  "5-line one-liner with no external policy state... a fixed
+  one-shot find is sufficient", and (3) the graduation to
+  `done/`. I duplicated work that had been deliberately
+  decided against, then had to close both MRs and delete four
+  branches.
+- **Trigger**: Self-caught when `git -C _private pull` during
+  the work-board update raised a merge conflict against the
+  graduated `done/` README path that didn't exist locally.
+- **Root cause**: `session-init` *fetches* but does not *pull*
+  the `_private` repo, and the dashboard's "LOCAL BRANCHES"
+  section only flags non-`main` checkouts — neither surface
+  flagged "_private/main is 3 commits behind origin/main".
+  The claim on the work board was authored by my prior
+  session that very morning; the prior session had also
+  closed it out and graduated it. Reading the local README
+  showed the pre-close-out state and was wrong; the truthful
+  source was `git log origin/main` for the same path.
+- **Lesson**: When picking up a same-session claim from the
+  work board, the very first move must be `git -C <repo> log
+  origin/main -- <record-path>` (or `git -C _private status`
+  to spot "behind N") *before* reading the local README.
+  The work board entry being marked "In Progress" with a
+  same-day claim is a strong signal the record may have
+  graduated since the local clone last pulled. Trust
+  `git log origin/main` over the local working-tree README,
+  always — the rule is in `verify-before-acting.md` ("Before
+  implementing a fix from a problem record: grep the actual
+  source...") but the tier-1 trigger should be earlier:
+  *before reading the record itself*, confirm the local copy
+  matches origin.
+- **Cross-ref**: `verify-before-acting.md` (problem records
+  vs code drift); `self-healing.md` (stale-record handling);
+  `multi-repo-awareness.md` ("Branch inspection: ALWAYS check
+  all repos" — same shape, different verb).
+- **Recurrence**: 1
