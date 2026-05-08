@@ -34,7 +34,7 @@ glossary owns *what the words mean*.
 
 - **Core must never call hardware directly** — hardware interaction uses command/event protocol: core emits `ExchangeCommand`, frontends execute and return `ExchangeHardwareEvent`
 - **Never create a Platform trait in core** — permanently unnecessary per ADR-030/031
-- **Never reintroduce the Transport generic parameter** — `Box<dyn Transport>` is the final form
+- **Never reintroduce a `Transport` generic on user-facing types** (`Vauchi`, `AppEngine`) — these use `Box<dyn Transport>` boxed inside `SyncController` per ADR-030 Phase 1 (merged 2026-03-15, core v0.3.1). Inner types `SyncController<'a, T>`, `RelayClient<T>`, `ConnectionManager<T>` retain the generic for static dispatch — a future internal cleanup may erase them, but reintroducing the generic on the FFI surface is the bug ADR-030 was written to prevent
 - **All future hardware** (biometrics, WiFi Aware, USB) **follows command/event pattern** — no new hardware traits
 - **Keep `UserAction` and `ExchangeHardwareEvent` on separate dispatch paths** — different concerns (ADR-031)
 - **Exchange tests must be pure input/output** — events in, commands out, no mock traits (ADR-031)
