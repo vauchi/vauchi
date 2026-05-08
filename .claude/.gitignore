@@ -11,6 +11,7 @@ settings.local.json
 # Session telemetry (ephemeral, processed by session-end)
 .session-errors
 .session-reads
+.session-reads-meta
 .session-edits
 .session-heads
 
