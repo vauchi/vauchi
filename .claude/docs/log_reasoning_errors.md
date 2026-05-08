@@ -68,10 +68,11 @@ record or design doc.
   tool outputs × sessions × time). Did not sample empirical waste
   before starting.
 - **Lesson**: For any token-cost audit, the FIRST step is to sample
-  where the tokens go. `_private/docs/reference/error-ledger.jsonl`
-  + the hook categories already have the answer. The CLAUDE.md
-  "Common waste patterns" section now codifies this as
-  "Wrong-layer audit"; this entry is the worked example behind it.
+  where the tokens go. The hook telemetry at
+  `_private/docs/reference/error-ledger.jsonl` already has the
+  category counts. The CLAUDE.md "Common waste patterns" section
+  now codifies this as "Wrong-layer audit"; this entry is the
+  worked example behind it.
 - **Recurrence**: 1
 
 ### 2026-04-20 — Used GNU-only `grep --exclude=` in alpine-CI shell script
