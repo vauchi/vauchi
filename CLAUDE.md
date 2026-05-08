@@ -48,6 +48,13 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 
 **Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
 
+**Subagents are expensive** — each `Agent` call spins up a fresh context
+with its own system prompt + agent definition. Use them for genuinely
+broad exploration (3+ search queries) or when isolating a long output
+from the main context. For a single grep, file read, or symbol lookup,
+use the direct tool — `Grep`, `Read`, `Glob`. Misused subagents
+multiply session cost without adding signal.
+
 ## Problem Workflow (MANDATORY)
 
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
