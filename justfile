@@ -2319,20 +2319,36 @@ check-just-docs action='check':
 # Find downstream consumers of a core function/type across repos
 # Usage: just consumers ExchangeSession
 #        just consumers "fn get_card"
+#
+# Covers all in-tree consumers: the binding crates inside core/ (vauchi-app,
+# vauchi-cabi, vauchi-platform), every Rust frontend, every native frontend
+# (macos/ios/android Swift+Kotlin, windows C#, linux-gtk Rust, linux-qt C++),
+# and web-demo/drift-detector (TypeScript). The list is broad on purpose —
+# missing a consumer is what made the 2026-05-08 deep-modules audit drop
+# linux-qt entirely. See .claude/docs/audit-scope.md.
 [group('tools')]
 [no-cd]
 [script]
 consumers pattern:
     set -uo pipefail
-    echo "Searching for '{{ pattern }}' across downstream repos..."
+    echo "Searching for '{{ pattern }}' across in-tree consumers..."
     echo ""
-    DOWNSTREAM_DIRS=(cli tui e2e relay linux-gtk)
-    for dir in "${DOWNSTREAM_DIRS[@]}"; do
+    CONSUMER_DIRS=(
+        core/vauchi-app core/vauchi-cabi core/vauchi-platform
+        cli tui e2e relay
+        linux-gtk linux-qt windows macos ios android
+        web-demo drift-detector
+    )
+    for dir in "${CONSUMER_DIRS[@]}"; do
         [[ ! -d "$dir" ]] && continue
-        label=$(basename "$dir")
+        label="$dir"
         results=$(rg "{{ pattern }}" "$dir" \
             --glob '*.rs' --glob '*.ts' --glob '*.tsx' \
-            --glob '!target/' --glob '!node_modules/' --glob '!dist/' \
+            --glob '*.swift' --glob '*.kt' \
+            --glob '*.cpp' --glob '*.h' --glob '*.hpp' \
+            --glob '*.cs' \
+            --glob '!target/' --glob '!build/' --glob '!.gradle/' \
+            --glob '!node_modules/' --glob '!dist/' --glob '!.next/' \
             -n --color=never 2>/dev/null || true)
         if [[ -n "$results" ]]; then
             count=$(echo "$results" | wc -l | tr -d ' ')
@@ -2341,20 +2357,21 @@ consumers pattern:
             echo ""
         fi
     done
-    # Also check mobile bindings
-    for dir in android ios; do
-        [[ ! -d "$dir" ]] && continue
-        results=$(rg "{{ pattern }}" "$dir" \
-            --glob '*.kt' --glob '*.swift' \
-            --glob '!build/' --glob '!.gradle/' \
-            -n --color=never 2>/dev/null || true)
-        if [[ -n "$results" ]]; then
-            count=$(echo "$results" | wc -l | tr -d ' ')
-            echo "── $dir ($count matches) ──"
-            echo "$results"
-            echo ""
-        fi
-    done
+
+# Snapshot the public API surface of each core crate (deterministic, diffable).
+# Usage: just public-api              # all crates + per-subsystem breakdown
+#        just public-api vauchi-core  # one crate, full pub item listing
+#
+# Use this output (not narrative prose) as the anchor for any "deep vs.
+# shallow" claim. If cargo-public-api is installed it produces
+# authoritative output; otherwise it falls back to a grep snapshot.
+# See .claude/docs/audit-scope.md for the audit coverage manifest.
+[group('tools')]
+[no-cd]
+[script]
+public-api crate="all":
+    set -uo pipefail
+    bash scripts/scripts/check-public-api.sh "{{ crate }}"
 
 # ═══════════════════════════════════════════════════════════════════
 # DOCUMENTATION LINTING
