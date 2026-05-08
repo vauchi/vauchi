@@ -8,15 +8,6 @@ implementation, or a tool usage was found to be wrong. Read by future
 sessions to avoid repeating the same dead ends — saves tokens by
 short-circuiting analysis when a known pitfall is recognized.
 
-## How this differs from `claude-errors-and-misjudgments.md`
-
-| | `log_reasoning_errors.md` (this file) | `claude-errors-and-misjudgments.md` |
-|---|---|---|
-| Granularity | Quick, one-off entries | Distilled patterns (E##) |
-| When to add | Anytime an error is caught | When a pattern recurs |
-| Format | Lightweight prose | Structured (root cause → prevention → test guard) |
-| Lifecycle | Append; promote after 3+ similar entries | Permanent reference |
-
 ## When to append an entry
 
 - **Self-caught**: realized mid-task that a hypothesis or step was wrong
@@ -24,9 +15,12 @@ short-circuiting analysis when a known pitfall is recognized.
 - **Discovery**: while reviewing past work, found a stale claim or buggy fix
 - **Tool misuse**: invoked a tool with wrong args / wrong tool for job
 
-If the same kind of entry appears 3+ times → promote to a numbered
-entry in `claude-errors-and-misjudgments.md` and reference it from a
-rule in `.claude/rules/`.
+If the same kind of entry appears 3+ times → promote a one-liner to
+the **Common waste patterns** section of `CLAUDE.md` and reference
+it from a rule in `.claude/rules/`. (The previous two-tier model
+via `claude-errors-and-misjudgments.md` was retired 2026-05-08:
+the E## file sat empty below E30 for weeks while real promotions
+went straight from this log to CLAUDE.md.)
 
 ## Format
 
