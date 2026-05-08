@@ -63,11 +63,18 @@ renderer-leaks-domain. Keep them named for what they are:
   same: data shape, no domain branching by the renderer. Keep.
 
 The deny-list in `wire_humble_keys_tests.rs` is the
-ground-truth for what's been retired. When the test fires, do
-not "fix" it by widening the deny-list. Pick a UI-shaped name
-for the new key. The deny-list is a record of names already
-retired — adding to it is fine when retiring more, never to
-silence a regression.
+ground-truth for **wire JSON keys** that have been retired —
+both struct field names and externally-tagged enum variant
+tags. Rust-only type retirements (e.g. `FieldDisplay`, where
+the struct's wire form is its *fields*, not its name) are
+convention-only — the deny-list cannot fire on a Rust-side
+re-introduction. CONTEXT.md is the ground truth for that
+class.
+
+When the test fires, do not "fix" it by widening the
+deny-list. Pick a UI-shaped name for the new key. The
+deny-list is a record of names already retired — adding to it
+is fine when retiring more, never to silence a regression.
 
 ### Reversibility
 
