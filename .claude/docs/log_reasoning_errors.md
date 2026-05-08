@@ -242,3 +242,61 @@ record or design doc.
   clean-path-overrides` before any further core commit. Or commit
   the bump immediately, then validate separately.
 - **Recurrence**: 1
+
+### 2026-05-08 — Inflated survey count drove a wrong volume argument
+
+- **What**: Reasoned over an Explore-agent survey claiming "1037
+  `get_string()` call sites in core" while scoping a CI gate
+  (problem record `2026-05-08-locale-key-coverage-ci-wiring`).
+  Used the number as the load-bearing justification for adding the
+  gate. Empirical count: **62** total — `vauchi-app` 48,
+  `vauchi-cabi` 4, `vauchi-platform` 10. Off by ~16×.
+- **Trigger**: Self-caught at the investigation phase when running
+  `bash locales/scripts/check-locale-key-coverage.sh` against
+  `core/vauchi-app/src/` returned only 47 candidates / 8 unique
+  literal keys, not the 1000+ implied by the survey.
+- **Root cause**: Treated an agent's bullet-pointed summary number
+  as ground truth without running the 30-second `rg -c
+  'get_string\b' core/vauchi-app/src --type rust` that would have
+  produced the real number. The summary phrasing
+  ("1037 get_string() calls used 1037 times across core") looked
+  too specific to be wrong.
+- **Lesson**: Survey-style numbers from agent reports get the same
+  treatment as plan-doc claims under `verify-before-acting.md`:
+  if a number is going to load-bear a recommendation, run the
+  smallest concrete count yourself before building on it. Counts
+  are especially prone to drift between "calls" / "call sites" /
+  "unique keys" / "matches in any file" — confirm what the
+  number actually represents.
+- **Recurrence**: 1
+
+### 2026-05-08 — Recommended wiring a script based on its header, not its behavior
+
+- **What**: While planning the same `locale-key-coverage` gate,
+  recommended wiring `locales/scripts/check-locale-key-coverage.sh`
+  into CI based on the script's header comment ("Catches missing
+  keys BEFORE merge — not at runtime fallback"). The script's
+  load-bearing line is:
+  ```bash
+  if echo "$EN_KEYS" | grep -qFx "$key"; then echo "$key"; fi
+  ```
+  which **filters out** any candidate not in `en.json`. A
+  misspelled key (e.g. `"contact.add_btn_x"` rather than
+  `"contact.add_button"`) is dropped from the candidate set
+  precisely because it doesn't match `en.json` — the inverse of
+  the stated intent. Wiring the script as-is would have shipped
+  zero typo detection while looking like a working gate.
+- **Trigger**: Self-caught at the investigation phase, while
+  reading the script line-by-line to write a CI job spec.
+- **Root cause**: Conflated "the script claims to do X" with "the
+  script does X". Header comments age more easily than code; a
+  three-year-old comment can describe an intent that a later
+  refactor inverted.
+- **Lesson**: Before wiring an unfamiliar script into CI, read
+  the body, not just the header. Run it against a sentinel known
+  to fail (a deliberate typo in source → expected ERROR) and
+  confirm the script catches it. If it doesn't, the script is
+  broken regardless of the header. Same root cause as
+  `verify-before-acting.md`: trust the smallest concrete check
+  over the docs.
+- **Recurrence**: 1
