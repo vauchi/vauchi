@@ -73,11 +73,19 @@ every config-level optimization combined. Rules:
 10–40 K tokens into context. Default to narrow output; widen only when
 the narrow form was inconclusive.
 
-- `git log` → always `--oneline -N` first; widen only if you need the
-  body. Same for `git diff` — `--stat` first, full diff when needed.
-- `cargo check` / `just test` failures → pipe through `tail -50` once
-  you know there's a failure; the first error is usually the only one
-  that matters. Re-run targeted (`cargo check -p <crate>`,
+- **Use `--quiet` on `just check`/`test`/`build`/`fmt`/`lint`.** The
+  shared `quiet-runner.sh` captures full output to `/tmp`, prints only
+  a pass/fail table on success (and dumps the full failed step's log
+  on failure). Default to `--quiet`; drop it only when actively
+  debugging a flaky test.
+- **Branch-scoped git views**: use `just git log-branch [repo]` and
+  `just git diff-main [repo]` — both already filter to "since
+  origin/main" and `--stat` where appropriate. Avoid raw `git log`
+  / `git diff` without limits.
+- For ad-hoc git work, `git -C <dir> log --oneline -N` (default N=15)
+  and `git -C <dir> diff --stat` first; widen only if inconclusive.
+- `cargo check` / `just test` failures (when not in `--quiet`) → pipe
+  through `tail -50`. Re-run targeted (`cargo check -p <crate>`,
   `just test-name <pat> <repo>`) instead of the full workspace.
 - `Read` a large file → check `wc -l` or use `Glob` to confirm size
   first. For files >500 lines, always pass `offset` + `limit`. Default
