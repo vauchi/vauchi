@@ -53,6 +53,27 @@ record or design doc.
 
 *New entries below this line. Newest first.*
 
+### 2026-05-08 — Token audit started at file-layer when cost lived in behavior
+
+- **What**: User asked "how to reduce tokens?" I opened with file-level
+  measurements (CLAUDE.md, `.claude/rules/`, MEMORY.md) and presented
+  ~880 tokens of session-start savings as the result. User pushed
+  back: "this is marginal no?" Reframing pulled the actual data —
+  hook telemetry showed ~2 M wasted tokens / 22 days dominated by
+  excessive re-read. The whole first pass was nibbling at the
+  smaller rock.
+- **Trigger**: User correction after the marginal result was presented.
+- **Root cause**: Optimized at the layer that was easy to count (file
+  bytes) rather than the layer where cost accumulates (per-call
+  tool outputs × sessions × time). Did not sample empirical waste
+  before starting.
+- **Lesson**: For any token-cost audit, the FIRST step is to sample
+  where the tokens go. `_private/docs/reference/error-ledger.jsonl`
+  + the hook categories already have the answer. The CLAUDE.md
+  "Common waste patterns" section now codifies this as
+  "Wrong-layer audit"; this entry is the worked example behind it.
+- **Recurrence**: 1
+
 ### 2026-04-20 — Used GNU-only `grep --exclude=` in alpine-CI shell script
 
 - **What**: After fixing the `check-claude-md` orphan-detector, I used
