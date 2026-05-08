@@ -48,12 +48,25 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 
 **Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
 
-**Subagents are expensive** — each `Agent` call spins up a fresh context
-with its own system prompt + agent definition. Use them for genuinely
-broad exploration (3+ search queries) or when isolating a long output
-from the main context. For a single grep, file read, or symbol lookup,
-use the direct tool — `Grep`, `Read`, `Glob`. Misused subagents
-multiply session cost without adding signal.
+**Subagent budget (MANDATORY)** — each `Agent` call costs ~5–10 K
+tokens of overhead (system prompt + agent definition + skills list)
+*before* it does any work. Empirical: 62 `Explore` invocations in
+30 days = the largest single token cost in this project, dwarfing
+every config-level optimization combined. Rules:
+
+- **Never `Agent` for ≤2 search queries.** Use `Grep` / `Read` /
+  `Glob` directly. One `Grep` with a wide pattern beats two `Agent`
+  calls.
+- **`Agent` is appropriate when**: (a) ≥3 independent searches across
+  unrelated files, (b) the result would be many KB and you need it
+  digested before returning to main context, or (c) the task matches
+  a specialized agent's description (e.g. `adr-check`, `rust-reviewer`,
+  `ci-fixer`).
+- **Never `Agent` for**: a single grep, reading one file, finding one
+  symbol, listing files in a directory, or anything you could express
+  as a single tool call.
+- **Parallelize before delegating.** Two `Grep` calls in one message
+  are cheaper than one `Agent` call.
 
 ## Problem Workflow (MANDATORY)
 
