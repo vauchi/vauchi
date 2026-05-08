@@ -218,3 +218,27 @@ record or design doc.
   (`SKIP_TESTS`, `_SKIP_FMT`, `_SKIP_CLIPPY_TEST`,
   `ALLOW_MERGED_BRANCH`) before killing the process.
 - **Recurrence**: 1
+
+### 2026-05-08 — Path-override lockfile churn leaked into a release-bump commit
+
+- **What**: After bumping core 0.49.0 → 0.50.0 in `core/Cargo.toml`,
+  ran `just setup-path-overrides` to compile-test a downstream
+  consumer (`linux-gtk`). When staging the bump commit, `git -C
+  core diff Cargo.lock` showed the path-override-induced lockfile
+  churn alongside the real version bump (10 lines vs. the expected
+  4 `[[package]] vauchi-*` entries). Caught by reading the diff
+  before staging — `just clean-path-overrides` reverted the noise.
+- **Trigger**: Self-caught when the Cargo.lock diff was larger than
+  expected.
+- **Root cause**: Conflated "verify the change works on a downstream
+  repo" with "no side effects on the upstream repo's working tree."
+  `setup-path-overrides` rewrites consumer `Cargo.toml` /
+  `Cargo.lock` AND can perturb the upstream `Cargo.lock` via patch
+  resolution.
+- **Lesson**: When bumping versions and validating downstream
+  consumers in the same flow, order matters: (a) bump core's
+  `Cargo.toml` + `Cargo.lock`, commit, THEN (b) `just
+  setup-path-overrides` to validate consumers, THEN (c) `just
+  clean-path-overrides` before any further core commit. Or commit
+  the bump immediately, then validate separately.
+- **Recurrence**: 1
