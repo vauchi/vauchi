@@ -1,7 +1,12 @@
 ## ADR Constraints (MANDATORY)
 
-Extracted from ADR-001 through ADR-044. These are hard rules — not guidelines.
+Extracted from ADR-001 through ADR-046. These are hard rules — not guidelines.
 Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify compliance.
+
+Vocabulary used below (`ContactCard`, `Identity`, `Wire Humble`,
+`DisplayHint`, etc.) is canonically defined in
+`_private/docs/CONTEXT.md`. This file owns *what's enforced*; the
+glossary owns *what the words mean*.
 
 ### Crypto (ADR-002, ADR-019)
 
@@ -19,10 +24,10 @@ Source: `_private/docs/decisions/adr-*.md`. Run `@adr-check` to verify complianc
 - **Every frontend is a Humble Object** — it renders `ScreenModel`, forwards `UserAction`s, executes `ExchangeCommand`s, and reports `ExchangeHardwareEvent`s. All testable behavior lives in core. If a frontend needs a conditional that is not purely about native presentation, the condition was computed in the wrong place (ADR-043)
 - **Core owns all business logic** — frontends never duplicate data logic, filtering, validation, or computation. If two clients need the same logic, it belongs in core
 - **Frontends are pure renderers** — they render `ScreenModel` components natively and forward `UserAction`s to core. No workflow orchestration in frontends
-- **CoreUI wire types carry presentation only** (ADR-044, Wire Humble) — type names + JSON keys are UI-shaped (`Item`, `Field`, `Component::List`, `items`, `variants`, `variant_id`, `selected_variant`); never `ContactItem`/`FieldDisplay`/`Component::ContactList`/`Component::CardPreview`/`GroupCardView`/`contacts`/`group_views`/`selected_group`/`group_name`/`searchable_fields`. Engine input never crosses serde — sidecar in the engine. Enforced by `core/vauchi-app/tests/it/wire_humble_keys_tests.rs`. Full discipline: `.claude/rules/wire-humble.md`
+- **CoreUI wire types carry presentation only** (ADR-044, Wire Humble) — vocabulary + retired-names list in CONTEXT.md (entries: **Item / Field / PreviewVariant**, flagged ambiguity *Item vs ContactItem*); engine input never crosses serde (sidecar in the engine); enforced by `core/vauchi-app/tests/it/wire_humble_keys_tests.rs`. Full procedure: `.claude/rules/wire-humble.md`
 - **Never put `DisplayHint` on `ScreenModel`** — it's a construction parameter, not screen data
 - **Frontends must never branch on form factor** — core handles form-factor differences via `DisplayHint`
-- **Every `WorkflowEngine` impl must handle all `DisplayHint` variants** — Phone, Watch, Desktop
+- **Every `WorkflowEngine` impl that takes `DisplayHint` must handle all variants** — Phone, Watch, Desktop. Engines that don't compose differently per form factor omit the parameter
 - **Use `InlineConfirm` for irrevocable actions, `ShowToast` for reversible feedback** — `ShowAlert` is for informational messages and errors only, never for destructive confirmations (ADR-022 addenda)
 
 ### Hardware & Platform (ADR-030, ADR-031)

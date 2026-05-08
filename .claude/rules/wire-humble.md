@@ -1,28 +1,16 @@
 ## CoreUI Wire Humble (MANDATORY)
 
+Vocabulary and the retired-names list live in
+`_private/docs/CONTEXT.md` (entries: **CoreUI**, **Wire Humble**,
+**Item / Field / PreviewVariant**). This file owns the *enforcement
+procedure*.
+
 Adopted 2026-05-03 across `vauchi-core` 0.41.0 (see Tier 0 of
 `2026-05-03-coreui-wire-humble-types` problem record + ADR-044).
 Enforced at runtime by
 `core/vauchi-app/tests/it/wire_humble_keys_tests.rs` — the 8-key
 deny-list regression test fails if a retired domain-shaped JSON
 key reappears in any `Component` variant's serialized output.
-
-### The invariant
-
-CoreUI wire types — anything serialized over CABI / UniFFI / JSON
-to a frontend renderer — **carry only presentation**:
-
-- Type names are UI-shaped: `Item`, `Field`, `PreviewVariant`,
-  `Component::List`, `Component::Preview`. **Never** `ContactItem`,
-  `FieldDisplay`, `GroupCardView`, `Component::ContactList`,
-  `Component::CardPreview`.
-- Field names are UI-shaped: `items`, `variants`, `variant_id`,
-  `selected_variant`. **Never** `contacts`, `group_views`,
-  `group_name`, `selected_group`.
-- Engine-input data (search indices, filter predicates, etc.)
-  **never** crosses the serde boundary. Move it to an engine-side
-  sidecar struct (e.g. `ContactListEngine` keeps
-  `Vec<IndexedItem>` internally; emits `Vec<Item>` on the wire).
 
 ### Why
 
@@ -34,14 +22,6 @@ contacts: ContactItem`, and the rename of binding-only
 identifiers (`for item in items: ContactItem`) silently re-domains
 under the next refactor pressure. Pure binding renames are
 half-measures; the wire shape is the durable seam.
-
-### Engine-side typing is fine — Rust-only
-
-`Item<T>` patterns, parallel engine types like
-`DecoyContactItem`, domain-named engine structs — all welcome on
-the Rust side. The discipline is at the **serde boundary**, not
-inside the engine. Engines are domain-aware by design (ADR-021);
-their types are too.
 
 ### Adding a new Component variant
 
