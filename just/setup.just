@@ -508,6 +508,7 @@ session-end:
         rm -f "$SESSION_LOG"
         rm -f ".claude/.session-reads"
         rm -f ".claude/.session-edits"
+        rm -f ".claude/.session-reads-meta"
     else
         echo "  No hook blocks recorded"
     fi
