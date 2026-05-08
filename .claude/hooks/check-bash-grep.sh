@@ -10,7 +10,8 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
 # Skip commands where "grep -P" appears only inside string arguments, not as an actual command.
 # This includes git commit messages, just recipe arguments, echo, etc.
-if echo "$COMMAND" | grep -qE 'git\s+(commit|tag)'; then
+# Allow flags like `-C <dir>` or `-c k=v` between `git` and the subcommand.
+if echo "$COMMAND" | grep -qE 'git(\s+-[Cc]\s+\S+)*\s+(commit|tag)'; then
   exit 0
 fi
 if echo "$COMMAND" | grep -qE '^\s*just\s'; then
