@@ -94,7 +94,14 @@ build-ios-device mode="debug":
         exit 1
     fi
     DEVICE_LIST=$(xcrun devicectl list devices 2>&1 || true)
-    DEVICE_ID=$(echo "$DEVICE_LIST" | grep 'available' | head -1 | sed -n 's/.*\([0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}\).*/\1/p')
+    # `xcrun devicectl list devices` reports State as one of
+    # `available`, `connected`, or `paired` depending on pairing
+    # posture (USB tether / WiFi / fresh CoreDevice handshake).
+    # The previous grep only matched `available` and missed
+    # `connected` — today's state on a USB-tethered iPhone SE.
+    # Match any live state so the recipe finds the device
+    # regardless of how `devicectl` is reporting it right now.
+    DEVICE_ID=$(echo "$DEVICE_LIST" | grep -E 'available|connected|paired' | head -1 | sed -n 's/.*\([0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}\).*/\1/p')
     if [ -z "$DEVICE_ID" ]; then
         echo "ERROR: No connected iOS device found"
         echo "$DEVICE_LIST"
