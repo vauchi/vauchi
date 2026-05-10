@@ -2537,6 +2537,28 @@ sync-locales-strict:
 # Verify literal i18n keys referenced in source exist in en.json.
 # Catches typos in `get_string("foo.bar")` at MR time instead of
 # the runtime fallback `Missing: <key>` at
+# Audit inbound markdown links for record graduations in the push range.
+#
+# When a problem record moves between `_private/docs/problems/X/` and
+# `_private/docs/problems/done/X/`, peer records that linked to the OLD
+# path become broken. CI's `lint:links` job catches it, but only on the
+# merge ref — after push. This recipe runs the same audit locally.
+#
+# Origin record:
+#   `_private/docs/problems/2026-05-10-record-graduation-link-audit/`
+#
+# Exit codes:
+#   0 — clean, or no graduations in range
+#   1 — broken inbound links found
+#   2 — script error (bad upstream ref, no docs tree)
+#
+# Usage:
+#   just lint-graduation-links                # vs origin/main
+#   just lint-graduation-links origin/develop # vs custom upstream
+[group('tools')]
+lint-graduation-links upstream='origin/main':
+    bash _private/docs/scripts/audit-graduation-links.sh {{ upstream }}
+
 # core/vauchi-app/src/i18n.rs:134. CI runs the same check via
 # `lint:locale-key-coverage` in core/.gitlab-ci.yml.
 #

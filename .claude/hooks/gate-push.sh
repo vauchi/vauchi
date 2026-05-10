@@ -401,6 +401,25 @@ if command -v markdownlint &>/dev/null; then
   fi
 fi
 
+# ── Record-graduation link audit (_private only) ─────────────────
+# Catches a class of failure that lint:links currently catches only on
+# the merge-ref in CI: when a problem record moves between
+# `docs/problems/X/` and `docs/problems/done/X/`, peer records that
+# linked to the OLD path become broken. Origin record:
+# `_private/docs/problems/2026-05-10-record-graduation-link-audit/`.
+if [[ "$REPO_NAME" == "_private" ]]; then
+  AUDIT_SCRIPT="$REPO_DIR/docs/scripts/audit-graduation-links.sh"
+  if [[ -x "$AUDIT_SCRIPT" ]]; then
+    echo "[gate-push] Auditing inbound links for record graduations (_private)..."
+    if ! (cd "$REPO_DIR" && bash "$AUDIT_SCRIPT" origin/main); then
+      echo "" >&2
+      echo "Push blocked: graduation-link audit found broken inbound links above." >&2
+      echo "Fix the listed peer files (paths shift when a record graduates), then re-push." >&2
+      exit 2
+    fi
+  fi
+fi
+
 # ── REUSE compliance (all repos) ──────────────────────────────────
 if command -v reuse &>/dev/null; then
   # Only check if changed files include ones that need SPDX headers
