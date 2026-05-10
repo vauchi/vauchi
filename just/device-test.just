@@ -827,4 +827,9 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
     img = base64.b64decode(data['value'])
     sys.stdout.buffer.write(img)
     " > "{{file}}"
+    if [[ ! -s "{{file}}" ]]; then
+        echo "ERROR: WDA returned empty screenshot data — file not written or 0-byte." >&2
+        echo "       Possible causes: WDA session expired, base64 payload empty, network-link broken." >&2
+        exit 1
+    fi
     echo "Screenshot saved to {{file}}"
