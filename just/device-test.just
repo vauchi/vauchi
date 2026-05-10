@@ -679,7 +679,12 @@ dt-relaunch-android:
     echo "Killing and relaunching Vauchi on Android ($SERIAL)..."
     adb -s "$SERIAL" shell am force-stop app.vauchi
     sleep 1
-    adb -s "$SERIAL" shell am start -n app.vauchi/.MainActivity
+    START_OUT=$(adb -s "$SERIAL" shell am start -n app.vauchi/.MainActivity 2>&1)
+    echo "$START_OUT"
+    if echo "$START_OUT" | grep -qiE "^Error|Activity not found|does not exist"; then
+        echo "ERROR: am start reported failure (see above)." >&2
+        exit 1
+    fi
     echo "Android app relaunched."
 
 # Install + relaunch iOS (convenience: build already done, just install and restart)
