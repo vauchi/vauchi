@@ -781,8 +781,14 @@ dt-ios-tap x y wda_url="http://169.254.202.178:8100":
     " 2>/dev/null)
 
     if [[ -z "$SID" ]]; then
+        # Pin Vauchi as the session bundle so WDA brings the app to
+        # foreground. Empty `capabilities: {}` returned a SpringBoard-
+        # bound session right after `devicectl process launch`, making
+        # downstream tap/screenshot operations target the launcher
+        # rather than Vauchi. Same fix the runner shipped today
+        # (`vauchi-gui-test.sh wda_new_session` — `_private!1218`).
         SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
-            -d '{"capabilities":{}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
     fi
 
     echo "Tapping ({{x}}, {{y}}) via WDA session $SID..."
@@ -805,8 +811,14 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
     " 2>/dev/null)
 
     if [[ -z "$SID" ]]; then
+        # Pin Vauchi as the session bundle so WDA brings the app to
+        # foreground. Empty `capabilities: {}` returned a SpringBoard-
+        # bound session right after `devicectl process launch`, making
+        # downstream tap/screenshot operations target the launcher
+        # rather than Vauchi. Same fix the runner shipped today
+        # (`vauchi-gui-test.sh wda_new_session` — `_private!1218`).
         SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
-            -d '{"capabilities":{}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
     fi
 
     curl -s "$WDA/session/$SID/screenshot" | python3 -c "
