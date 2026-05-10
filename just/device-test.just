@@ -737,10 +737,18 @@ dt-clean-devices:
 dt-wda-start:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
-    WDA_DIR="/tmp/WebDriverAgent"
+    # macOS clears /tmp aggressively between reboots, and CoreDevice's
+    # bookmark sandbox refuses to install xcodebuild artefacts out of
+    # /tmp paths (errSecInternalComponent + "Failed to obtain access
+    # to one or more requested file system resources because
+    # CoreDevice was unable to create bookmark data"). Persistent
+    # location matches `_private/docs/testing/device-automation/test-run-context.md`
+    # and the runner's preflight expectations.
+    WDA_DIR="${HOME}/Workspace/.tools/WebDriverAgent"
 
     if [[ ! -d "$WDA_DIR" ]]; then
         echo -e "${YELLOW}Cloning WebDriverAgent...${NC}"
+        mkdir -p "$(dirname "$WDA_DIR")"
         git clone https://github.com/appium/WebDriverAgent.git "$WDA_DIR"
     fi
 
@@ -760,7 +768,7 @@ dt-wda-start:
 # Tap iOS screen at coordinates via WebDriverAgent
 [group('device-test')]
 [script]
-dt-ios-tap x y wda_url="http://192.168.1.215:8100":
+dt-ios-tap x y wda_url="http://169.254.202.178:8100":
     set -euo pipefail
     WDA="{{wda_url}}"
 
@@ -785,7 +793,7 @@ dt-ios-tap x y wda_url="http://192.168.1.215:8100":
 # Take iOS screenshot via WebDriverAgent (returns PNG)
 [group('device-test')]
 [script]
-dt-wda-screenshot file="screenshot-ios.png" wda_url="http://192.168.1.215:8100":
+dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100":
     set -euo pipefail
     WDA="{{wda_url}}"
 
