@@ -659,7 +659,14 @@ dt-relaunch-ios:
     echo "Killing and relaunching Vauchi on iOS..."
     pymobiledevice3 developer dvt kill app.vauchi.ios 2>/dev/null || true
     sleep 1
-    pymobiledevice3 developer dvt launch app.vauchi.ios 2>&1 | head -2
+    LAUNCH_OUT=$(pymobiledevice3 developer dvt launch app.vauchi.ios 2>&1)
+    echo "$LAUNCH_OUT" | head -2
+    if ! echo "$LAUNCH_OUT" | grep -q "Launched application"; then
+        echo "ERROR: pymobiledevice3 launch did not confirm success." >&2
+        echo "       Common cause: tunneld is not running. Start it with:" >&2
+        echo "       sudo python3 -m pymobiledevice3 remote tunneld" >&2
+        exit 1
+    fi
     echo "iOS app relaunched."
 
 # Kill and relaunch Android app. Auto-selects device if multiple connected.
