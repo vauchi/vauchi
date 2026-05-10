@@ -792,8 +792,14 @@ dt-ios-tap x y wda_url="http://169.254.202.178:8100":
     fi
 
     echo "Tapping ({{x}}, {{y}}) via WDA session $SID..."
-    curl -s -X POST "$WDA/session/$SID/actions" -H 'Content-Type: application/json' \
-        -d "{\"actions\":[{\"type\":\"pointer\",\"id\":\"finger1\",\"parameters\":{\"pointerType\":\"touch\"},\"actions\":[{\"type\":\"pointerMove\",\"duration\":0,\"x\":{{x}},\"y\":{{y}}},{\"type\":\"pointerDown\",\"button\":0},{\"type\":\"pause\",\"duration\":50},{\"type\":\"pointerUp\",\"button\":0}]}]}" > /dev/null
+    RESP_FILE=$(mktemp)
+    trap 'rm -f "$RESP_FILE"' EXIT
+    if ! curl -s --fail-with-body -X POST "$WDA/session/$SID/actions" -H 'Content-Type: application/json' \
+        -d "{\"actions\":[{\"type\":\"pointer\",\"id\":\"finger1\",\"parameters\":{\"pointerType\":\"touch\"},\"actions\":[{\"type\":\"pointerMove\",\"duration\":0,\"x\":{{x}},\"y\":{{y}}},{\"type\":\"pointerDown\",\"button\":0},{\"type\":\"pause\",\"duration\":50},{\"type\":\"pointerUp\",\"button\":0}]}]}" > "$RESP_FILE"; then
+        echo "ERROR: WDA tap returned an HTTP error:" >&2
+        cat "$RESP_FILE" >&2
+        exit 1
+    fi
     echo "Done."
 
 # Take iOS screenshot via WebDriverAgent (returns PNG)
