@@ -642,11 +642,18 @@ dt-screenshot-android file="screenshot.png":
 [group('device-test')]
 [script]
 dt-screenshot-ios file="screenshot.png":
+    set -euo pipefail
     if ! command -v pymobiledevice3 &>/dev/null; then
         echo "ERROR: pymobiledevice3 not installed. Install: pip install pymobiledevice3"
         exit 1
     fi
     pymobiledevice3 developer dvt screenshot "{{file}}"
+    if [[ ! -s "{{file}}" ]]; then
+        echo "ERROR: pymobiledevice3 reported success but no screenshot file was written." >&2
+        echo "       (pymobiledevice3 exits 0 on tunneld connection failure — known upstream bug.)" >&2
+        echo "       Start tunneld:  sudo python3 -m pymobiledevice3 remote tunneld" >&2
+        exit 1
+    fi
     echo "Screenshot saved to {{file}}"
 
 # ─── App lifecycle (kill / launch) ────────────────────────────────
