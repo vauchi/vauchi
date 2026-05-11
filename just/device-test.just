@@ -743,12 +743,23 @@ dt-clean-devices:
         echo -e "${YELLOW}No Android device connected (skipped)${NC}"
     fi
 
-    # iOS
+    # iOS — pymobiledevice3 apps uninstall exits 0 with "Installation succeed"
+    # regardless of actual outcome (even for a non-existent bundle id), so the
+    # naive `&& uninstalled || skip` pattern always took the success branch.
+    # Determine real state via `apps list` and verify the uninstall took effect.
     if UDID=$(dt_detect_ios_device 2>/dev/null); then
         echo -e "${BLUE}Uninstalling from iOS ($UDID)...${NC}"
-        pymobiledevice3 apps uninstall app.vauchi.ios 2>/dev/null && \
-            echo -e "${GREEN}  iOS app uninstalled${NC}" || \
+        if pymobiledevice3 apps list 2>/dev/null | python3 -c "import sys,json; sys.exit(0 if 'app.vauchi.ios' in json.load(sys.stdin) else 1)" 2>/dev/null; then
+            pymobiledevice3 apps uninstall app.vauchi.ios 2>/dev/null || true
+            if pymobiledevice3 apps list 2>/dev/null | python3 -c "import sys,json; sys.exit(0 if 'app.vauchi.ios' in json.load(sys.stdin) else 1)" 2>/dev/null; then
+                echo -e "${RED}  ERROR: pymobiledevice3 reported success but app.vauchi.ios is still installed.${NC}" >&2
+                echo "         (pymobiledevice3 apps uninstall exits 0 regardless of outcome.)" >&2
+                exit 1
+            fi
+            echo -e "${GREEN}  iOS app uninstalled${NC}"
+        else
             echo -e "${YELLOW}  iOS app not installed (skipped)${NC}"
+        fi
     else
         echo -e "${YELLOW}No iOS device connected (skipped)${NC}"
     fi
