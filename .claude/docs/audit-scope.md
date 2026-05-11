@@ -109,6 +109,21 @@ prompt:
 > <symbol>` before recommending demotion. Final report must end with the
 > updated row(s) for this manifest.
 
+## Standing ratchet audits
+
+Some audits are not one-shot deep dives — they are *quantitative
+ratchets* attached to ongoing retirement programs. Each is anchored to
+a baseline JSON snapshot in `_private/docs/audit/`; subsequent MRs may
+only reduce the counters.
+
+| Audit | Script | Baseline | Anchored program |
+|---|---|---|---|
+| Legacy mobile / Mobile\* surface | `scripts/scripts/audit-mobile-surface.sh` | [`_private/docs/audit/2026-05-11-legacy-baseline.md`](../../_private/docs/audit/2026-05-11-legacy-baseline.md) | [`pure-functional-core-program`](../../_private/docs/problems/2026-05-11-pure-functional-core-program/README.md) — see plan Phase 0 / Task 0.1 |
+
+When adding a new ratchet audit, append a row here and link the
+baseline. A standing audit without a row in this table is a blind spot
+of the same shape as the 2026-05-08 deep-modules gap.
+
 ## See also
 
 - `.claude/rules/verify-before-acting.md` — code is the source of truth.
