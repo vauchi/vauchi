@@ -636,6 +636,14 @@ dt-screenshot-android file="screenshot.png":
     source "$(pwd)/just/device-test-lib.sh"
     SERIAL=$(dt_detect_android_device)
     adb -s "$SERIAL" exec-out screencap -p > "{{file}}"
+    if [[ ! -s "{{file}}" ]]; then
+        echo "ERROR: adb screencap wrote a 0-byte file." >&2
+        echo "       Possible causes: device locked (screencap denied)," >&2
+        echo "       USB drop mid-stream, or screencap-deny by policy." >&2
+        echo "       Unlock the device and retry, or use:" >&2
+        echo "         adb -s $SERIAL shell screencap -p /sdcard/s.png && adb pull /sdcard/s.png" >&2
+        exit 1
+    fi
     echo "Screenshot saved to {{file}} (device: $SERIAL)"
 
 # Take a screenshot from connected iOS device (requires pymobiledevice3)
