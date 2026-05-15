@@ -487,18 +487,47 @@ session-end:
             echo "  → appended to $LEDGER"
         fi
 
-        # Check for emerging patterns (3+ same category = system problem)
+        # Check for emerging patterns (3+ same category = system problem).
+        # The ledger is append-only — cumulative counts grow forever, so a
+        # bare "14071 occurrences" tells you nothing about whether the hook
+        # is working. Cross-reference each category against installed hooks
+        # and add today's count: trajectory > tally. Categories without a
+        # hook still get the "consider a hook fix" warning.
         if [[ -f "$LEDGER" ]]; then
             echo ""
             echo "── pattern detection (all sessions) ──"
-            PATTERNS=$(jq -rR 'fromjson? | .category' "$LEDGER" 2>/dev/null \
+
+            # Category → hook filename. Empty means no hook is installed
+            # for that pattern yet (the 3-strike warning still fires).
+            _hook_for_category() {
+                case "$1" in
+                    excessive-reread) echo "pretool-read-cap.sh" ;;
+                    excessive-reedit) echo "pretool-edit-cap.sh" ;;
+                    wrong-tool)       echo "check-bash-grep.sh" ;;
+                    cwd-drift)        echo "check-cd-git.sh" ;;
+                    read-nudge)       echo "pre-read-nudge.sh" ;;
+                    raw-cargo|raw-glab|raw-mv-archive) echo "check-use-just.sh" ;;
+                    *) echo "" ;;
+                esac
+            }
+
+            PATTERNS=$(jq -rR 'fromjson? | select(.category != null) | .category' "$LEDGER" 2>/dev/null \
                 | sort | uniq -c | sort -rn | head -5 || true)
             echo "$PATTERNS" | while read -r count cat; do
                 if [[ -z "$count" || -z "$cat" ]]; then continue; fi
-                if [[ "$count" -ge 3 ]] 2>/dev/null; then
-                    echo "  ⚠ $cat ($count occurrences) — consider a hook fix (3-strike rule)"
+                today=0
+                if [[ -f "$SESSION_LOG" ]]; then
+                    today=$(jq -rR --arg c "$cat" \
+                        'fromjson? | select(.category == $c) | 1' \
+                        "$SESSION_LOG" 2>/dev/null | wc -l | tr -d ' ')
+                fi
+                hook=$(_hook_for_category "$cat")
+                if [[ -n "$hook" && -f ".claude/hooks/$hook" ]]; then
+                    echo "  • $cat ($count cumulative, $today today) — hook active: $hook"
+                elif [[ "$count" -ge 3 ]] 2>/dev/null; then
+                    echo "  ⚠ $cat ($count cumulative, $today today) — consider a hook fix (3-strike rule)"
                 else
-                    echo "    $cat ($count)"
+                    echo "    $cat ($count cumulative, $today today)"
                 fi
             done
         fi
