@@ -439,3 +439,45 @@ record or design doc.
   `multi-repo-awareness.md` ("Branch inspection: ALWAYS check
   all repos" — same shape, different verb).
 - **Recurrence**: 1
+
+### 2026-05-16 — Investigated a failing MR without checking for already-prepared revert MRs
+
+- **What**: User asked "fix vauchi/linux-gtk!125" (a Draft MR
+  whose test:a11y job had failed). I read the failing-pipeline
+  trace, set up a `/tmp/linux-gtk-mr125` worktree, built both
+  debug and release binaries (~3 minutes of cargo work), ran the AT-SPI
+  suite locally (passed), then retried the CI job (passed —
+  apparent flake). Only AFTER all of that did I check the
+  user's other open MRs and find `vauchi/linux-gtk!126`
+  (revert) and `vauchi/private!1272` (defer docs), both
+  authored by the same user, both pipeline-green, both
+  explicitly stating the !125 approach was unsafe ("Synchronous
+  re-emit triggered a mid-`clicked` sidebar rebuild — Button
+  widget destroyed underneath the click signal"). The real
+  task was simply to merge the prepared revert + defer, not
+  to chase a CI flake.
+- **Trigger**: Self-caught when the user sent the second URL
+  `vauchi/private!1272` mid-investigation. That URL led to the
+  revert MR via the auto-link block.
+- **Root cause**: When asked to "fix !N", default reflex was
+  to debug the failure rather than first check whether the
+  user (or anyone) had already opened a superseding /
+  reverting MR for the same problem record. `glab mr list -A`
+  scoped to the same author + same touch-area is a 1-second
+  query; running it before any build/test work would have
+  surfaced the revert immediately.
+- **Lesson**: "Fix MR !N" — before any code inspection or
+  local repro, check for sibling MRs:
+  `glab -R <repo> mr list -A` and grep for the same record
+  slug or branch shape. If a `revert:` MR exists from the
+  same author, the fix is almost certainly "merge the revert"
+  not "debug the original". Same shape applies cross-repo:
+  scan `glab -R vauchi/private mr list` for a paired docs MR
+  (e.g. problem-record status flip) — the auto-link block at
+  the bottom of MR descriptions is the durable connector.
+- **Cross-ref**: `verify-before-acting.md` ("Before
+  implementing a fix from a problem record: grep the actual
+  source"); CLAUDE.md "Subagent budget" (the local build +
+  Rust toolchain ran for ~3 min before I read the user's own
+  narrative).
+- **Recurrence**: 1
