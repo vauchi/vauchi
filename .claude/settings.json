@@ -182,6 +182,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-mr-mentions.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-wrong-tool.sh",
+            "timeout": 5
           }
         ]
       }
