@@ -220,6 +220,18 @@ if [[ -d "$SESSION_DIR" ]]; then
   fi
 fi
 
+# ---------- 7. Prune corrupted Claude config backups ----------
+# Claude Code writes .claude.json.corrupted.<timestamp> on state-file
+# corruption. They accumulate forever otherwise. Anything >7 days old
+# is no longer useful for forensic recovery (audit SEV-3, 2026-05-18).
+BACKUP_DIR="$HOME/.claude/backups"
+if [[ -d "$BACKUP_DIR" ]]; then
+  PRUNED=$(find "$BACKUP_DIR" -maxdepth 1 -name "*.corrupted.*" -mtime +7 -print -delete 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$PRUNED" -gt 0 ]]; then
+    say "[FIX ] Pruned ${PRUNED} corrupted Claude backup(s) >7 days old."
+  fi
+fi
+
 # ---------- Emit (silent on success) ----------
 if [[ -n "$OUT" || "$VERBOSE" == "1" ]]; then
   echo "=== Vauchi Environment Bootstrap ==="
