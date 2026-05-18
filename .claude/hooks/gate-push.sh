@@ -13,6 +13,23 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // "."')
 
+# Emit a message to BOTH the model (stdout JSON additionalContext — the
+# only channel that survives Claude Code's exit-0 stderr discard) AND
+# stderr (for the human terminal + older harnesses). Used by non-blocking
+# advisories below. Reference pattern: pre-read-nudge.sh, check-stale-commit.sh.
+# Audit S2-1 (2026-05-18): without this, exit-0 stderr warnings about skipped
+# checks and path-override drift never reach the model.
+emit_to_model() {
+  local msg="$1"
+  jq -nc --arg msg "$msg" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      additionalContext: $msg
+    }
+  }'
+  printf '%s\n' "$msg" >&2
+}
+
 # Only intercept commands containing git push — anywhere in the string.
 # No start-of-line anchor: catches chained (&&, ||, ;), subshell, pipe,
 # and any other construct that embeds a push.
@@ -107,18 +124,18 @@ fi
 # pushes (e.g. linux-gtk on macOS, macos repo on Linux).
 case "$REPO_NAME:$(uname -s)" in
   linux-gtk:Darwin|linux-qt:Darwin)
-    echo "[gate-push] Skipping checks — $REPO_NAME requires Linux (running on $(uname -s))." >&2
-    echo "  CI will enforce checks on a Linux runner." >&2
+    emit_to_model "[gate-push] Skipping checks — $REPO_NAME requires Linux (running on $(uname -s)).
+  CI will enforce checks on a Linux runner."
     exit 0
     ;;
   macos:Linux|ios:Linux)
-    echo "[gate-push] Skipping checks — $REPO_NAME requires macOS (running on $(uname -s))." >&2
-    echo "  CI will enforce checks on a macOS runner." >&2
+    emit_to_model "[gate-push] Skipping checks — $REPO_NAME requires macOS (running on $(uname -s)).
+  CI will enforce checks on a macOS runner."
     exit 0
     ;;
   windows:Linux|windows:Darwin)
-    echo "[gate-push] Skipping checks — $REPO_NAME requires Windows (running on $(uname -s))." >&2
-    echo "  CI will enforce checks on a Windows runner." >&2
+    emit_to_model "[gate-push] Skipping checks — $REPO_NAME requires Windows (running on $(uname -s)).
+  CI will enforce checks on a Windows runner."
     exit 0
     ;;
 esac
@@ -186,12 +203,11 @@ if [[ -f "$WORK_DIR/Cargo.toml" ]]; then
   if [[ -n "$WORKSPACE_ROOT" && -x "$FRESHNESS_SCRIPT" ]]; then
     FRESHNESS_OUT=$(cd "$WORKSPACE_ROOT" && bash "$FRESHNESS_SCRIPT" freshness 2>/dev/null || true)
     if echo "$FRESHNESS_OUT" | grep -q '^  WARN:'; then
-      echo "" >&2
-      echo "[gate-push] ⚠ Path-override source drift detected in $WORKSPACE_ROOT" >&2
-      echo "[gate-push] Local clippy below may pass on stale APIs that CI will reject:" >&2
-      echo "$FRESHNESS_OUT" | sed 's/^/[gate-push]   /' >&2
-      echo "[gate-push] (advisory — not blocking; clippy continues)" >&2
-      echo "" >&2
+      FRESHNESS_PREFIXED=$(echo "$FRESHNESS_OUT" | sed 's/^/[gate-push]   /')
+      emit_to_model "[gate-push] ⚠ Path-override source drift detected in $WORKSPACE_ROOT
+[gate-push] Local clippy below may pass on stale APIs that CI will reject:
+$FRESHNESS_PREFIXED
+[gate-push] (advisory — not blocking; clippy continues)"
     fi
   fi
 
