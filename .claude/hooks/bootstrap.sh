@@ -207,6 +207,19 @@ if command -v glab &>/dev/null; then
   fi
 fi
 
+# ---------- 6. Session log directory size ----------
+# Claude Code retains session JSONL files indefinitely. >200 MB warrants
+# periodic pruning so disk and /resume UX stay healthy (audit S2-4).
+SESSION_DIR="$HOME/.claude/projects/$(echo "$PROJECT_DIR" | tr '/' '-')"
+if [[ -d "$SESSION_DIR" ]]; then
+  SIZE_MB=$(du -sm "$SESSION_DIR" 2>/dev/null | awk '{print $1}')
+  if [[ -n "$SIZE_MB" && "$SIZE_MB" -gt 200 ]]; then
+    say "[NOTE] Session log dir is ${SIZE_MB}MB (threshold 200MB)."
+    say "       Path: $SESSION_DIR"
+    say "       Archive older sessions to keep disk and /resume UX healthy."
+  fi
+fi
+
 # ---------- Emit (silent on success) ----------
 if [[ -n "$OUT" || "$VERBOSE" == "1" ]]; then
   echo "=== Vauchi Environment Bootstrap ==="
