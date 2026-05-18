@@ -79,7 +79,7 @@ case "$TRIMMED" in
     # no other action or filter verb. `find -name X -delete/-newer/
     # -mtime/-prune/-type/-maxdepth/...` are NOT Glob equivalents —
     # Glob can't delete, filter by age, prune, etc.
-    OTHER_VERBS='-delete|-newer|-mtime|-atime|-ctime|-size|-prune|-depth|-maxdepth|-mindepth|-type|-perm|-user|-group|-empty|-path|-ipath|-regex|-print|-printf|-print0|-quit|-fprintf|-fprint|-ls|-fls'
+    OTHER_VERBS='-delete|-newer|-mtime|-atime|-ctime|-size|-prune|-depth|-maxdepth|-mindepth|-type|-perm|-user|-group|-empty|-path|-ipath|-regex|-print|-printf|-print0|-quit|-fprintf|-fprint|-ls|-fls|-exec|-execdir|-ok|-okdir'
     if printf '%s' "$TRIMMED" | grep -qE -- '-name|-iname'; then
       if ! printf '%s' "$TRIMMED" | grep -qE -- "$OTHER_VERBS"; then
         block "find … -name <pat>" "Glob" 'Glob(pattern="**/*.rs")'

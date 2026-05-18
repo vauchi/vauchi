@@ -82,6 +82,14 @@ assert_exit "allows find -name -size"     "0" "$(run 'find . -name "*.log" -size
 # Regression — still blocks the pure Glob-equivalent form
 assert_exit "still blocks find -name only"  "2" "$(run 'find . -name "*.rs"')"
 
+# Regression — find -exec/-execdir/-ok/-okdir with + terminator
+# (the \; form passes via shell-composition early-exit by coincidence,
+# but + terminator does not — these must be allowed by OTHER_VERBS).
+assert_exit "allows find -exec ... +"    "0" "$(run 'find . -name "*.rs" -exec ls {} +')"
+assert_exit "allows find -execdir ... ;" "0" "$(run 'find . -name "*.rs" -execdir cat {} \;')"
+assert_exit "allows find -ok ... +"      "0" "$(run 'find . -name "*.tmp" -ok rm {} +')"
+assert_exit "allows find -okdir ... +"   "0" "$(run 'find . -name "*.tmp" -okdir rm {} +')"
+
 # Allow — non-matching commands
 assert_exit "allows git status"        "0" "$(run 'git status')"
 assert_exit "allows just check"        "0" "$(run 'just check')"
