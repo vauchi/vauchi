@@ -48,11 +48,14 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 
 **Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
 
-**Subagent budget (MANDATORY)** — each `Agent` call costs ~5–10 K
-tokens of overhead (system prompt + agent definition + skills list)
-*before* it does any work. Empirical: 62 `Explore` invocations in
-30 days = the largest single token cost in this project, dwarfing
-every config-level optimization combined. Rules:
+**Subagent budget (MANDATORY)** — each `Agent` call adds significant
+per-invocation overhead (system prompt + agent definition + skills
+list) *before* it does any work. Anthropic's costs doc cites "~7×
+more tokens for agent-team sessions" as the only documented number;
+the often-quoted ~5–10 K absolute figure is community speculation, not
+Anthropic-published. Empirical: 62 `Explore` invocations in 30 days
+= the largest single token cost in this project, dwarfing every
+config-level optimization combined. Rules:
 
 - **Never `Agent` for ≤2 search queries.** Use `Grep` / `Read` /
   `Glob` directly. One `Grep` with a wide pattern beats two `Agent`
