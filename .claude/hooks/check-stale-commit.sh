@@ -51,15 +51,30 @@ BEHIND=$(git -C "$REPO_DIR" rev-list --count HEAD..origin/main 2>/dev/null || ec
 
 if [[ "$BEHIND" -gt 0 ]]; then
   REPO_NAME=$(basename "$REPO_DIR")
-  # Show what landed upstream
   UPSTREAM=$(git -C "$REPO_DIR" log --oneline HEAD..origin/main 2>/dev/null | head -5)
-  echo "" >&2
-  echo "WARNING: $REPO_NAME is $BEHIND commit(s) behind origin/main." >&2
-  echo "Recent upstream commits:" >&2
-  echo "$UPSTREAM" >&2
-  echo "" >&2
-  echo "Verify your changes aren't already upstream before committing." >&2
-  echo "Run: git -C $REPO_NAME fetch origin main && git -C $REPO_NAME log --oneline HEAD..origin/main" >&2
+
+  # Single message used for both surfaces.
+  WARNING="WARNING: $REPO_NAME is $BEHIND commit(s) behind origin/main.
+Recent upstream commits:
+$UPSTREAM
+
+Verify your changes aren't already upstream before committing.
+Run: git -C $REPO_NAME fetch origin main && git -C $REPO_NAME log --oneline HEAD..origin/main"
+
+  # JSON on stdout — visible to the model. Exit-0 stderr is silently
+  # discarded by Claude Code per docs, so without this the prior
+  # `echo >&2` sequence reached the human terminal but never the model.
+  # Reference implementation: pre-read-nudge.sh. Audit: 2026-05-18 S2-1.
+  jq -nc --arg msg "$WARNING" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      additionalContext: $msg
+    }
+  }'
+
+  # Stderr preserved for the human in the terminal + older harnesses.
+  printf '\n%s\n\n' "$WARNING" >&2
+
   # Warn only, don't block — the developer may be on a feature branch intentionally behind
   exit 0
 fi
