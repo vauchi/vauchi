@@ -37,6 +37,25 @@ else
   echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
 fi
 
+# ---------- 0b. Drift detector: broad filesystem allow rules ----------
+# Catches re-introduction of patterns like Write(/**), Read(/**), Write(~/...)
+# that defeat the deny-list and grant tool-call access to the entire
+# filesystem. Rationale: 2026-05-18 audit S1-1 — under defaultMode=auto +
+# skipAutoPermissionPrompt these wildcards are vestigial *and* dangerous.
+PROJECT_SETTINGS="$PROJECT_DIR/.claude/settings.json"
+if [[ -f "$PROJECT_SETTINGS" ]]; then
+  BROAD_RULES=$(jq -r '.permissions.allow[]? // empty' "$PROJECT_SETTINGS" 2>/dev/null \
+    | grep -E '^(Read|Write)\((/[*/]|/\)$|~)' || true)
+  if [[ -n "$BROAD_RULES" ]]; then
+    say "[WARN] Settings: broad filesystem allow rule(s) in .claude/settings.json:"
+    while IFS= read -r rule; do
+      say "       - $rule"
+    done <<< "$BROAD_RULES"
+    say "       See _private/docs/investigations/2026-05-18-claude-code-harness-audit.md S1-1."
+    ISSUES=$((ISSUES + 1))
+  fi
+fi
+
 # ---------- 1. Required CLI tools ----------
 TOOLS=(cargo rustfmt clippy-driver node npm just jq glab)
 MISSING=()

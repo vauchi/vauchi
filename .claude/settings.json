@@ -47,12 +47,6 @@
       "Bash(tar:*)",
       "Bash(unzip:*)",
       "Bash(curl:*)",
-      "Read(/)",
-      "Read(/**)",
-      "Read(/**/**)",
-      "Write(/)",
-      "Write(/**)",
-      "Write(/**/**)",
       "WebSearch",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:doc.rust-lang.org)",
@@ -74,14 +68,22 @@
       "Bash(uv run:*)",
       "Bash(pacman -Q libgit2)",
       "Bash(ldconfig -p)",
-      "Read(//usr/lib/**)",
       "Bash(markdown-plan/python/.venv/bin/python --version)",
       "Bash(markdown-plan/python/.venv/bin/python -c \"import pygit2; print\\(''ok''\\)\")",
       "Bash(markdown-plan/python/.venv/bin/python -m pytest markdown-plan/python/src/mdplan/tests/test_parse.py -v -k \"multiline\")",
       "Bash(markdown-plan/python/.venv/bin/python -m pip install pytest)"
     ],
     "deny": [
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "Write(/Users/megloff1/.ssh/**)",
+      "Write(/Users/megloff1/.aws/**)",
+      "Write(/Users/megloff1/.gnupg/**)",
+      "Write(/Users/megloff1/.config/gh/**)",
+      "Write(/Users/megloff1/.config/glab-cli/**)",
+      "Write(/etc/**)",
+      "Write(/private/etc/**)",
+      "Write(/System/**)",
+      "Write(/usr/**)"
     ]
   },
   "enableAllProjectMcpServers": false,
