@@ -481,3 +481,46 @@ record or design doc.
   Rust toolchain ran for ~3 min before I read the user's own
   narrative).
 - **Recurrence**: 1
+
+### 2026-05-18 — Started a slice already in flight in a parallel session; commit dropped on rebase
+
+- **What**: The user said "another session is auditing slice
+  32h". I picked slice 32f as independent work, executed the
+  whole file deletion + tests + commit + doc heal end-to-end.
+  Then `just git sync` reported `core: pulled main`. The
+  parallel session had ALSO shipped slice 32f as
+  `93c0f5a9 refactor: retire entire mobile_onboarding.rs (slice 32f)`
+  during the same window. My commit `b9c2961a` got rebase-
+  dropped as a no-op patch ("patch contents already
+  upstream"). The deletion was correct; the duplication of
+  work was ~30 minutes of churn.
+- **Trigger**: Self-caught when the sync output said `pulled
+  main` and the `core` log no longer contained `b9c2961a`.
+- **Root cause**: I checked for in-flight work by reading
+  the user's narrative ("auditing 32h") and assumed the
+  parallel session was on 32h only. But "auditing" is a
+  superposition: it can pivot to *any* of the remaining
+  slices once the audit finishes. The signal I missed:
+  `git ls-remote origin "feature/slice-32*"` would have
+  shown the parallel session's branch shape before I picked
+  a slice that might collide.
+- **Lesson**: Before starting any slice 32X work when a
+  parallel session is "auditing" or "investigating" the
+  same category of work, query `git -C <repo> ls-remote
+  origin "feature/slice-32*"` (and the `_private` mirror)
+  to enumerate every in-flight branch. If a matching slice
+  branch exists OR if the parallel session might pivot to
+  the slice I want, switch to a different slice or to a
+  non-slice task (record heals, plan-doc heals, readiness
+  audits). The audit's promise was "might pivot to 32l
+  partial" — that was the explicit warning that the
+  parallel session's scope was fluid.
+- **Cross-ref**: 2026-05-04 "Trilogy MRs already landed via
+  different SHAs" (same shape — concurrent commits to
+  same record converge via patch-equivalence detection).
+  This entry adds: the convergence is BENIGN (no data loss,
+  git rebase --empty=drop handles it) but the wasted cycles
+  are not. The fix is upstream of the collision — pre-flight
+  branch-shape query — not downstream cleanup.
+- **Recurrence**: 1 (collision recurrence; bootstrap-staleness
+  pattern from 2026-05-04 is a sibling, not the same)
