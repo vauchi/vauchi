@@ -16,10 +16,14 @@ VERBOSE="${BOOTSTRAP_VERBOSE:-0}"
 OUT=""
 say() { OUT+="$1"$'\n'; }
 
-# ---------- 0. Self-heal settings.local.json ----------
-# Prevents junk accumulation from one-off "Allow" clicks.
-# Canonical state: only disabledMcpjsonServers (machine-local preference).
-# Any useful permissions belong in settings.json (tracked).
+# ---------- 0. settings.local.json: initialize if missing, report if accumulating ----------
+# Claude Code uses settings.local.json as the default destination for
+# per-session "Allow forever" clicks. Prior behavior here wiped
+# accumulated entries on every SessionStart — that silently destroyed
+# user intent and trained the user not to trust per-session approvals
+# (audit S1-2, 2026-05-18). Now: initialize when missing, *report*
+# accumulation non-destructively. User prunes via the Claude Code
+# permission UI, or promotes durable entries to settings.json (tracked).
 LOCAL_SETTINGS="$PROJECT_DIR/.claude/settings.local.json"
 CANONICAL_LOCAL='{
   "disabledMcpjsonServers": [
@@ -30,8 +34,11 @@ CANONICAL_LOCAL='{
 if [[ -f "$LOCAL_SETTINGS" ]]; then
   CURRENT_PERMS=$(jq -r '.permissions.allow // [] | length' "$LOCAL_SETTINGS" 2>/dev/null || echo "0")
   if [[ "$CURRENT_PERMS" -gt 0 ]]; then
-    echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
-    say "[FIX ] Settings: reset settings.local.json (had $CURRENT_PERMS accumulated permissions)"
+    say "[NOTE] settings.local.json holds $CURRENT_PERMS accumulated permission(s):"
+    while IFS= read -r p; do
+      say "       - $p"
+    done < <(jq -r '.permissions.allow[]? // empty' "$LOCAL_SETTINGS" 2>/dev/null || true)
+    say "       Prune via Claude Code permission UI, or promote to settings.json (tracked)."
   fi
 else
   echo "$CANONICAL_LOCAL" > "$LOCAL_SETTINGS"
