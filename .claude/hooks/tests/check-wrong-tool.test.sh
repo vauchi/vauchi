@@ -70,6 +70,18 @@ assert_exit "allows grep -r | head"    "0" "$(run 'grep -r foo src/ | head')"
 assert_exit "allows command sub"       "0" "$(run 'echo $(cat foo)')"
 assert_exit "allows find without name" "0" "$(run 'find . -newer marker -delete')"
 
+# Regression — false-positives discovered in the 2026-05-18 post-merge
+# audit (find with -name + a non-Glob action verb is NOT a Glob equivalent).
+assert_exit "allows find -name -delete"   "0" "$(run 'find . -name "*.lock" -delete')"
+assert_exit "allows find -name -newer"    "0" "$(run 'find . -name "*.bak" -newer marker.txt')"
+assert_exit "allows find -name -mtime"    "0" "$(run 'find . -name "*.tmp" -mtime +7')"
+assert_exit "allows find -name -type"     "0" "$(run 'find . -name "*.rs" -type f')"
+assert_exit "allows find -name -prune"    "0" "$(run 'find . -name "node_modules" -prune')"
+assert_exit "allows find -name -maxdepth" "0" "$(run 'find . -maxdepth 3 -name "*.rs"')"
+assert_exit "allows find -name -size"     "0" "$(run 'find . -name "*.log" -size +1M')"
+# Regression — still blocks the pure Glob-equivalent form
+assert_exit "still blocks find -name only"  "2" "$(run 'find . -name "*.rs"')"
+
 # Allow — non-matching commands
 assert_exit "allows git status"        "0" "$(run 'git status')"
 assert_exit "allows just check"        "0" "$(run 'just check')"

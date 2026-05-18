@@ -75,10 +75,15 @@ case "$TRIMMED" in
     block "tail <file>" "Read with offset" 'Read(file_path="path/to/file", offset=<last_line_minus_10>)'
     ;;
   find\ *)
-    # Allow find without -name (the find call is doing real work,
-    # not a Glob equivalent).
+    # Block ONLY if the command is exactly a name-pattern search with
+    # no other action or filter verb. `find -name X -delete/-newer/
+    # -mtime/-prune/-type/-maxdepth/...` are NOT Glob equivalents —
+    # Glob can't delete, filter by age, prune, etc.
+    OTHER_VERBS='-delete|-newer|-mtime|-atime|-ctime|-size|-prune|-depth|-maxdepth|-mindepth|-type|-perm|-user|-group|-empty|-path|-ipath|-regex|-print|-printf|-print0|-quit|-fprintf|-fprint|-ls|-fls'
     if printf '%s' "$TRIMMED" | grep -qE -- '-name|-iname'; then
-      block "find … -name <pat>" "Glob" 'Glob(pattern="**/*.rs")'
+      if ! printf '%s' "$TRIMMED" | grep -qE -- "$OTHER_VERBS"; then
+        block "find … -name <pat>" "Glob" 'Glob(pattern="**/*.rs")'
+      fi
     fi
     ;;
   "grep -r "*|"grep -R "*|"grep --recursive "*|"grep -rn "*|"grep -Rn "*)
