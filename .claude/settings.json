@@ -233,7 +233,7 @@
     "commit-commands@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": false,
     "kotlin-lsp@claude-plugins-official": false,
-    "feature-dev@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": false,
     "clangd-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": false,
