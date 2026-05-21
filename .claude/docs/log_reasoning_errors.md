@@ -524,3 +524,30 @@ record or design doc.
   branch-shape query — not downstream cleanup.
 - **Recurrence**: 1 (collision recurrence; bootstrap-staleness
   pattern from 2026-05-04 is a sibling, not the same)
+
+### 2026-05-21 — Bulk-sweep regex matched function parameters as struct field assignments
+
+During Phase 2 of wire-identifier-newtypes I wrote a regex
+`^(\s+)(sender_id|recipient_id):\s+(.+?),\s*$` to wrap
+struct-field expressions with `.into()` so a `String` literal
+becomes a `ContactId`. The pattern matched any source line that
+looked like a `field: expr,` — including the function-parameter
+lines `sender_id: &str,` inside `from_transport(...)` and
+`build_shred_senders(...)` in `vauchi-platform/src/lib.rs`. The
+sweep produced `sender_id: &str.into(),`, which is a syntax
+error — caught immediately by the next `just build`, reverted via
+a targeted second pass. ~2 minutes lost.
+
+- **Lesson**: A "field: expr," shape is ambiguous between
+  struct literal context and function-parameter context. Any
+  sweep that wraps the RHS must guard against the parameter
+  case — either by requiring the RHS to look like an *expression*
+  (no bare `&str` / `Vec<...>` type-shaped patterns), or by
+  inspecting the enclosing block (look back for `(` not `{`).
+  The cheapest check: skip the line if the RHS starts with `&`
+  or is a single ident that matches a known type name (`&str`,
+  `String`, `u32`, ...).
+- **Cross-ref**: 2026-05-08 "Recommended wiring a script based
+  on its header, not its behavior" — same shape (acting on a
+  textual pattern without verifying the structural context).
+- **Recurrence**: 1
