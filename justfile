@@ -325,7 +325,7 @@ lint *args:
         if ! quiet_enabled; then echo "═══ lint: $r ($tc) ═══"; fi
         _do_step() {
             case "$tc" in
-                rust)    (cd "$dir" && cargo clippy --workspace -- -D warnings 2>&1) ;;
+                rust)    (cd "$dir" && cargo clippy --workspace --all-targets -- -D warnings 2>&1) ;;
                 npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) ;;
                 gradle)
                     (cd "$dir" && ./gradlew lint 2>&1)

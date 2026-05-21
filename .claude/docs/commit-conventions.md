@@ -152,5 +152,5 @@ desktop-phone exchange over BLE.
 Plan-Task: sp24-desktop-exchange#4
 Plan-Task: sp24-desktop-exchange#5
 Problem: sp24-desktop-exchange
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 ```

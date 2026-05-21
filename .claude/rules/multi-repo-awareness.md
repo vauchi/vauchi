@@ -3,7 +3,7 @@
 - This is a **multi-repo project** — each subdirectory is its own git repo
 - **Commit format**: `{type}: {Short description}` — types: `feat`, `fix`,
   `refactor`, `tidy`, `docs`, `test`, `chore`
-- **Co-author**: Always add `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- **Co-author**: Always add `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
 - **Atomic commits**: One logical change per commit. TDD order: `tidy:`
   (optional) → `test:` → `feat:`/`fix:`
 - **Branches**: `feature/`, `bugfix/`, `refactor/`, `tidy/`, `investigation/`

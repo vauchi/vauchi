@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Create, update, or validate a `.plan.md` companion file. $ARGUMENTS describes the target (a problem slug, plan name, or file path).
 
-See also: `.claude/rules/markdown-plan.md` for format rules.
+See also: `.claude/docs/markdown-plan.md` for format rules.
 
 ## Creating a new plan.md
 
