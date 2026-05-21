@@ -364,15 +364,40 @@ session-init:
             echo "IN PROGRESS:"
             echo "$IN_PROGRESS" | while IFS= read -r line; do echo "  $line"; done
         fi
-        NEXT=$(sed -n '/^## v0\.5\.0 Next$/,/^## /{ /^## /d; /^$/d; p; }' "$BOARD" | head -5)
+        # Board uses priority-tiered headers since 2026-04 restructure:
+        # `## Blocked`, `## CRITICAL — Next`, `## HIGH — Next`,
+        # `## MEDIUM — Next`, `## LOW — Next`. NEXT aggregates
+        # CRITICAL+HIGH `- [ ]` items including their indented
+        # continuation lines (top of file = highest priority).
+        NEXT=$(awk '
+            /^## (CRITICAL|HIGH) — Next$/ { p=1; next }
+            /^## / { p=0 }
+            !p { next }
+            /^- \[ \]/ { emit=1; print; next }
+            emit && /^  / { print; next }
+            { emit=0 }
+        ' "$BOARD" | head -10)
         if [[ -n "$NEXT" ]]; then
             echo "NEXT:"
             echo "$NEXT" | while IFS= read -r line; do echo "  $line"; done
         fi
-        BLOCKED=$(sed -n '/^## v0\.5\.0 Blocked$/,/^## /{ /^## /d; /^$/d; p; }' "$BOARD")
+        BLOCKED=$(awk '
+            /^## Blocked$/ { p=1; next }
+            /^## / { p=0 }
+            !p { next }
+            /^- \[ \]/ { emit=1; print; next }
+            emit && /^  / { print; next }
+            { emit=0 }
+        ' "$BOARD")
         if [[ -n "$BLOCKED" ]]; then
             echo "BLOCKED:"
             echo "$BLOCKED" | while IFS= read -r line; do echo "  $line"; done
+        fi
+        # Sanity guard (CC-21): if board has `- [ ]` items but the
+        # parser finds none, the headers may have changed again.
+        TOTAL=$(grep -c '^- \[ \] ' "$BOARD" || true)
+        if [[ "$TOTAL" -gt 0 && -z "$NEXT" && -z "$BLOCKED" ]]; then
+            echo "  WARN: board has $TOTAL items but parser found none — check headers in $BOARD"
         fi
     else
         echo "  (no work board at $BOARD)"
