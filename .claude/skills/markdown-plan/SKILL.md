@@ -1,19 +1,22 @@
 ---
 name: markdown-plan
-description: Create, update, and validate markdown-plan companion files for task tracking
+description:
+  Create, update, and validate markdown-plan companion files for task tracking
 disable-model-invocation: true
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Create, update, or validate a `.plan.md` companion file. $ARGUMENTS describes the target (a problem slug, plan name, or file path).
+Create, update, or validate a `.plan.md` companion file. $ARGUMENTS describes
+the target (a problem slug, plan name, or file path).
 
 See also: `.claude/docs/markdown-plan.md` for format rules.
 
 ## Creating a new plan.md
 
-When a problem record has an `implementation-plan.md` or a planning doc exists in `planning/todo/`:
+When a problem record has an `implementation-plan.md` or a planning doc exists
+in `planning/todo/`:
 
 1. **Read the implementation plan** to extract the task structure
 2. **Create the companion `.plan.md`** using markdown-plan syntax:
@@ -23,10 +26,13 @@ When a problem record has an `implementation-plan.md` or a planning doc exists i
    - `@(substring)` for cross-task dependencies
    - `[x]` for already-completed tasks
 3. **Validate** the file:
+
    ```bash
    just plan-validate <file>
    ```
+
 4. **Commit** the new file:
+
    ```bash
    git add <file>
    git commit -m "feat: add markdown-plan task tracking for <name>"
@@ -40,6 +46,7 @@ When implementation work is completed:
 2. **Mark completed tasks** with `[x]`
 3. **Validate**: `just plan-validate <file>`
 4. **Commit**:
+
    ```bash
    git add <file>
    git commit -m "chore: update plan progress for <name>"
@@ -57,12 +64,12 @@ just plan-stale                   # Plans with no recent changes
 
 ## File naming
 
-| Location | Naming |
-|----------|--------|
+| Location                  | Naming                         |
+| ------------------------- | ------------------------------ |
 | `planning/todo/<name>.md` | `planning/todo/<name>.plan.md` |
-| `plans/<name>.md` | `plans/<name>.plan.md` |
-| `problems/<slug>/` | `problems/<slug>/plan.md` |
-| Portfolio level | `planning/master-plan.plan.md` |
+| `plans/<name>.md`         | `plans/<name>.plan.md`         |
+| `problems/<slug>/`        | `problems/<slug>/plan.md`      |
+| Portfolio level           | `planning/master-plan.plan.md` |
 
 ## Example plan.md
 

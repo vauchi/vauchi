@@ -3,7 +3,9 @@
 
 ## Drift-Detector Naming & Tagging Conventions (MANDATORY)
 
-The project uses `drift-detector` to verify cross-layer traceability. Follow these conventions so new code is automatically traceable.
+The project uses `drift-detector` to verify cross-layer
+traceability. Follow these conventions so new code is
+automatically traceable.
 
 ### Concept Tags (use consistently across all layers)
 
@@ -38,15 +40,26 @@ The project uses `drift-detector` to verify cross-layer traceability. Follow the
 
 - **Test naming**: `test_<subject>_<scenario>_<expected_outcome>`
 - **Scenario annotations** (MANDATORY for tests covering a Gherkin scenario):
+
   ```rust
   // @scenario: feature_name.feature:Scenario Name
   #[test]
   fn test_exchange_round_trip_succeeds() { ... }
   ```
-  - Format: `// @scenario: <feature_file>:<scenario_title>` or `// @scenario: <feature_name>:<scenario_title>`
+
+  - Format: `// @scenario: <feature_file> :: <scenario_title>` or
+    `// @scenario: <feature_name> :: <scenario_title>`. The
+    ` :: ` separator (space-double-colon-space) is the adopted
+    convention across `core/vauchi-core/tests/it/` (2043
+    occurrences as of 2026-05-21). Earlier drafts of this doc
+    cited a single `:` separator; that form has 0 occurrences
+    in production tests. The drift-detector parser accepts the
+    ` :: ` form — promoting docs to match code per
+    `.claude/rules/verify-before-acting.md` truth hierarchy.
   - Place immediately above `#[test]`
   - Multiple annotations allowed for tests covering multiple scenarios
 - **Source annotations** (optional, for explicit test-to-code linking):
+
   ```rust
   // @source: exchange::ExchangeSession::new_qr
   #[test]
@@ -55,7 +68,9 @@ The project uses `drift-detector` to verify cross-layer traceability. Follow the
 
 ### Concept Aliases (for searching)
 
-When searching the codebase for a concept, use these aliases to find all related code:
+When searching the codebase for a concept, use these aliases to
+find all related code:
+
 - **exchange**: `proximity`, `qr-code`, `qr`, `nfc`, `ble`, `audio`, `prekey`
 - **contacts**: `contact-card`, `contact-actions`, `add-field`, `merge`, `favorites`, `labels`
 - **security**: `auth`, `attacks`, `spoofing`, `passwords`, `audit`
