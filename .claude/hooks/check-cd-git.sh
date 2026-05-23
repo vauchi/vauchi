@@ -63,7 +63,10 @@ fi
 # Block: cd <other-dir> && ... — drifts working directory
 _CD_EXEMPT=false
 if echo "$COMMAND" | grep -qE '^\s*\('; then _CD_EXEMPT=true; fi
-if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && echo "$COMMAND" | grep -qE "^\s*cd\s+(\"|')?(\\$\{?CLAUDE_PROJECT_DIR\}?|$(printf '%s' "${CLAUDE_PROJECT_DIR}" | sed 's/[.[\*^$/]/\\&/g'))(\"|')?\s"; then _CD_EXEMPT=true; fi
+# Escape ERE metacharacters in the absolute path before embedding in the
+# regex. `/` is NOT an ERE metachar — escaping it makes grep emit
+# "stray \ before /" warnings (one per slash in CLAUDE_PROJECT_DIR).
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && echo "$COMMAND" | grep -qE "^\s*cd\s+(\"|')?(\\$\{?CLAUDE_PROJECT_DIR\}?|$(printf '%s' "${CLAUDE_PROJECT_DIR}" | sed 's/[].*+?|(){}[$^\\]/\\&/g'))(\"|')?\s"; then _CD_EXEMPT=true; fi
 if echo "$COMMAND" | grep -qE '^\s*cd\s+\S+.*&&' && [[ "$_CD_EXEMPT" == "false" ]]; then
   cat >&2 <<EOF
 [$CLAUDE_PROJECT_DIR/.claude/hooks/check-cd-git.sh]: "cd <dir> && ..." drifts the working directory.
