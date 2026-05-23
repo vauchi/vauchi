@@ -77,22 +77,36 @@ if ! echo "$COMMAND" | grep -qF -- '--tags'; then
   CURRENT_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || true)
   PUSH_TO_MAIN=false
 
-  # Case 1: on main and pushing without an explicit non-main branch.
-  # Strip shell redirects/pipes before checking for a refspec — prevents
-  # "2>&1", "| tail", etc. from being mistaken for branch names.
-  if [[ "$CURRENT_BRANCH" == "main" ]]; then
-    # Extract just the git push portion (before any redirect/pipe/semicolon)
-    PUSH_ARGS=$(echo "$COMMAND" | sed 's/[;|&].*//' | sed 's/[0-9]*>&[0-9]*//')
-    # Check if a non-main branch is explicitly named after the remote
-    if ! echo "$PUSH_ARGS" | grep -qE 'push\s+\S+\s+[a-zA-Z]'; then
-      PUSH_TO_MAIN=true
-    fi
-  fi
+  # Split the command on shell chain separators (; | &) and inspect each
+  # `git push` subcommand individually. The previous single-segment slice
+  # (`sed 's/[;|&].*//'`) broke on chained workflows like
+  # `git checkout -b feature && git push -u origin feature`: the
+  # checkout segment contains no `push`, so the branch-name regex
+  # silently failed and false-positive-blocked Case 1.
+  PUSH_SUBCMDS=$(printf '%s' "$COMMAND" \
+      | tr ';|&' '\n' \
+      | grep -E '\bgit\b.*\bpush\b' || true)
 
-  # Case 2: explicit push to main (e.g. "git push origin main", "git push origin HEAD:main")
-  if echo "$COMMAND" | grep -qE 'push\s+\S+\s+(.*:)?main(\s|$)'; then
-    PUSH_TO_MAIN=true
-  fi
+  while IFS= read -r subcmd; do
+    [[ -z "$subcmd" ]] && continue
+
+    # Case 1: on main, this push subcommand names no explicit non-main
+    # branch (e.g. `git push`, `git push origin`) — defaults to current
+    # branch (main).
+    if [[ "$CURRENT_BRANCH" == "main" ]]; then
+      if ! echo "$subcmd" | grep -qE 'push\s+\S+\s+[a-zA-Z]'; then
+        PUSH_TO_MAIN=true
+        break
+      fi
+    fi
+
+    # Case 2: explicit push to main (e.g. `git push origin main`,
+    # `git push origin HEAD:main`) — fires regardless of CURRENT_BRANCH.
+    if echo "$subcmd" | grep -qE 'push\s+\S+\s+(.*:)?main(\s|$)'; then
+      PUSH_TO_MAIN=true
+      break
+    fi
+  done <<< "$PUSH_SUBCMDS"
 
   if [[ "$PUSH_TO_MAIN" == "true" ]]; then
     echo "" >&2
