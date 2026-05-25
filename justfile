@@ -497,8 +497,8 @@ test-file name repo='core':
                 (cd "$dir" && npx vitest run "{{ name }}" 2>&1) || true
                 ;;
             gradle)
-                echo "── $r: ./gradlew test --tests *{{ name }}* ──"
-                (cd "$dir" && ./gradlew test --tests "*{{ name }}*" 2>&1) || true
+                echo "── $r: ./gradlew testDebugUnitTest --tests *{{ name }}* ──"
+                (cd "$dir" && ./gradlew testDebugUnitTest --tests "*{{ name }}*" 2>&1) || true
                 ;;
             *)
                 echo "── $r: test-file not supported for $tc ──"
@@ -530,8 +530,8 @@ test-name pattern repo='core':
                 (cd "$dir" && npx vitest run -t "{{ pattern }}" 2>&1) || true
                 ;;
             gradle)
-                echo "── $r: ./gradlew test --tests *{{ pattern }}* ──"
-                (cd "$dir" && ./gradlew test --tests "*{{ pattern }}*" 2>&1) || true
+                echo "── $r: ./gradlew testDebugUnitTest --tests *{{ pattern }}* ──"
+                (cd "$dir" && ./gradlew testDebugUnitTest --tests "*{{ pattern }}*" 2>&1) || true
                 ;;
             *)
                 echo "── $r: test-name not supported for $tc ──"
