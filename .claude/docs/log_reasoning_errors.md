@@ -551,3 +551,28 @@ a targeted second pass. ~2 minutes lost.
   on its header, not its behavior" — same shape (acting on a
   textual pattern without verifying the structural context).
 - **Recurrence**: 1
+
+### 2026-05-25 — Asserted a failure *mechanism* from a partial trace
+
+- **What**: For the contact-tap "→ My Card" bug I found a real core gap
+  (`route_result` had no general `OpenContact → ContactDetail` arm) and
+  immediately wrote a confident root-cause narrative — "the mobile mapping
+  is broken, so the raw result navigates to My Card" — into the problem
+  record AND the RED/GREEN commit messages.
+- **Why wrong**: closer reading refuted it. The frontends *do* map
+  `OpenContact → ContactDetail` (`CoreAppViewModel.kt:482`,
+  `AppViewModel.swift:392`), and `navigate_to_json` is strict serde that
+  parses `{"ContactDetail":{...}}` (→ ContactDetail) or errors (→ stays on
+  Contacts) — **neither path yields My Card**. The located gap was real, but
+  not shown to be the cause of the symptom. I had the symptom and a
+  plausible gap and welded them into a mechanism without tracing the full
+  path through the consuming frontend code + the parser.
+- **Lesson**: locating a code gap ≠ explaining an observed symptom. Before
+  writing a *mechanism* into records/commits, trace the full path
+  end-to-end (emitter → router → wire → consumer → parser), especially when
+  you cannot reproduce (device unavailable). State "found gap X; symptom
+  cause unverified," not "X causes the symptom." The fix can be correct
+  (core *should* resolve nav) without the mechanism claim being true.
+- **Cross-ref**: same family as "Header-comment-as-spec" / "acting on a
+  textual pattern without verifying structural context"; also CC-21.
+- **Recurrence**: 1
