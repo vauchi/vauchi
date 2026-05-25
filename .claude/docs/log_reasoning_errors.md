@@ -552,6 +552,39 @@ a targeted second pass. ~2 minutes lost.
   textual pattern without verifying the structural context).
 - **Recurrence**: 1
 
+### 2026-05-25 — Consumer audit checked UniFFI surfaces only, missed the C-ABI/C# binding surface
+
+Slice 32l T3.1 said "delete the dead legacy initiator surface,
+0 frontend callers per T0.2". T0.2 enumerated consumers via
+`just consumers` (snake_case) + a manual Swift/Kotlin camelCase
+pass. I deleted the app-layer `device_link_session.rs`
+(`DeviceLinkSession` + `run_initiator_cycle`) on that basis — and
+`just check core` failed: `vauchi-cabi`'s `device_link_session.rs`
+(`vauchi_device_link_session_*` C ABI) wraps it, and windows
+`DeviceLinkBridge.cs` is a live consumer (8 `[LibraryImport]`
+calls). The app-layer initiator was **not** dead; only the *mobile
+UniFFI* parallel was. Restored the app-layer file, narrowed the
+PR to the verified-dead mobile surface (T3.1a), re-scoped the
+C-ABI/windows retirement as T3.1b.
+
+- **Lesson**: This repo has **three** binding surfaces, not two:
+  UniFFI snake_case (`just consumers`), UniFFI camelCase
+  (Swift/Kotlin — the known blindspot), and the **C-ABI / C#**
+  surface (`vauchi-cabi` → windows/linux-qt, `[LibraryImport]`
+  P/Invoke). A "0 callers" claim that only covers UniFFI is
+  unproven for any symbol `vauchi-cabi` re-exports. Before
+  deleting an app-layer (`vauchi-app`) type, grep
+  `vauchi-cabi/src` for it AND grep windows/linux-qt for the
+  `vauchi_*` C entrypoint — not just the mobile bindings.
+- **Cheapest guard**: a wide `grep -rn <symbol>` across the whole
+  workspace (incl. `vauchi-cabi`, `windows`, `linux-qt`) costs one
+  call; the build failure + restore cost ~15 K tokens. Verify the
+  plan's "0 callers" premise with the build, which is exactly what
+  caught it — running `just check` before the commit was the save.
+- **Cross-ref**: feedback `grep_target_symbol_before_designing`
+  (plan checkboxes lie) + `verify-before-acting` rule.
+- **Recurrence**: 1
+
 ### 2026-05-25 — Asserted a failure *mechanism* from a partial trace
 
 - **What**: For the contact-tap "→ My Card" bug I found a real core gap
