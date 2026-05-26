@@ -1056,9 +1056,9 @@ coverage *args:
 # commit gate: each mutant reruns the suite, so it costs minutes even on a
 # small diff — that conflicts with fast push/commit feedback. Full-crate
 # mutation runs nightly in CI (see core/ci/mutation-and-fuzz.yml). Picks up
-# each repo's .cargo/mutants.toml (excludes, test features) automatically.
+# each repo's .cargo/mutants.toml automatically. Extra args after the repo
+# forward to cargo-mutants. Exits non-zero if any mutant survives or errors.
 # Usage: `just mutants-diff` (all changed Rust repos) | `just mutants-diff core`
-#        extra args after the repo are forwarded to cargo-mutants.
 [group('extended')]
 [script]
 mutants-diff *args:
@@ -1072,22 +1072,28 @@ mutants-diff *args:
     [ "$JOBS" -gt 8 ] && JOBS=8
     set -- {{ args }}
     repo_arg="${1:-all}"; [ "$#" -gt 0 ] && shift || true
-    ran=0
+    ran=0; failed=0
     for r in $(resolve_repo "$repo_arg" "test"); do
         [ "$(repo_toolchain "$r")" = "rust" ] || continue
         dir=$(repo_dir "$r")
+        # Diff from the merge-base, not origin/main directly: a branch behind
+        # origin/main would otherwise see upstream-only files as "changed"
+        # (two-dot diff is bidirectional). merge-base = this branch's work
+        # plus uncommitted edits, nothing upstream.
+        base=$(git -C "$dir" merge-base origin/main HEAD 2>/dev/null || echo origin/main)
         diff_file=$(mktemp)
-        git -C "$dir" diff origin/main -- '*.rs' > "$diff_file" 2>/dev/null || true
+        git -C "$dir" diff "$base" -- '*.rs' > "$diff_file" 2>/dev/null || true
         if [ ! -s "$diff_file" ]; then
             rm -f "$diff_file"
             continue
         fi
         ran=1
-        echo "═══ mutants-diff: $r (changed Rust vs origin/main) ═══"
-        (cd "$dir" && cargo mutants --in-diff "$diff_file" --jobs "$JOBS" "$@") || true
+        echo "═══ mutants-diff: $r (changed Rust since branch point) ═══"
+        (cd "$dir" && cargo mutants --in-diff "$diff_file" --jobs "$JOBS" "$@") || failed=1
         rm -f "$diff_file"
     done
-    [ "$ran" = 1 ] || echo "No changed Rust files vs origin/main in any targeted repo — nothing to mutate."
+    [ "$ran" = 1 ] || echo "No changed Rust files since branch point in any targeted repo — nothing to mutate."
+    [ "$failed" = 0 ] || { echo "mutants-diff: surviving mutants or errors above (exit 1)"; exit 1; }
 
 # Diff-scoped tests — fast changed-code feedback per toolchain. Runs only the
 # repos whose tracked files changed vs origin/main, using each ecosystem's
@@ -1103,35 +1109,39 @@ test-diff *args:
     OS="$(uname -s)"
     set -- {{ args }}
     repo_arg="${1:-all}"
-    ran=0
+    ran=0; failed=0
     for r in $(resolve_repo "$repo_arg" "test"); do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
-        changed=$(git -C "$dir" diff --name-only origin/main 2>/dev/null || true)
+        # merge-base, not origin/main: avoids flagging upstream-only files
+        # when the branch is behind origin/main (same fix as mutants-diff).
+        base=$(git -C "$dir" merge-base origin/main HEAD 2>/dev/null || echo origin/main)
+        changed=$(git -C "$dir" diff --name-only "$base" 2>/dev/null || true)
         [ -n "$changed" ] || continue
         case "$tc" in
             rust)
                 # .rs only — Cargo.toml/Cargo.lock are dirtied locally by
-                # setup-path-overrides (known false positive); triggering on
-                # them would run the full suite on a clean branch.
+                # setup-path-overrides (known false positive). NOTE: nextest has
+                # no changed-files mode, so this runs the repo's WHOLE suite —
+                # scoped to repos you touched, not to changed lines.
                 echo "$changed" | grep -qE '\.rs$' || continue
                 if [ "$r" = "linux-gtk" ] && [ "$OS" != "Linux" ]; then
                     echo "═══ test-diff: $r — Linux-only deps; tests run in CI ═══"; continue
                 fi
                 ran=1
                 tfeats=$(repo_test_features "$r")
-                echo "═══ test-diff: $r (cargo nextest — changed repo) ═══"
+                echo "═══ test-diff: $r (cargo nextest — whole repo suite) ═══"
                 if command -v cargo-nextest >/dev/null 2>&1; then
-                    (cd "$dir" && cargo nextest run $tfeats) || true
+                    (cd "$dir" && cargo nextest run $tfeats) || failed=1
                 else
-                    (cd "$dir" && cargo test $tfeats) || true
+                    (cd "$dir" && cargo test $tfeats) || failed=1
                 fi
                 ;;
             npm)
                 echo "$changed" | grep -qE '\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$' || continue
                 ran=1
-                echo "═══ test-diff: $r (vitest --changed origin/main) ═══"
-                (cd "$dir" && npx vitest run --changed origin/main) || true
+                echo "═══ test-diff: $r (vitest --changed since branch point) ═══"
+                (cd "$dir" && npx vitest run --changed "$base") || failed=1
                 ;;
             gradle)
                 echo "$changed" | grep -qE '\.(kt|kts|java)$' || continue
@@ -1141,7 +1151,7 @@ test-diff *args:
                     GRADLE_ARGS="-PlocalBindings"
                 fi
                 echo "═══ test-diff: $r (gradle testDebugUnitTest) ═══"
-                (cd "$dir" && ./gradlew $GRADLE_ARGS testDebugUnitTest) || true
+                (cd "$dir" && ./gradlew $GRADLE_ARGS testDebugUnitTest) || failed=1
                 ;;
             xcode)
                 echo "$changed" | grep -qE '\.swift$' || continue
@@ -1159,7 +1169,7 @@ test-diff *args:
                 if [ "$OS" = "Linux" ] && [ -d "$dir/build" ]; then
                     ran=1
                     echo "═══ test-diff: $r (ctest) ═══"
-                    (cd "$dir/build" && ctest --output-on-failure) || true
+                    (cd "$dir/build" && ctest --output-on-failure) || failed=1
                 else
                     echo "═══ test-diff: $r — Qt/C++ needs Linux + configured build/; tests run in CI ═══"
                 fi
@@ -1169,7 +1179,8 @@ test-diff *args:
                 ;;
         esac
     done
-    [ "$ran" = 1 ] || echo "No locally-runnable changed tests vs origin/main in any targeted repo."
+    [ "$ran" = 1 ] || echo "No locally-runnable changed tests since branch point in any targeted repo."
+    [ "$failed" = 0 ] || { echo "test-diff: failures above (exit 1)"; exit 1; }
 
 # Run Criterion benchmarks
 [group('extended')]
