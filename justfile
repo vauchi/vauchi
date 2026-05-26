@@ -1176,6 +1176,23 @@ lint-no-domain-imports-in-views *args:
     set -euo pipefail
     scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" {{args}}
 
+# Frontend-source domain-vocabulary deny-list (ADR-043 Am4 / ADR-044
+# Am1). Ratchets navigate-by-domain-name string literals in handwritten
+# Swift/Kotlin (e.g. navigateTo("ContactDetail")) against a committed
+# baseline; fails if any count rises. Companion to
+# lint-no-domain-imports-in-views: that fences Mobile* imports, this
+# fences nav-target domain strings. Run with no args for the ratchet
+# check; pass an empty arg to emit raw JSON counts.
+[group('tools')]
+[script]
+lint-frontend-vocab *args:
+    set -euo pipefail
+    if [ -z "{{args}}" ]; then
+        scripts/scripts/audit-frontend-vocab.sh --check scripts/scripts/audit-frontend-vocab.baseline.json
+    else
+        scripts/scripts/audit-frontend-vocab.sh {{args}}
+    fi
+
 # Count caller sites for a method on a frontend repo, with the corrected
 # pattern that excludes Kotlin/Swift extension-method **declaration**
 # signatures (which silently inflated the Phase 4a Android audit's
