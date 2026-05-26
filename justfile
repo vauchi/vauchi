@@ -1050,6 +1050,127 @@ coverage *args:
         esac
     done
 
+# Diff-scoped mutation testing — on-demand signal on changed code only.
+# Runs cargo-mutants against just the lines changed vs origin/main
+# (committed + uncommitted), per Rust repo. Deliberately NOT a push or
+# commit gate: each mutant reruns the suite, so it costs minutes even on a
+# small diff — that conflicts with fast push/commit feedback. Full-crate
+# mutation runs nightly in CI (see core/ci/mutation-and-fuzz.yml). Picks up
+# each repo's .cargo/mutants.toml (excludes, test features) automatically.
+# Usage: `just mutants-diff` (all changed Rust repos) | `just mutants-diff core`
+#        extra args after the repo are forwarded to cargo-mutants.
+[group('extended')]
+[script]
+mutants-diff *args:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    # core mutants load themes/locales at runtime (see CI before_script).
+    [ -d themes ]  && export VAUCHI_THEMES_DIR="$(cd themes && pwd)"
+    [ -d locales ] && export VAUCHI_LOCALES_DIR="$(cd locales && pwd)"
+    # jobs: min(8, ncpu) — cargo-mutants warns that >8 overloads the box.
+    JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    [ "$JOBS" -gt 8 ] && JOBS=8
+    set -- {{ args }}
+    repo_arg="${1:-all}"; [ "$#" -gt 0 ] && shift || true
+    ran=0
+    for r in $(resolve_repo "$repo_arg" "test"); do
+        [ "$(repo_toolchain "$r")" = "rust" ] || continue
+        dir=$(repo_dir "$r")
+        diff_file=$(mktemp)
+        git -C "$dir" diff origin/main -- '*.rs' > "$diff_file" 2>/dev/null || true
+        if [ ! -s "$diff_file" ]; then
+            rm -f "$diff_file"
+            continue
+        fi
+        ran=1
+        echo "═══ mutants-diff: $r (changed Rust vs origin/main) ═══"
+        (cd "$dir" && cargo mutants --in-diff "$diff_file" --jobs "$JOBS" "$@") || true
+        rm -f "$diff_file"
+    done
+    [ "$ran" = 1 ] || echo "No changed Rust files vs origin/main in any targeted repo — nothing to mutate."
+
+# Diff-scoped tests — fast changed-code feedback per toolchain. Runs only the
+# repos whose tracked files changed vs origin/main, using each ecosystem's
+# "changed files" mode where one exists. Skips repos you didn't touch and
+# defers tests that need a foreign host (Windows/Linux/Apple) or a slow
+# simulator — those run in CI. NOT a push/commit gate; invoke on demand.
+# Usage: `just test-diff` (all changed repos) | `just test-diff web-demo`
+[group('extended')]
+[script]
+test-diff *args:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    OS="$(uname -s)"
+    set -- {{ args }}
+    repo_arg="${1:-all}"
+    ran=0
+    for r in $(resolve_repo "$repo_arg" "test"); do
+        dir=$(repo_dir "$r")
+        tc=$(repo_toolchain "$r")
+        changed=$(git -C "$dir" diff --name-only origin/main 2>/dev/null || true)
+        [ -n "$changed" ] || continue
+        case "$tc" in
+            rust)
+                # .rs only — Cargo.toml/Cargo.lock are dirtied locally by
+                # setup-path-overrides (known false positive); triggering on
+                # them would run the full suite on a clean branch.
+                echo "$changed" | grep -qE '\.rs$' || continue
+                if [ "$r" = "linux-gtk" ] && [ "$OS" != "Linux" ]; then
+                    echo "═══ test-diff: $r — Linux-only deps; tests run in CI ═══"; continue
+                fi
+                ran=1
+                tfeats=$(repo_test_features "$r")
+                echo "═══ test-diff: $r (cargo nextest — changed repo) ═══"
+                if command -v cargo-nextest >/dev/null 2>&1; then
+                    (cd "$dir" && cargo nextest run $tfeats) || true
+                else
+                    (cd "$dir" && cargo test $tfeats) || true
+                fi
+                ;;
+            npm)
+                echo "$changed" | grep -qE '\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$' || continue
+                ran=1
+                echo "═══ test-diff: $r (vitest --changed origin/main) ═══"
+                (cd "$dir" && npx vitest run --changed origin/main) || true
+                ;;
+            gradle)
+                echo "$changed" | grep -qE '\.(kt|kts|java)$' || continue
+                ran=1
+                GRADLE_ARGS=""
+                if [ -d "$dir/app/src/local-bindings/kotlin/uniffi" ]; then
+                    GRADLE_ARGS="-PlocalBindings"
+                fi
+                echo "═══ test-diff: $r (gradle testDebugUnitTest) ═══"
+                (cd "$dir" && ./gradlew $GRADLE_ARGS testDebugUnitTest) || true
+                ;;
+            xcode)
+                echo "$changed" | grep -qE '\.swift$' || continue
+                # iOS sim launch is the latency floor and macOS unit tests
+                # can't run locally (testmanagerd) — both run in CI. swiftlint
+                # on these files is your fast local signal (gate-push runs it).
+                echo "═══ test-diff: $r — Apple unit tests deferred to CI; swiftlint is the fast local check ═══"
+                ;;
+            dotnet)
+                echo "$changed" | grep -qE '\.cs$' || continue
+                echo "═══ test-diff: $r — WinUI build needs Windows; tests run in CI ═══"
+                ;;
+            cmake)
+                echo "$changed" | grep -qE '\.(cpp|cc|cxx|h|hpp|py)$' || continue
+                if [ "$OS" = "Linux" ] && [ -d "$dir/build" ]; then
+                    ran=1
+                    echo "═══ test-diff: $r (ctest) ═══"
+                    (cd "$dir/build" && ctest --output-on-failure) || true
+                else
+                    echo "═══ test-diff: $r — Qt/C++ needs Linux + configured build/; tests run in CI ═══"
+                fi
+                ;;
+            *)
+                continue
+                ;;
+        esac
+    done
+    [ "$ran" = 1 ] || echo "No locally-runnable changed tests vs origin/main in any targeted repo."
+
 # Run Criterion benchmarks
 [group('extended')]
 [script]
