@@ -1325,6 +1325,21 @@ lint-frontend-vocab *args:
         scripts/scripts/audit-frontend-vocab.sh {{args}}
     fi
 
+# Dispatch-wrapper purity gate (L3.2): ratchets impurity signals
+# (collection transforms, formatters, statement branching) in the two
+# frontend dispatch-extension files. Enforces ADR-043 Am3 §2's
+# conditional sanction of dispatch_domain_command. Run with no args for
+# the ratchet check; pass an empty arg to emit raw JSON counts.
+[group('tools')]
+[script]
+lint-dispatch-purity *args:
+    set -euo pipefail
+    if [ -z "{{args}}" ]; then
+        scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
+    else
+        scripts/scripts/audit-dispatch-purity.sh {{args}}
+    fi
+
 # Count caller sites for a method on a frontend repo, with the corrected
 # pattern that excludes Kotlin/Swift extension-method **declaration**
 # signatures (which silently inflated the Phase 4a Android audit's
