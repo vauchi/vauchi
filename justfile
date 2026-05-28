@@ -1877,8 +1877,16 @@ housekeeping:
         [[ ! -f "${dir}README.md" ]] && continue
         dirname=$(basename "$dir")
         [[ "$dirname" == "done" ]] && continue
-        # Extract status from first 20 lines using sed
-        status=$(head -20 "${dir}README.md" | sed -n 's/.*\*\*Status\*\*[[:space:]]*[|:][[:space:]]*`\?\([a-zA-Z]*\).*/\1/p' | head -1 || true)
+        # Extract status from first 50 lines using sed. Extended regex
+        # (`-nE`) is required: BSD sed (macOS) treats `\?` as a literal
+        # `?`, so the basic-regex form left every record classified as
+        # "unknown" and the threshold check unguarded. head -50 covers
+        # records whose **Status** table cell sits below a long preamble
+        # (e.g. the 2026-02-15-e2e-proximity-simulation record at line 22).
+        # The `(\*\*)?Status(\*\*)?` group catches both the bold-table
+        # form (`| **Status** | intake |`) and the markdown-heading form
+        # (`## Status: intake`) used by some 2026-04-27 records.
+        status=$(head -50 "${dir}README.md" | sed -nE 's/.*(\*\*)?Status(\*\*)?[[:space:]]*[|:][[:space:]]*`?([a-zA-Z]*).*/\3/p' | head -1 || true)
         status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
         [[ "$status" == "done" || "$status" == "archived" || "$status" == "complete" ]] && continue
         # Use git last-modified date for any file in the problem directory
