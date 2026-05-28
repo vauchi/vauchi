@@ -616,6 +616,13 @@ download-cabi:
 [group('core')]
 [script]
 bump-core version:
+    # Ordering: every step that EDITS the manifest happens before the
+    # first step that can FAIL. So if schema-gen aborts because (e.g.)
+    # a new `ActionResult` field is missing a `JsonSchema` derive, the
+    # bump is already in a consistent state — Cargo.toml + Cargo.lock
+    # + .version are all at the new version. Fix the derive and re-run
+    # just the affected step: `just regen-schemas` or
+    # `just regen-golden-fixtures`.
     set -euo pipefail
     if [ -z "{{ version }}" ]; then
         echo "Usage: just bump-core <version>"
@@ -628,13 +635,28 @@ bump-core version:
     # 2. [workspace.dependencies] hardcoded version refs for the
     #    intra-workspace crates. Each line looks like:
     #      vauchi-core = { path = "vauchi-core", version = "0.X.Y", ... }
-    #    Cargo refuses `cargo generate-lockfile` if these aren't kept in
-    #    lockstep with the workspace version (it can't resolve a path-
-    #    member at the published version).
+    #    Cargo refuses to resolve a path-member at a stale published
+    #    version if the constraint excludes the new workspace version,
+    #    so these stay in lockstep.
     for crate in vauchi-core vauchi-app vauchi-protocol; do
         sed -i.bak "s|^\\($crate = { path = \"$crate\", version = \"\\)[^\"]*\\(\".*\\)|\\1{{ version }}\\2|" Cargo.toml && rm Cargo.toml.bak
     done
-    cargo generate-lockfile 2>&1 | tail -3
+    # 3. Golden fixture metadata (`core_version` in
+    #    vauchi-core/tests/fixtures/golden/.version) is the parity gate
+    #    `engine_golden_fixtures::*_fixture_is_fresh` reads. Sync it
+    #    NOW so a later failure (vet, fixtures, schemas) leaves a
+    #    consistent partial bump rather than tripping `just check core`
+    #    on a version-skew assertion.
+    sed -i.bak "s/\"core_version\": \"[^\"]*\"/\"core_version\": \"{{ version }}\"/" \
+        vauchi-core/tests/fixtures/golden/.version && rm vauchi-core/tests/fixtures/golden/.version.bak
+    grep -q "\"core_version\": \"{{ version }}\"" vauchi-core/tests/fixtures/golden/.version \
+        || { echo "ERROR: .version sed failed"; exit 1; }
+    # 4. Minimal lockfile update restricted to the 5 workspace crates.
+    #    `cargo generate-lockfile` (the old recipe's call) regenerates
+    #    from scratch and pulls newest compatible versions of every
+    #    transitive dep — 44-line Cargo.lock churn vs the convention's
+    #    10 lines. `cargo update -p` touches only the named packages.
+    cargo update -p vauchi-core -p vauchi-app -p vauchi-cabi -p vauchi-platform -p vauchi-protocol 2>&1 | tail -10
     echo "Regenerating cargo-vet exemptions..."
     cargo vet regenerate exemptions 2>&1
     cargo vet fmt 2>&1
@@ -647,16 +669,24 @@ bump-core version:
         regenerate_all_engine_fixtures --run-ignored=ignored-only 2>&1 | tail -3
     echo "Regenerating JSON schemas..."
     cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored 2>&1 | tail -3
-    # 3. Golden fixture metadata (`core_version` in
-    #    vauchi-core/tests/fixtures/golden/.version) is read by the
-    #    engine_golden_fixtures::*_fixture_is_fresh tests as a parity
-    #    gate. The regenerate_all_engine_fixtures test does not touch
-    #    this file, so update it inline.
-    sed -i.bak "s/\"core_version\": \"[^\"]*\"/\"core_version\": \"{{ version }}\"/" \
-        vauchi-core/tests/fixtures/golden/.version && rm vauchi-core/tests/fixtures/golden/.version.bak
-    echo "Verifying .version file..."
-    grep -q "{{ version }}" vauchi-core/tests/fixtures/golden/.version || echo "WARN: .version not updated"
     echo "✓ Core bumped to {{ version }}. Review changes and commit."
+
+# Regenerate the engine golden fixtures (resumes a halted bump-core).
+[group('core')]
+[script]
+regen-golden-fixtures:
+    set -euo pipefail
+    cd core
+    cargo nextest run -p vauchi-core --features testing --test it \
+        regenerate_all_engine_fixtures --run-ignored=ignored-only
+
+# Regenerate the JSON schemas (resumes a halted bump-core).
+[group('core')]
+[script]
+regen-schemas:
+    set -euo pipefail
+    cd core
+    cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored
 
 # Create a dev tag for fast CI feedback (lint + test only)
 # Usage: just release-dev [repo] [version]
