@@ -405,6 +405,22 @@ lint *args:
         run_step "$r" _do_step
     done
     print_summary "lint" || exit 1
+    # Humble-UI source ratchets (Lever 3 enforcement keystone, ADR-043 Am4 §4
+    # / ADR-044 Am1 §3). These audits scan BOTH android/ and ios/ source in a
+    # single pass, so they live at the workspace level — not the per-repo loop
+    # above — and run only on a full-workspace lint (`just lint` with no repo
+    # arg, which `just check` invokes). Ratchet semantics: counts may DROP as
+    # retirement lands, never RISE; baselines locked at 0. Detectors are
+    # self-tested in scripts/scripts/tests/audit-{frontend-vocab,dispatch-purity}.test.sh
+    # (non-tautological per CC-20/CC-21). Safe where a frontend tree is absent
+    # (e.g. single-repo CI): counts fall to 0 ≤ baseline and pass — fail-on-rise
+    # only fires in the workspace where both trees coexist. Plan:
+    # _private/docs/planning/todo/2026-05-26-humble-ui-vocab-fast-path-plan.md (L3.1/L3.2).
+    if [ -z "${_QR_REPO:-}" ]; then
+        if ! quiet_enabled; then echo "═══ lint: humble-ui source ratchets (workspace) ═══"; fi
+        scripts/scripts/audit-frontend-vocab.sh --check scripts/scripts/audit-frontend-vocab.baseline.json
+        scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
+    fi
 
 # Interactive commit across repos with changes
 [group('daily')]
