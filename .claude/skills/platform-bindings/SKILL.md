@@ -182,7 +182,19 @@ On tag `v*.*.*`:
 
 - Swift bindings: min 3500 lines
 - Kotlin bindings: min 5000 lines
-- Grep for 47 expected types (MobileContact, MobileError, etc.)
+- Greps for the `EXPECTED_TYPES` allow-list (MobileContact, MobileError,
+  …) — every listed type **must be present** in the generated Swift +
+  Kotlin bindings.
+
+**Gotcha — retiring a UniFFI type:** when you delete a `#[uniffi::export]`
+type from `vauchi-platform`, you MUST also remove it from `EXPECTED_TYPES`
+in `scripts/validate-bindings.sh` in the *same* MR. Otherwise
+`build:validate-bindings` fails with `Missing types` on the **tag**
+pipeline and hard-blocks `publish:maven` + `update:swift-bindings`;
+because the tag commit is immutable, the only recovery is a fresh version
+bump + re-release (the `core!1002` → `0.51.27` / `core!1007` incident).
+Mirror of how PAE-method retirements must update the `PAE_ALLOWLIST`
+heredoc — see ADR-048 "Related: retiring UniFFI-exported types".
 
 ## Distribution Repos
 
