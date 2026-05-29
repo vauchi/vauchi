@@ -431,6 +431,7 @@ lint *args:
         if ! quiet_enabled; then echo "═══ lint: humble-ui source ratchets (workspace) ═══"; fi
         scripts/scripts/audit-frontend-vocab.sh --check scripts/scripts/audit-frontend-vocab.baseline.json
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
+        scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
     fi
 
 # Interactive commit across repos with changes
@@ -1395,6 +1396,22 @@ lint-dispatch-purity *args:
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
     else
         scripts/scripts/audit-dispatch-purity.sh {{args}}
+    fi
+
+# Deprecation-window lint (settings-storage S5): fails if a NEW frontend
+# caller of the deprecated `Vauchi::app_preferences*` surface reappears
+# between S4 (migration complete) and S6 (core surface deletion).
+# Ratchets per-frontend caller counts against a committed baseline (0);
+# counts may drop, never rise. Run with no args for the ratchet check;
+# pass an empty arg to emit raw JSON counts.
+[group('tools')]
+[script]
+lint-app-preferences *args:
+    set -euo pipefail
+    if [ -z "{{args}}" ]; then
+        scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
+    else
+        scripts/scripts/audit-app-preferences.sh {{args}}
     fi
 
 # Count caller sites for a method on a frontend repo, with the corrected
