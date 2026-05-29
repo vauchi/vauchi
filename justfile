@@ -325,7 +325,18 @@ lint *args:
         if ! quiet_enabled; then echo "═══ lint: $r ($tc) ═══"; fi
         _do_step() {
             case "$tc" in
-                rust)    (cd "$dir" && cargo clippy --workspace --all-targets -- -D warnings 2>&1) ;;
+                rust)
+                    (cd "$dir" && cargo clippy --workspace --all-targets -- -D warnings 2>&1)
+                    # Pure-functional-core seal (program Phase 1): vauchi-core
+                    # state machines own NO ambient time/rng/sleep. Hard-fail
+                    # if any core_* counter regresses above 0. Runs from the
+                    # workspace root (the audit scans core/vauchi-core/src and
+                    # already exempts the seam files + tests + diagnostic
+                    # perf-timers). core-only; other Rust repos skip it.
+                    if [[ "$r" == "core" ]]; then
+                        scripts/scripts/audit-mobile-surface.sh --check-core-purity 2>&1
+                    fi
+                    ;;
                 npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) ;;
                 gradle)
                     (cd "$dir" && ./gradlew lint 2>&1)
