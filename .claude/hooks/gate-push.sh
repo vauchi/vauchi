@@ -380,10 +380,10 @@ if command -v markdownlint &>/dev/null; then
   # Lint only .md files changed on this branch vs origin/main
   MD_BASE=$(git -C "$REPO_DIR" merge-base origin/main HEAD 2>/dev/null || echo "")
   if [[ -n "$MD_BASE" ]]; then
-    MD_FILES=$(git -C "$REPO_DIR" diff --name-only "$MD_BASE"...HEAD -- '*.md' 2>/dev/null | grep -v '^$' || true)
+    MD_FILES=$(git -C "$REPO_DIR" diff --name-only "$MD_BASE"...HEAD -- '*.md' 2>/dev/null | grep -v '^$' | grep -vE '(^|/)vendor/' || true)
   else
     # No merge-base (e.g. new repo) — lint all .md files
-    MD_FILES=$(git -C "$REPO_DIR" ls-files '*.md' 2>/dev/null || true)
+    MD_FILES=$(git -C "$REPO_DIR" ls-files '*.md' 2>/dev/null | grep -vE '(^|/)vendor/' || true)
   fi
 
   if [[ -n "$MD_FILES" ]]; then
