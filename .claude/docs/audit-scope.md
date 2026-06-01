@@ -1,13 +1,24 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-# Audit Scope & Coverage Manifest
+# Audit Scope & Methodology
 
-Source of truth for **which subsystems have been audited, when, and how**.
-Future architecture or design audits MUST cite this document and update
-it. Prevents the silent-blind-spot failure mode that produced the
-2026-05-08 deep-modules audit (which covered 4 of 14 core subsystems
-and never said so).
+Source of truth for **how** audits are run: surface-claim verification,
+recorded failure modes, the audit-prompt template, and the
+standing-ratchet registry. Future architecture or design audits MUST
+read this file for method.
+
+The **coverage manifest** — which subsystems have been audited, when,
+with what verdict, plus size metrics — lives privately at
+`_private/docs/audit/2026-06-01-core-subsystem-coverage.md`. It is not
+public because the "unaudited" column is a soft-spot map: publishing
+which security subsystems have never been audited hands an attacker a
+prioritised target list. Future audits update **that** file for coverage
+and cite **this** one for method.
+
+This split prevents the silent-blind-spot failure mode that produced the
+2026-05-08 deep-modules audit (which covered 4 of 14 core subsystems and
+never said so).
 
 ## How to verify any claim about the public surface
 
@@ -29,40 +40,13 @@ recipe output. If it doesn't, the prose is wrong (per
 frontends, binding crates, TS tools). Missing a consumer is what made
 the 2026-05-08 audit drop `linux-qt` and `windows` entirely.
 
-## vauchi-core subsystem inventory
+## Subsystem inventory & coverage
 
-Numbers are a 2026-05-08 snapshot. Re-run `just public-api` for current.
-
-| Subsystem    | Files | LOC    | Pub-items | Last audited | Auditor / verdict |
-|--------------|-------|--------|-----------|--------------|-------------------|
-| api          | 36    | 11,848 | 74        | —            | unaudited         |
-| avatar       | 1     | 90     | 2         | —            | unaudited         |
-| backup       | 3     | 556    | 12        | —            | unaudited         |
-| contact      | 12    | 2,876  | 39        | —            | unaudited         |
-| contact_card | 6     | 2,501  | 29        | —            | unaudited         |
-| crypto       | 11    | 2,114  | 30        | 2026-05-08   | deep ✓            |
-| diagnostic   | 9     | 2,122  | 36        | —            | unaudited         |
-| exchange     | 66    | 17,537 | 202       | 2026-05-08   | deep, wide surface — needs consumer-driven demotion pass |
-| identity     | 4     | 1,456  | 18        | 2026-05-08   | deep ✓            |
-| network      | 28    | 7,845  | 109       | —            | unaudited         |
-| qr           | 2     | 424    | 5         | —            | unaudited         |
-| recovery     | 3     | 1,513  | 19        | —            | unaudited         |
-| social       | 2     | 260    | 2         | —            | unaudited         |
-| storage      | 31    | 11,449 | 28        | —            | unaudited (likely deep — 28 pub items behind 11K LOC) |
-| sync         | 7     | 3,356  | 35        | 2026-05-08   | mixed-leaning-deep ✓ |
-
-**Coverage gap:** ~38,000 LOC of core (storage, api, network,
-contact_card, recovery, diagnostic, contact, qr, backup, social, avatar)
-remained unaudited in the 2026-05-08 round. Future audits must declare
-their scope up-front against this table.
-
-## Other crates
-
-| Crate           | Files | LOC    | Pub-items | Notes |
-|-----------------|-------|--------|-----------|-------|
-| vauchi-cabi     | 11    | 5,164  | 16 (fn) + 140 extern | C ABI; count `#[no_mangle]` separately from `pub fn` |
-| vauchi-platform | 43    | 20,778 | 254       | UniFFI bindings — surface is large by tooling constraint, not classitis |
-| vauchi-protocol | 4     | 1,084  | 52        | Serde-only contract surface |
+The per-subsystem table (files, LOC, pub-items, last-audited, verdict)
+and the coverage-gap summary live privately at
+`_private/docs/audit/2026-06-01-core-subsystem-coverage.md` — see the
+rationale in the header. Update that file when an audit changes
+coverage; anchor every count to `just public-api` output.
 
 ## 2026-05-08 deep-modules audit — failure modes recorded
 
@@ -101,13 +85,14 @@ forbid them.
 When dispatching a deep-module / architecture audit, include in the
 prompt:
 
-> Scope: subsystems X, Y, Z (cite this manifest's table). Anchor every
-> count to the output of `just public-api <crate>`. For "shallow"
+> Scope: subsystems X, Y, Z (cite the coverage table in
+> `_private/docs/audit/2026-06-01-core-subsystem-coverage.md`). Anchor
+> every count to the output of `just public-api <crate>`. For "shallow"
 > verdicts on Rust types, distinguish between *small method bodies* and
 > *small caller-visible complexity* — only the latter is shallow per
 > Ousterhout. Cite file:line for every named symbol. Run `just consumers
 > <symbol>` before recommending demotion. Final report must end with the
-> updated row(s) for this manifest.
+> updated row(s) for that private coverage manifest.
 
 ## Standing ratchet audits
 
