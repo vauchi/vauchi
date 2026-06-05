@@ -131,6 +131,66 @@ if [[ -f "$STAMP_SH" ]]; then
   fi
 fi
 
+# ── Architectural ratchets not otherwise gated at the push boundary ──
+# The pure-functional-core seal + humble-UI workspace ratchets hard-fail in
+# `just lint`, which nothing forces before a push, and they cannot be a
+# single-repo CI gate: they scan the android/ios/cli trees, absent in a
+# per-repo pipeline, so their counters fall to 0 <= baseline and pass
+# trivially (the seal is the exception — see core's lint:core-purity job).
+# The local workspace checkout is the one place all trees coexist, so this
+# hook is their real gate. The per-repo `case` below selects WHICH audits a
+# push must clear — the audits themselves aggregate several trees (e.g.
+# app_preferences spans cli/tui/linux-gtk/android/ios), so a guarded push
+# can legitimately catch a sibling tree's regression; out-of-scope pushes
+# (docs, relay, _private, themes) run nothing.
+#
+# Placed BEFORE the platform-limit gate on purpose: these are host-OS-
+# independent source greps, so an ios push from a Linux host (which the
+# gate below skips for the Swift toolchain) must still clear the ios
+# vocab/dispatch ratchets. A valid TDD stamp above already means `just
+# check` ran them, so this is only reached when it did not. Skips cleanly
+# when scripts/ is not cloned. Verified green on main (2026-06-05).
+HOOK_WS_ROOT="${CLAUDE_PROJECT_DIR:-}"
+[[ -z "$HOOK_WS_ROOT" ]] && HOOK_WS_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)
+SCRIPTS_DIR="$HOOK_WS_ROOT/scripts/scripts"
+if [[ -n "$HOOK_WS_ROOT" && -d "$SCRIPTS_DIR" ]]; then
+  # Which workspace ratchets does a push of this repo need to clear?
+  #   android/ios       -> vocab + dispatch + app_preferences surface
+  #   cli/tui/linux-gtk -> app_preferences (Rust caller surface only)
+  RATCHET_CHECKS=""
+  case "$REPO_NAME" in
+    android|ios)        RATCHET_CHECKS="audit-frontend-vocab.sh audit-dispatch-purity.sh audit-app-preferences.sh" ;;
+    cli|tui|linux-gtk)  RATCHET_CHECKS="audit-app-preferences.sh" ;;
+  esac
+  RATCHET_FAIL=0
+  for script in $RATCHET_CHECKS; do
+    base="${script%.sh}.baseline.json"
+    if [[ -x "$SCRIPTS_DIR/$script" && -f "$SCRIPTS_DIR/$base" ]]; then
+      if ! OUT=$("$SCRIPTS_DIR/$script" --check "$SCRIPTS_DIR/$base" 2>&1); then
+        echo "" >&2
+        echo "Push blocked: humble-UI ratchet regression ($script)." >&2
+        echo "$OUT" >&2
+        RATCHET_FAIL=1
+      fi
+    fi
+  done
+  # Pure-functional-core seal — only meaningful when core source is in play.
+  if [[ "$REPO_NAME" == "core" && -x "$SCRIPTS_DIR/audit-mobile-surface.sh" ]]; then
+    if ! OUT=$("$SCRIPTS_DIR/audit-mobile-surface.sh" --check-core-purity "$HOOK_WS_ROOT" 2>&1); then
+      echo "" >&2
+      echo "Push blocked: pure-functional-core seal regression." >&2
+      echo "$OUT" >&2
+      RATCHET_FAIL=1
+    fi
+  fi
+  if [[ "$RATCHET_FAIL" -ne 0 ]]; then
+    echo "" >&2
+    echo "Fix the source first (CC-21: the gate is catching a real regression)." >&2
+    echo "Run the named audit locally to inspect. Do not bypass with --no-verify." >&2
+    exit 2
+  fi
+fi
+
 # ── Platform-limit gate (E16) ────────────────────────────────────────
 # Some repos can only be built on specific OSes. Skip Rust/lint checks
 # when pushing from an incompatible host — CI will run them on a matching
