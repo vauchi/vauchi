@@ -183,6 +183,19 @@ if [[ -n "$HOOK_WS_ROOT" && -d "$SCRIPTS_DIR" ]]; then
       RATCHET_FAIL=1
     fi
   fi
+  # Crypto-hygiene seal — HKDF domain separation (ADR-007) + trust-level
+  # immutability (ADR-034). Core-local; baseline + allow-list ship beside
+  # the script in the scripts repo.
+  CH="$SCRIPTS_DIR/audit-crypto-hygiene.sh"
+  CH_BASE="$SCRIPTS_DIR/audit-crypto-hygiene.baseline.json"
+  if [[ "$REPO_NAME" == "core" && -x "$CH" && -f "$CH_BASE" ]]; then
+    if ! OUT=$("$CH" --check "$CH_BASE" "$HOOK_WS_ROOT" 2>&1); then
+      echo "" >&2
+      echo "Push blocked: crypto-hygiene regression." >&2
+      echo "$OUT" >&2
+      RATCHET_FAIL=1
+    fi
+  fi
   if [[ "$RATCHET_FAIL" -ne 0 ]]; then
     echo "" >&2
     echo "Fix the source first (CC-21: the gate is catching a real regression)." >&2
