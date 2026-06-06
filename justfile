@@ -2739,32 +2739,56 @@ lint-markdown *ARGS:
       echo "SKIP: custom rule not found at $RULE"
       exit 0
     fi
+    WS_ROOT="$(pwd)"
     ARGS="{{ ARGS }}"
     FIX=""
-    PATHS=""
+    PATHS=()
     for arg in $ARGS; do
       if [ "$arg" = "fix" ]; then
         FIX="--fix"
       else
-        PATHS="$PATHS $arg"
+        PATHS+=("$arg")
       fi
     done
-    if [ -z "$PATHS" ]; then
-      PATHS="_private/docs/"
+    if [ ${#PATHS[@]} -eq 0 ]; then
+      PATHS=("_private/docs/")
     fi
-    # Use _private config when scanning _private docs
-    CONFIG=""
-    if [ -f "_private/.markdownlint.json" ]; then
-      CONFIG="-c _private/.markdownlint.json"
-    fi
-    echo "═══ Markdown lint (backtick-path exempt) ═══"
-    if [ -n "$FIX" ]; then
-      echo "  Mode: auto-fix"
-      markdownlint $CONFIG -r "$RULE" $FIX $PATHS
+    # Resolve the markdownlint config for a path by finding its owning
+    # repo root (nearest ancestor with a .git) and applying that repo's
+    # config. Precedence mirrors scripts/hooks/pre-push so this recipe and
+    # the push gate never disagree: repo-local > _private > workspace root.
+    resolve_config() {
+      local p="$1" dir root
+      if [ -d "$p" ]; then dir="$p"; else dir="$(dirname "$p")"; fi
+      dir="$(cd "$dir" 2>/dev/null && pwd || echo "$WS_ROOT")"
+      root="$dir"
+      while [ "$root" != "/" ]; do
+        [ -e "$root/.git" ] && break
+        root="$(dirname "$root")"
+      done
+      if [ -f "$root/.markdownlint.json" ]; then echo "$root/.markdownlint.json"; return; fi
+      if [ -f "$root/.markdownlint.jsonc" ]; then echo "$root/.markdownlint.jsonc"; return; fi
+      if [ -f "$WS_ROOT/_private/.markdownlint.json" ]; then echo "$WS_ROOT/_private/.markdownlint.json"; return; fi
+      if [ -f "$WS_ROOT/.markdownlint.json" ]; then echo "$WS_ROOT/.markdownlint.json"; return; fi
+      echo ""
+    }
+    echo "═══ Markdown lint (per-repo config, backtick-path exempt) ═══"
+    [ -n "$FIX" ] && echo "  Mode: auto-fix"
+    rc=0
+    for p in "${PATHS[@]}"; do
+      cfg="$(resolve_config "$p")"
+      CONFIG=""
+      [ -n "$cfg" ] && CONFIG="-c $cfg"
+      echo "  $p  →  config: ${cfg:-(markdownlint default)}"
+      # shellcheck disable=SC2086
+      markdownlint $CONFIG -r "$RULE" $FIX "$p" || rc=1
+    done
+    if [ "$rc" -eq 0 ]; then
+      echo "All markdown checks passed."
     else
-      markdownlint $CONFIG -r "$RULE" $PATHS
+      echo "FAILED: markdownlint found issues. Run 'just lint-markdown fix' to auto-fix."
+      exit 1
     fi
-    echo "All markdown checks passed."
 
 # ═══════════════════════════════════════════════════════════════════
 # I18N / LOCALES
