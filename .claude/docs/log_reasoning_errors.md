@@ -609,3 +609,31 @@ C-ABI/windows retirement as T3.1b.
 - **Cross-ref**: same family as "Header-comment-as-spec" / "acting on a
   textual pattern without verifying structural context"; also CC-21.
 - **Recurrence**: 1
+
+### 2026-06-06 — Graduated records to `done/` and broke inbound links a checker layer couldn't see
+
+- **What**: In MR !1589 I `git mv`-ed 7 problem records into
+  `problems/done/`, fixed the inbound links my per-slug greps surfaced,
+  and pushed green locally. CI `lint:links` then failed on two inbound
+  links in files the branch never touched
+  (`investigations/2026-06-01-ddd-precept-audit.md`,
+  `planning/done/2026-05-23-track-b-push-to-zero-plan.md`).
+- **Why wrong**: two compounding mistakes. (1) My discovery grep carried
+  a `grep -v "/problems/<slug>/"` filter intended to drop the record's
+  own dir, but it also dropped every *inbound* link whose target path
+  contains `problems/<slug>/` — i.e. exactly the links I was hunting.
+  (2) The two local guards have overlapping blind spots: pre-push lychee
+  scans changed files only, and `audit-graduation-links.sh` checks peer
+  records under `problems/` only — neither sees an inbound link from an
+  unchanged `investigations/`/`planning/` file. Both passed; CI's
+  full-tree scan caught it.
+- **Lesson**: for record graduations, the per-slug grep is a discovery
+  aid, not a gate. The gate is the full-tree scan CI runs:
+  `cd _private && lychee --offline docs/**/*.md docs/*.md`. Run it before
+  pushing. Never put a `-v "/problems/<slug>/"` filter on an inbound-link
+  grep. (Memory `git_mv_inbound_links` updated with the lychee command.)
+- **Cross-ref**: direct recurrence of the `git mv` inbound-link pattern
+  (`_private` MR !1261, 2026-05-15, which needed 3 fix commits); same
+  "trusted a filtered/narrow check over the full-surface check" family as
+  the 2026-05-25 C-ABI consumer-audit blindspot.
+- **Recurrence**: 2 (this pattern: inbound-link breakage on `git mv`)
