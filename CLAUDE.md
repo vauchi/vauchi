@@ -23,7 +23,7 @@ cargo watch -x 'nextest run'   # re-run tests on file save
 ## MANDATORY
 
 - **Principles**: All work must align with
-  [docs/about/principles.md](docs/docs/about/principles.md)
+  [docs/about/principles.md](docs/src/about/principles.md)
 - **Vocabulary**: Canonical glossary at `_private/docs/CONTEXT.md` —
   domain, CoreUI, crypto, repos, workspace terms with `_Avoid_`
   aliases. When prose drifts from these names, prose is wrong.
@@ -153,7 +153,7 @@ Run `just drift` after completing features or before MRs. Levels: `high`/`medium
 
 All repos have protected `main` — merge via MR only, force push disabled.
 Use `just gitlab mr-create [repo]` for MRs. Use `/create-mr` for multi-repo workflows.
-Contributing guide: `docs/docs/developers/contributing.md`.
+Contributing guide: `docs/src/developers/contributing.md`.
 
 ## Reference Docs
 
