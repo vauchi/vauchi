@@ -657,3 +657,22 @@ C-ABI/windows retirement as T3.1b.
   "trusted a filtered/narrow check over the full-surface check" family as
   the 2026-05-25 C-ABI consumer-audit blindspot.
 - **Recurrence**: 2 (this pattern: inbound-link breakage on `git mv`)
+
+### 2026-06-07 — `just commit-repo` silently dropped new files (uses `git add -u`)
+
+- **What**: Committed a new `Tag` type via `just commit-repo core "..."`.
+  The recipe reported "4 files changed, 3 insertions" — actually only the
+  tracked `mod.rs`/`main.rs` edits landed; the two *new* files
+  (`contact/tag.rs`, `tag_tests.rs`) were never staged. Pushed a broken
+  commit: `pub mod tag;` with no `tag.rs`.
+- **Why wrong**: `commit-repo` stages with `git add -u` (tracked-modified
+  only). It even prints a "NOTE: Untracked files (not staged…)" line that
+  I didn't read. Earlier in the same session I *did* `git add` new files
+  explicitly for `_private` (ADR, problem record) — so this was an
+  inconsistency, not ignorance.
+- **Lesson**: for any commit introducing NEW files, `git -C <repo> add
+  <files>` first, THEN `just commit-repo`. Always sanity-check the
+  recipe's "N files changed" against how many files you actually touched
+  before pushing — the mismatch is the tell. Fix here: `git add` +
+  `--amend` + `--force-with-lease` (feature branch).
+- **Recurrence**: 1
