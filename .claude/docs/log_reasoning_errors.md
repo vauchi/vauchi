@@ -47,6 +47,26 @@ record or design doc.
 
 *New entries below this line. Newest first.*
 
+### 2026-06-07 — Used `git diff A...B` to judge "is this branch merged"
+
+- **What**: For 4 "gone" branches (remote deleted) flagged by
+  `branch-health` as unmerged/RECOVER, I ran `git diff origin/main...<branch>
+  --stat`, saw a non-empty net diff, and told the user they had unmerged
+  commits. User said "check again." `git cherry origin/main <branch>` showed
+  every commit marked `-` (patch-id already in main) — all 4 were
+  squash-merged, hence safe to delete.
+- **Trigger**: User correction ("check again if it is really unmerged").
+- **Root cause**: `git diff A...B` = `diff $(merge-base A B) B` — it shows
+  everything B added since the fork point and does NOT subtract what A
+  independently merged. So squash-merged branches (different SHA, same
+  content) still show a non-empty 3-dot diff. Wrong tool for the question.
+- **Lesson**: To decide "is this branch's work in main", use
+  `git cherry origin/main <branch>` (patch-id: `-` = in main, `+` =
+  unmerged) or grep main for a distinctive symbol — never the 3-dot diff.
+  Note `branch-health`'s "gone/unmerged" is reachability-based and
+  false-positives on every squash-merge.
+- **Recurrence**: 1
+
 ### 2026-05-08 — Token audit started at file-layer when cost lived in behavior
 
 - **What**: User asked "how to reduce tokens?" I opened with file-level
