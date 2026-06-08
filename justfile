@@ -355,11 +355,12 @@ lint *args:
                         # through ClipboardUtils.copy{,WithAutoClear}.
                         scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
                         # Phase 1 of 2026-05-01-android-humble-ui-deep-retirement.
-                        # Warn-only (no --strict) until Phase 4.6 closes.
+                        # --strict (enforcing): Phase 4.6 closed 2026-06-08
+                        # after the MainViewModel diet (1,881 -> 537 LOC).
                         # Fences new Mobile* imports + identity/biometric
                         # branches in views; allowlist covers coreui/,
-                        # MainViewModel.kt, MainActivity.kt.
-                        scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" 2>&1
+                        # MainViewModel.kt, MainActivity.kt, theme/Theme.kt.
+                        scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" --strict 2>&1
                     fi
                     ;;
                 xcode)
