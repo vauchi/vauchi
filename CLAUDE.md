@@ -29,6 +29,9 @@ cargo watch -x 'nextest run'   # re-run tests on file save
   aliases. When prose drifts from these names, prose is wrong.
 - **Visibility**: See `.claude/rules/visibility-boundary.md`
 - **TDD, Structure, Crypto, Coverage**: See `.claude/rules/tdd-and-code-rules.md`
+- **Code Comments**: See `.claude/rules/comments.md` — self-document via
+  naming; keep a comment only for strange/uncommon patterns, and then
+  state *why*, not *how*
 - **Test Quality & Design**: See `.claude/rules/test-quality-rules.md`.
   Full reference: `.claude/docs/test-quality-rules.md`
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md`
