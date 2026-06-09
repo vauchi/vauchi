@@ -37,7 +37,7 @@ cargo watch -x 'nextest run'   # re-run tests on file save
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md`
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **File Size**: See `.claude/rules/file-size.md`
-- **Public docs**: `docs/` is the public mkdocs site — never write
+- **Public docs**: `docs/` is the public mdBook site — never write
   plans or private content there
 
 ## Tool Usage (MANDATORY)

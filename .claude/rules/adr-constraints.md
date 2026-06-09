@@ -11,7 +11,7 @@ glossary owns *what the words mean*.
 ### Crypto (ADR-002, ADR-019)
 
 - **Never mock crypto in tests** — use real crypto operations
-- **Approved crates only**: RustCrypto primary (`ed25519-dalek`, `x25519-dalek`, `sha2`, `hmac`, `hkdf`), spec-mandated (`chacha20poly1305`, `argon2`), transport (`snow`, `aws-lc-rs` via rustls), privacy (`ohttp` via ADR-037). New crypto crates require ADR amendment
+- **Approved crates only**: RustCrypto primary (`ed25519-dalek`, `x25519-dalek`, `sha2`, `hmac`, `hkdf`), spec-mandated (`chacha20poly1305`, `argon2`), transport (`aws-lc-rs` via rustls for TLS; client transport is HTTP v2 + `ohttp`), privacy (`ohttp` via ADR-037). `snow` (Noise NK) was removed from `vauchi-core` and now lives only in the relay for relay-to-relay federation. New crypto crates require ADR amendment
 - **XChaCha20-Poly1305 for all new encryption** — AES-256-GCM is legacy decryption only
 - **Always use HKDF domain separation** — every derivation path has a unique info string (ADR-007)
 - **Identity signing key uses raw seed directly** — not HKDF-derived (Ed25519 requirement)
