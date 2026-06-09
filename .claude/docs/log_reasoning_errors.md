@@ -676,3 +676,23 @@ C-ABI/windows retirement as T3.1b.
   before pushing — the mismatch is the tell. Fix here: `git add` +
   `--amend` + `--force-with-lease` (feature branch).
 - **Recurrence**: 1
+
+### 2026-06-09 — grep false-negative (unescaped paren) → wrong "Android is clean"
+
+- **What**: While scoping the VauchiPlatform→PlatformAppEngine collapse
+  (G1), I ran `for m in "\.sync(" ...; grep -rEl "$m" android/...`. The
+  ERE pattern `\.sync(` has an unmatched `(` (group-open), so it matched
+  nothing → I concluded "Android calls 0 of the legacy sync/identity
+  methods → iOS-only collapse" and wrote that into the problem record.
+  Android in fact calls `platform().sync()` (`VauchiRepository.kt:250`).
+- **Why wrong**: trusted a single grep's empty result as proof of absence
+  without (a) escaping the regex metachar or (b) a second method (literal
+  `grep -F` or reading the file). `verify-before-acting` explicitly says a
+  "not found" is not proof of absence — I violated it for a load-bearing
+  scoping claim that then shaped a problem record.
+- **Lesson**: when a grep result drives a scope/architecture claim, use
+  `grep -F` (fixed-string) or escape metachars, and confirm with a second
+  method before writing it down. Empty results from a hand-built regex are
+  the tell — paren/dot/brace in the pattern means re-check. Caught when
+  `just consumers VauchiPlatform` later listed the Android handle.
+- **Recurrence**: 1
