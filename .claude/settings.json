@@ -181,6 +181,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-wrong-tool.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-branch-delete.sh",
+            "timeout": 15
           }
         ]
       }
@@ -202,6 +207,11 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/log-bash-errors.sh",
+            "timeout": 3
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/log-bash-edits.sh",
             "timeout": 3
           }
         ]
