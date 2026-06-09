@@ -433,6 +433,13 @@ lint *args:
         scripts/scripts/audit-frontend-vocab.sh --check scripts/scripts/audit-frontend-vocab.baseline.json
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
         scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
+        # Humble-UI domain-mutation ratchet for the Rust/C++/C# frontends
+        # (tui, cli, linux-gtk, linux-qt, windows) — the analogue of
+        # audit-frontend-vocab.sh's mobile (Swift/Kotlin) coverage. Closes
+        # the ungated-scope gap from 2026-06-02-humble-ui-enforcement-mobile-only:
+        # counts domain-mutating verb calls (save_/configure_/setup_/validate_)
+        # + vauchi_core::types:: construction; baseline may DROP, never RISE.
+        scripts/scripts/audit-frontend-domain-calls.sh --check scripts/scripts/audit-frontend-domain-calls.baseline.json
     fi
 
 # Interactive commit across repos with changes
