@@ -27,7 +27,7 @@ All daily commands accept an optional `[repo]` argument:
 | core, cli, relay, tui, e2e, linux-gtk | rust | cargo build | cargo nextest | cargo fmt | cargo clippy | cargo fmt + clippy --fix |
 | android | gradle | gradlew assembleDebug | gradlew test | — | gradlew lint | — |
 | ios | xcode | xcodebuild build | xcodebuild test | swiftformat | swiftlint + swiftformat --lint | swiftformat + swiftlint --fix |
-| docs | mkdocs | mkdocs build --strict | mkdocs build --strict | — | markdownlint | — |
+| docs | mdbook | mdbook build | — | — | markdownlint | — |
 | locales, themes | python | — | — | — | python3 validate.py | — |
 | features | gherkin | — | — | — | advisory only | — |
 | scripts | shell | — | — | — | shellcheck | — |
@@ -267,7 +267,7 @@ See also: `just setup-fast-builds` (configures sccache + mold)
 
 ## Justfile Structure
 
-```
+```text
 justfile                  # Root (imports below)
 ├── just/git.just         # Git multi-repo (mod)
 ├── just/gitlab.just      # GitLab MR/pipeline/issue ops (mod)

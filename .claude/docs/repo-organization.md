@@ -1,15 +1,15 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 apply: always
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 ## Repository Organisation
 
 This is a **multi-repo project** under the [`vauchi` GitLab group](https://gitlab.com/vauchi). The root repo (`vauchi/vauchi`) is the workspace orchestrator — running `just setup` clones all sub-repos as sibling directories.
 
-```
+```text
 vauchi/                          ← root repo (this file, justfile, CI config)
 │
 │── core/                        ← Rust workspace: vauchi-core + vauchi-platform + vauchi-protocol
@@ -99,7 +99,7 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
 | Repo | Purpose |
 |------|---------|
-| `docs/` | Public documentation website (mkdocs) — user guides, contributing, security |
+| `docs/` | Public documentation website (mdBook) — user guides, contributing, security |
 | `scripts/` | Dev tools, hooks, utilities |
 | `drift-detector/` | Traceability matrix & cross-layer drift detection CLI tool + CI gate |
 | `gitlab-profile/` | GitLab group profile page (`.gitlab/README.md`) |
