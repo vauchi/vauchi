@@ -696,3 +696,26 @@ C-ABI/windows retirement as T3.1b.
   the tell — paren/dot/brace in the pattern means re-check. Caught when
   `just consumers VauchiPlatform` later listed the Android handle.
 - **Recurrence**: 1
+
+### 2026-06-10 — glab 404 (wrong project slug) misread as "no MR exists" → duplicate MR
+
+- **What**: Verifying whether the _private BLE-checklist branch already had
+  an MR, I ran `glab mr list -R vauchi/_private …` and `glab mr view 1666
+  -R vauchi/_private`. The project slug is `vauchi/private` (no leading
+  underscore), so both returned **404 Not Found**. I read the 404 as "no MR
+  exists / 1666 never existed" and created a duplicate MR (!1667) for a
+  commit that !1666 had already merged the day before.
+- **Why wrong**: a tool error (404 from a wrong identifier) is not the same
+  as an authoritative "absent" result — same class as the grep-false-negative
+  above, but the tell is an *error string*, not an empty list. `glab` prints
+  `ERROR / 404 Not Found` rather than an empty table; I should have treated
+  the 404 as "my query is malformed," not "the thing is gone." The remote
+  branch still carrying the name + a stale local origin/main ref ("1 ahead")
+  both pointed at already-merged work, which a correct slug would have shown.
+- **Lesson**: when a CLI lookup returns an error/404 (not an empty success),
+  fix the query before drawing a conclusion. For GitLab the canonical slug
+  is `vauchi/<repo>` with **no** underscore even though the dir is `_private`
+  → project is `vauchi/private`. Confirm "no MR" with the printed MR URL or
+  `glab api projects/vauchi%2F<repo>/merge_requests?source_branch=…` before
+  creating one. Caught by the user asking me to check what I'd pushed.
+- **Recurrence**: 1
