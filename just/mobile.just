@@ -72,6 +72,10 @@ build-ios-device mode="debug":
     # Detect build source: workspace (local bindings) or project (remote)
     if [ -d "ios/Vauchi.xcworkspace" ]; then
         SRC="-workspace Vauchi.xcworkspace"
+        # Without this, SPM resolves the REMOTE binaryTarget URL and the
+        # build silently links the published (stale) core — local Rust
+        # changes never reach the device (found 2026-06-10 device session).
+        export VAUCHI_PLATFORM_USE_LOCAL_XCFRAMEWORK=1
         echo "── iOS: Building from workspace (local bindings) ──"
     else
         SRC="-project Vauchi.xcodeproj"
