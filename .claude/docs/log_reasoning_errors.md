@@ -719,3 +719,26 @@ C-ABI/windows retirement as T3.1b.
   `glab api projects/vauchi%2F<repo>/merge_requests?source_branch=…` before
   creating one. Caught by the user asking me to check what I'd pushed.
 - **Recurrence**: 1
+
+### 2026-06-10 — `state=merged` + no merge commit misread as "broken merge"
+
+- **What**: Three test MRs (ios `!525`, macos `!284`, android `!514`) showed
+  `state=merged` while `origin/main` still sat at each MR's `base_sha` and the
+  merged files were absent. I concluded the merges were "broken / rolled back"
+  and warned it was a systemic merge-train failure that would also drop the
+  five open MRs. The user corrected me: they were *still merging*. Minutes
+  later `origin/main` fast-forwarded to each branch tip (`28a3580` / `3f856b1`
+  / `38ba9384`) and every file was present.
+- **Why wrong**: a fast-forward merge has **no merge commit** — `merge_commit_sha`
+  and `squash_commit_sha` are both `None` by design, and during a merge train
+  `main` advances only when the train reaches that MR. So "merged + null merge
+  commit + main not advanced yet" is the *normal* transient signature of an
+  in-flight FF merge, not a rollback. `merge_error: None` was the tell I
+  ignored. I also over-escalated to "systemic, will hit the other MRs."
+- **Lesson**: don't diagnose a merge as broken from a single snapshot. If an
+  MR is `merged` but main hasn't moved, account for (a) FF merges having no
+  merge commit and (b) merge-train latency — re-fetch after a short wait
+  before concluding. `merge_error: None` + `detailed_merge_status: not_open`
+  means GitLab thinks it's fine; trust that over the absent merge commit.
+  Don't raise a systemic alarm from one in-progress data point.
+- **Recurrence**: 1
