@@ -212,6 +212,12 @@ times over.
   yet the next action ignores it (e.g. reflexive `cd` despite the
   `git -C` memory). When starting a multi-step action, scan the
   loaded memory for entries that name the action verb.
+- **Blocked twice or unsure → ask.** When a hook/check/permission
+  blocks a second attempt, or a fix rests on a semantic guess you
+  can't verify, stop and ask the user — never bypass, never
+  third-retry. The archive attributes 15/30 logged errors to
+  process-bypass under friction; a question is always cheaper than
+  the cleanup.
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.
