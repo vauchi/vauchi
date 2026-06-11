@@ -118,3 +118,15 @@ Internal content that is not public-facing lives in `_private/`:
 | `strategy/` | Business strategy, funding plans |
 
 See `VISIBILITY_POLICY.md` for what goes where.
+
+## Funding manifest (three mirrored copies)
+
+`website/public/.well-known/funding.json` is **canonical** — edit it
+first. Two mirrors must be kept byte-identical to it:
+`website/public/funding.json` (the spec-recommended serving location,
+`https://vauchi.app/funding.json`) and the workspace-root
+`funding.json` (repo-discovery copy). The root repo's
+`.well-known/funding-manifest-urls` is the floss.fund provenance file
+the manifest's `wellKnown` field points at — it lists the served
+manifest URLs. History: the copies drifted for two months
+(2026-04→06) until reconciled 2026-06-11.
