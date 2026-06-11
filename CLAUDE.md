@@ -212,6 +212,14 @@ times over.
   yet the next action ignores it (e.g. reflexive `cd` despite the
   `git -C` memory). When starting a multi-step action, scan the
   loaded memory for entries that name the action verb.
+- **Stale local checkout as evidence.** Diagnosing, diffing, or
+  branching from a sub-repo's local main without fetching first. In a
+  20-repo workspace with concurrent sessions, any unfetched checkout
+  is weeks old; conclusions drawn from it (and branches built on it)
+  get clobbered by reality at push time. `git -C <repo> fetch origin`
+  before reading state you'll act on; compare against `origin/main`,
+  not the working tree. (3 occurrences: 2026-05-04 bootstrap, 2×
+  2026-06-11 website + locales.)
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.

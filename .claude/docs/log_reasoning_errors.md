@@ -788,4 +788,8 @@ one-line targeted fix after fetching.
   divergence may be intentional per-surface content, not drift.
 - **Cross-ref**: session-hygiene §Cross-Machine Sync; 2026-05-04
   bootstrap-staleness pattern (sibling).
-- **Recurrence**: 1 (stale-local-state family)
+- **Recurrence**: 3 (stale-local-state family) — recurred the same
+  session with `locales/` (13 commits behind; accent branch built on
+  the stale base hit rebase conflicts and missed that the targeted MR
+  had already merged and shipped a du/tú sweep). Promoted to CLAUDE.md
+  "Common waste patterns" 2026-06-11.
