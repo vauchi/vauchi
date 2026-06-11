@@ -793,6 +793,7 @@ one-line targeted fix after fetching.
   the stale base hit rebase conflicts and missed that the targeted MR
   had already merged and shipped a du/tú sweep). Promoted to CLAUDE.md
   "Common waste patterns" 2026-06-11.
+
 ### 2026-06-11 — content verified, container assumed (status grep; wrong justfile recipe)
 
 - **What**: While auditing `_private/`, I grepped `^status:` across all
@@ -823,6 +824,7 @@ one-line targeted fix after fetching.
   execution path, not re-implement the logic; and an inexplicable
   grep miss is a finding, not noise.
 - **Recurrence**: 2
+
 ### 2026-06-11 — stale-pathspec `git add` recurred with the memory loaded
 
 - **What**: After `git mv`-ing a problem record to `done/`, I ran

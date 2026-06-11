@@ -45,7 +45,11 @@ vauchi/                          ← root repo (this file, justfile, CI config)
 
 Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 
-**Name exceptions**: The local directory `_private/` maps to GitLab project `vauchi/private` (not `vauchi/_private`). The root directory maps to `vauchi/vauchi`. All other directories use identity mapping. See `scripts/scripts/resolve-repo.sh:_dir_to_gitlab_name()` for the authoritative mapping.
+**Name exceptions**: The local directory `_private/` maps to GitLab
+project `vauchi/private` (not `vauchi/_private`). The root directory
+maps to `vauchi/vauchi`. All other directories use identity mapping.
+See `scripts/scripts/resolve-repo.sh:_dir_to_gitlab_name()` for the
+authoritative mapping.
 
 ### Repo Categories
 
@@ -79,7 +83,9 @@ Each subdirectory is its own Git repo hosted at `gitlab.com/vauchi/<name>`.
 | `vauchi-platform-swift/` | Swift bindings + XCFramework (consumed by `ios/` via SPM) |
 | `vauchi-platform-kotlin/` | **ARCHIVED** — Maven AAR now published directly from `core/` |
 
-`vauchi-platform-swift` is updated by core's `update:swift-bindings` CI job. Android consumes the AAR from the group-level Maven registry (published by core's `publish:maven` job).
+`vauchi-platform-swift` is updated by core's `update:swift-bindings`
+CI job. Android consumes the AAR from the group-level Maven registry
+(published by core's `publish:maven` job).
 
 **Testing & Specs:**
 
