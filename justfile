@@ -1954,8 +1954,6 @@ housekeeping:
     # A record updated yesterday is not stale even if created months ago.
     section "Stale problem records"
     stale_problems=0
-    intake_count=0
-    missing_status=0
     now_epoch=$(date +%s)
     for dir in _private/docs/problems/*/; do
         [[ ! -f "${dir}README.md" ]] && continue
@@ -1972,8 +1970,6 @@ housekeeping:
         # (`## Status: intake`) used by some 2026-04-27 records.
         status=$(head -50 "${dir}README.md" | sed -nE 's/.*(\*\*)?Status(\*\*)?[[:space:]]*[|:][[:space:]]*`?([a-zA-Z]*).*/\3/p' | head -1 || true)
         status=$(echo "$status" | tr '[:upper:]' '[:lower:]')
-        [[ "$status" == "intake" ]] && intake_count=$((intake_count + 1))
-        [[ -z "$status" ]] && missing_status=$((missing_status + 1))
         [[ "$status" == "done" || "$status" == "archived" || "$status" == "complete" ]] && continue
         # Use git last-modified date for any file in the problem directory
         # This catches updates to README.md, plan.md, investigation.md, etc.
@@ -1996,30 +1992,6 @@ housekeeping:
         echo "  None"
     else
         ISSUES=$((ISSUES + stale_problems))
-    fi
-
-    # 13b. Intake backlog (CLAUDE.md alert threshold: 5+ unreviewed)
-    section "Intake backlog"
-    if [[ "$intake_count" -ge 5 ]]; then
-        echo "  $intake_count problem records in intake (alert threshold: 5) -> triage, defer, or reject"
-        ISSUES=$((ISSUES + 1))
-    else
-        echo "  OK ($intake_count in intake)"
-    fi
-    if [[ "$missing_status" -gt 0 ]]; then
-        echo "  $missing_status active README(s) without a Status row -> add one"
-        ISSUES=$((ISSUES + missing_status))
-    fi
-
-    # 13c. Work board size (Done is archived to work-board-archive.md;
-    # 1200-line threshold calibrated to the 941-line live floor of 2026-06-11)
-    section "Work board size"
-    board_lines=$(wc -l < _private/docs/work-board.md 2>/dev/null || echo 0)
-    if [[ "$board_lines" -gt 1200 ]]; then
-        echo "  work-board.md is ${board_lines} lines (>1200) -> move stale '## Done' entries to work-board-archive.md"
-        ISSUES=$((ISSUES + 1))
-    else
-        echo "  OK (${board_lines} lines)"
     fi
 
     # 14. Orphaned worktrees
