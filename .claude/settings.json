@@ -55,8 +55,6 @@
       "WebFetch(domain:developer.android.com)",
       "WebFetch(domain:kotlinlang.org)",
       "WebFetch(domain:swift.org)",
-      "WebFetch(domain:tauri.app)",
-      "WebFetch(domain:docs.solidjs.com)",
       "WebFetch(domain:mozilla.github.io)",
       "WebFetch(domain:docs.gtk.org)",
       "WebFetch(domain:crates.io)",
