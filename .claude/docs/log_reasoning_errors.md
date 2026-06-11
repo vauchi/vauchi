@@ -865,3 +865,24 @@ one-line targeted fix after fetching.
   Fixed in ios!529; structural race filed as
   `_private/docs/problems/2026-06-11-spm-mirror-cross-pin-race/`.
 - **Recurrence**: 1
+
+### 2026-06-11 — declared 4 platforms' VRT baselines stale from commit dates; CI re-record proved 3 pixel-identical
+
+- **What**: To answer "are the GUI screenshots current?", I compared
+  `git log -1 --format=%cs -- <baselines>` against the last view-layer
+  commit date per repo and declared iOS (4 days), macOS (2.5 months),
+  Android (1 month), and web-demo (3 months) stale. The CI record jobs
+  then re-recorded all three mobile/desktop platforms with **zero
+  pixel differences** — "No baseline changes — nothing to commit".
+  Only web-demo gained a baseline (a missing linux-chromium variant,
+  not a stale darwin one).
+- **Why wrong**: commit recency in view-layer *paths* is not evidence
+  of visual change. Most view-file commits are behavioral, refactors,
+  or affect screens outside snapshot coverage. The heuristic has no
+  pixel-level grounding.
+- **Lesson**: when a definitive cheap check exists (a record-mode CI
+  job that diffs against committed baselines), run it instead of
+  arguing from metadata. Date-lag flags *candidates*, never verdicts.
+  Corollary of `verify-before-acting.md` §"Before claiming something
+  is missing" — applies equally to claiming something is *stale*.
+- **Recurrence**: 1
