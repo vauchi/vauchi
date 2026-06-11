@@ -742,3 +742,22 @@ C-ABI/windows retirement as T3.1b.
   means GitLab thinks it's fine; trust that over the absent merge commit.
   Don't raise a systemic alarm from one in-progress data point.
 - **Recurrence**: 1
+
+### 2026-06-11 — frontmatter `status:` counted as problem-record status
+
+- **What**: While auditing `_private/`, I grepped `^status:` across all
+  `problems/**/*.md` and reported "26 distinct statuses, zero `intake`,
+  the canonical lifecycle is fiction" — and logged that as a ranked
+  finding. The matches were document frontmatter (investigation.md,
+  plan.md: `status: draft|complete|approved`), not record statuses.
+  Records keep status in a README table row (`| **Status** | intake |`)
+  and follow the canonical lifecycle almost perfectly (44+ intake).
+- **Why wrong**: one grep pattern, one source of truth assumed. I
+  verified the *count* but not the *provenance* of the matches — never
+  looked at which files they came from before drawing the conclusion.
+- **Lesson**: before claiming a convention is violated, sample WHERE the
+  matches live (`grep -l` first, read one hit). A status field exists at
+  two layers here (record vs document); any audit grep must pin the
+  layer. Caught self during implementation; correction committed in the
+  investigation doc (preserved, not rewritten).
+- **Recurrence**: 1
