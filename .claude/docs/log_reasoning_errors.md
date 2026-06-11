@@ -840,3 +840,23 @@ one-line targeted fix after fetching.
   old; never `2>/dev/null` a `git add`; verify `git show --stat` shows
   nonzero insertions before pushing a commit that should carry content.
 - **Recurrence**: 2 (first: 2026-06-08, the memory entry's origin)
+
+### 2026-06-11 — ios pin bump edited the generated pbxproj, not project.yml
+
+- **What**: ios!528 (abf0453, earlier session) "bumped" platform-swift
+  to 0.51.53 by editing `Vauchi.xcodeproj/project.pbxproj` only.
+  `project.yml` is the XcodeGen source of truth AND the file ios CI's
+  mirror prologue reads — so CI silently kept building 0.51.52, and
+  every ios pipeline rewrote the host-shared user-level `mirrors.json`
+  to v0.51.52, breaking the concurrent macos main pipeline
+  (`test:snapshots`, "unable to read tree", pipeline 2594394641).
+  The MR looked merged-and-green; the bump was a no-op.
+- **Why wrong**: edited a generated artifact instead of its source.
+  The previous bot bump (29f2cad) touched both files — diffing one
+  prior bump commit would have shown the expected file set.
+- **Lesson**: before hand-replicating a bot's chore commit, diff the
+  bot's previous instance and match its file set; for generated files
+  (pbxproj, bindings, lockfiles), always edit the generator's input.
+  Fixed in ios!529; structural race filed as
+  `_private/docs/problems/2026-06-11-spm-mirror-cross-pin-race/`.
+- **Recurrence**: 1
