@@ -5,7 +5,7 @@
 
 **Privacy-focused updatable contact cards via in-person exchange.**
 
-Exchange contact info with people you meet in person. Update your details anytime — everyone who has your card sees the changes. No accounts, no servers storing your data, no tracking.
+Exchange contact info with people you meet in person. Update your details anytime — everyone who has your card sees the changes. No accounts, no server that can read your data, no tracking.
 
 ## Why Vauchi?
 
