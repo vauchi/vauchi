@@ -28,11 +28,19 @@ wip msg='' *repos='':
             fi
         done
     else
-        # All repos including root — collect dirty ones
+        # All repos including root — collect dirty ones. Repos whose only
+        # changes are path-override churn are skipped: WIP-committing the
+        # fence is how it ends up on protected mains (--no-verify below
+        # bypasses the pre-commit guard). Explicit `just git wip <repo>`
+        # still takes the repo as-is.
         _collect_dirty() {
             local label="$1" dir="$2"
             if [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]; then
-                targets+=("$dir")
+                if scripts/scripts/override-only-changes.sh "$dir" >/dev/null 2>&1; then
+                    echo "  · $label: only path-override churn — skipped"
+                else
+                    targets+=("$dir")
+                fi
             fi
         }
         for_each_repo _collect_dirty

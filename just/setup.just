@@ -436,10 +436,20 @@ session-end:
         local status branch ahead gl_name mr_count
         status=$(git -C "$d" status --porcelain 2>/dev/null || true)
         if [[ -n "$status" ]]; then
-            {
-                echo "  ERROR: $label has uncommitted changes"
-                git -C "$d" status --short 2>/dev/null | while IFS= read -r line; do echo "    $line"; done
-            } >> "$SE_TMP/uncommitted.txt"
+            # Path-override churn (fenced Cargo.toml + lock rewrite) is
+            # documented persistent local-dev state — the pre-commit hook
+            # refuses to commit it, so demanding a clean tree here only
+            # trains bypasses (see 2026-06-11-session-end-override-false-
+            # positives). Content-verified by the filter; missing filter
+            # falls back to strict.
+            if scripts/scripts/override-only-changes.sh "$d" >/dev/null 2>&1; then
+                echo "  $label: path-override churn only (local-dev state, not committable)" >> "$SE_TMP/override-only.txt"
+            else
+                {
+                    echo "  ERROR: $label has uncommitted changes"
+                    git -C "$d" status --short 2>/dev/null | while IFS= read -r line; do echo "    $line"; done
+                } >> "$SE_TMP/uncommitted.txt"
+            fi
         fi
         # Unpushed commits
         branch=$(git -C "$d" branch --show-current 2>/dev/null)
@@ -468,6 +478,9 @@ session-end:
         ERRORS=1
     else
         echo "  All clean"
+    fi
+    if [[ -s "$SE_TMP/override-only.txt" ]]; then
+        sort "$SE_TMP/override-only.txt"
     fi
 
     echo ""
