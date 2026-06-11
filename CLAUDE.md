@@ -226,6 +226,13 @@ times over.
   third-retry. The archive attributes 15/30 logged errors to
   process-bypass under friction; a question is always cheaper than
   the cleanup.
+- **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
+  paths — a dead old path aborts the whole `git add`, and
+  `2>/dev/null` turns the abort into silent content loss (the commit
+  lands renames with 0 insertions). Never silence `git add` stderr;
+  verify `git show --stat` shows nonzero insertions before pushing a
+  commit that should carry content. (3 occurrences: 2026-06-08, 2×
+  2026-06-11.)
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.

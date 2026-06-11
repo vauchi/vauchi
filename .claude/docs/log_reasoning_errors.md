@@ -839,7 +839,12 @@ one-line targeted fix after fetching.
 - **Lesson**: after `git mv`, `git add` only the new paths, never the
   old; never `2>/dev/null` a `git add`; verify `git show --stat` shows
   nonzero insertions before pushing a commit that should carry content.
-- **Recurrence**: 2 (first: 2026-06-08, the memory entry's origin)
+- **Recurrence**: 3 (2026-06-08, the memory entry's origin;
+  2026-06-11 PM; 2026-06-11 eve — `_private` close-out commit ran the
+  identical `git add <new> <old> 2>/dev/null` after `git mv`, dropped
+  three README status edits, caught only post-commit via `show --stat`
+  0-insertions while chasing an unrelated lint failure). N≥3 →
+  promoted to CLAUDE.md Common waste patterns 2026-06-11.
 
 ### 2026-06-11 — ios pin bump edited the generated pbxproj, not project.yml
 
