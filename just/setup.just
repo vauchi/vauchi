@@ -659,6 +659,35 @@ session-end:
         echo "  ${USE_PCT}% used (OK)"
     fi
 
+    # ── Intake backlog ──
+    # CLAUDE.md alert threshold: 5+ problems in intake. Advisory, not an
+    # ERRORS gate — gating session exit on triage debt would only train
+    # ignoring the gate. Matches table (| **Status** | intake |), heading
+    # (## Status: intake), and bold-colon (**Status**: intake) forms.
+    echo ""
+    echo "── intake backlog ──"
+    INTAKE_COUNT=$( (grep -liE '^(\| *)?(#+ *)?(\*\*)?status(\*\*)? *[|:] *`?intake' \
+        _private/docs/problems/*/README.md 2>/dev/null || true) | wc -l | tr -d ' ')
+    if [[ "$INTAKE_COUNT" -ge 5 ]]; then
+        echo "  $INTAKE_COUNT problem records in intake (alert threshold: 5)"
+        echo "  → triage into a lifecycle phase, defer, or reject"
+    else
+        echo "  OK ($INTAKE_COUNT in intake)"
+    fi
+
+    # ── Work board size ──
+    # Advisory. 1200-line threshold calibrated to the 941-line live floor
+    # measured 2026-06-11 after the first Done-section archive pass.
+    echo ""
+    echo "── work board size ──"
+    BOARD_LINES=$(wc -l < "$BOARD" 2>/dev/null || echo 0)
+    if [[ "$BOARD_LINES" -gt 1200 ]]; then
+        echo "  work-board.md: ${BOARD_LINES} lines (>1200)"
+        echo "  → archive old '## Done' entries to work-board-archive.md"
+    else
+        echo "  OK (${BOARD_LINES} lines)"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"

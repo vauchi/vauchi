@@ -240,9 +240,21 @@ problem-list phase='':
     order = ['intake', 'investigating', 'planning', 'implementing', 'testing', 'done', 'archived']
     total = sum(len(v) for v in by_status.values())
 
+    # Records under done/ and deferred/ live one level deeper; their
+    # location IS their status (os.listdir above only sees top level).
+    def count_subdir(name):
+        sub = os.path.join(problems_dir, name)
+        if not os.path.isdir(sub):
+            return 0
+        return sum(1 for d in os.listdir(sub)
+                   if os.path.isfile(os.path.join(sub, d, 'README.md'))
+                   or os.path.isfile(os.path.join(sub, d, 'problem.md')))
+    done_dir_count = count_subdir('done')
+    deferred_dir_count = count_subdir('deferred')
+
     if not phase_filter:
         # Summary mode
-        print(f'Problem records: {total} total\n')
+        print(f'Problem records: {total + done_dir_count + deferred_dir_count} total\n')
         for phase in order:
             items = by_status.get(phase, [])
             if items:
@@ -252,7 +264,8 @@ problem-list phase='':
             print(f'  {k:15s} {len(by_status[k]):3d}')
         print()
         active = sum(len(by_status.get(p, [])) for p in ['intake', 'investigating', 'planning', 'implementing', 'testing'])
-        print(f'Active: {active}  Done: {len(by_status.get("done", []))}  Archived: {len(by_status.get("archived", []))}')
+        done_total = len(by_status.get('done', [])) + done_dir_count
+        print(f'Active: {active}  Deferred: {deferred_dir_count}  Done: {done_total}  Archived: {len(by_status.get("archived", []))}')
     else:
         items = by_status.get(phase_filter, [])
         if not items:
@@ -528,7 +541,10 @@ plan-stale days='30':
             echo "  STALE ($DAYS days): $file"
             STALE=$((STALE + 1))
         fi
-    done < <(find _private/docs -name "*.plan.md" -print0)
+    done < <(find _private/docs \
+        \( -path '*/planning/done' -o -path '*/planning/archived' \
+           -o -path '*/planning/deferred' -o -path '*/planning/rejected' \) -prune \
+        -o -name "*.plan.md" -print0)
     echo ""
     echo "$STALE stale plan(s) found."
 

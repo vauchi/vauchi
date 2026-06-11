@@ -793,3 +793,33 @@ one-line targeted fix after fetching.
   the stale base hit rebase conflicts and missed that the targeted MR
   had already merged and shipped a du/tú sweep). Promoted to CLAUDE.md
   "Common waste patterns" 2026-06-11.
+### 2026-06-11 — content verified, container assumed (status grep; wrong justfile recipe)
+
+- **What**: While auditing `_private/`, I grepped `^status:` across all
+  `problems/**/*.md` and reported "26 distinct statuses, zero `intake`,
+  the canonical lifecycle is fiction" — and logged that as a ranked
+  finding. The matches were document frontmatter (investigation.md,
+  plan.md: `status: draft|complete|approved`), not record statuses.
+  Records keep status in a README table row (`| **Status** | intake |`)
+  and follow the canonical lifecycle almost perfectly (44+ intake).
+- **Why wrong**: one grep pattern, one source of truth assumed. I
+  verified the *count* but not the *provenance* of the matches — never
+  looked at which files they came from before drawing the conclusion.
+- **Lesson**: before claiming a convention is violated, sample WHERE the
+  matches live (`grep -l` first, read one hit). A status field exists at
+  two layers here (record vs document); any audit grep must pin the
+  layer. Caught self during implementation; correction committed in the
+  investigation doc (preserved, not rewritten).
+- **Instance 2 (same day, same class)**: grepped 'intake' in the
+  justfile, found the staleness scan at line 1952, and edited it as
+  "session-end §13" without checking the owning recipe — it was
+  `housekeeping:`; session-end lives in `just/setup.just` via import
+  (which is also why a plain `grep session-end justfile` had returned
+  nothing — a signal I ignored). The "verification" was a hand-typed
+  replica of my own logic — correlated, not independent. Caught in
+  second-pass review only by executing the real recipe
+  (`just session-end`) and seeing the sections absent. Fixed in
+  `58b76aff`. Lesson addendum: a verification must exercise the real
+  execution path, not re-implement the logic; and an inexplicable
+  grep miss is a finding, not noise.
+- **Recurrence**: 2

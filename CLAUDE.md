@@ -220,6 +220,12 @@ times over.
   before reading state you'll act on; compare against `origin/main`,
   not the working tree. (3 occurrences: 2026-05-04 bootstrap, 2×
   2026-06-11 website + locales.)
+- **Blocked twice or unsure → ask.** When a hook/check/permission
+  blocks a second attempt, or a fix rests on a semantic guess you
+  can't verify, stop and ask the user — never bypass, never
+  third-retry. The archive attributes 15/30 logged errors to
+  process-bypass under friction; a question is always cheaper than
+  the cleanup.
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.
