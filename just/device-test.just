@@ -797,6 +797,17 @@ dt-wda-start:
     echo "First run requires Touch ID / passcode on device ('Enable UI Automation')"
     echo ""
     cd "$WDA_DIR"
+    # test-without-building fails on a fresh machine ("Failed to install
+    # the app on the device" / missing products) — build-for-testing
+    # first when no Runner app exists yet (2026-06-11 session).
+    if ! ls "$HOME/Library/Developer/Xcode/DerivedData"/WebDriverAgent-*/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app >/dev/null 2>&1; then
+        echo -e "${YELLOW}No WDA build products found — running build-for-testing first...${NC}"
+        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
+            -destination "id=$UDID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
+            -allowProvisioningUpdates build-for-testing 2>&1 \
+            | grep --line-buffered -E "BUILD|error:" || true
+    fi
     xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
         -destination "id=$UDID" \
         DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
