@@ -742,3 +742,50 @@ C-ABI/windows retirement as T3.1b.
   means GitLab thinks it's fine; trust that over the absent merge commit.
   Don't raise a systemic alarm from one in-progress data point.
 - **Recurrence**: 1
+
+### 2026-06-11 — `just grep` silent false negative nearly "fixed" a correct claim
+
+While auditing funding.json's "Signal protocol (X3DH + Double
+Ratchet)" claim, `just grep -li "x3dh"` and `just grep -l
+"double_ratchet\|DoubleRatchet"` both returned empty, and I
+provisionally concluded the claim was false. A direct
+`ls core/vauchi-core/src/crypto/` showed `x3dh.rs` and
+`ratchet.rs` exist — the claim was correct all along.
+
+- **Lesson**: A "not found" from one tool is not proof of
+  absence. Before acting on any load-bearing negative, confirm
+  with a second method (`Glob`, `ls`, plain `grep -r`). Had I
+  "fixed" the wording, a true technical claim would have been
+  replaced by a vaguer one. Cause of the empty result not yet
+  diagnosed (possibly pattern quoting or recipe search scope) —
+  worth a sentinel test of `just grep` against a known-present
+  symbol next time it gates a decision.
+- **Cross-ref**: 2026-06-09 "grep false-negative (unescaped
+  paren) → wrong 'Android is clean'" — same family;
+  `.claude/rules/verify-before-acting.md` §"Before claiming
+  something is missing".
+- **Recurrence**: 2 (grep-false-negative family — one more
+  occurrence promotes this to CLAUDE.md "Common waste patterns")
+
+### 2026-06-11 — Diagnosed deployed content from a stale local checkout
+
+During the server-claim wording sweep I grepped the local
+`website/` checkout, found `"zero-knowledge relay"` in
+`public/.well-known/funding.json`, and prepared a wholesale
+copy-over from the workspace root funding.json. The rebase
+conflict revealed origin/main had already healed that wording
+("oblivious privacy-preserving relay") plus other fields — the
+local main was weeks stale, and the two files had *diverged
+intentionally* (different emails, descriptions). The blind copy
+would have clobbered newer deployed content; replaced with a
+one-line targeted fix after fetching.
+
+- **Lesson**: Before diagnosing (or healing) anything that is
+  deployed from a repo's main, `git fetch` and read the file at
+  `origin/main`, not the working tree. A local checkout is a
+  cache with no freshness guarantee. Corollary: "sync A from B"
+  requires establishing which side is the source of truth first —
+  divergence may be intentional per-surface content, not drift.
+- **Cross-ref**: session-hygiene §Cross-Machine Sync; 2026-05-04
+  bootstrap-staleness pattern (sibling).
+- **Recurrence**: 1 (stale-local-state family)
