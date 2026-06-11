@@ -823,3 +823,18 @@ one-line targeted fix after fetching.
   execution path, not re-implement the logic; and an inexplicable
   grep miss is a finding, not noise.
 - **Recurrence**: 2
+### 2026-06-11 — stale-pathspec `git add` recurred with the memory loaded
+
+- **What**: After `git mv`-ing a problem record to `done/`, I ran
+  `git add <new-path> <old-path> 2>/dev/null`. The stale old path aborted
+  the entire add; `2>/dev/null` swallowed the error; the commit captured
+  only the rename and silently dropped the README status edit and the
+  work-board edit. Caught by reading the commit's `0 insertions` stat.
+- **Why wrong**: the auto-memory entry for exactly this trap
+  (`feedback_git_add_stale_pathspec`) was loaded in context, and I still
+  passed the old path — plus I added `2>/dev/null`, which converted a
+  loud abort into silent data loss. Memory-loaded-but-unused pattern.
+- **Lesson**: after `git mv`, `git add` only the new paths, never the
+  old; never `2>/dev/null` a `git add`; verify `git show --stat` shows
+  nonzero insertions before pushing a commit that should carry content.
+- **Recurrence**: 2 (first: 2026-06-08, the memory entry's origin)
