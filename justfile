@@ -2013,11 +2013,13 @@ housekeeping:
     # 15. Orphaned test temp dirs (vauchi-core tests leak TempDir on SIGKILL)
     section "Orphaned test temp dirs"
     # Only count .tmp* dirs containing vauchi.db (test databases), skip others
-    test_tmp_count=$(find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' 2>/dev/null | wc -l | tr -d ' ')
-    tmp_total=$(find /tmp -maxdepth 1 -user "$(whoami)" -name '.tmp*' -type d 2>/dev/null | wc -l | tr -d ' ')
+    # find /tmp exits 1 on foreign-user EPERM entries even with stderr
+    # nulled — guard it or pipefail aborts the whole recipe here.
+    test_tmp_count=$( (find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' 2>/dev/null || true) | wc -l | tr -d ' ')
+    tmp_total=$( (find /tmp -maxdepth 1 -user "$(whoami)" -name '.tmp*' -type d 2>/dev/null || true) | wc -l | tr -d ' ')
     if [[ "$test_tmp_count" -gt 0 ]]; then
         # Only clean dirs with no open file handles (safe)
-        stale=$(find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' -mmin +5 2>/dev/null | wc -l | tr -d ' ')
+        stale=$( (find /tmp -maxdepth 2 -user "$(whoami)" -name 'vauchi.db' -path '/tmp/.tmp*' -mmin +5 2>/dev/null || true) | wc -l | tr -d ' ')
         echo "  $test_tmp_count test temp dir(s) ($tmp_total total .tmp* dirs)"
         if [[ "$stale" -gt 0 ]]; then
             echo "  $stale older than 5min — safe to clean:"
