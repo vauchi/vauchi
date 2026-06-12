@@ -198,23 +198,6 @@ e2e-tui instance:
 e2e-tui-multi *instances:
     ./scripts/scripts/e2e/orchestrate.sh tui-multi {{instances}}
 
-# ─── Desktop E2E ────────────────────────────────────────────────
-
-# Launch desktop app for instance
-[group('e2e')]
-e2e-desktop instance="default":
-    ./scripts/scripts/e2e/orchestrate.sh desktop {{instance}}
-
-# Launch desktop in dev mode for instance
-[group('e2e')]
-e2e-desktop-dev instance="default":
-    ./scripts/scripts/e2e/orchestrate.sh desktop-dev {{instance}}
-
-# Build desktop release binary
-[group('e2e')]
-e2e-desktop-build:
-    ./scripts/scripts/e2e/orchestrate.sh desktop-build
-
 # Run mobile E2E tests (requires booted simulator/emulator + Maestro)
 [group('e2e')]
 [script]
@@ -225,7 +208,7 @@ e2e-mobile: e2e-build
     echo ""
     echo "Mobile E2E tests complete."
 
-# Run all E2E tests (CLI + Desktop + Mobile)
+# Run all E2E tests (CLI + Mobile)
 [group('e2e')]
 [script]
 e2e-all: e2e-build
