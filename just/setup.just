@@ -7,7 +7,7 @@
 # Check that required tools are installed before setup
 [group('setup')]
 check-prerequisites:
-    @source scripts/check-prerequisites.sh
+    @source just/check-prerequisites.sh
 
 # Clone all repos and set up workspace (run first after cloning meta-repo)
 [group('setup')]
