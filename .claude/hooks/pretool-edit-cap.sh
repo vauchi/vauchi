@@ -2,57 +2,61 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# PreToolUse Edit hook: blocks the 5th+ Edit of the same file in a
-# session. 1–2 Edits = normal. 3rd Edit = soft nudge from post-edit.sh
-# already prints. 4th = logged as `excessive-reedit`. 5th = blocked.
+# PreToolUse Edit hook: one-shot circuit breaker on the 5th Edit of
+# the same file in a session. Blocks ONCE to force a planning pause,
+# then allows — a permanent wall proved counterproductive: it
+# displaced edits into Bash (sed -i / python heredocs), which skip
+# rustfmt, the assertion checks, SPDX, and the file-state tracker.
+# Full audit: 2026-06-12 findings F1–F6 in
+# _private/docs/problems/2026-04-20-excessive-reedit-reread-pattern/.
 #
-# Companion to post-edit.sh (PostToolUse, observation-only). The
-# 3-strike rule in `just session-end` flagged `excessive-reedit` 3000+
-# times across sessions — this hook turns the post-edit log into a
-# pre-edit block.
+# Counts are per (session_id, file) in .claude/.session-activity,
+# line format `<session_id> <VERB> <file_path>` — session scoping
+# keeps concurrent sessions and past sessions from polluting the
+# count. Writers: post-edit.sh (EDIT/WRITE), log-read-patterns.sh
+# (READ). This hook writes the BLOCKED marker.
 #
-# Escape: re-Read the file (post-edit.sh tracker is per-session, not
-# per-edit-burst — there is no built-in reset). Use Write instead to
-# replace the whole file when many changes pile up.
-#
-# Tuning notes: watch the next 3–5 sessions for false positives. If
-# legitimate flows trip the cap, widen the escapes (or bump the
-# threshold). Otherwise the threshold stays at 4.
+# Escapes: Write tool (never capped), VAUCHI_EDIT_CAP=0 (revert
+# hatch per the problem record's measurement criteria).
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
 # Only check Edit. Write is fine — it's the suggested escape.
 [[ "$TOOL" != "Edit" ]] && exit 0
+[[ "${VAUCHI_EDIT_CAP:-1}" == "0" ]] && exit 0
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 [[ -z "$FILE_PATH" ]] && exit 0
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "nosession"')
 
-TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
-COUNT=0
-# Same `grep -c || echo "0"` multi-line bug as pretool-read-cap.sh —
-# `grep -c` exits 1 with stdout "0" on no matches, the fallback echo
-# appended a second "0" line, producing a multi-line COUNT.
-[[ -f "$TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$TRACKER" 2>/dev/null || true)
+TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-activity"
+[[ -f "$TRACKER" ]] || exit 0
+
+# `grep -c` exits 1 with stdout "0" on no matches; `|| true` keeps
+# COUNT single-line (the `|| echo "0"` variant appended a 2nd line).
+COUNT=$(grep -cxF "$SESSION_ID EDIT $FILE_PATH" "$TRACKER" 2>/dev/null || true)
 [[ -z "$COUNT" ]] && COUNT=0
+[[ "$COUNT" -lt 4 ]] && exit 0
 
-if [[ "$COUNT" -ge 4 ]]; then
-  cat >&2 <<EOF
-Blocked: $((COUNT + 1))th Edit of $FILE_PATH this session (cap: 4).
+BLOCKED=$(grep -cxF "$SESSION_ID BLOCKED $FILE_PATH" "$TRACKER" 2>/dev/null || true)
+[[ -n "$BLOCKED" && "$BLOCKED" -ge 1 ]] && exit 0
 
-Repeated Edits to the same file usually mean the changes don't fit the
-mental model — back up:
+echo "$SESSION_ID BLOCKED $FILE_PATH" >> "$TRACKER" 2>/dev/null
 
-  1. Write the whole file fresh (one tool call, atomic).
-  2. Re-read the file, plan all remaining changes, then a single Edit
-     with replace_all where applicable.
-  3. If you're patching small unrelated fragments, batch them — each
-     Edit is round-trip overhead.
+cat >&2 <<EOF
+Paused: $((COUNT + 1))th Edit of $FILE_PATH this session (cap: 4).
 
-The post-edit.sh hook already nudged at the 3rd Edit; this is the hard
-cap. See .claude/.session-errors for the prior edits.
+Frequent re-edits of one file usually mean the changes don't fit the
+current mental model. Take one planning pass now:
+
+  - Collect EVERY remaining change to this file, then apply them in
+    a single Edit call (replace_all where applicable) — or use Write
+    to replace the file in one atomic call.
+  - Do NOT route the edit through Bash (sed -i, python, tee) — that
+    skips the formatter and the test-assertion checks.
+
+This pause fires once per file per session: your next Edit to this
+file will be allowed. Prior activity: .claude/.session-activity.
 EOF
-  exit 2
-fi
-
-exit 0
+exit 2

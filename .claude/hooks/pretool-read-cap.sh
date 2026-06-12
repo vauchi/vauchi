@@ -2,79 +2,66 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# PreToolUse Read hook: blocks the 4th+ Read of the same file in a
-# session, unless an Edit/Write to that file has happened since the
+# PreToolUse Read hook: blocks the 4th+ full Read of the same file in
+# a session, unless an Edit/Write to that file happened after the
 # previous Read (legitimate verify-after-edit) or the Read targets a
-# different region (offset/limit).
+# specific region (offset/limit — never counted, never blocked).
 #
-# Companion to .claude/hooks/log-read-patterns.sh (PostToolUse,
-# observation-only). The 3-strike rule in `just session-end` flagged
-# `excessive-reread` 8000+ times across sessions — this hook is the
-# tightening that turns the warning into a block.
+# Counts are per (session_id, file) in .claude/.session-activity,
+# line format `<session_id> <VERB> <file_path>`. The single combined
+# tracker makes read-vs-edit ordering positional — the previous
+# two-file design compared line numbers across independently growing
+# files, so the verify-after-edit escape opened effectively at
+# random (2026-06-12 finding F4 in
+# _private/docs/problems/2026-04-20-excessive-reedit-reread-pattern/).
 #
-# Escape: if a re-read is genuinely needed (file changed externally,
-# different region, etc.), pass `offset` or `limit` — those count as
-# different reads. Otherwise use Grep for a specific symbol or
-# `Bash sed -n NNp,MMp <file>` for a known line range.
-#
-# Tuning notes: watch the next 3–5 sessions for false positives. If
-# legitimate flows trip the cap, widen the escapes (or bump the
-# threshold). Otherwise the threshold stays at 3.
+# Escapes: offset/limit slice, Grep, verify-after-edit,
+# VAUCHI_READ_CAP=0 (revert hatch).
 
 INPUT=$(cat)
+[[ "${VAUCHI_READ_CAP:-1}" == "0" ]] && exit 0
+
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 OFFSET=$(echo "$INPUT" | jq -r '.tool_input.offset // empty')
 LIMIT=$(echo "$INPUT" | jq -r '.tool_input.limit // empty')
 
 [[ -z "$FILE_PATH" ]] && exit 0
 
-# Reads with explicit offset/limit target a specific region — different
-# from a full re-read. Allow without counting toward the cap.
+# Region-targeted reads are a different read each time — exempt.
 if [[ -n "$OFFSET" || -n "$LIMIT" ]]; then
   exit 0
 fi
 
-READS_TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-reads"
-EDITS_TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "nosession"')
+TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-activity"
+[[ -f "$TRACKER" ]] || exit 0
 
-COUNT=0
-# `grep -c` exits 1 with stdout "0" when there are no matches; `|| echo "0"`
-# in that case appended a second "0" line to the substitution, producing a
-# multi-line COUNT that broke the `[[ … -ge 3 ]]` arithmetic. `|| true`
-# swallows the non-zero exit and keeps the substitution single-line.
-[[ -f "$READS_TRACKER" ]] && COUNT=$(grep -cF "$FILE_PATH" "$READS_TRACKER" 2>/dev/null || true)
+# `grep -c` exits 1 with stdout "0" on no matches; `|| true` keeps
+# COUNT single-line.
+COUNT=$(grep -cxF "$SESSION_ID READ $FILE_PATH" "$TRACKER" 2>/dev/null || true)
 [[ -z "$COUNT" ]] && COUNT=0
+[[ "$COUNT" -lt 3 ]] && exit 0
 
-# Allow the next Read if there has been an Edit/Write to this file
-# AFTER the most recent Read (file genuinely changed; verify-after-edit
-# is legitimate). Compare line numbers in the trackers.
-if [[ -f "$EDITS_TRACKER" && "$COUNT" -ge 3 ]]; then
-  LAST_READ_LINE=$(grep -nF "$FILE_PATH" "$READS_TRACKER" 2>/dev/null | tail -1 | cut -d: -f1)
-  LAST_EDIT_LINE=$(grep -nF "$FILE_PATH" "$EDITS_TRACKER" 2>/dev/null | tail -1 | cut -d: -f1)
-  if [[ -n "$LAST_EDIT_LINE" && -n "$LAST_READ_LINE" \
-        && "$LAST_EDIT_LINE" -gt "$LAST_READ_LINE" ]]; then
-    exit 0
-  fi
+# Verify-after-edit: allow if an EDIT or WRITE to this file appears
+# after the last READ. Line numbers are comparable — same file.
+LAST_READ=$(grep -nxF "$SESSION_ID READ $FILE_PATH" "$TRACKER" 2>/dev/null | tail -1 | cut -d: -f1)
+LAST_CHANGE=$( { grep -nxF "$SESSION_ID EDIT $FILE_PATH" "$TRACKER" 2>/dev/null
+                 grep -nxF "$SESSION_ID WRITE $FILE_PATH" "$TRACKER" 2>/dev/null
+               } | cut -d: -f1 | sort -n | tail -1)
+if [[ -n "$LAST_CHANGE" && -n "$LAST_READ" && "$LAST_CHANGE" -gt "$LAST_READ" ]]; then
+  exit 0
 fi
 
-if [[ "$COUNT" -ge 3 ]]; then
-  cat >&2 <<EOF
-Blocked: $((COUNT + 1))th Read of $FILE_PATH this session (cap: 3).
+cat >&2 <<EOF
+Blocked: $((COUNT + 1))th full Read of $FILE_PATH this session (cap: 3).
 
 Either:
   1. Trust the file content already in your context.
   2. Use Grep for a specific symbol — much cheaper than re-reading.
-  3. Use 'Bash sed -n NNp,MMp <file>' for a known line range.
-  4. Pass offset/limit on Read for a different region — that bypasses
-     this cap (legitimate when reading a long file in chunks).
+  3. Pass offset/limit on Read for the region you need — sliced
+     reads are never capped.
 
-If the file changed externally and you must re-read in full, the
-session-tracker doesn't see that. Edit/Write any byte of the file
-first to flip the "verify-after-edit" escape hatch.
-
-Escalations: see .claude/.session-errors for the prior reads.
+If the file genuinely changed, an Edit/Write to it re-opens one full
+Read automatically. Prior activity: .claude/.session-activity.
 EOF
-  exit 2
-fi
-
-exit 0
+exit 2

@@ -13,6 +13,7 @@ settings.local.json
 .session-reads
 .session-reads-meta
 .session-edits
+.session-activity
 .session-heads
 
 # Scheduled-task coordination lock (runtime artifact of ScheduleWakeup,

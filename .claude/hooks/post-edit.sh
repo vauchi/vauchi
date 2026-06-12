@@ -26,16 +26,23 @@ log_error() {
 
 # ── Edit/Write frequency tracking ───────────────────────────────────
 # Excessive re-edits (same file 4+ edits) signal Claude got it wrong.
-# Tracks Edit calls per file per session. 1-2 = normal, 3 = re-edit, 4+ = churn.
-if [[ "$TOOL_NAME" == "Edit" ]]; then
-  TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-edits"
-  echo "$FILE_PATH" >> "$TRACKER" 2>/dev/null
-  EDIT_COUNT=$(grep -cF "$FILE_PATH" "$TRACKER" 2>/dev/null || echo "1")
-  if [[ "$EDIT_COUNT" -eq 3 ]]; then
-    # Soft nudge before crossing the threshold — visible to Claude, non-blocking.
-    echo "Note: 3rd Edit to $FILE_PATH this session. If more changes are coming, consider Write or batching them in fewer Edit calls." >&2
-  elif [[ "$EDIT_COUNT" -ge 4 ]]; then
-    log_error "excessive-reedit" "$FILE_PATH" "edited $EDIT_COUNT times this session"
+# Line format `<session_id> <VERB> <file_path>` in .session-activity
+# is the contract the cap hooks (pretool-{edit,read}-cap.sh) count
+# against. WRITE lines exist for the read-cap's verify-after-edit
+# escape; only EDIT lines count toward the edit cap.
+if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+  TRACKER="${CLAUDE_PROJECT_DIR:-.}/.claude/.session-activity"
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "nosession"')
+  VERB=$([[ "$TOOL_NAME" == "Edit" ]] && echo "EDIT" || echo "WRITE")
+  echo "$SESSION_ID $VERB $FILE_PATH" >> "$TRACKER" 2>/dev/null
+  if [[ "$TOOL_NAME" == "Edit" ]]; then
+    EDIT_COUNT=$(grep -cxF "$SESSION_ID EDIT $FILE_PATH" "$TRACKER" 2>/dev/null || true)
+    if [[ "$EDIT_COUNT" == "3" ]]; then
+      # Soft nudge before crossing the threshold — visible to Claude, non-blocking.
+      echo "Note: 3rd Edit to $FILE_PATH this session. If more changes are coming, consider Write or batching them in fewer Edit calls." >&2
+    elif [[ -n "$EDIT_COUNT" && "$EDIT_COUNT" -ge 4 ]]; then
+      log_error "excessive-reedit" "$FILE_PATH" "edited $EDIT_COUNT times this session"
+    fi
   fi
 fi
 
