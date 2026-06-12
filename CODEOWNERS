@@ -13,7 +13,6 @@
 
 # Security-sensitive files require explicit review
 /.gitlab-ci.yml @megloff1
-/.license-decisions.yml @megloff1
 /deny.toml @megloff1
 
 # Infrastructure and deployment

@@ -14,7 +14,7 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 
 # Lock files and generated JSON
 [[annotations]]
-path = ["**/package-lock.json", "**/yarn.lock", "**/*.lock"]
+path = ["**/*.lock"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
@@ -38,7 +38,7 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 
 # JSON config files (can't have comments)
 [[annotations]]
-path = ["package.json", "opencode.json", "funding.json", ".changeset/config.json", "locales/*.json", ".mcp.json", ".markdownlint.json"]
+path = ["opencode.json", "funding.json", ".markdownlint.json"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
@@ -48,8 +48,3 @@ path = [".claude/rules/**", ".claude/agents/**", ".claude/docs/**", ".claude/age
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
-# detect-secrets baseline (JSON, can't have comments)
-[[annotations]]
-path = [".secrets.baseline"]
-SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
-SPDX-License-Identifier = "GPL-3.0-or-later"

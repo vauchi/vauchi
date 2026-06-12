@@ -67,10 +67,6 @@
 # - .gitignore
 # - .gitlab-ci.yml
 # - .github/
-# - .changeset/
-# - .pre-commit-config.yaml
-# - package.json
-# - package-lock.json
 # - CLAUDE.md (symlink)
 # - CONTRIBUTING.md (symlink)
 

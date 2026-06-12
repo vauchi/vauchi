@@ -1931,25 +1931,7 @@ housekeeping:
         ISSUES=$((ISSUES + unpushed))
     fi
 
-    # 12. Unreviewed proposals
-    section "Unreviewed proposals"
-    proposals_dir="_private/docs/planning/proposals"
-    if [[ -d "$proposals_dir" ]]; then
-        prop_count=$(find "$proposals_dir" -name '*.md' -not -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
-        if [[ "$prop_count" -ge 5 ]]; then
-            echo "  ALERT: $prop_count unreviewed proposal(s) (threshold: 5)"
-            find "$proposals_dir" -name '*.md' -not -name 'README.md' 2>/dev/null | while IFS= read -r f; do echo "    $(basename "$f")"; done
-            ISSUES=$((ISSUES + prop_count))
-        elif [[ "$prop_count" -gt 0 ]]; then
-            echo "  $prop_count proposal(s)"
-        else
-            echo "  None"
-        fi
-    else
-        echo "  None"
-    fi
-
-    # 13. Stale problem records (14d intake, 30d other phases)
+    # 12. Stale problem records (14d intake, 30d other phases)
     # Uses git last-modified date (not directory creation date) for accuracy.
     # A record updated yesterday is not stale even if created months ago.
     section "Stale problem records"
@@ -1994,7 +1976,7 @@ housekeeping:
         ISSUES=$((ISSUES + stale_problems))
     fi
 
-    # 14. Orphaned worktrees
+    # 13. Orphaned worktrees
     section "Orphaned worktrees"
     if [[ -d ".worktrees" ]]; then
         wt_count=$(ls -d .worktrees/*/ 2>/dev/null | wc -l | tr -d ' ')
@@ -2010,7 +1992,7 @@ housekeeping:
         echo "  None"
     fi
 
-    # 15. Orphaned test temp dirs (vauchi-core tests leak TempDir on SIGKILL)
+    # 14. Orphaned test temp dirs (vauchi-core tests leak TempDir on SIGKILL)
     section "Orphaned test temp dirs"
     # Only count .tmp* dirs containing vauchi.db (test databases), skip others
     # find /tmp exits 1 on foreign-user EPERM entries even with stderr
@@ -2032,7 +2014,7 @@ housekeeping:
         echo "  None"
     fi
 
-    # 16. Cargo target sizes
+    # 15. Cargo target sizes
     section "Cargo target sizes"
     total_mb=0
     for dir in $(repos_by_toolchain rust); do
@@ -2054,7 +2036,7 @@ housekeeping:
         echo "  No target dirs"
     fi
 
-    # 17. Cargo.toml ref check (branch = "main")
+    # 16. Cargo.toml ref check (branch = "main")
     section "Cargo.toml branch refs"
     ref_output=$(just check-refs 2>&1 || true)
     if echo "$ref_output" | grep -q "not pointing to main"; then
@@ -2065,7 +2047,7 @@ housekeeping:
         echo "  All refs point to main"
     fi
 
-    # 18. Just recipe documentation freshness
+    # 17. Just recipe documentation freshness
     section "allow_failure budget"
     if scripts/scripts/check-allow-failure-budget.sh . >/dev/null 2>&1; then
         count=$(scripts/scripts/check-allow-failure-budget.sh . 2>&1 | grep "Current count:" | grep -oE '[0-9]+')
