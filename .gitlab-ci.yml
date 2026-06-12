@@ -33,35 +33,10 @@ stages:
 
 # REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
-# Validate CLAUDE.md references and detect orphaned .claude/docs/.
-# Script lives in vauchi/scripts — fetched via API because the main
-# repo's CI checkout does not include sub-repos. Same script runs
-# locally via `just check-claude-md` against the scripts/ sub-repo
-# checkout. Pattern mirrors android/ios check:design-tokens.
-# Portable to BusyBox grep (alpine) — see portable-shell.md §BusyBox.
-lint:claude-md:
-  stage: lint
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
-  tags: [docker]
-  needs: []
-  before_script:
-    - apk add --no-cache curl
-  script:
-    - |
-      curl --silent --fail \
-        "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2Fcheck-claude-md.sh/raw?ref=main" \
-        -o /tmp/check-claude-md.sh
-    - chmod +x /tmp/check-claude-md.sh
-    - sh /tmp/check-claude-md.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - CLAUDE.md
-        - .claude/docs/**/*
-        - .claude/rules/**/*
-        - .claude/skills/**/*
-        - justfile
-        - .gitlab-ci.yml
+# lint:claude-md retired 2026-06-12: the .claude tree moved to the
+# _private repo (root .claude is a symlink), so this repo's CI checkout
+# can no longer see it — CLAUDE.md ↔ .claude/docs consistency is checked
+# where both sides exist: `just session-end` / `just check-claude-md`.
 
 # Secret detection (MR + scheduled)
 secret_detection:

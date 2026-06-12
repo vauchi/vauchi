@@ -76,6 +76,16 @@ session-init:
     echo "── hooks ──"
     bash scripts/install-hooks.sh 2>&1 | tail -1
 
+    # Claude config layout (.claude symlink → _private/.claude)
+    echo ""
+    echo "── claude config ──"
+    source just/claude-layout-lib.sh
+    if check_claude_layout; then
+        echo "  OK: .claude → _private/.claude"
+    else
+        WARN=1
+    fi
+
     # Fetch all repos in parallel + prune stale refs
     echo ""
     echo "── fetch ──"
@@ -686,6 +696,29 @@ session-end:
         echo "  → archive old '## Done' entries to work-board-archive.md"
     else
         echo "  OK (${BOARD_LINES} lines)"
+    fi
+
+    # ── Claude config layout ──
+    echo ""
+    echo "── claude config layout ──"
+    source just/claude-layout-lib.sh
+    if check_claude_layout; then
+        echo "  OK: .claude → _private/.claude, no strays"
+    else
+        ERRORS=1
+    fi
+
+    # ── CLAUDE.md ↔ .claude/docs consistency ──
+    # Replaces the retired root-repo CI job lint:claude-md: root CI
+    # checkouts no longer contain .claude (it lives in _private), so
+    # the workspace — the only place both sides exist — runs the check.
+    echo ""
+    echo "── claude-md references ──"
+    if CMD_OUT=$(./scripts/scripts/check-claude-md.sh 2>&1); then
+        echo "  OK"
+    else
+        echo "$CMD_OUT" | sed 's/^/  /' | head -20
+        ERRORS=1
     fi
 
     echo ""

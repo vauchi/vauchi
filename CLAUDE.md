@@ -148,6 +148,12 @@ archived.
 
 Repo layout: `.claude/docs/repo-organization.md`. Drift naming: `.claude/docs/drift-naming.md`.
 
+**Claude config location**: the real `.claude/` tree lives at
+`_private/.claude` (versioned in the `_private` repo); the root
+`.claude` is a relative symlink to it, since Claude Code only discovers
+project config at the workspace root. `just session-init` repairs the
+symlink; `just session-end` gates on stray `.claude/` dirs in sub-repos.
+
 ## Drift Detection
 
 Run `just drift` after completing features or before MRs. Levels: `high`/`medium`/`low`.
