@@ -7,21 +7,32 @@ disable-model-invocation: true
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Start or advance a problem record following the mandatory Problem to Solution Flow. $ARGUMENTS describes the problem or references an existing problem slug.
+Start or advance a problem record following the mandatory Problem to
+Solution Flow. $ARGUMENTS describes the problem or references an
+existing problem slug.
 
-See also: `_private/docs/2026-01-23-problem-to-solution-flow.md`
+See also: `_private/docs/reference/2026-01-23-problem-to-solution-flow.md` (SSOT)
 
 ## Problem Lifecycle
 
-```
+```text
 intake → investigating → planning → implementing → testing → done (or archived)
 ```
+
+**Status field is a bare enum** from the lifecycle above. Progress
+narrative, MR links, and evidence go in dated `## Update YYYY-MM-DD`
+sections in the record body — never in the Status cell.
+
+Records spawned from a completed, adversarially verified audit may
+start at `planning`, with the audit doc linked as their
+investigation.md.
 
 ## Creating a New Problem
 
 1. **Create problem directory**: `_private/docs/problems/YYYY-MM-DD-<problem-slug>/`
 
 2. **Create README.md** with:
+
    ```markdown
    # Problem: <Title>
 
@@ -60,7 +71,8 @@ intake → investigating → planning → implementing → testing → done (or 
    - PRB-YYYY-NNN: <title> (spawned from retrospective/post-mortem)
    ```
 
-3. **Ask the user**: Is this actually a problem worth solving? If no → archive with learnings.
+3. **Ask the user**: Is this actually a problem worth solving?
+   If no → archive with learnings.
 
 ### Estimation Fields
 
@@ -89,7 +101,10 @@ Tag risk with the dominant type to enable pattern analysis later:
 | `unknown` | Never done before, no comparable past work | New platform/toolchain first-time penalty |
 | `integration` | Cross-repo coordination, binding generation, CI wiring | Binding oscillation, version drift, token issues |
 
-**Counter-intuitive guidance**: The audit found that *detailed plans for large tasks* had the worst estimate accuracy (6-8x off), while *simple problems* were perfectly estimated. High risk often correlates with high overestimation — adjust accordingly.
+**Counter-intuitive guidance**: The audit found that *detailed plans
+for large tasks* had the worst estimate accuracy (6-8x off), while
+*simple problems* were perfectly estimated. High risk often correlates
+with high overestimation — adjust accordingly.
 
 ### Priority Levels
 
@@ -105,26 +120,43 @@ Tag risk with the dominant type to enable pattern analysis later:
 Based on current status, guide to the next step:
 
 ### intake → investigating
-**Gate**: Problem discussed and confirmed real. Priority assigned. Goals defined. Owner assigned. Containment documented if critical/high.
+
+**Gate**: Problem discussed and confirmed real. Priority assigned.
+Goals defined. Owner assigned. Containment documented if critical/high.
+
 - Define success criteria (goals) — what does "solved" look like?
-- If critical/high priority: document containment action (interim mitigation) before proceeding
+- If critical/high priority: document containment action (interim
+  mitigation) before proceeding
 - Research the problem, identify possible solutions
-- If external knowledge needed → create docs in `knowledge/` subdirectory
-- Write `investigation.md` in the problem directory (include `### References` section)
+- If external knowledge needed → create docs in `reference/` subdirectory
+- Write `investigation.md` in the problem directory (include
+  `### References` section)
 
 ### investigating → planning
-**Gate**: Root cause or opportunity identified. `investigation.md` attached with references. At least one candidate solution identified.
+
+**Gate**: Root cause or opportunity identified. `investigation.md`
+attached with references. At least one candidate solution identified.
+
 - Validate solutions against [Principles](https://docs.vauchi.app/about/principles/):
   - Core Principles (Privacy, Trust, Quality)
   - Culture (Process Principles)
   - Current Implementation (Technical Principles)
   - Existing Features (UX Principles)
 - Write `implementation-plan.md` with mandatory sections:
-  - `### Rejected Approaches` — document each rejected solution with reasoning (or "N/A — first candidate passed validation")
-  - `### Test Strategy` — unit, property-based, contract, acceptance, mutation testing impact
+  - `### Rejected Approaches` — document each rejected solution with
+    reasoning (or "N/A — first candidate passed validation")
+  - `### Test Strategy` — unit, property-based, contract, acceptance,
+    mutation testing impact
+  - `### Decommission Sweep` — mandatory when the change removes or
+    replaces anything: retired names grep clean across all repos, or
+    survivors carry keep-reasons (else "N/A — change removes nothing")
 
 ### planning → implementing
-**Gate**: Solution validated against criteria. `implementation-plan.md` attached with test strategy and rejected approaches. Draft Gherkin scenarios written.
+
+**Gate**: Solution validated against criteria. `implementation-plan.md`
+attached with test strategy and rejected approaches. Draft Gherkin
+scenarios written.
+
 - Create companion `plan.md` in markdown-plan syntax:
   - Extract task structure from implementation-plan.md
   - Use ordered lists for sequential phases, unordered for parallel subtasks
@@ -136,24 +168,37 @@ Based on current status, guide to the next step:
 - Implement in strict TDD: Red → Green → Refactor
 
 ### implementing → testing
-**Gate**: All TDD cycles complete. Gherkin promoted with `promoted_to:` tracked. E2E tests written. All unit + E2E tests green.
+
+**Gate**: All TDD cycles complete. Gherkin promoted with `promoted_to:`
+tracked. E2E tests written. All unit + E2E tests green.
+
 - All tests must be green
 - Verify against success criteria (goals)
 
 ### testing → done
-**Gate**: Retrospective written evaluating against goals. Child problems spawned if needed. Success criteria verified as met.
-- Write `retrospective.md` — evaluate against goals (were success criteria met?)
-- **Fill `Actual Effort` in README.md** — compare to estimate, note why if different
+
+**Gate**: Retrospective written evaluating against goals. Child
+problems spawned if needed. Success criteria verified as met.
+Decommission sweep complete if the work removed or replaced anything.
+
+- Write `retrospective.md` — evaluate against goals (were success
+  criteria met?)
+- **Fill `Actual Effort` in README.md** — compare to estimate, note
+  why if different
 - Add `## Estimation Accuracy` section to retrospective:
   - Estimated: X focused days → Actual: Y focused days (ratio: Z)
-  - Blocker wait: N calendar days (on: <what>)
-  - Lesson: <what to adjust next time>
+  - Blocker wait: N calendar days (on: `<what>`)
+  - Lesson: `<what to adjust next time>`
+- Verify the decommission sweep: `just grep <retired-name>` clean
+  across all repos (code, scripts, CI, deploy, docs), or each
+  survivor has a recorded keep-reason
 - Spawn child problems from retrospective learnings
 - Move planning doc from `_private/docs/planning/todo/` to `done/`
 
 ## On Errors/Regressions
 
 If unforeseen errors occur during implementation:
+
 1. Write `post-mortem.md` analyzing root cause
 2. Distill new problem descriptions from post-mortem
 3. New problems feed back into the workflow
@@ -171,12 +216,13 @@ Problems that stall erode trust in the workflow. Flag these to the user:
 
 ## Directory Structure
 
-```
+```text
 _private/docs/problems/YYYY-MM-DD-slug/
 ├── README.md                 # Status, priority, owner, goals, links
-├── knowledge/                # External research (if needed)
+├── reference/                # External research (if needed)
 ├── investigation.md          # Problem analysis (includes ### References)
-├── implementation-plan.md    # Plan (includes ### Rejected Approaches + ### Test Strategy)
+├── implementation-plan.md    # Plan (Rejected Approaches + Test
+│                             #   Strategy + Decommission Sweep)
 ├── plan.md                   # Task DAG in markdown-plan syntax
 ├── retrospective.md          # Post-completion (evaluates against goals)
 └── post-mortem.md            # If unforeseen errors occurred
