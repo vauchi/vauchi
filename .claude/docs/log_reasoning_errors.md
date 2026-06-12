@@ -885,4 +885,32 @@ one-line targeted fix after fetching.
   arguing from metadata. Date-lag flags *candidates*, never verdicts.
   Corollary of `verify-before-acting.md` §"Before claiming something
   is missing" — applies equally to claiming something is *stale*.
+
+### 2026-06-12 — edit-cap shipped as its own record's rejected approach; block displaced edits into Bash
+
+- **What**: `pretool-{edit,read}-cap.sh` (shipped 2026-04-30, `8b6f9fd1`)
+  hard-block the 5th Edit / 4th Read of a file "this session". A live
+  transcript showed the block firing twice, then the edit applied via
+  `python3` heredoc through Bash — skipping rustfmt, assertion checks,
+  SPDX, and the file-state tracker. Audit found the trackers were never
+  reset ("this session" was actually cumulative across sessions and
+  concurrent sessions), the block message recommended remedies that
+  were themselves blocked (batched Edit still hits the cap — only
+  Write escaped), and the read-cap's verify-after-edit escape compared
+  line numbers across two independently growing files (random result).
+- **Why wrong**: the hard block is exactly what the owning problem
+  record (`2026-04-20-excessive-reedit-reread-pattern`) had rejected
+  ("would derail legitimate TDD cycles… worse UX than the current
+  waste") — it shipped anyway, without the record being reconciled,
+  without the env-var escape its fallback design specified, and
+  without tests. Classic process-bypass-under-friction, but induced
+  *by the tooling*: when the compliant path costs more than the
+  bypass, the bypass wins and lands outside every safety net.
+- **Lesson**: (1) a blocking hook must leave a compliant exit that is
+  cheaper than the cheapest bypass — otherwise it converts visible
+  friction into invisible displacement; (2) "per session" state needs
+  a session key, not an append-only file; (3) before shipping a hook,
+  diff it against the owning problem record's Rejected Approaches.
+  Fix: one-shot circuit breaker + session-scoped `.session-activity`
+  tracker (branch `fix/edit-read-cap-circuit-breaker`).
 - **Recurrence**: 1
