@@ -46,6 +46,64 @@ mr-view id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab mr view "{{id}}" -R "$p"
 
+# Re-sync an existing MR's title + description to the current commits.
+# Usage: just gitlab mr-update [repo] [title]
+#   just gitlab mr-update core                     # rebuild title+body from commits
+#   just gitlab mr-update core "feat: my feature"  # custom title, rebuild body
+#
+# Use when commits accumulate on a branch and the title/body auto-filled at
+# mr-create time drift from the MR's actual contents (the recurring stale-title
+# problem). Rebuilds the body from `origin/main..HEAD` with the same @-escaping
+# as mr-create. Title defaults to the first commit subject; pass an explicit
+# title to override (the usual reason to run this).
+[no-cd]
+[script]
+mr-update repo='' title='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
+    dir=$(gitlab_repo_dir "{{repo}}")
+    workspace_root=$(pwd)
+    branch=$(git -C "$dir" branch --show-current)
+    if [[ "$branch" == "main" ]]; then
+        echo "ERROR: cannot update an MR from the main branch"
+        exit 1
+    fi
+    # Find the open MR for this branch.
+    iid=$(glab api "projects/vauchi%2F${r}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
+    if [[ -z "$iid" ]]; then
+        echo "ERROR: no open MR found for branch '$branch' in $p"
+        exit 1
+    fi
+    # Title: explicit arg, else the first commit subject (same as mr-create).
+    if [[ -n "{{ title }}" ]]; then
+        mr_title="{{ title }}"
+    else
+        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+    fi
+    # Body: rebuild from commit bodies, strip Co-Authored-By, escape @mentions,
+    # collapse blanks — identical pipeline to mr-create so the two stay in sync.
+    mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
+        | grep -v '^Co-Authored-By:' \
+        | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
+        | cat -s)
+    if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
+        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+        mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
+    fi
+    # Defence in depth: no bare `@word` reaches GitLab (mirrors mr-create).
+    if ! printf '%s' "$mr_body" \
+       | "$workspace_root/scripts/scripts/escape-mr-mentions.py" --check; then
+        echo 'ERROR: aborting glab mr update — body has unsafe @-mentions.'
+        echo '       (See script output above for the offending tags.)'
+        exit 1
+    fi
+    glab mr update "$iid" -R "$p" --title "$mr_title" --description "$mr_body"
+    echo "Updated $p!$iid (title + body) from $(git -C "$dir" rev-list --count origin/main..HEAD) commit(s) on $branch."
+
 # Create merge request from current branch
 # Usage: just gitlab mr-create [repo] [title]
 #   just gitlab mr-create core                    # auto-fill from commits
