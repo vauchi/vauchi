@@ -628,6 +628,31 @@ dt-verify-builds:
         echo "  Install libimobiledevice (brew install libimobiledevice) for iOS log capture"
     fi
 
+# Run the exchange permission-denial instrumentation test on a connected
+# Android device/emulator (T2.4 acceptance for exchange-waits-forever). Drives
+# the camera+BLE-denial scenario and asserts the core-driven grant/other-mode
+# affordance appears (queried via the screen_id testTag) — never infinite
+# "Searching...". The BLE leg works today (Phase 0 PermissionDenied forwarding);
+# the camera leg is gated on T0.3 (camera-deny → PermissionDenied forwarding).
+# SCAFFOLD: the test class PermissionDeniedExchangeTest is NOT committed yet —
+# see _private/docs/problems/2026-06-11-exchange-waits-forever-without-capabilities
+# (T2.4) for the test design. Until it lands, this recipe reports "no tests
+# found". It is the human-run entry point (no device CI runner exists).
+[group('device-test')]
+[script]
+dt-android-permission-test:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+    SERIAL=$(dt_detect_android_device)
+    echo -e "${YELLOW}Running exchange permission-denial test on $SERIAL...${NC}"
+    echo -e "${YELLOW}(install the debug APK first via 'just rebuild-android' if needed)${NC}"
+    cd android
+    ANDROID_SERIAL="$SERIAL" ./gradlew connectedDebugAndroidTest \
+        -PlocalBindings \
+        -Pandroid.testInstrumentationRunnerArguments.class=app.vauchi.ui.PermissionDeniedExchangeTest \
+        2>&1 | tail -40
+    echo -e "${GREEN}  Permission-denial test run complete${NC}"
+
 # Take a screenshot from connected Android device. Auto-selects device if multiple connected.
 [group('device-test')]
 [script]
