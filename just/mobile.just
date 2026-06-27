@@ -134,6 +134,20 @@ check-ios:
       -clonedSourcePackagesDirPath .spm-packages -skipPackageUpdates build
     echo ""
     echo "── iOS: Running tests ──"
+    # UI tests launch with --reset-for-testing, which only *creates* an
+    # identity when absent; it never wipes a stale one. A simulator carrying
+    # a prior run's encrypted store fails identity seeding with "Decryption
+    # failed: data may be corrupted or wrong key", the tab bar never renders,
+    # and every AccessibilityUITest times out — green in CI (fresh sim each
+    # run), red on a dev's second run of the day. Erase first for a clean
+    # fixture. JUST_NO_SIM_ERASE=1 skips it when iterating on UI-test
+    # rendering against an already-running simulator.
+    # (_private/docs/problems/2026-05-10-ios-uitests-stale-sim-dependency)
+    if [ -z "${JUST_NO_SIM_ERASE:-}" ]; then
+      echo "  erasing simulator '{{ ios_simulator }}' (JUST_NO_SIM_ERASE=1 to skip)"
+      xcrun simctl shutdown '{{ ios_simulator }}' 2>/dev/null || true
+      xcrun simctl erase '{{ ios_simulator }}'
+    fi
     xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
       -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
       -clonedSourcePackagesDirPath .spm-packages -skipPackageUpdates test
