@@ -702,7 +702,8 @@ bump-core version:
     # run when explicitly invoked. The original glob filter
     # 'test(regenerate)' missed them — name the binaries directly.
     cargo nextest run -p vauchi-core --features testing --test it \
-        regenerate_all_engine_fixtures --run-ignored=ignored-only 2>&1 | tail -3
+        --run-ignored=ignored-only \
+        -E 'test(regenerate_all_engine_fixtures) | test(regenerate_all_fixtures)' 2>&1 | tail -3
     echo "Regenerating JSON schemas..."
     cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored 2>&1 | tail -3
     echo "✓ Core bumped to {{ version }}. Review changes and commit."
@@ -713,8 +714,14 @@ bump-core version:
 regen-golden-fixtures:
     set -euo pipefail
     cd core
+    # BOTH suites live in the `it` binary as #[ignore] regen tests:
+    # engine_golden_fixtures::regenerate_all_engine_fixtures and
+    # golden_fixtures::regenerate_all_fixtures. Naming only the engine one
+    # left the golden_fixtures suite stale after a token change (the
+    # cdce0bf9 inclusive-v2-tokens red-main).
     cargo nextest run -p vauchi-core --features testing --test it \
-        regenerate_all_engine_fixtures --run-ignored=ignored-only
+        --run-ignored=ignored-only \
+        -E 'test(regenerate_all_engine_fixtures) | test(regenerate_all_fixtures)'
 
 # Regenerate the JSON schemas (resumes a halted bump-core).
 [group('core')]
