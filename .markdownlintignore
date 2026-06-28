@@ -2,3 +2,5 @@
 # but REUSE/SPDX hook prepends license headers — causing false positives
 # for MD003 (heading style) and MD022 (blanks around headings).
 .junie/agents/
+# Claude Code agent-memory files use the same YAML frontmatter format.
+.claude/agent-memory/
