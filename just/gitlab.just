@@ -81,6 +81,9 @@ mr-update repo='' title='':
     # Title: explicit arg, else the first commit subject (same as mr-create).
     if [[ -n "{{ title }}" ]]; then
         mr_title="{{ title }}"
+        # `just gitlab` recipe args are positional (module recipe), so a
+        # `title=...` invocation form leaks the prefix in verbatim — strip it.
+        mr_title="${mr_title#title=}"
     else
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
     fi
@@ -129,16 +132,26 @@ mr-create repo='' title='':
         echo "ERROR: cannot create MR from main branch"
         exit 1
     fi
-    # Push branch if not tracking remote (skip tests — CI runs them)
+    # Push the branch ourselves (skip tests — CI runs them), then let glab
+    # create the MR against the already-pushed ref. The pre-push hook
+    # (scripts/hooks/pre-push) rebases a branch that is behind origin/main and
+    # *blocks the first push*, requiring a second --force-with-lease push of
+    # the rebased ref — so a plain `git push` (or glab's `--push`) loses the
+    # race against a moving main. Retry with --force-with-lease (safe: it only
+    # pushes if the remote is where we last saw it — the same --force-with-lease
+    # guard mr-create-all uses to resend a rebased branch).
     export SKIP_TESTS=1
-    if ! git -C "$dir" rev-parse --abbrev-ref "@{u}" &>/dev/null; then
-        git -C "$dir" push -u origin "$branch"
+    if ! git -C "$dir" push -u origin "$branch"; then
+        git -C "$dir" push --force-with-lease -u origin "$branch"
     fi
     # Build title and description explicitly to sanitize @ mentions.
     # --fill passes commit body verbatim, which may contain @tags that
     # ping people on GitLab (e.g., Co-Authored-By: ... <noreply@anthropic.com>).
     if [[ -n "{{ title }}" ]]; then
         mr_title="{{ title }}"
+        # `just gitlab` recipe args are positional (module recipe), so a
+        # `title=...` invocation form leaks the prefix in verbatim — strip it.
+        mr_title="${mr_title#title=}"
     else
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
     fi
@@ -170,7 +183,7 @@ mr-create repo='' title='':
     fi
     (
         cd "$dir"
-        ARGS=(--yes --target-branch main --push -R "$p")
+        ARGS=(--yes --target-branch main -R "$p")
         ARGS+=(--title "$mr_title")
         ARGS+=(--description "$mr_body")
         glab mr create "${ARGS[@]}"
@@ -385,6 +398,8 @@ mr-create-all title='':
 
             if [[ -n "{{ title }}" ]]; then
                 mr_title="{{ title }}"
+                # Positional module args: a `title=...` form leaks the prefix.
+                mr_title="${mr_title#title=}"
             else
                 mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
             fi
@@ -599,7 +614,10 @@ issue-create title repo='' *args='':
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab issue create --title "{{title}}" --no-editor --yes -R "$p" {{args}}
+    # Positional module args: a `title=...` form leaks the prefix — strip it.
+    issue_title="{{title}}"
+    issue_title="${issue_title#title=}"
+    glab issue create --title "$issue_title" --no-editor --yes -R "$p" {{args}}
 
 # Close an issue
 [no-cd]
