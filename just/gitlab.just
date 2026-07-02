@@ -559,7 +559,9 @@ pipeline-log job_id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab ci trace "{{job_id}}" -R "$p"
 
-# Retry a failed pipeline
+# Retry a failed pipeline (all failed jobs). `glab ci retry` takes a JOB
+# id, not a pipeline id — passing a pipeline id 404s — so hit the
+# pipelines retry API directly.
 [no-cd]
 [script]
 pipeline-retry id repo='':
@@ -568,7 +570,9 @@ pipeline-retry id repo='':
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab ci retry "{{id}}" -R "$p"
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    glab api "projects/${enc}/pipelines/{{id}}/retry" -X POST \
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"Retried pipeline {d['id']}: {d['status']} — {d['web_url']}\")"
 
 # Cancel a running pipeline
 [no-cd]
