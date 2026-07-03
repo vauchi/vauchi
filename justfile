@@ -1232,9 +1232,21 @@ test-diff *args:
             gradle)
                 echo "$changed" | grep -qE '\.(kt|kts|java)$' || continue
                 ran=1
+                # Use local UniFFI bindings only when FRESH — a stale
+                # gitignored stub (older than the current version pin)
+                # compiles against an outdated surface and yields a
+                # misleading failure; fall back to the Maven AAR (CI's
+                # source) instead. Mirrors gate-push.sh's staleness guard.
                 GRADLE_ARGS=""
-                if [ -d "$dir/app/src/local-bindings/kotlin/uniffi" ]; then
-                    GRADLE_ARGS="-PlocalBindings"
+                _stub="$dir/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
+                if [ -f "$_stub" ]; then
+                    _sm=$(stat -f %m "$_stub" 2>/dev/null || stat -c %Y "$_stub" 2>/dev/null || echo 0)
+                    _pm=$(git -C "$dir" log -1 --format=%ct -- app/build.gradle.kts 2>/dev/null || echo 0)
+                    if [ "$_sm" -gt 0 ] && [ "$_sm" -ge "$_pm" ]; then
+                        GRADLE_ARGS="-PlocalBindings"
+                    else
+                        echo "  (local bindings look stale vs the pin — using Maven AAR; 'just bindings-local' to refresh)"
+                    fi
                 fi
                 echo "═══ test-diff: $r (gradle testDebugUnitTest) ═══"
                 (cd "$dir" && ./gradlew $GRADLE_ARGS testDebugUnitTest) || failed=1
