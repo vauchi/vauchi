@@ -144,9 +144,16 @@ check-ios:
     # rendering against an already-running simulator.
     # (_private/docs/problems/2026-05-10-ios-uitests-stale-sim-dependency)
     if [ -z "${JUST_NO_SIM_ERASE:-}" ]; then
-      echo "  erasing simulator '{{ ios_simulator }}' (JUST_NO_SIM_ERASE=1 to skip)"
-      xcrun simctl shutdown '{{ ios_simulator }}' 2>/dev/null || true
-      xcrun simctl erase '{{ ios_simulator }}'
+      echo "  erasing simulator(s) '{{ ios_simulator }}' (JUST_NO_SIM_ERASE=1 to skip)"
+      # Erase EVERY device matching the name: duplicate names across
+      # installed runtimes make a single-name erase hit a different
+      # device than the one xcodebuild's name-based destination boots.
+      xcrun simctl list devices | grep -F '{{ ios_simulator }} (' \
+        | grep -oE '[0-9A-F-]{36}' \
+        | while read -r udid; do
+            xcrun simctl shutdown "$udid" 2>/dev/null || true
+            xcrun simctl erase "$udid" || true
+          done
     fi
     xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
       -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \

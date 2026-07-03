@@ -182,6 +182,19 @@ test *args:
                 xcode)
                     local xc_dest='platform=iOS Simulator,name={{ ios_simulator }}'
                     [[ "$r" == "macos" ]] && xc_dest='platform=macOS'
+                    # UI tests need a clean store or --reset-for-testing
+                    # seeding fails (2026-05-10-ios-uitests-stale-sim-
+                    # dependency). Erase EVERY sim matching the name —
+                    # duplicate names across runtimes make single-name
+                    # erase hit a different device than xcodebuild boots.
+                    if [[ "$r" != "macos" && -z "${JUST_NO_SIM_ERASE:-}" ]]; then
+                        xcrun simctl list devices | grep -F '{{ ios_simulator }} (' \
+                            | grep -oE '[0-9A-F-]{36}' \
+                            | while read -r udid; do
+                                xcrun simctl shutdown "$udid" 2>/dev/null || true
+                                xcrun simctl erase "$udid" || true
+                              done
+                    fi
                     (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -skipPackageUpdates test -quiet 2>&1)
                     ;;
                 mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
