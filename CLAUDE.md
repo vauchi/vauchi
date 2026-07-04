@@ -34,6 +34,10 @@ cargo watch -x 'nextest run'   # re-run tests on file save
   state *why*, not *how*
 - **Test Quality & Design**: See `.claude/rules/test-quality-rules.md`.
   Full reference: `.claude/docs/test-quality-rules.md`
+- **Defensive Coding (ASVS)**: See `.claude/rules/defensive-coding-asvs.md`
+  — OWASP ASVS 5.0-mapped checklist for input handling, file handling,
+  and API/auth boundaries. Applies at design, planning, TDD, and coding
+  time, not just at audit time.
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md`
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **File Size**: See `.claude/rules/file-size.md`
