@@ -453,6 +453,13 @@ lint *args:
         # counts domain-mutating verb calls (save_/configure_/setup_/validate_)
         # + vauchi_core::types:: construction; baseline may DROP, never RISE.
         scripts/scripts/audit-frontend-domain-calls.sh --check scripts/scripts/audit-frontend-domain-calls.baseline.json
+        # Hardcoded-English ratchet over core's ScreenModel builders
+        # (M3 S2 of 2026-07-03-core-screens-bypass-i18n, design D3.4):
+        # counts string literals in title:/label:/hint:/placeholder:/
+        # subtitle:/detail:/content: positions of production
+        # core/vauchi-app/src/ui code. The i18n threading slices burn
+        # the baseline down; it may DROP, never RISE.
+        scripts/scripts/audit-ui-literals.sh --check scripts/scripts/audit-ui-literals.baseline.json
     fi
 
 # Interactive commit across repos with changes
