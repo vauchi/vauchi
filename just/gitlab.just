@@ -537,7 +537,8 @@ pipeline-list repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab ci list -R "$p"
 
-# List jobs in a pipeline
+# List jobs in a pipeline. `glab ci list` has no `--pipeline` flag
+# (removed upstream) — hit the pipeline jobs API directly instead.
 [no-cd]
 [script]
 pipeline-jobs id repo='':
@@ -546,7 +547,9 @@ pipeline-jobs id repo='':
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab ci list -R "$p" --pipeline "{{id}}"
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    glab api "projects/${enc}/pipelines/{{id}}/jobs" --paginate \
+      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}\") for j in jobs]"
 
 # View job log output
 [no-cd]
