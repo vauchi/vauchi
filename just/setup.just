@@ -379,14 +379,17 @@ session-init:
         # `## MEDIUM — Next`, `## LOW — Next`. NEXT aggregates
         # CRITICAL+HIGH `- [ ]` items including their indented
         # continuation lines (top of file = highest priority).
+        # Limit lives INSIDE awk: `| head -10` closed the pipe early,
+        # awk died with SIGPIPE (141), and pipefail+set -e killed the
+        # whole session-init once NEXT grew past 10 lines.
         NEXT=$(awk '
             /^## (CRITICAL|HIGH) — Next$/ { p=1; next }
             /^## / { p=0 }
             !p { next }
-            /^- \[ \]/ { emit=1; print; next }
+            /^- \[ \]/ { if (++items > 10) exit; emit=1; print; next }
             emit && /^  / { print; next }
             { emit=0 }
-        ' "$BOARD" | head -10)
+        ' "$BOARD")
         if [[ -n "$NEXT" ]]; then
             echo "NEXT:"
             echo "$NEXT" | while IFS= read -r line; do echo "  $line"; done
@@ -429,6 +432,13 @@ session-end:
     ERRORS=0
     SE_TMP=$(mktemp -d)
     trap 'rm -rf "$SE_TMP"' EXIT
+
+    # VGT05: claim-format check (warn-only at session end; _private CI
+    # enforces). Page: _private/docs/lint-errors/vgt05-work-board-claims.md
+    if [[ -x scripts/scripts/check-work-board.sh ]]; then
+        scripts/scripts/check-work-board.sh || \
+            echo "  WARN: work-board claim format issues (see above)"
+    fi
 
     # Source resolve-repo for MR check (if available)
     GLAB_OK=0
