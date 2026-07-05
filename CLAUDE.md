@@ -41,6 +41,10 @@ cargo watch -x 'nextest run'   # re-run tests on file save
 - **Session Hygiene**: See `.claude/rules/session-hygiene.md`
 - **Task Tracking & Plan-Code Sync**: See `.claude/docs/markdown-plan.md`
 - **File Size**: See `.claude/rules/file-size.md`
+- **Lint rule pages**: `_private/docs/lint-errors/` — one ruff-style
+  page per deterministic rule ID (VSH/VGT/VDC/VTL/VCI/VRS/VSC,
+  CC-##, ADR-###). Lint error messages cite these; when a check
+  fires, the page has the why + fix.
 - **Public docs**: `docs/` is the public mdBook site — never write
   plans or private content there
 
@@ -130,9 +134,11 @@ Track Gherkin promotion with `promoted_to:` links.
   the root, never from a sub-repo.
 - Check what's installed before suggesting tool installations.
 - When asked about pricing/hardware/real-world info, use web search.
-- Cargo-vet rules + portable-shell rules auto-load when relevant paths
-  are touched (see `.claude/rules/cargo-vet.md`,
-  `.claude/rules/portable-shell.md`).
+- Portable-shell rules auto-load when shell paths are touched
+  (`.claude/rules/portable-shell.md`; VSH01–12 enforced by
+  `check-portable-shell.sh`). Cargo-vet discipline is VSC01-enforced —
+  `_private/docs/lint-errors/vsc01-no-ai-audits.md` owns the workflow
+  (the old cargo-vet.md rules file is deleted).
 
 ## Dependencies & Repo Layout
 
