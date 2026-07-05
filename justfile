@@ -348,6 +348,13 @@ lint *args:
                     # perf-timers). core-only; other Rust repos skip it.
                     if [[ "$r" == "core" ]]; then
                         scripts/scripts/audit-mobile-surface.sh --check-core-purity 2>&1
+                        # VRS03: mirror of CI lint:no-default-features —
+                        # the no-default build prunes feature-gated paths
+                        # and surfaces dead code the default `just check`
+                        # never compiles (this class previously appeared
+                        # only after push). Page:
+                        # _private/docs/lint-errors/vrs03-no-default-features.md
+                        (cd "$dir" && RUSTFLAGS="-D warnings" cargo check -p vauchi-app --no-default-features 2>&1)
                     fi
                     ;;
                 npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) ;;
