@@ -121,3 +121,5 @@ yarn.lock
 
 # macOS
 .DS_Store
+cli/.cargo/config.toml
+relay/.cargo/config.toml
