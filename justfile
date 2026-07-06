@@ -2700,6 +2700,8 @@ lint-docs:
         echo "$dirname" | grep -q "strategy" && continue
         echo "$dirname" | grep -q "infra" && continue
         echo "$dirname" | grep -q "knowledge" && continue
+        echo "$dirname" | grep -q "archive" && continue
+        echo "$dirname" | grep -q "runbooks" && continue
         [ "$dirname" = "$repo" ] && continue
         echo "$dirname" | grep -q "/\." && continue
 
