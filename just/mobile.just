@@ -128,8 +128,19 @@ check-ios:
     echo "── iOS: Generating Xcode project ──"
     xcodegen generate
     echo ""
-    echo "── iOS: Building (Debug) ──"
-    xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
+    # Local dev wires bindings into vauchi-platform-swift and creates
+    # Vauchi.xcworkspace; building from the workspace with the env var
+    # avoids resolving the remote package and links the local core.
+    # CI uses ci-spm-provision.sh and builds from Vauchi.xcodeproj.
+    if [ -d "Vauchi.xcworkspace" ]; then
+      SRC="-workspace Vauchi.xcworkspace"
+      export VAUCHI_PLATFORM_USE_LOCAL_XCFRAMEWORK=1
+      echo "── iOS: Building from workspace (local bindings) ──"
+    else
+      SRC="-project Vauchi.xcodeproj"
+      echo "── iOS: Building from project (remote bindings) ──"
+    fi
+    xcodebuild $SRC -scheme Vauchi -configuration Debug \
       -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
       -clonedSourcePackagesDirPath .spm-packages -skipPackageUpdates build
     echo ""
@@ -155,7 +166,7 @@ check-ios:
             xcrun simctl erase "$udid" || true
           done
     fi
-    xcodebuild -project Vauchi.xcodeproj -scheme Vauchi -configuration Debug \
+    xcodebuild $SRC -scheme Vauchi -configuration Debug \
       -destination 'platform=iOS Simulator,name={{ ios_simulator }}' \
       -clonedSourcePackagesDirPath .spm-packages -skipPackageUpdates test
     echo ""
