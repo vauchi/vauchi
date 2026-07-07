@@ -188,8 +188,115 @@
     fi
 
 # ═══════════════════════════════════════════════════════════════
-# RUNTIME PROFILING — tracing-flame on E2E tests
+# CODE COVERAGE — cargo-llvm-cov (line + branch + path)
 # ═══════════════════════════════════════════════════════════════
+#
+# Uses LLVM source-based instrumentation for accurate line, branch,
+# and path coverage. Output: lcov (for IDE/codecov), cobertura (for GitLab),
+# and text summary (for terminal).
+#
+# Requires: cargo-llvm-cov, cargo-nextest
+# Install:  just install-dev-deps
+
+# Run coverage for a workspace or specific package.
+# Output: <repo>/lcov.info, <repo>/cobertura.xml
+# View:    just cov-html <repo>  (opens browser)
+# IDE:     load lcov.info into VS Code / CLion coverage panel
+[group('perf')]
+[script]
+cov repo='core' package='' html='false':
+    set -euo pipefail
+    REPO="{{repo}}"
+    PKG="{{package}}"
+    GEN_HTML="{{html}}"
+
+    if [[ ! -d "$REPO" ]]; then
+        echo "Error: repo '$REPO' not found"
+        exit 1
+    fi
+
+    cd "$REPO"
+
+    PKG_FLAG=""
+    if [[ -n "$PKG" ]]; then
+        PKG_FLAG="-p $PKG"
+    fi
+
+    echo "── Coverage: $REPO ${PKG:+($PKG) }──"
+    echo ""
+
+    # Clean previous coverage data to avoid merge artifacts
+    cargo llvm-cov clean --workspace
+
+    # Run tests with coverage instrumentation
+    # --no-fail-fast: collect coverage even if some tests fail
+    cargo llvm-cov nextest --no-fail-fast $PKG_FLAG \
+        --lcov --output-path lcov.info
+
+    # Generate cobertura separately (can't use --output-path twice)
+    cargo llvm-cov report --cobertura --output-path cobertura.xml
+
+    # Text summary for terminal
+    echo ""
+    cargo llvm-cov report
+
+    echo ""
+    echo "Artifacts:"
+    echo "  lcov.info      → $REPO/lcov.info"
+    echo "  cobertura.xml  → $REPO/cobertura.xml"
+
+    if [[ "$GEN_HTML" == "true" ]]; then
+        echo ""
+        cargo llvm-cov report --html --output-dir coverage-html
+        echo "  HTML report    → $REPO/coverage-html/index.html"
+        if command -v xdg-open &>/dev/null; then
+            xdg-open coverage-html/index.html
+        elif command -v open &>/dev/null; then
+            open coverage-html/index.html
+        fi
+    fi
+
+# Open the HTML coverage report for a repo
+[group('perf')]
+[script]
+cov-html repo='core':
+    set -euo pipefail
+    REPO="{{repo}}"
+    HTML="$REPO/coverage-html/index.html"
+    if [[ ! -f "$HTML" ]]; then
+        echo "No HTML report found. Generate with:"
+        echo "  just cov $REPO --html=true"
+        exit 1
+    fi
+    if command -v xdg-open &>/dev/null; then
+        xdg-open "$HTML"
+    elif command -v open &>/dev/null; then
+        open "$HTML"
+    else
+        echo "Open manually: $HTML"
+    fi
+
+# Clean coverage artifacts (lcov, cobertura, html, profraw)
+[group('perf')]
+[script]
+cov-clean repo='core':
+    set -euo pipefail
+    REPO="{{repo}}"
+    cd "$REPO" 2>/dev/null || { echo "Repo $REPO not found"; exit 1; }
+    cargo llvm-cov clean --workspace
+    rm -f lcov.info cobertura.xml
+    rm -rf coverage-html
+    echo "Coverage artifacts cleaned in $REPO"
+
+# ═══════════════════════════════════════════════════════════════
+# RUNTIME ANALYSIS — samply (CPU sampling, no instrumentation)
+# ═══════════════════════════════════════════════════════════════
+# (existing recipes: samply-core, samply-e2e, etc.)
+
+# ═══════════════════════════════════════════════════════════════
+# RUNTIME ANALYSIS — tracing-flame (instrumented spans)
+# ═══════════════════════════════════════════════════════════════
+# (existing recipes: flame-core, flame-e2e, etc.)
 #
 # Captures `tracing` spans emitted in-process by vauchi-core,
 # vauchi-app, and the e2e orchestrator. Renders to an SVG flamegraph
