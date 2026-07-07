@@ -460,6 +460,44 @@ samply-ohttp-relay duration_secs='30':
     echo "Wrote: $OUT"
     echo "Open: samply load \"$OUT\""
 
+# Measure carbon emissions of `cargo test -p vauchi-core` using CodeCarbon.
+# Requires: python3 + codecarbon.
+# Quick setup:
+#   python3 -m venv .venv/carbon
+#   source .venv/carbon/bin/activate
+#   python3 -m pip install -r scripts/requirements-carbon.txt
+[group('perf')]
+[script]
+perf-carbon-test:
+    set -euo pipefail
+    if ! command -v python3 &>/dev/null; then
+        echo "Error: python3 not found." >&2
+        exit 1
+    fi
+    # Prefer a local venv if it exists.
+    PYTHON=python3
+    VENV="{{ justfile_directory() }}/.venv/carbon/bin/python3"
+    if [[ -x "$VENV" ]]; then
+        PYTHON="$VENV"
+    fi
+    "$PYTHON" - <<'PY'
+    import importlib.util, sys
+    if importlib.util.find_spec("codecarbon") is None:
+        print("Error: codecarbon is not installed.", file=sys.stderr)
+        print("Install with:", file=sys.stderr)
+        print("  python3 -m venv .venv/carbon", file=sys.stderr)
+        print("  source .venv/carbon/bin/activate", file=sys.stderr)
+        print("  python3 -m pip install -r scripts/requirements-carbon.txt", file=sys.stderr)
+        sys.exit(1)
+    PY
+    echo "── CodeCarbon: cargo test -p vauchi-core ──"
+    (cd "{{ justfile_directory() }}/core" && "$PYTHON" "{{ justfile_directory() }}/scripts/measure-carbon.py" \
+        --project-name vauchi-core \
+        --experiment-id "vauchi-core-test-$(date +%s)" \
+        --output-dir .cache/carbon \
+        --format text \
+        -- cargo test -p vauchi-core)
+
 # Remove all samply profiles
 [group('perf')]
 [script]
