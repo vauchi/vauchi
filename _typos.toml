@@ -46,3 +46,5 @@ Tollerance = "Tollerance"
 tollerance = "tollerance"
 # MIS is a tracker prefix (MIS-5, MIS-7, etc.)
 MIS = "MIS"
+# MapPin icon rendered as "mappin" in CLI card output
+mappin = "mappin"
