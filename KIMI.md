@@ -58,7 +58,7 @@ Invoke with `/skill:<name>` or the model may auto-invoke based on context.
 | Multi-Repo MR | `/skill:multi-repo-mr <action>` | GitLab MR operations |
 | Rust Patterns | `/skill:rust-patterns <topic>` | Writing Rust code |
 | Pre-MR Check | `/skill:pre-mr-check <repo>` | Before creating MRs |
-| Session Hygiene | `/skill:session-hygiene <start|end>` | Session start/end |
+| Session Hygiene | `/skill:session-hygiene <start or end>` | Session start/end |
 | Just Recipes | `/skill:just-recipes <command>` | Finding the right `just` recipe |
 | Security Audit | `/skill:security-audit <scope>` | Security review or audit |
 | Platform Bindings | `/skill:platform-bindings <platform>` | iOS/Android/macOS/Windows/Linux |
@@ -124,15 +124,19 @@ per-invocation overhead. Rules:
 All significant work follows the Problem to Solution Flow. Use `/skill:problem-workflow`.
 See: `_private/docs/reference/2026-01-23-problem-to-solution-flow.md`
 
-Lifecycle: `intake → investigating → planning → implementing → testing → done`
+Lifecycle: `backlog → intake → investigating → planning → implementing → testing → done`
 
 Every problem record must have: **status**, **priority**, **owner**,
 **goals**. Critical/high problems require **containment** before
 investigation. Rejected solutions go in `### Rejected Approaches`.
 Track Gherkin promotion with `promoted_to:` links.
 
+New problems start in `_private/docs/backlog/` with **investigation only**;
+no implementation plans or `plan.md` files. When scheduled, move the record to
+`_private/docs/problems/` and set status `intake`.
+
 **Alert threshold**: 5+ unreviewed problems in `_private/docs/problems/` with status `intake`.
-**Staleness threshold**: 14 days (intake) or 30 days (other phases).
+**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other phases).
 
 ## Shell & Cargo Rules
 

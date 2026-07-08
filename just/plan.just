@@ -252,9 +252,14 @@ problem-list phase='':
     done_dir_count = count_subdir('done')
     deferred_dir_count = count_subdir('deferred')
 
+    backlog_dir = '_private/docs/backlog'
+    backlog_count = sum(1 for d in os.listdir(backlog_dir)
+                        if os.path.isfile(os.path.join(backlog_dir, d, 'README.md'))
+                        or os.path.isfile(os.path.join(backlog_dir, d, 'problem.md')))
+
     if not phase_filter:
         # Summary mode
-        print(f'Problem records: {total + done_dir_count + deferred_dir_count} total\n')
+        print(f'Problem records: {total + done_dir_count + deferred_dir_count} total  Backlog: {backlog_count}\n')
         for phase in order:
             items = by_status.get(phase, [])
             if items:
@@ -265,7 +270,7 @@ problem-list phase='':
         print()
         active = sum(len(by_status.get(p, [])) for p in ['intake', 'investigating', 'planning', 'implementing', 'testing'])
         done_total = len(by_status.get('done', [])) + done_dir_count
-        print(f'Active: {active}  Deferred: {deferred_dir_count}  Done: {done_total}  Archived: {len(by_status.get("archived", []))}')
+        print(f'Active: {active}  Deferred: {deferred_dir_count}  Done: {done_total}  Archived: {len(by_status.get("archived", []))}  Backlog: {backlog_count}')
     else:
         items = by_status.get(phase_filter, [])
         if not items:

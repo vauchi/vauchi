@@ -644,6 +644,7 @@ session-end:
                 while IFS= read -r f; do
                     MATCHES="$MATCHES  $f (references $repo/)\n"
                 done < <(grep -rl "${repo}/" \
+                    _private/docs/backlog/*/README.md \
                     _private/docs/problems/*/README.md \
                     _private/docs/planning/todo/*.md 2>/dev/null \
                     | grep -v '/done/' \
@@ -678,6 +679,13 @@ session-end:
     else
         echo "  ${USE_PCT}% used (OK)"
     fi
+
+    # ── Backlog review ──
+    # Advisory count of backlog items. Staleness is checked by drift detection.
+    echo ""
+    echo "── backlog ──"
+    BACKLOG_COUNT=$(find _private/docs/backlog -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+    echo "  $BACKLOG_COUNT problem records in backlog"
 
     # ── Intake backlog ──
     # CLAUDE.md alert threshold: 5+ problems in intake. Advisory, not an

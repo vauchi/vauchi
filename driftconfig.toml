@@ -543,7 +543,7 @@ user_doc_paths = ["/docs/"]
 user_doc_filenames = ["README.md"]
 
 [layers.gherkin]
-problem_paths = ["_private/features/", "_private/docs/problems/"]
+problem_paths = ["_private/features/", "_private/docs/problems/", "_private/docs/backlog/"]
 
 # ─── Embeddings ──────────────────────────────────────────
 

@@ -116,15 +116,19 @@ the narrow form was inconclusive.
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
 See: `_private/docs/reference/2026-01-23-problem-to-solution-flow.md`
 
-Lifecycle: `intake → investigating → planning → implementing → testing → done`
+Lifecycle: `backlog → intake → investigating → planning → implementing → testing → done`
 
 Every problem record must have: **status**, **priority**, **owner**,
 **goals**. Critical/high problems require **containment** before
 investigation. Rejected solutions go in `### Rejected Approaches`.
 Track Gherkin promotion with `promoted_to:` links.
 
+New problems start in `_private/docs/backlog/` with **investigation only**;
+no implementation plans or `plan.md` files. When scheduled, move the record to
+`_private/docs/problems/` and set status `intake`.
+
 **Alert threshold**: 5+ unreviewed problems in `_private/docs/problems/` with status `intake`.
-**Staleness threshold**: 14 days (intake) or 30 days (other phases).
+**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other phases).
 
 ## Shell & Cargo Rules
 
