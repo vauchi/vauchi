@@ -467,6 +467,13 @@ lint *args:
         # core/vauchi-app/src/ui code. The i18n threading slices burn
         # the baseline down; it may DROP, never RISE.
         scripts/scripts/audit-ui-literals.sh --check scripts/scripts/audit-ui-literals.baseline.json
+        # Hardcoded-English ratchet over the remaining frontends that do not
+        # have a dedicated i18n string lint (Android Kotlin, Windows XAML,
+        # linux-qt C++, linux-gtk Rust, TUI Rust, CLI Rust). Core and the
+        # SwiftUI frontends are covered by audit-ui-literals.sh and
+        # check-text-literal-count.sh respectively. The baseline may DROP as
+        # strings are routed through locales; it may never RISE.
+        scripts/scripts/audit-frontend-i18n-strings.sh --check scripts/scripts/audit-frontend-i18n-strings.baseline.json
     fi
 
 # Interactive commit across repos with changes
