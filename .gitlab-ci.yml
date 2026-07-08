@@ -23,8 +23,11 @@
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
-    ref: main
+    ref: ci-templates-v2026.07.1
     file: '/ci-templates/reuse.yml'
+
+variables:
+  VAUCHI_SCRIPTS_REF: "ci-templates-v2026.07.1"
 
 stages:
   - lint
@@ -40,6 +43,7 @@ stages:
 
 # Secret detection (MR + scheduled)
 secret_detection:
+  allow_failure: false
   stage: security
   tags: [docker]
   rules:
@@ -62,7 +66,7 @@ cleanup:prerelease:
     - >-
       curl -sf
       -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}"
-      "https://gitlab.com/api/v4/projects/vauchi%2Fscripts/repository/files/scripts%2Fcleanup-prerelease.sh/raw?ref=main"
+      "https://gitlab.com/api/v4/projects/vauchi%2Fscripts/repository/files/scripts%2Fcleanup-prerelease.sh/raw?ref=${VAUCHI_SCRIPTS_REF}"
       -o /tmp/cleanup.sh
     - chmod +x /tmp/cleanup.sh
     - /tmp/cleanup.sh
