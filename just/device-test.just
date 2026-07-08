@@ -112,6 +112,7 @@ rebuild-android core_dir="":
 
 # Build vauchi-platform for iOS device target (aarch64-apple-ios)
 [group('device-test')]
+[private]
 [script]
 _dt-build-mobile-libs-ios core_dir:
     set -euo pipefail
@@ -126,6 +127,7 @@ _dt-build-mobile-libs-ios core_dir:
 
 # Build vauchi-platform for Android device target (aarch64-linux-android)
 [group('device-test')]
+[private]
 [script]
 _dt-build-mobile-libs-android core_dir:
     set -euo pipefail
@@ -140,6 +142,7 @@ _dt-build-mobile-libs-android core_dir:
 
 # Build vauchi-platform for both device targets + native (for Kotlin bindgen)
 [group('device-test')]
+[private]
 [script]
 _dt-build-mobile-libs core_dir:
     set -euo pipefail
@@ -166,6 +169,7 @@ _dt-build-mobile-libs core_dir:
 
 # Generate Swift bindings from iOS .a
 [group('device-test')]
+[private]
 [script]
 _dt-generate-bindings-swift core_dir:
     set -euo pipefail
@@ -184,6 +188,7 @@ _dt-generate-bindings-swift core_dir:
 
 # Generate Kotlin bindings from native macOS .dylib
 [group('device-test')]
+[private]
 [script]
 _dt-generate-bindings-kotlin core_dir:
     set -euo pipefail
@@ -209,6 +214,7 @@ _dt-generate-bindings-kotlin core_dir:
 
 # Generate both Swift and Kotlin bindings
 [group('device-test')]
+[private]
 [script]
 _dt-generate-bindings core_dir:
     set -euo pipefail
@@ -238,6 +244,7 @@ _dt-generate-bindings core_dir:
 
 # Package iOS: copy .a, Swift bindings, header, modulemap into xcframework
 [group('device-test')]
+[private]
 [script]
 _dt-package-ios core_dir:
     set -euo pipefail
@@ -384,6 +391,7 @@ _dt-package-ios core_dir:
 
 # Package Android: copy .so and Kotlin bindings to android repo
 [group('device-test')]
+[private]
 [script]
 _dt-package-android core_dir:
     set -euo pipefail
@@ -436,6 +444,7 @@ _dt-package-android core_dir:
 
 # Build iOS app for physical device
 [group('device-test')]
+[private]
 [script]
 _dt-build-ios:
     set -euo pipefail
@@ -465,6 +474,7 @@ _dt-build-ios:
 
 # Build Android APK
 [group('device-test')]
+[private]
 [script]
 _dt-build-android:
     set -euo pipefail
@@ -478,6 +488,7 @@ _dt-build-android:
 
 # Install iOS app on connected device
 [group('device-test')]
+[private]
 [script]
 _dt-install-ios:
     set -euo pipefail
@@ -505,6 +516,7 @@ _dt-install-ios:
 
 # Install Android APK on connected device
 [group('device-test')]
+[private]
 [script]
 _dt-install-android:
     set -euo pipefail

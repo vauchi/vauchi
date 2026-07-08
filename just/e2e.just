@@ -58,56 +58,6 @@ e2e-integration: e2e-build
     echo ""
     echo "Integration tests complete."
 
-# Run a YAML scenario by name
-[group('e2e')]
-[script]
-e2e-yaml name:
-    cd e2e && cargo run --example yaml_runner -- "{{name}}"
-
-# List available YAML scenarios
-[group('e2e')]
-[script]
-e2e-yaml-list:
-    echo "Available YAML scenarios:"
-    find e2e/scenarios -name "*.yaml" -o -name "*.yml" 2>/dev/null | while read f; do
-        name=$(basename "$f" .yaml)
-        dir=$(dirname "$f" | xargs basename)
-        echo "  $dir/$name"
-    done
-
-# Show manual instructions for a YAML scenario
-[group('e2e')]
-[script]
-e2e-yaml-manual name:
-    cd e2e && cargo run --example yaml_runner -- "{{name}}" --manual
-
-# Show E2E test coverage against Gherkin features
-[group('e2e')]
-[script]
-e2e-coverage:
-    echo "── E2E Test Coverage Report ──"
-    echo ""
-    echo "Gherkin Features:"
-    feature_count=$(find features -name "*.feature" 2>/dev/null | wc -l)
-    echo "  Total feature files: $feature_count"
-    echo ""
-    echo "Rust E2E Tests:"
-    rust_tests=$(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^smoke_\|^integration_" || echo 0)
-    echo "  Smoke tests: $(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^smoke_" || echo 0)"
-    echo "  Integration tests: $(cd e2e && cargo test -- --list --include-ignored 2>&1 | grep -c "^integration_" || echo 0)"
-    echo ""
-    echo "YAML Scenarios:"
-    yaml_smoke=$(find e2e/scenarios/smoke -name "*.yaml" 2>/dev/null | wc -l)
-    yaml_integration=$(find e2e/scenarios/integration -name "*.yaml" 2>/dev/null | wc -l)
-    yaml_edge=$(find e2e/scenarios/edge -name "*.yaml" 2>/dev/null | wc -l)
-    echo "  Smoke: $yaml_smoke"
-    echo "  Integration: $yaml_integration"
-    echo "  Edge cases: $yaml_edge"
-    echo ""
-    echo "Feature Traceability:"
-    echo "  (Scenarios referencing Gherkin features)"
-    grep -h "^feature:" e2e/scenarios/*/*.yaml 2>/dev/null | sort -u | sed 's/feature: /  - /'
-
 # Build CLI binary (into shared target dir for e2e tests)
 # Uses --no-default-features to disable secure-storage (macOS Keychain)
 # which doesn't persist keys between CLI process invocations.
