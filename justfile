@@ -2827,8 +2827,23 @@ lint-markdown *ARGS:
       CONFIG=""
       [ -n "$cfg" ] && CONFIG="-c $cfg"
       echo "  $p  →  config: ${cfg:-(markdownlint default)}"
-      # shellcheck disable=SC2086
-      markdownlint $CONFIG -r "$RULE" $FIX "$p" || rc=1
+      if [ -n "$FIX" ]; then
+        # Custom rules may need multiple fix passes to reach a stable state
+        # (one wrap can create another over-long continuation line).
+        pass=0
+        while [ "$pass" -lt 5 ]; do
+          pass=$((pass + 1))
+          # shellcheck disable=SC2086
+          if markdownlint $CONFIG -r "$RULE" $FIX "$p" >/dev/null 2>&1; then
+            break
+          fi
+        done
+        # shellcheck disable=SC2086
+        markdownlint $CONFIG -r "$RULE" "$p" || rc=1
+      else
+        # shellcheck disable=SC2086
+        markdownlint $CONFIG -r "$RULE" $FIX "$p" || rc=1
+      fi
     done
     if [ "$rc" -eq 0 ]; then
       echo "All markdown checks passed."
