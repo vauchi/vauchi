@@ -221,6 +221,20 @@ monitoring-relay-alias:
     ssh "{{ssh_target}}" "docker network connect --alias vauchi-relay-web monitoring_monitoring $RELAY"
     echo "Connected $RELAY to monitoring network as 'vauchi-relay-web'"
 
+# Re-create landing page alias on monitoring network (run after each landing deploy)
+[group('deploy')]
+monitoring-landing-alias:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-landing-' --format '{{{{.Names}}' | head -1")
+    if [ -z "$LANDING" ]; then
+        echo "ERROR: No running landing container found"
+        exit 1
+    fi
+    ssh "{{ssh_target}}" "docker network disconnect monitoring_monitoring $LANDING 2>/dev/null || true"
+    ssh "{{ssh_target}}" "docker network connect --alias vauchi-landing-web monitoring_monitoring $LANDING"
+    echo "Connected $LANDING to monitoring network as 'vauchi-landing-web'"
+
 # ═══════════════════════════════════════════════════════════════════
 # VRT (Visual Regression Tracker)
 # ═══════════════════════════════════════════════════════════════════
