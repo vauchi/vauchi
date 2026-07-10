@@ -32,6 +32,7 @@ deploy-check:
 
     _DS_C1=12  # service name column
     _DS_C2=28  # status column (fits "STALE (99 commits behind)")
+    _DS_STALE=0
 
     check_service() {
         local name="$1" url="$2" repo="$3"
@@ -50,7 +51,10 @@ deploy-check:
         deployed_time=$(echo "$info" | jq -r '.built // "unknown"')
         local short_sha="${deployed_sha:0:8}"
 
-        # Get local main HEAD
+        # Refresh origin/main first — comparing against an unfetched ref
+        # reports false UP TO DATE (the exact failure this alarm exists
+        # to prevent). Tolerate offline: the stale ref is still shown.
+        git -C "{{justfile_directory()}}/$repo" fetch origin main --quiet 2>/dev/null || true
         local main_sha
         main_sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "unknown")
         local main_short="${main_sha:0:8}"
@@ -63,6 +67,7 @@ deploy-check:
             behind=$(git -C "{{justfile_directory()}}/$repo" rev-list "$deployed_sha..origin/main" --count 2>/dev/null || echo "?")
             status_text="STALE ($behind behind)"
             status_color="$RED"
+            _DS_STALE=$(( _DS_STALE + 1 ))
         fi
 
         local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
@@ -85,6 +90,13 @@ deploy-check:
     check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
 
     echo ""
+    if [[ "$_DS_STALE" -gt 0 ]]; then
+        # Exit nonzero so callers (session-init) surface the drift — a
+        # stale docs deploy sat unnoticed for 10 weeks before this alarm
+        # (backlog 2026-07-10-docs-deploy-drift-alarm).
+        printf "${RED}DRIFT: %d service(s) behind origin/main${NC} — play the deploy job on the latest _private main pipeline\n" "$_DS_STALE"
+        exit 1
+    fi
     echo "Fetch latest: just git fetch"
 
 # ═══════════════════════════════════════════════════════════════════

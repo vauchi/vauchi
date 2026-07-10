@@ -134,6 +134,14 @@ session-init:
         echo "  (path-overrides.sh missing — scripts/ out of date?)"
     fi
 
+    # ── Deployed-service drift ──
+    # Runs after fetch so origin/main is current. Advisory here (WARN,
+    # not abort): the alarm exists because a stale docs deploy sat
+    # unnoticed for 10 weeks (backlog 2026-07-10-docs-deploy-drift-alarm).
+    echo ""
+    echo "── deployed services ──"
+    just deploy-check || WARN=1
+
     # ── Dashboard ──
     SI_TMP=$(mktemp -d)
     trap 'rm -rf "$SI_TMP"' EXIT
