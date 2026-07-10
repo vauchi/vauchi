@@ -76,6 +76,58 @@ deploy-check:
             "$name" "$_p" "" "$status_text" "$_p2" "" "$short_sha" "$main_short" "$deployed_time"
     }
 
+    # For services whose public surface deliberately hides version info
+    # (relay R-SA1: no version disclosure on the main port), drift is
+    # checked via GitLab instead: registry digest of :latest vs the
+    # origin/main sha tag, and the last successful deployment vs the
+    # image build time. No public endpoint required or added.
+    check_service_gitlab() {
+        local name="$1" repo="$2" envpath="$3"
+        local sha rid dig_l dig_s dep_at fin_at
+        git -C "{{justfile_directory()}}/$repo" fetch origin main --quiet 2>/dev/null || true
+        sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "")
+        rid=$(glab api "projects/vauchi%2F${repo}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${repo}" '.[] | select(.path==$p) | .id' | head -1 || true)
+        dig_l=$(glab api "projects/vauchi%2F${repo}/registry/repositories/${rid}/tags/latest" 2>/dev/null | jq -r '.digest // empty' || true)
+        dig_s=$(glab api "projects/vauchi%2F${repo}/registry/repositories/${rid}/tags/${sha}" 2>/dev/null | jq -r '.digest // empty' || true)
+        dep_at=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&status=success&order_by=created_at&sort=desc&per_page=1" 2>/dev/null | jq -r '.[0].created_at // empty' || true)
+        # finished_at only exists on the pipeline DETAIL endpoint —
+        # the list response omits it (silently empty otherwise).
+        local pid
+        pid=$(glab api "projects/vauchi%2F${repo}/pipelines?sha=${sha}&ref=main&status=success" 2>/dev/null | jq -r '.[0].id // empty' || true)
+        fin_at=""
+        if [[ -n "$pid" ]]; then
+            fin_at=$(glab api "projects/vauchi%2F${repo}/pipelines/${pid}" 2>/dev/null | jq -r '.finished_at // empty' || true)
+        fi
+
+        local status_text status_color
+        if [[ -z "$sha" || -z "$dig_l" || -z "$dep_at" || -z "$fin_at" ]]; then
+            # Never green-wash on missing evidence: without all four
+            # facts the comparison below cannot prove currency.
+            status_text="UNKNOWN"
+            status_color="$YELLOW"
+        elif [[ "$dig_l" != "$dig_s" ]]; then
+            # :latest is not origin/main's image — wrong image tagged
+            status_text="IMAGE DRIFT"
+            status_color="$RED"
+            _DS_STALE=$(( _DS_STALE + 1 ))
+        elif [[ "${dep_at:0:19}" < "${fin_at:0:19}" ]]; then
+            # Newest main image was built after the last deploy. A
+            # same-sha rebuild also lands here — redeploying is a no-op
+            # then, but only a deploy proves the host runs this image.
+            status_text="STALE (image newer)"
+            status_color="$RED"
+            _DS_STALE=$(( _DS_STALE + 1 ))
+        else
+            status_text="UP TO DATE"
+            status_color="$GREEN"
+        fi
+
+        local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
+        local _p2=$(( _DS_C2 - ${#status_text} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s main=%-10s  %s\n" \
+            "$name" "$_p" "" "$status_text" "$_p2" "" "${dep_at:0:10}" "${sha:0:8}" "img-built=${fin_at:0:16}"
+    }
+
     _ds_hdr() {
         local c1="$1" c2="$2" c3="$3" c4="$4" c5="$5"
         local _p1=$(( _DS_C1 - ${#c1} )); [[ $_p1 -lt 1 ]] && _p1=1
@@ -85,7 +137,8 @@ deploy-check:
     _ds_hdr "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
     printf "  ${DIM}%s${NC}\n" "$(printf '%*s' $(( _DS_C1 + _DS_C2 + 48 )) '' | tr ' ' '-')"
 
-    check_service "relay"   "https://relay.vauchi.app/build-info" "relay"
+    check_service_gitlab "relay" "relay"       "production%2Frelay"
+    check_service_gitlab "ohttp" "ohttp-relay" "production%2Fohttp-relay"
     check_service "website" "https://vauchi.app/build-info.json"  "website"
     check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
 
