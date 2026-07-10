@@ -361,7 +361,7 @@ monitoring-relay-alias:
 monitoring-landing-alias:
     #!/usr/bin/env bash
     set -euo pipefail
-    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-landing-' --format '{{{{.Names}}' | head -1")
+    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-landing' --format '{{{{.Names}}' | head -1")
     if [ -z "$LANDING" ]; then
         echo "ERROR: No running landing container found"
         exit 1
