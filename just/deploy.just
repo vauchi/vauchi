@@ -99,6 +99,56 @@ deploy-check:
     fi
     echo "Fetch latest: just git fetch"
 
+# Hand me the deploy button that is guaranteed to ship the newest main
+# build. Does not deploy and changes no deploy config: it verifies the
+# service repo's origin/main image is built, mints a FRESH _private main
+# pipeline (its manual deploy:<service> job uses :latest by existing
+# rule), and prints that job's URL. Sha-pinned buttons on older
+# pipelines go stale the moment another MR merges — this one cannot.
+[group('deploy')]
+deploy-latest service:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SERVICE="{{service}}"
+    case "$SERVICE" in
+        docs)        REPO="docs" ;;
+        landing)     REPO="website" ;;
+        relay)       REPO="relay" ;;
+        ohttp-relay) REPO="ohttp-relay" ;;
+        *) echo "Unknown service: $SERVICE (docs|landing|relay|ohttp-relay)"; exit 1 ;;
+    esac
+
+    git -C "{{justfile_directory()}}/$REPO" fetch origin main --quiet 2>/dev/null || true
+    SHA=$(git -C "{{justfile_directory()}}/$REPO" rev-parse origin/main)
+    BUILD_STATUS=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main" | jq -r '.[0].status // "none"')
+    echo "newest main:    $REPO ${SHA:0:8} (build pipeline: $BUILD_STATUS)"
+    if [[ "$BUILD_STATUS" != "success" ]]; then
+        echo "WARNING: :latest image for ${SHA:0:8} is not confirmed built —"
+        echo "         wait for the $REPO main pipeline, then rerun."
+    fi
+
+    echo "minting fresh _private main pipeline..."
+    PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline?ref=main" | jq -r '.id')
+
+    JOB_URL=""
+    for _ in 1 2 3 4 5 6; do
+        JOB_URL=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/jobs?per_page=100" 2>/dev/null \
+            | jq -r --arg n "deploy:${SERVICE}" '.[] | select(.name==$n) | .web_url' | head -1)
+        [[ -n "$JOB_URL" ]] && break
+        sleep 5
+    done
+
+    if [[ -z "$JOB_URL" ]]; then
+        echo "Pipeline created but deploy:${SERVICE} job not visible yet:"
+        echo "  https://gitlab.com/vauchi/private/-/pipelines/${PIPE}"
+        exit 1
+    fi
+    echo ""
+    echo "Press play here — this button deploys ${REPO}:latest (= ${SHA:0:8} once built):"
+    echo "  $JOB_URL"
+    echo ""
+    echo "Afterwards verify with: just deploy-check"
+
 # ═══════════════════════════════════════════════════════════════════
 # PROXY MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════
