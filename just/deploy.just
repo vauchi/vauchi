@@ -94,7 +94,7 @@ deploy-check:
         # Exit nonzero so callers (session-init) surface the drift — a
         # stale docs deploy sat unnoticed for 10 weeks before this alarm
         # (backlog 2026-07-10-docs-deploy-drift-alarm).
-        printf "${RED}DRIFT: %d service(s) behind origin/main${NC} — play the deploy job on the latest _private main pipeline\n" "$_DS_STALE"
+        printf "${RED}DRIFT: %d service(s) behind origin/main${NC} — run: just deploy-latest <service>\n" "$_DS_STALE"
         exit 1
     fi
     echo "Fetch latest: just git fetch"
@@ -115,16 +115,33 @@ deploy-latest service:
         landing)     REPO="website" ;;
         relay)       REPO="relay" ;;
         ohttp-relay) REPO="ohttp-relay" ;;
+        # cdn is excluded: its image lives at vauchi/website/cdn and
+        # ci-deploy-service.sh has no :latest fallback for it — the
+        # minted button would fail (verified 2026-07-10).
         *) echo "Unknown service: $SERVICE (docs|landing|relay|ohttp-relay)"; exit 1 ;;
     esac
 
     git -C "{{justfile_directory()}}/$REPO" fetch origin main --quiet 2>/dev/null || true
     SHA=$(git -C "{{justfile_directory()}}/$REPO" rev-parse origin/main)
-    BUILD_STATUS=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main" | jq -r '.[0].status // "none"')
-    echo "newest main:    $REPO ${SHA:0:8} (build pipeline: $BUILD_STATUS)"
-    if [[ "$BUILD_STATUS" != "success" ]]; then
-        echo "WARNING: :latest image for ${SHA:0:8} is not confirmed built —"
-        echo "         wait for the $REPO main pipeline, then rerun."
+    BUILT=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main&status=success" 2>/dev/null | jq 'length' || echo 0)
+    echo "newest main:    $REPO ${SHA:0:8} (successful build pipelines: $BUILT)"
+    if [[ "$BUILT" -eq 0 ]]; then
+        echo "WARNING: no successful pipeline for ${SHA:0:8} yet —"
+        echo "         :latest is older. Wait for the $REPO main pipeline, then rerun."
+    fi
+
+    # Prove :latest actually IS this sha's image (registry digests),
+    # instead of assuming tag order.
+    RID=$(glab api "projects/vauchi%2F${REPO}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${REPO}" '.[] | select(.path==$p) | .id' | head -1 || true)
+    if [[ -n "$RID" ]]; then
+        LATEST_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/latest" 2>/dev/null | jq -r '.digest // empty' || true)
+        SHA_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/${SHA}" 2>/dev/null | jq -r '.digest // empty' || true)
+        if [[ -n "$LATEST_DIGEST" && "$LATEST_DIGEST" == "$SHA_DIGEST" ]]; then
+            echo "registry:       :latest digest == :${SHA:0:8} digest — verified"
+        else
+            echo "WARNING: :latest digest differs from :${SHA:0:8} — an older or"
+            echo "         newer image holds the latest tag. Investigate before deploying."
+        fi
     fi
 
     echo "minting fresh _private main pipeline..."
@@ -144,9 +161,12 @@ deploy-latest service:
         exit 1
     fi
     echo ""
-    echo "Press play here — this button deploys ${REPO}:latest (= ${SHA:0:8} once built):"
+    echo "Press play here — this button deploys ${REPO}:latest:"
     echo "  $JOB_URL"
     echo ""
+    echo "Playing creates a deployment that waits for APPROVAL"
+    echo "(protected environment production/${SERVICE}) — approve it on the"
+    echo "job page or under Operate > Environments, or it stays blocked."
     echo "Afterwards verify with: just deploy-check"
 
 # ═══════════════════════════════════════════════════════════════════
