@@ -57,6 +57,7 @@
 # Local/machine-specific directories
 # ===========================================
 /_VMs/
+/Visual-Regression-Tracker/
 
 
 
