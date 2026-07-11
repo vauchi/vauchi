@@ -347,7 +347,13 @@ monitoring-logs:
 monitoring-relay-alias:
     #!/usr/bin/env bash
     set -euo pipefail
-    RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
+    # Discover by the stable app.vauchi.service label (set on every deploy
+    # path); the name filter is a fallback for containers deployed before
+    # the label existed. Name filters drift across deploy schemes.
+    RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=relay' --format '{{{{.Names}}' | head -1")
+    if [ -z "$RELAY" ]; then
+        RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
+    fi
     if [ -z "$RELAY" ]; then
         echo "ERROR: No running relay container found"
         exit 1
@@ -361,11 +367,15 @@ monitoring-relay-alias:
 monitoring-landing-alias:
     #!/usr/bin/env bash
     set -euo pipefail
-    # 'name=landing' matches both deploy paths: the generic docker-run
-    # path (vauchi-landing-<digest>) and the Goal-6 compose path
-    # (vauchi-relay-landing) — a path-specific filter went stale twice
-    # and left the landing dashboards dark (2026-07-10, 2026-07-11).
-    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=landing' --format '{{{{.Names}}' | head -1")
+    # Discover by the stable app.vauchi.service label (compose sets it).
+    # The name filter is a fallback for pre-label containers; it matches
+    # both deploy schemes (vauchi-landing-<digest>, vauchi-relay-landing)
+    # after a path-specific filter went stale twice and left the landing
+    # dashboards dark (2026-07-10, 2026-07-11).
+    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=landing' --format '{{{{.Names}}' | head -1")
+    if [ -z "$LANDING" ]; then
+        LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=landing' --format '{{{{.Names}}' | head -1")
+    fi
     if [ -z "$LANDING" ]; then
         echo "ERROR: No running landing container found"
         exit 1
