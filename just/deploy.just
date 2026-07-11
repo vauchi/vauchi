@@ -138,8 +138,8 @@ deploy-check:
     _ds_hdr "SERVICE" "STATUS" "DEPLOYED" "MAIN" "BUILT"
     printf "  ${DIM}%s${NC}\n" "$(printf '%*s' $(( _DS_C1 + _DS_C2 + 48 )) '' | tr ' ' '-')"
 
-    check_service_gitlab "relay" "relay"       "production%2Frelay"
-    check_service_gitlab "ohttp" "ohttp-relay" "production%2Fohttp-relay"
+    check_service_gitlab "relay" "relay"       "relay-prod"
+    check_service_gitlab "ohttp" "ohttp-relay" "ohttp-relay-prod"
     check_service "website" "https://vauchi.app/build-info.json"  "website"
     check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
 
@@ -219,7 +219,7 @@ deploy-latest service:
     echo "  $JOB_URL"
     echo ""
     echo "Playing creates a deployment that waits for APPROVAL"
-    echo "(protected environment production/${SERVICE}) — approve it on the"
+    echo "(protected environment ${SERVICE}-prod) — approve it on the"
     echo "job page or under Operate > Environments, or it stays blocked."
     echo "Afterwards verify with: just deploy-check"
 
