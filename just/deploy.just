@@ -405,10 +405,11 @@ monitoring-landing-alias:
 # VRT (Visual Regression Tracker)
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy / update VRT stack (Visual Regression Tracker)
+# Deploy / update VRT stack (Visual Regression Tracker). Pass-through args,
+# e.g. `just deploy-vrt --dry-run`.
 [group('deploy')]
-deploy-vrt:
-    ./_private/infra/scripts/deploy-vrt.sh
+deploy-vrt *args:
+    ./_private/infra/scripts/deploy-vrt.sh {{ args }}
 
 # Show VRT stack status
 [group('deploy')]
