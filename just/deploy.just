@@ -28,6 +28,7 @@ deploy-check:
 
     source scripts/scripts/output-helpers.sh
     echo "Checking deployed service versions..."
+    echo "Ledger + approvals: https://gitlab.com/vauchi/private/-/environments"
     echo ""
 
     _DS_C1=12  # service name column
