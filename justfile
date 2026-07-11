@@ -1627,7 +1627,7 @@ help:
       just tui                Run TUI
 
     Deploy:
-      just deploy             Deploy relay + landing (Kamal)
+      just deploy-latest <svc> Mint a fresh CI deploy button (relay|landing|docs|ohttp-relay)
       just deploy-check       Check deployed versions vs origin/main
       just core-freshness     Check if bindings/consumers are up to date with core
       just schema-check       Verify JSON schemas match core UI types

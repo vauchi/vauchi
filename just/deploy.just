@@ -238,57 +238,73 @@ proxy-list:
     ssh {{ssh_target}} "docker exec kamal-proxy kamal-proxy list"
 
 # ═══════════════════════════════════════════════════════════════════
-# KAMAL DEPLOYMENT (relay + landing)
+# APP DEPLOYS (via CI — kamal deployer retired 2026-07-11)
 # ═══════════════════════════════════════════════════════════════════
-
-# Deploy relay + landing using pre-built CI images (auto-resolves version from relay origin/main)
-[group('deploy')]
-deploy: validate
-    ./_private/infra/scripts/deploy-all.sh --skip-validation
-
-# Deploy relay + landing with local build + push (escape hatch for manual builds)
-[group('deploy')]
-deploy-with-build: validate
-    ./_private/infra/scripts/deploy-all.sh --skip-validation --with-build
-
-# Deploy a specific image version
-[group('deploy')]
-deploy-version VERSION:
-    ./_private/infra/scripts/deploy-all.sh --version={{VERSION}}
+#
+# Apps (relay, landing, cdn, docs, ohttp-relay) deploy in CI via
+# infra/scripts/ci-deploy-service.sh, gated by GitLab protected-environment
+# approval. Mint a fresh, always-current deploy button with:
+#
+#     just deploy-latest <service>
+#
+# The former kamal-based `deploy` / `deploy-with-build` / `deploy-version`
+# recipes were retired: they duplicated the CI path (a second way to mint
+# containers) and drove the container name/label drift that broke the
+# landing dashboards twice. kamal is retained ONLY for kamal-proxy
+# lifecycle (see proxy-upgrade / proxy-list above).
 
 # Verify website image contains only expected files (no workspace leaks)
 [group('deploy')]
 test-website-image:
     ./_private/infra/scripts/test-website-image.sh
 
-# Show relay logs
+# Show relay logs (CI-deployed container, discovered by service label)
 [group('deploy')]
 relay-logs:
-    kamal app logs -f -c _private/infra/config/deploy.combined.yml
-
-# Rollback to previous deployment version
-[group('deploy')]
-[confirm('This will roll back to the previous deployment. Continue?')]
-deploy-rollback:
     #!/usr/bin/env bash
     set -euo pipefail
-
-    CONFIG="_private/infra/config/deploy.combined.yml"
-    if [[ ! -f "$CONFIG" ]]; then
-        echo "ERROR: Deploy config not found at $CONFIG"
+    C=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=relay' --format '{{{{.Names}}' | head -1")
+    if [ -z "$C" ]; then
+        C=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-' --format '{{{{.Names}}' | grep -v landing | head -1")
+    fi
+    if [ -z "$C" ]; then
+        echo "ERROR: no running relay container found"
         exit 1
     fi
+    ssh "{{ssh_target}}" "docker logs -f $C"
 
-    echo "── Current deployment ──"
-    kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not fetch current version)"
+# Show cold-rollback candidates + commands for a CI-deployed service.
+# CI (ci-deploy-service.sh) stops — but keeps — the previous few
+# containers per service, so rollback is: start the previous one and
+# re-point kamal-proxy at it. This prints the plan for review rather than
+# executing a traffic switch blind; run the shown commands to apply, or
+# roll forward with `just deploy-latest {{service}}`.
+[group('deploy')]
+deploy-rollback service:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SVC="{{service}}"
+    case "$SVC" in
+        relay)       PROXY=vauchi-relay-web;    HOST=relay.vauchi.app; PORT=8080; HP=/health ;;
+        ohttp-relay) PROXY=vauchi-ohttp-relay;  HOST=ohttp.vauchi.app; PORT=8082; HP=/health ;;
+        cdn)         PROXY=vauchi-cdn-web;       HOST=cdn.vauchi.app;   PORT=80;   HP=/health ;;
+        docs)        PROXY=vauchi-docs-web;      HOST=docs.vauchi.app;  PORT=80;   HP=/health ;;
+        landing)     echo "landing runs via the compose/systemd stack — roll back by redeploying the"; \
+                     echo "previous image: just deploy-latest landing (pins :latest), or restart"; \
+                     echo "landing-compose.service with a previous IMAGE_TAG on the host."; exit 0 ;;
+        *) echo "Unknown service: $SVC (relay|ohttp-relay|cdn|docs|landing)"; exit 1 ;;
+    esac
+    echo "── Containers for $SVC (newest first; [*]=running) ──"
+    ssh "{{ssh_target}}" "docker ps -a --filter 'label=app.vauchi.service=$SVC' --format '{{{{.Names}}\t{{{{.Status}}' | head -6" \
+        || { echo "No labelled containers yet (label ships with the app.vauchi.service MR); falling back to name."; \
+             ssh "{{ssh_target}}" "docker ps -a --filter 'name=vauchi-$SVC-' --format '{{{{.Names}}\t{{{{.Status}}' | head -6"; }
     echo ""
-
-    echo "── Rolling back ──"
-    kamal rollback -c "$CONFIG"
-
+    echo "── To roll back, pick a previous (stopped) container <PREV> and run: ──"
+    echo "  ssh {{ssh_target}} \"docker start <PREV>\""
+    echo "  ssh {{ssh_target}} \"docker exec kamal-proxy kamal-proxy deploy $PROXY \\"
+    echo "      --target <PREV>:$PORT --host $HOST --health-check-path $HP --tls\""
     echo ""
-    echo "── Rollback complete — verifying ──"
-    kamal app version -c "$CONFIG" 2>/dev/null || echo "(could not verify — check manually)"
+    echo "This mirrors ci-deploy-service.sh's proxy switch (health-gated). Verify with: just deploy-check"
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL DEPLOYMENT
@@ -407,9 +423,10 @@ vrt-logs:
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy Kamal services + sync mail config + monitoring + VRT
+# Deploy the support stacks (mail + monitoring + VRT). Apps (relay,
+# landing, …) deploy via CI — see the APP DEPLOYS section / just deploy-latest.
 [group('deploy')]
-deploy-all: deploy deploy-mail deploy-monitoring deploy-vrt
+deploy-all: deploy-mail deploy-monitoring deploy-vrt
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL MANAGEMENT
