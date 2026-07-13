@@ -1030,12 +1030,20 @@ audit repo='':
     else
         repos="{{repo}}"
     fi
+    failed=0
     for r in $repos; do
         dir=$(repo_dir "$r")
         echo "═══ audit: $r ═══"
-        (cd "$dir" && cargo audit 2>&1) || true
-        (cd "$dir" && cargo deny check 2>&1) || true
+        if ! (cd "$dir" && cargo audit 2>&1); then
+            echo "ERROR: cargo audit failed for $r" >&2
+            failed=1
+        fi
+        if ! (cd "$dir" && cargo deny check 2>&1); then
+            echo "ERROR: cargo deny check failed for $r" >&2
+            failed=1
+        fi
     done
+    exit "$failed"
 
 # Regenerate cargo-vet exemptions to match each repo's CI strategy.
 # Repos with custom CI scripts (cli, tui, relay): regenerate lockfile without path overrides.
