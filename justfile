@@ -533,6 +533,14 @@ commit-repo repo message:
     echo ""
     echo "Committed in $label"
 
+# Wait for GitLab CI pipeline on the current branch
+# Usage: just ci-wait           (uses repo inferred from cwd)
+#        just ci-wait core      (wait for vauchi/core pipeline)
+[group('daily')]
+[no-cd]
+ci-wait repo='':
+    just gitlab pipeline-wait "{{ repo }}"
+
 # ═══════════════════════════════════════════════════════════════════
 # EXTENDED COMMANDS - Less frequently used
 # ═══════════════════════════════════════════════════════════════════
