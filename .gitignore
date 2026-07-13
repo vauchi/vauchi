@@ -68,7 +68,8 @@
 # - .gitignore
 # - .gitlab-ci.yml
 # - .github/
-# - CLAUDE.md (symlink)
+# - CLAUDE.md, KIMI.md, and AGENTS.md
+# - .claude, .kimi-code, .codex, and .agents (symlinks)
 # - CONTRIBUTING.md (symlink)
 
 # IDE / AI agent configs
@@ -80,7 +81,6 @@
 .ai/
 # AI memory and local session state
 .junie/
-AGENTS.md
 # .claude/ is tracked (skills, agents, shared settings)
 # .claude/settings.local.json is excluded via .claude/.gitignore
 
