@@ -92,6 +92,11 @@ per-invocation overhead. Rules:
   as a single tool call.
 - **Parallelize before delegating.** Two `Grep` calls in one message
   are cheaper than one `Agent` call.
+- **Reach for the local search tools before an `Agent` spawn.** For
+  "where is / how does X work", `just semsearch "<q>"` (local semantic
+  search, zero API tokens) and `just tell-me-about "<topic>"` (local-LLM
+  summary) locate code without a model-priced agent. See the search
+  ladder in Exploration below.
 
 **Tool output discipline (MANDATORY)** — a single noisy command
 (`git log`, `cargo check`, `just test`, large `Read`) routinely dumps
@@ -136,7 +141,8 @@ no implementation plans or `plan.md` files. When scheduled, move the record to
 `_private/docs/problems/` and set status `intake`.
 
 **Alert threshold**: 5+ unreviewed problems in `_private/docs/problems/` with status `intake`.
-**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other phases).
+**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other
+phases).
 
 ## Shell & Cargo Rules
 
@@ -252,4 +258,15 @@ a clear recurrence with worked example, promote a one-liner here.
 
 ## Exploration
 
-`just tell-me-about "<topic>"` — uses local LLM to search and summarize codebase.
+`just tell-me-about "<topic>"` — local-LLM (ollama) codebase search +
+summary, **zero API tokens**. One-time activation (fails loud until done):
+`ollama serve >/dev/null 2>&1 &` then `ollama pull gemma4:e2b`.
+
+`just semsearch "<question>"` — local **semantic** code search (Ollama
+embeddings + sqlite, zero API tokens). Use to *locate* code by meaning
+when grep's exact match won't do — prefer it over an `Agent` spawn for
+"where is the code that does X". Append `--code` to exclude markdown docs.
+First run `just semindex` (incremental); needs `ollama pull nomic-embed-text`.
+
+Search ladder: `just grep` (exact) → `just semsearch` (semantic) →
+`just tell-me-about` (summarize) → `Agent` (reason over results).
