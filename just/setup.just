@@ -747,6 +747,24 @@ session-end:
         ERRORS=1
     fi
 
+    # ── subagent-spawn signal (observe-only, never an error) ──
+    # Subagent tokens are the top cost driver yet invisible per session
+    # (log-subagent-spawn.sh tallies them). Surface the count so a heavy
+    # session is noticed live; weekly cost trend is `just token-report`.
+    SE_LEDGER=".claude/.session-errors"
+    if [[ -f "$SE_LEDGER" ]]; then
+        SPAWNS=$(grep -c '"category":"subagent-spawn"' "$SE_LEDGER" 2>/dev/null || true)
+        SPAWNS=${SPAWNS:-0}
+        if [[ "$SPAWNS" -gt 0 ]]; then
+            echo ""
+            echo "── subagent spawns this session: $SPAWNS ──"
+            grep '"category":"subagent-spawn"' "$SE_LEDGER" 2>/dev/null \
+                | jq -r '.agent' 2>/dev/null | sort | uniq -c | sort -rn | head -6 \
+                | while read -r n a; do echo "    $n  $a"; done
+            echo "  Heavy? Check per-week cost with: just token-report"
+        fi
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"
@@ -765,6 +783,15 @@ session-end:
 [group('setup')]
 gen-hook-from-pattern category="" force="":
     @bash scripts/scripts/gen-hook-from-pattern.sh {{category}} {{force}}
+
+# Weekly Claude Code cost-vs-output report: joins session-transcript token
+# usage (incl. subagents) with git commits/lines to show cost-per-commit and
+# subagent% trend. Answers "more tokens for fewer results?" empirically.
+# Optional args: <workspace_root> <project_match> (both auto-detected).
+[group('setup')]
+[positional-arguments]
+token-report *args:
+    @python3 scripts/scripts/token-report.py "$@"
 
 # Install development dependencies (macOS via Homebrew + Cargo)
 [group('setup')]

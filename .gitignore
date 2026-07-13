@@ -124,3 +124,6 @@ yarn.lock
 .DS_Store
 cli/.cargo/config.toml
 relay/.cargo/config.toml
+
+# Local semantic search index (just semindex / semsearch)
+.cache/

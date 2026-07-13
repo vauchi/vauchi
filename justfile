@@ -3086,6 +3086,21 @@ drift-ci *args:
 tell-me-about *topic:
     ./scripts/scripts/tell-me-about.sh {{topic}}
 
+# Build/refresh the local semantic search index (Ollama embeddings, no API
+# tokens). Incremental — re-embeds only changed files. Run once, then again
+# after large changes. Index lives in .cache/semsearch.db (gitignored).
+[group('tools')]
+semindex root='.':
+    python3 scripts/scripts/semsearch.py index {{root}}
+
+# Semantic code search — "find code related to X" (e.g.
+# just semsearch "daily rotating mailbox tokens"). Prefer over an Explore
+# agent for locating code; grep still wins for exact strings.
+[group('tools')]
+[positional-arguments]
+semsearch *query:
+    python3 scripts/scripts/semsearch.py query "$@"
+
 # Find all doc references to a pattern (SP number, problem slug, percentage)
 # Use after implementation to find all docs that need updating.
 # e.g., just doc-refs "SP-32" or just doc-refs "anonymous-sender"

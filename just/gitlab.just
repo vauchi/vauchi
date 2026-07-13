@@ -513,6 +513,19 @@ mr-create-all title='':
 
 # ── Pipeline Operations ────────────────────────────────────────────
 
+# Deterministically classify a failed job's trace (no model tokens).
+# Prints {category, escalate, signature, fix}. escalate=true → novel
+# signature, hand to /ci-fix. Usage: just gitlab ci-classify <repo> <job_id>
+[no-cd]
+[script]
+ci-classify repo job_id:
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab api "projects/${p}/jobs/{{job_id}}/trace" \
+        | scripts/scripts/classify-ci-failure.sh
+
 # Show pipeline status for current branch
 [no-cd]
 [script]
