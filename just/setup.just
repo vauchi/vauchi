@@ -793,6 +793,14 @@ gen-hook-from-pattern category="" force="":
 token-report *args:
     @python3 scripts/scripts/token-report.py "$@"
 
+# Report hooks present in one agent harness's hook dir but not the other
+# (.claude/hooks vs .kimi-code/hooks). Catches a guardrail added to one
+# harness but never mirrored. --strict exits 1 on drift (for gating).
+[group('setup')]
+[positional-arguments]
+check-hook-parity *args:
+    @bash scripts/scripts/check-hook-parity.sh "$@"
+
 # Install development dependencies (macOS via Homebrew + Cargo)
 [group('setup')]
 [script]
