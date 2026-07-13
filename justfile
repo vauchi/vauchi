@@ -3095,7 +3095,9 @@ semindex root='.':
 
 # Semantic code search — "find code related to X" (e.g.
 # just semsearch "daily rotating mailbox tokens"). Prefer over an Explore
-# agent for locating code; grep still wins for exact strings.
+# agent for locating code; grep still wins for exact strings. Append --code
+# to exclude markdown docs (ADRs/plans) when you want only code. Optional
+# trailing number caps results (default 8).
 [group('tools')]
 [positional-arguments]
 semsearch *query:
