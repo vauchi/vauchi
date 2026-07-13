@@ -765,6 +765,26 @@ regen-golden-fixtures:
         --run-ignored=ignored-only \
         -E 'test(regenerate_all_engine_fixtures) | test(regenerate_all_fixtures)'
 
+# Sync cli's vendored golden fixtures from core.
+# cli keeps a copy of core's golden fixtures for its screen-renderer tests;
+# they re-drift (cli's check:fixtures-drift) whenever core regenerates
+# fixtures. Run after `bump-core`/`regen-golden-fixtures` — or when the
+# drift check fails — then review and commit the result in cli.
+[group('core')]
+[script]
+sync-cli-fixtures:
+    set -euo pipefail
+    src="core/vauchi-core/tests/fixtures/golden"
+    dst="cli/tests/fixtures/golden"
+    [ -d "$src" ] || { echo "core fixtures missing at $src — run 'just setup'"; exit 1; }
+    [ -d "$dst" ] || { echo "cli fixtures dir missing at $dst"; exit 1; }
+    # Mirror core -> cli: add new fixtures, drop removed ones. Preserve cli's
+    # own README.md and skip core's .version (cli does not vendor it) — the
+    # same exclusions cli's check:fixtures-drift job diffs with.
+    rsync -a --delete --exclude='README.md' --exclude='.version' "$src/" "$dst/"
+    echo "Synced $(ls "$dst"/*.json | wc -l | tr -d ' ') golden fixtures: core -> cli."
+    echo "Review and commit in cli: git -C cli add tests/fixtures/golden"
+
 # Regenerate the JSON schemas (resumes a halted bump-core).
 [group('core')]
 [script]
