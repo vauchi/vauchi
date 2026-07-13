@@ -81,6 +81,23 @@ config-level optimization combined. Rules:
   as a single tool call.
 - **Parallelize before delegating.** Two `Grep` calls in one message
   are cheaper than one `Agent` call.
+- **Route the spawn to the cheapest model that fits.** Project agents
+  already pin cheap models (search/git/audit → `haiku`/`sonnet`); the
+  built-in `Explore`/`general-purpose` agents inherit the session model
+  (Opus) and have no cheap default — when one is genuinely warranted,
+  pass `model: "haiku"` (search) or `"sonnet"` (light reasoning) in the
+  `Agent` call. Empirically (2026-07 session-cost analysis) subagent
+  share drove cost-per-commit 5× in the worst week; wrong-tier search
+  agents were the largest slice.
+- **Cascade mechanical work to Haiku (docs/tidy/chore ≈ 53% of commits).**
+  When on an expensive session model and facing a *batch* of judgment-free
+  edits — docs/README prose, tidy renames/formatting, chore version bumps,
+  locale key additions — delegate to the `mechanical-edit` agent (Haiku)
+  rather than doing it inline on Opus. It self-verifies and returns an
+  `ESCALATE:` reason for anything needing judgment, which comes back to
+  you. Threshold: batches or multi-file changes — a single one-line fix is
+  cheaper done inline (agent spawn overhead). Cheap model first, escalate
+  on judgment.
 
 **Tool output discipline (MANDATORY)** — a single noisy command
 (`git log`, `cargo check`, `just test`, large `Read`) routinely dumps
@@ -128,7 +145,8 @@ no implementation plans or `plan.md` files. When scheduled, move the record to
 `_private/docs/problems/` and set status `intake`.
 
 **Alert threshold**: 5+ unreviewed problems in `_private/docs/problems/` with status `intake`.
-**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other phases).
+**Staleness threshold**: 60 days (backlog), 14 days (intake), or 30 days (other
+phases).
 
 ## Shell & Cargo Rules
 
@@ -259,4 +277,21 @@ a clear recurrence with worked example, promote a one-liner here.
 
 ## Exploration
 
-`just tell-me-about "<topic>"` — uses local LLM to search and summarize codebase.
+`just tell-me-about "<topic>"` — local-LLM (ollama) codebase search +
+summary, **zero API tokens**. Prefer it as the *first* step for open-ended
+"where does X live / how does Y work" questions before reaching for an
+`Explore`/`general-purpose` agent (which runs on the session model). Use a
+frontier agent only when the local pass is inconclusive or the task needs
+reasoning over the results, not just locating them.
+
+One-time activation (the tool fails loud until both are done):
+`ollama serve >/dev/null 2>&1 &` then `ollama pull gemma4:e2b` (or set
+`TELL_ME_AUTOPULL=1`). Override the model with `TELL_ME_MODEL`.
+
+`just semsearch "<question>"` — local **semantic** code search (Ollama
+embeddings + sqlite, zero API tokens). Use to *locate* code by meaning when
+grep's exact match won't do — prefer it over an `Explore`/`general-purpose`
+agent for "where is the code that does X". Exact strings → still `just grep`.
+First run `just semindex` (incremental; re-embeds only changed files); needs
+`ollama pull nomic-embed-text` once. Search ladder: `grep` (exact) →
+`semsearch` (semantic) → `tell-me-about` (summarize) → frontier agent (reason).
