@@ -395,6 +395,50 @@ push-all mode='full':
         summary_mix "${#pushed[@]}" "${#wip_blocked[@]}" "$elapsed"
     fi
 
+# Push a single repo, retrying with --force-with-lease on non-fast-forward failure.
+# Mirrors the fallback already used by `just gitlab mr-create`, but for the
+# plain-git case when not opening an MR.
+# Usage: just git push-retry          (current repo)
+#        just git push-retry core     (specific repo)
+[no-cd]
+[script]
+push-retry repo='':
+    source scripts/scripts/output-helpers.sh
+    set -euo pipefail
+    dir="{{ repo }}"
+    if [[ "$dir" == "." || "$dir" == "root" || -z "$dir" ]]; then
+        dir="."
+        label="vauchi (root)"
+    else
+        label="{{ repo }}"
+    fi
+    if [[ "$dir" != "." && ! -d "$dir/.git" ]]; then
+        echo "ERROR: $dir is not a git repo" >&2
+        exit 1
+    fi
+    branch=$(git -C "$dir" branch --show-current 2>/dev/null || true)
+    if [[ "$branch" == "main" ]]; then
+        status_fail "$label" "SKIPPED — main is protected, use MRs"
+        exit 1
+    fi
+    ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+    if [[ "$ahead" -eq 0 ]]; then
+        status_ok "$label" "nothing to push"
+        exit 0
+    fi
+    status_info "$label" "pushing $ahead commit(s) on $branch..."
+    if git -C "$dir" push 2>&1; then
+        status_ok "$label" "pushed"
+    else
+        status_info "$label" "push rejected — trying force-with-lease"
+        if git -C "$dir" push --force-with-lease 2>&1; then
+            status_ok "$label" "pushed (force-with-lease)"
+        else
+            status_fail "$label" "push FAILED (force-with-lease also rejected)"
+            exit 1
+        fi
+    fi
+
 # Show diff of current branch vs origin/main
 # Usage: just git diff-main [repo]   (omit repo to diff all repos with branches)
 [no-cd]
