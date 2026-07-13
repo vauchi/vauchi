@@ -1680,6 +1680,7 @@ help:
 
     Setup:
       just setup              Clone all repos, init workspace
+      just setup-completion [bash|zsh]  Install shell completions
       just install-dev-deps   Install toolchain (Homebrew + Cargo)
       just clean              Clean all build artifacts
 

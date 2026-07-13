@@ -982,6 +982,55 @@ setup-fast-builds:
         echo "No changes needed."
     fi
 
+# Install shell completions for just (bash + zsh by default)
+# Usage: just setup-completion [bash|zsh]
+[group('setup')]
+[script]
+setup-completion shell="":
+    set -euo pipefail
+
+    install_bash() {
+        local dir="$HOME/.local/share/bash-completion/completions"
+        mkdir -p "$dir"
+        just --completions bash > "$dir/just"
+        echo "  bash: $dir/just"
+    }
+
+    install_zsh() {
+        local dir="$HOME/.zfunc"
+        mkdir -p "$dir"
+        just --completions zsh > "$dir/_just"
+        echo "  zsh:  $dir/_just"
+
+        if [[ -f "$HOME/.zshrc" ]]; then
+            if grep -qE 'fpath.*\.zfunc' "$HOME/.zshrc"; then
+                echo "  zsh:  ~/.zfunc already in fpath"
+            else
+                local tmp
+                tmp=$(mktemp)
+                if grep -q 'compinit' "$HOME/.zshrc"; then
+                    awk '/compinit/ && !inserted { print "fpath+=(~/.zfunc)"; inserted=1 } { print }' \
+                        "$HOME/.zshrc" > "$tmp"
+                else
+                    cp "$HOME/.zshrc" "$tmp"
+                    echo 'fpath+=(~/.zfunc)' >> "$tmp"
+                fi
+                mv "$tmp" "$HOME/.zshrc"
+                echo "  zsh:  added ~/.zfunc to fpath in ~/.zshrc"
+            fi
+        fi
+    }
+
+    echo "── Installing just shell completions ──"
+    if [[ -z "{{shell}}" || "{{shell}}" == "bash" ]]; then
+        install_bash
+    fi
+    if [[ -z "{{shell}}" || "{{shell}}" == "zsh" ]]; then
+        install_zsh
+    fi
+    echo "── Done ──"
+    echo "Reload your shell or start a new terminal to use completions."
+
 # Inject `[patch]` blocks into each consumer repo's `Cargo.toml` so
 # local cargo invocations resolve `vauchi-core` / `vauchi-app` /
 # `vauchi-protocol` / `vauchi-relay` to the sibling clones rather than
