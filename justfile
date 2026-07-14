@@ -943,18 +943,28 @@ release-chain-status version="":
 
     # 1. Core tags
     echo "── Core Tags ──"
-    TAGS=$(git -C core tag -l "v${BASE}*" 2>/dev/null | sort -V)
+    # Include origin tags even when the local clone has not fetched them.
+    TAGS=$({
+        git -C core tag -l "v${BASE}*" 2>/dev/null
+        git -C core ls-remote --tags --refs origin "refs/tags/v${BASE}*" 2>/dev/null \
+            | awk '{sub("^refs/tags/", "", $2); print $2}'
+    } | sort -Vu)
     if [[ -z "$TAGS" ]]; then
         echo "  No tags for v${BASE}"
     else
         echo "$TAGS" | while read -r tag; do
-            DATE=$(git -C core log -1 --format=%ci "$tag" 2>/dev/null | cut -d' ' -f1)
+            DATE=$(git -C core log -1 --format=%ci "$tag" 2>/dev/null | cut -d' ' -f1 || true)
             if echo "$tag" | grep -q "dev"; then
-                echo "  $tag  ($DATE)  [dev]"
+                CLASS="dev"
             elif echo "$tag" | grep -q "rc"; then
-                echo "  $tag  ($DATE)  [RC]"
+                CLASS="RC"
             else
-                echo "  $tag  ($DATE)  [PROD]"
+                CLASS="PROD"
+            fi
+            if [[ -n "$DATE" ]]; then
+                echo "  $tag  ($DATE)  [$CLASS]"
+            else
+                echo "  $tag  [$CLASS]"
             fi
         done
     fi
@@ -975,17 +985,30 @@ release-chain-status version="":
     # 3. Distribution repo status
     for dist_repo in vauchi-platform-swift; do
         echo "── ${dist_repo} ──"
+        DIST_TAGS=$(git -C "${dist_repo}" ls-remote --tags --refs origin \
+            "refs/tags/v${BASE}*" 2>/dev/null \
+            | awk '{sub("^refs/tags/", "", $2); print $2}' \
+            | sort -Vu)
+        if [[ -n "$DIST_TAGS" ]]; then
+            echo "  Published tags: $(echo "$DIST_TAGS" | paste -sd, -)"
+        else
+            echo "  No published tags for v${BASE}"
+        fi
         if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
-            # Check for open MRs mentioning this version
-            MRS=$(glab mr list -R "vauchi/${dist_repo}" --state opened 2>/dev/null | grep -i "${BASE}" || true)
+            MRS=$(glab mr list -R "vauchi/${dist_repo}" --all \
+                --search "${BASE}" --per-page 5 -F json 2>/dev/null \
+                | jq -r '.[] | "!\(.iid) [\(.state)] \(.title) — \(.web_url)"' \
+                || true)
             if [[ -n "$MRS" ]]; then
-                echo "  Open MRs:"
+                echo "  Matching MRs:"
                 echo "$MRS" | sed 's/^/    /'
             else
-                echo "  No open MRs for v${BASE}"
+                echo "  No matching MRs for v${BASE}"
             fi
-            # Show latest pipeline (just the first result line, skip header)
-            LATEST=$(glab ci list -R "vauchi/${dist_repo}" 2>/dev/null | head -2 | tail -1)
+            LATEST=$(glab ci list -R "vauchi/${dist_repo}" --per-page 1 \
+                -F json 2>/dev/null \
+                | jq -r '.[0] | select(.) | "#\(.id) [\(.status)] ref=\(.ref) \(.web_url)"' \
+                || true)
             if [[ -n "$LATEST" ]]; then
                 echo "  Latest pipeline: $LATEST"
             fi
@@ -999,12 +1022,15 @@ release-chain-status version="":
     for app_repo in ios android; do
         echo "── ${app_repo} ──"
         if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
-            MRS=$(glab mr list -R "vauchi/${app_repo}" --state opened 2>/dev/null | grep -i "${BASE}" || true)
+            MRS=$(glab mr list -R "vauchi/${app_repo}" --all \
+                --search "${BASE}" --per-page 5 -F json 2>/dev/null \
+                | jq -r '.[] | "!\(.iid) [\(.state)] \(.title) — \(.web_url)"' \
+                || true)
             if [[ -n "$MRS" ]]; then
-                echo "  Open MRs:"
+                echo "  Matching MRs:"
                 echo "$MRS" | sed 's/^/    /'
             else
-                echo "  No open MRs for v${BASE}"
+                echo "  No matching MRs for v${BASE}"
             fi
         else
             echo "  (glab not authenticated)"
