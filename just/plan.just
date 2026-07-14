@@ -565,8 +565,74 @@ release-gates:
     python3 << 'PYEOF'
     import re, sys
     from datetime import date
+    from pathlib import Path
 
     PLAN = "_private/docs/planning/master-plan.plan.md"
+    DEPLOY_CONFIG = Path("_private/infra/config/deploy.combined.yml")
+
+    def first_match(pattern, text):
+        match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
+        return match.group(1).strip().strip('"\'') if match else ""
+
+    def extract_ohttp_block(text):
+        match = re.search(
+            r"(?ms)^  ohttp-relay:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)",
+            text,
+        )
+        return match.group("body") if match else ""
+
+    def release_config_failures():
+        if not DEPLOY_CONFIG.is_file():
+            return [f"{DEPLOY_CONFIG} is missing"]
+
+        deploy_text = DEPLOY_CONFIG.read_text()
+        relay_block = first_match(
+            r"(?ms)^servers:\n(?P<body>.*?)(?=^proxy:|^# Relay proxy|^env:|\Z)",
+            deploy_text,
+        )
+        ohttp_block = extract_ohttp_block(deploy_text)
+
+        relay_host = first_match(r"(?m)^\s+-\s*([A-Za-z0-9_.-]+)\s*$", relay_block)
+        ohttp_host = first_match(
+            r"(?m)^\s+host:\s*\"?([A-Za-z0-9_.-]+)\"?\s*$", ohttp_block
+        )
+        relay_operator = first_match(
+            r"(?m)^\s+app\.vauchi\.operator:\s*\"?([^\"\n#]+)\"?\s*$",
+            relay_block,
+        )
+        ohttp_operator = first_match(
+            r"(?m)^\s+app\.vauchi\.operator:\s*\"?([^\"\n#]+)\"?\s*$",
+            ohttp_block,
+        )
+
+        failures = []
+        if not relay_host:
+            failures.append("application relay host is not declared")
+        if not ohttp_host:
+            failures.append("OHTTP relay host is not declared")
+        if relay_host and ohttp_host and relay_host == ohttp_host:
+            failures.append(
+                f"application relay and OHTTP relay share host '{relay_host}'"
+            )
+        if not relay_operator:
+            failures.append(
+                "application relay operator identity label "
+                "app.vauchi.operator is not declared"
+            )
+        if not ohttp_operator:
+            failures.append(
+                "OHTTP relay operator identity label app.vauchi.operator "
+                "is not declared"
+            )
+        if (
+            relay_operator
+            and ohttp_operator
+            and relay_operator == ohttp_operator
+        ):
+            failures.append(
+                f"operator identities are not distinct ('{relay_operator}')"
+            )
+        return failures
 
     try:
         with open(PLAN) as f:
@@ -619,6 +685,8 @@ release-gates:
     # --- Output ---
     done_hard = [h for h in hard if h[2]]
     open_hard = [h for h in hard if not h[2]]
+    rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
+    config_failures = release_config_failures() if rg7_done else []
 
     print(f"Production Release Readiness — {date.today()}")
     print(f"Source: master-plan.plan.md (single source of truth)\n")
@@ -631,10 +699,22 @@ release-gates:
 
     if open_hard:
         print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
+    if config_failures:
+        print("\n  >>> RG-7 release config failure <<<")
+        for failure in config_failures:
+            print(f"      - {failure}")
+        print(
+            "      ADR-037 requires distinct OHTTP gateway and application "
+            "relay operators."
+        )
+    if not open_hard and config_failures:
+        print("\n  Release remains blocked by release-configuration evidence.")
+    elif open_hard:
+        pass
     else:
         print(f"\n  All hard gates passed!")
 
-    sys.exit(0 if not open_hard else 1)
+    sys.exit(0 if not open_hard and not config_failures else 1)
     PYEOF
 
 # Detect satellite docs that duplicate master plan status (run in session-init)

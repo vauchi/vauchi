@@ -13,13 +13,15 @@ JUSTFILE = Path(sys.argv.pop(1)).resolve()
 
 
 def plan_with_gates(
-    completed_gate: int | None = None, excluded_gate: int | None = None
+    completed_gate: int | None = None,
+    excluded_gate: int | None = None,
+    all_completed: bool = False,
 ) -> str:
     gates = []
     for gate_number in range(1, 16):
         if gate_number == excluded_gate:
             continue
-        marker = "[x] " if gate_number == completed_gate else ""
+        marker = "[x] " if all_completed or gate_number == completed_gate else ""
         gates.append(f"   - {marker}RG-{gate_number} — Gate {gate_number} outcome.")
     return "\n".join(
         [
@@ -40,12 +42,18 @@ def plan_with_gates(
 
 
 class ReleaseGatesTest(unittest.TestCase):
-    def run_release_gates(self, plan: str) -> subprocess.CompletedProcess[str]:
+    def run_release_gates(
+        self, plan: str, deploy_config: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
             plan_path.write_text(plan)
+            if deploy_config is not None:
+                deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
+                deploy_path.parent.mkdir(parents=True)
+                deploy_path.write_text(deploy_config)
             return subprocess.run(
                 [
                     "just",
@@ -87,6 +95,71 @@ class ReleaseGatesTest(unittest.TestCase):
 
         self.assertNotEqual(0, result.returncode)
         self.assertIn("ERROR: expected RG-1 through RG-15", result.stderr)
+
+    def test_completed_rg7_requires_distinct_relay_hosts(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(all_completed=True),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - bold-hopper-vps
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: bold-hopper-vps
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn("application relay and OHTTP relay share host", result.stdout)
+
+    def test_completed_rg7_requires_distinct_operator_labels(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(all_completed=True),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: same-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: same-operator
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn("operator identities are not distinct", result.stdout)
+
+    def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(all_completed=True),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+        )
+
+        self.assertEqual(0, result.returncode)
+        self.assertIn("All hard gates passed", result.stdout)
 
 
 if __name__ == "__main__":
