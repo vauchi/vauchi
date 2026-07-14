@@ -77,6 +77,7 @@ class ReleaseGatesTest(unittest.TestCase):
         deploy_config: str | None = None,
         adr_065: str | None = None,
         ignored_test_count: int | None = None,
+        core_tags: list[str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -103,6 +104,29 @@ class ReleaseGatesTest(unittest.TestCase):
                         ]
                     )
                 )
+            if core_tags is not None:
+                core_path = workspace / "core"
+                core_path.mkdir()
+                subprocess.run(["git", "init", "--quiet"], cwd=core_path, check=True)
+                subprocess.run(
+                    ["git", "config", "user.email", "test@example.invalid"],
+                    cwd=core_path,
+                    check=True,
+                )
+                subprocess.run(
+                    ["git", "config", "user.name", "Release Gate Test"],
+                    cwd=core_path,
+                    check=True,
+                )
+                (core_path / "README.md").write_text("test core repo\n")
+                subprocess.run(["git", "add", "README.md"], cwd=core_path, check=True)
+                subprocess.run(
+                    ["git", "commit", "--quiet", "-m", "test core repo"],
+                    cwd=core_path,
+                    check=True,
+                )
+                for tag in core_tags:
+                    subprocess.run(["git", "tag", tag], cwd=core_path, check=True)
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -266,6 +290,7 @@ accessories:
 **Status**: Accepted
 """,
             ignored_test_count=5,
+            core_tags=["v0.55.2"],
         )
 
         self.assertEqual(0, result.returncode)
@@ -372,6 +397,43 @@ accessories:
         self.assertIn("E2E ignored-test evidence failure", result.stdout)
         self.assertIn("6 ignored Rust E2E test(s), expected no more than 5", result.stdout)
 
+    def test_completed_convergence_gates_require_current_core_binding_tag(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization. "
+                    "Core !1391 publishes current core main as 0.55.2 bindings."
+                ),
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+            ignored_test_count=5,
+            core_tags=["v0.55.1"],
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("Core binding release evidence failure", result.stdout)
+        self.assertIn("required core tag v0.55.2 is missing", result.stdout)
+
     def test_checked_protocol_v2_requires_accepted_adr_065(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -471,6 +533,7 @@ accessories:
 **Status**: Accepted
 """,
             ignored_test_count=5,
+            core_tags=["v0.55.2"],
         )
 
         self.assertEqual(0, result.returncode)

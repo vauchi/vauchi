@@ -563,7 +563,7 @@ test-release-gates:
 release-gates:
     set -euo pipefail
     python3 << 'PYEOF'
-    import re, sys
+    import re, subprocess, sys
     from datetime import date
     from pathlib import Path
 
@@ -574,6 +574,8 @@ release-gates:
         "adr-065-first-release-protocol-version-contract.md"
     )
     E2E_DIR = Path("e2e")
+    CORE_REPO = Path("core")
+    REQUIRED_CORE_BINDING_TAG = "v0.55.2"
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
@@ -684,6 +686,28 @@ release-gates:
                 f"no more than {ceiling}"
             )
         return failures
+
+    def core_binding_release_failures():
+        if not CORE_REPO.is_dir():
+            return ["core repository is missing"]
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(CORE_REPO),
+                "tag",
+                "--list",
+                REQUIRED_CORE_BINDING_TAG,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return [f"cannot inspect core tags: {result.stderr.strip()}"]
+        if result.stdout.strip() != REQUIRED_CORE_BINDING_TAG:
+            return [f"required core tag {REQUIRED_CORE_BINDING_TAG} is missing"]
+        return []
 
     try:
         with open(PLAN) as f:
@@ -797,7 +821,14 @@ release-gates:
     done_ship = [criterion for criterion in ship_criteria if criterion[2]]
     open_ship = [criterion for criterion in ship_criteria if not criterion[2]]
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
+    binding_release_done = any(
+        gid in {"RG-10", "RG-14"} and done
+        for gid, _name, done, _detail in hard
+    )
     config_failures = release_config_failures() if rg7_done else []
+    core_binding_release_failures = (
+        core_binding_release_failures() if binding_release_done else []
+    )
     protocol_v2_done = any(
         criterion == "Protocol v2" and done
         for criterion, _required_state, done in ship_criteria
@@ -871,6 +902,10 @@ release-gates:
         print("\n  >>> E2E ignored-test evidence failure <<<")
         for failure in e2e_ignored_test_failures:
             print(f"      - {failure}")
+    if core_binding_release_failures:
+        print("\n  >>> Core binding release evidence failure <<<")
+        for failure in core_binding_release_failures:
+            print(f"      - {failure}")
     if (
         not open_hard
         and (
@@ -878,6 +913,7 @@ release-gates:
             or status_failures
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
+            or core_binding_release_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -894,6 +930,7 @@ release-gates:
         and not status_failures
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
+        and not core_binding_release_failures
         else 1
     )
     PYEOF
