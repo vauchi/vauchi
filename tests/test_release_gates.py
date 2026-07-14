@@ -10,9 +10,13 @@ from pathlib import Path
 JUSTFILE = Path(sys.argv.pop(1)).resolve()
 
 
-def plan_with_gates(completed_gate: int | None = None) -> str:
+def plan_with_gates(
+    completed_gate: int | None = None, excluded_gate: int | None = None
+) -> str:
     gates = []
     for gate_number in range(1, 16):
+        if gate_number == excluded_gate:
+            continue
         marker = "[x] " if gate_number == completed_gate else ""
         gates.append(f"   - {marker}RG-{gate_number} — Gate {gate_number} outcome.")
     return "\n".join(
@@ -58,6 +62,8 @@ class ReleaseGatesTest(unittest.TestCase):
         result = self.run_release_gates(plan_with_gates())
 
         self.assertEqual(1, result.returncode)
+        self.assertIn("Production Release Readiness", result.stdout)
+        self.assertNotIn("v0.2.0", result.stdout)
         self.assertIn("HARD GATES (0/15 done)", result.stdout)
         self.assertIn("15 HARD GATE(s) block release", result.stdout)
 
@@ -73,6 +79,12 @@ class ReleaseGatesTest(unittest.TestCase):
 
         self.assertNotEqual(0, result.returncode)
         self.assertIn("ERROR: no RG release gates found", result.stderr)
+
+    def test_missing_rg_task_fails_loudly(self) -> None:
+        result = self.run_release_gates(plan_with_gates(excluded_gate=9))
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("ERROR: expected RG-1 through RG-15", result.stderr)
 
 
 if __name__ == "__main__":
