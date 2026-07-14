@@ -547,9 +547,8 @@ ci-wait repo='':
 
 # Run tests for specific crate (within core workspace)
 [group('extended')]
-[working-directory('core')]
 test-crate crate:
-    cargo test -p {{crate}} --features vauchi-core/testing
+    cd core && cargo test -p {{crate}} --features vauchi-core/testing
 
 # Run a single test file by name
 # Usage: just test-file identity_test           (searches core/)
@@ -619,9 +618,8 @@ test-name pattern repo='core':
 
 # Build release binaries
 [group('extended')]
-[working-directory('core')]
 build-release:
-    cargo build --workspace --release
+    cd core && cargo build --workspace --release
 
 # Build vauchi-cabi DLL for Windows (requires Rust + MSVC + CMake + NASM)
 [group('extended')]
@@ -1124,9 +1122,8 @@ run-website *args:
 
 # Watch for changes and run tests (core only)
 [group('extended')]
-[working-directory('core')]
 watch:
-    cargo watch -x "test --workspace"
+    cd core && cargo watch -x "test --workspace"
 
 # Engineering metrics dashboard (PI-21)
 [group('extended')]
@@ -1357,9 +1354,8 @@ bench *args:
 
 # Generate and open Rust docs
 [group('extended')]
-[working-directory('core')]
 docs:
-    cargo doc --workspace --no-deps --open
+    cd core && cargo doc --workspace --no-deps --open
 
 # Install git hooks (pre-commit + pre-push) across all repos
 [group('extended')]
