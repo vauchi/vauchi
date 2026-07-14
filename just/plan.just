@@ -616,6 +616,10 @@ release-gates:
         "_private/docs/testing/usability/"
         "selectable-exchange-mode-acceptance.md"
     )
+    LONG_LIVED_CONTACT_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "long-lived-contact-continuity.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -1035,6 +1039,44 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def long_lived_contact_failures():
+        if not LONG_LIVED_CONTACT_EVIDENCE.is_file():
+            return [f"{LONG_LIVED_CONTACT_EVIDENCE.name} is missing"]
+
+        evidence_text = LONG_LIVED_CONTACT_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "long-lived contact continuity: passed": (
+                "long-lived contact continuity evidence"
+            ),
+            "composite longitudinal scenario: passed": (
+                "composite longitudinal scenario evidence"
+            ),
+            "clock-driven scenario: passed": "clock-driven scenario evidence",
+            "exchange remains useful: passed": (
+                "exchange remains useful evidence"
+            ),
+            "permitted detail changes: passed": (
+                "permitted detail change evidence"
+            ),
+            "offline catch-up: passed": "offline catch-up evidence",
+            "device add/revoke/replace: passed": (
+                "device add/revoke/replace evidence"
+            ),
+            "archive/unarchive: passed": "archive/unarchive evidence",
+            "block behavior: passed": "block behavior evidence",
+            "ignore semantics: accepted": "accepted ignore semantics evidence",
+            "ignored relationship behavior: passed": (
+                "ignored relationship behavior evidence"
+            ),
+            "no re-exchange required: passed": "no re-exchange evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1195,6 +1237,10 @@ release-gates:
         gid == "RG-13" and done
         for gid, _name, done, _detail in hard
     )
+    long_lived_contact_done = any(
+        gid == "RG-15" and done
+        for gid, _name, done, _detail in hard
+    )
     frontend_journey_failures = (
         frontend_journey_failures() if frontend_journey_done else []
     )
@@ -1229,6 +1275,9 @@ release-gates:
     )
     usability_evidence_failures = (
         usability_evidence_failures() if usability_done else []
+    )
+    long_lived_contact_failures = (
+        long_lived_contact_failures() if long_lived_contact_done else []
     )
     protocol_v2_done = any(
         criterion == "Protocol v2" and done
@@ -1351,6 +1400,10 @@ release-gates:
         print("\n  >>> RG-13 usability evidence failure <<<")
         for failure in usability_evidence_failures:
             print(f"      - {failure}")
+    if long_lived_contact_failures:
+        print("\n  >>> RG-15 long-lived contact evidence failure <<<")
+        for failure in long_lived_contact_failures:
+            print(f"      - {failure}")
     if (
         not open_hard
         and (
@@ -1370,6 +1423,7 @@ release-gates:
             or humble_ui_failures
             or accessibility_evidence_failures
             or usability_evidence_failures
+            or long_lived_contact_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -1398,6 +1452,7 @@ release-gates:
         and not humble_ui_failures
         and not accessibility_evidence_failures
         and not usability_evidence_failures
+        and not long_lived_contact_failures
         else 1
     )
     PYEOF
