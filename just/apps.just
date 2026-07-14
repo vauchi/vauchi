@@ -7,7 +7,7 @@
 # Run an application: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]
 [group('apps')]
 [script]
-run platform="" *args:
+run platform *args:
     set -e
     case "{{platform}}" in
         cli)
@@ -111,13 +111,10 @@ run platform="" *args:
 
 # Start relay server
 [group('apps')]
-[working-directory('relay')]
 relay:
-    cargo run
+    cd relay && cargo run
 
 # Run TUI application
 [group('apps')]
-[working-directory('tui')]
 tui:
-    cargo run
-
+    cd tui && cargo run

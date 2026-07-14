@@ -62,15 +62,13 @@ e2e-integration: e2e-build
 # Uses --no-default-features to disable secure-storage (macOS Keychain)
 # which doesn't persist keys between CLI process invocations.
 [private]
-[working-directory('cli')]
 build-cli:
-    cargo build --no-default-features --release --target-dir ../target
+    cd cli && cargo build --no-default-features --release --target-dir ../target
 
 # Build relay binary (into shared target dir for e2e tests)
 [private]
-[working-directory('relay')]
 build-relay:
-    cargo build --release --target-dir ../target
+    cd relay && cargo build --release --target-dir ../target
 
 # ═══════════════════════════════════════════════════════════════
 # CROSS-PLATFORM E2E TESTING

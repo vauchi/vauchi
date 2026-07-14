@@ -25,9 +25,8 @@ build-android mode="debug":
 
 # Build Android APK
 [group('mobile')]
-[working-directory('android')]
 android mode="debug": (build-android mode)
-    ./gradlew assemble{{ capitalize(mode) }}
+    cd android && ./gradlew assemble{{ capitalize(mode) }}
 
 # Build iOS framework (macOS only)
 # NOTE: Requires ios/build-ios.sh — see platform-bindings skill

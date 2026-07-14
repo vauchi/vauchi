@@ -186,7 +186,9 @@ main mode='':
 
 # Show git status for all repos
 [no-cd]
-[default]
+default: status
+
+[no-cd]
 [script]
 status:
     source scripts/scripts/output-helpers.sh
