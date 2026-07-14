@@ -576,6 +576,10 @@ release-gates:
     E2E_DIR = Path("e2e")
     CORE_REPO = Path("core")
     REQUIRED_CORE_BINDING_TAG = "v0.55.2"
+    USABILITY_EVIDENCE = Path(
+        "_private/docs/testing/usability/"
+        "first-release-unassisted-sessions.md"
+    )
     FRONTEND_REPOS = (
         Path("android"),
         Path("ios"),
@@ -738,6 +742,31 @@ release-gates:
             return [f"{todo_count} TODO(HUMBLE) site(s) remain"]
         return []
 
+    def usability_evidence_failures():
+        if not USABILITY_EVIDENCE.is_file():
+            return [f"{USABILITY_EVIDENCE.name} is missing"]
+
+        evidence_text = USABILITY_EVIDENCE.read_text(errors="ignore")
+        failures = []
+        required_phrases = {
+            "representative": "representative users",
+            "unassisted": "unassisted central journey",
+            "approved study protocol": "approved study protocol",
+        }
+        lowered = evidence_text.lower()
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} evidence is missing")
+
+        session_count = len(
+            re.findall(r"(?mi)^\s*-\s+Session\s+\d+\s*:", evidence_text)
+        )
+        if session_count < 3:
+            failures.append(
+                f"{session_count} unassisted session record(s), expected at least 3"
+            )
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -858,11 +887,18 @@ release-gates:
         gid == "RG-11" and done
         for gid, _name, done, _detail in hard
     )
+    usability_done = any(
+        gid == "RG-13" and done
+        for gid, _name, done, _detail in hard
+    )
     config_failures = release_config_failures() if rg7_done else []
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
     )
     humble_ui_failures = humble_ui_failures() if humble_ui_done else []
+    usability_evidence_failures = (
+        usability_evidence_failures() if usability_done else []
+    )
     protocol_v2_done = any(
         criterion == "Protocol v2" and done
         for criterion, _required_state, done in ship_criteria
@@ -944,6 +980,10 @@ release-gates:
         print("\n  >>> RG-11 Humble UI evidence failure <<<")
         for failure in humble_ui_failures:
             print(f"      - {failure}")
+    if usability_evidence_failures:
+        print("\n  >>> RG-13 usability evidence failure <<<")
+        for failure in usability_evidence_failures:
+            print(f"      - {failure}")
     if (
         not open_hard
         and (
@@ -953,6 +993,7 @@ release-gates:
             or e2e_ignored_test_failures
             or core_binding_release_failures
             or humble_ui_failures
+            or usability_evidence_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -971,6 +1012,7 @@ release-gates:
         and not e2e_ignored_test_failures
         and not core_binding_release_failures
         and not humble_ui_failures
+        and not usability_evidence_failures
         else 1
     )
     PYEOF
