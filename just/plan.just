@@ -588,6 +588,20 @@ release-gates:
         "_private/docs/testing/privacy/"
         "service-boundary-no-decryptability.md"
     )
+    OHTTP_FAIL_CLOSED_EVIDENCE = Path(
+        "_private/docs/testing/privacy/"
+        "ohttp-fail-closed.md"
+    )
+    PRODUCTION_CONSUMERS = (
+        "android",
+        "ios",
+        "macos",
+        "windows",
+        "linux-gtk",
+        "linux-qt",
+        "cli",
+        "tui",
+    )
     SUPPORTED_NATIVE_FRONTENDS = (
         "android",
         "ios",
@@ -821,6 +835,32 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def ohttp_fail_closed_failures():
+        if not OHTTP_FAIL_CLOSED_EVIDENCE.is_file():
+            return [f"{OHTTP_FAIL_CLOSED_EVIDENCE.name} is missing"]
+
+        evidence_text = OHTTP_FAIL_CLOSED_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        for consumer in PRODUCTION_CONSUMERS:
+            if consumer not in lowered:
+                failures.append(f"{consumer} fail-closed evidence is missing")
+
+        required_phrases = {
+            "plaintext path: fails closed": "plaintext path fail-closed evidence",
+            "tls-only path: fails closed": "TLS-only path fail-closed evidence",
+            "direct path: fails closed": "direct path fail-closed evidence",
+            "bootstrap path: fails closed": "bootstrap path fail-closed evidence",
+            "reachability-probe path: fails closed": (
+                "reachability-probe path fail-closed evidence"
+            ),
+            "no bypass": "no-bypass evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -937,6 +977,10 @@ release-gates:
         gid == "RG-6" and done
         for gid, _name, done, _detail in hard
     )
+    ohttp_fail_closed_done = any(
+        gid == "RG-8" and done
+        for gid, _name, done, _detail in hard
+    )
     binding_release_done = any(
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
@@ -956,6 +1000,9 @@ release-gates:
     config_failures = release_config_failures() if rg7_done else []
     service_boundary_privacy_failures = (
         service_boundary_privacy_failures() if privacy_done else []
+    )
+    ohttp_fail_closed_failures = (
+        ohttp_fail_closed_failures() if ohttp_fail_closed_done else []
     )
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
@@ -1036,6 +1083,10 @@ release-gates:
         print("\n  >>> RG-6 service-boundary privacy evidence failure <<<")
         for failure in service_boundary_privacy_failures:
             print(f"      - {failure}")
+    if ohttp_fail_closed_failures:
+        print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
+        for failure in ohttp_fail_closed_failures:
+            print(f"      - {failure}")
     if protocol_v2_evidence_failures:
         print("\n  >>> Protocol v2 evidence failure <<<")
         for failure in protocol_v2_evidence_failures:
@@ -1065,6 +1116,7 @@ release-gates:
         and (
             config_failures
             or service_boundary_privacy_failures
+            or ohttp_fail_closed_failures
             or status_failures
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
@@ -1086,6 +1138,7 @@ release-gates:
         and not open_ship
         and not config_failures
         and not service_boundary_privacy_failures
+        and not ohttp_fail_closed_failures
         and not status_failures
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
