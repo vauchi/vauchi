@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -81,6 +82,7 @@ class ReleaseGatesTest(unittest.TestCase):
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
+            env = os.environ.copy()
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
             plan_path.write_text(plan)
@@ -107,26 +109,32 @@ class ReleaseGatesTest(unittest.TestCase):
             if core_tags is not None:
                 core_path = workspace / "core"
                 core_path.mkdir()
-                subprocess.run(["git", "init", "--quiet"], cwd=core_path, check=True)
-                subprocess.run(
-                    ["git", "config", "user.email", "test@example.invalid"],
-                    cwd=core_path,
-                    check=True,
+                tag_list = workspace / "core-tags.txt"
+                tag_list.write_text("\n".join(core_tags))
+                fake_bin = workspace / "bin"
+                fake_bin.mkdir()
+                fake_git = fake_bin / "git"
+                fake_git.write_text(
+                    "\n".join(
+                        [
+                            "#!/bin/sh",
+                            'if [ "$1" = "-C" ] && [ "$3" = "tag" ] && '
+                            '[ "$4" = "--list" ]; then',
+                            '  if grep -Fx -- "$5" '
+                            '"$RELEASE_GATE_TEST_CORE_TAGS" >/dev/null; then',
+                            '    printf "%s\\n" "$5"',
+                            "  fi",
+                            "  exit 0",
+                            "fi",
+                            'printf "%s\\n" "unsupported fake git invocation" >&2',
+                            "exit 2",
+                            "",
+                        ]
+                    )
                 )
-                subprocess.run(
-                    ["git", "config", "user.name", "Release Gate Test"],
-                    cwd=core_path,
-                    check=True,
-                )
-                (core_path / "README.md").write_text("test core repo\n")
-                subprocess.run(["git", "add", "README.md"], cwd=core_path, check=True)
-                subprocess.run(
-                    ["git", "commit", "--quiet", "-m", "test core repo"],
-                    cwd=core_path,
-                    check=True,
-                )
-                for tag in core_tags:
-                    subprocess.run(["git", "tag", tag], cwd=core_path, check=True)
+                fake_git.chmod(0o755)
+                env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+                env["RELEASE_GATE_TEST_CORE_TAGS"] = str(tag_list)
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -143,6 +151,7 @@ class ReleaseGatesTest(unittest.TestCase):
                 check=False,
                 capture_output=True,
                 text=True,
+                env=env,
             )
 
     def test_open_rg_tasks_block_release(self) -> None:
