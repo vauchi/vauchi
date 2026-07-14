@@ -600,6 +600,10 @@ release-gates:
         "_private/docs/testing/release/"
         "local-two-user-propagation.md"
     )
+    OHTTP_RELAY_TWO_USER_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "ohttp-relay-two-user-propagation.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -913,6 +917,28 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def ohttp_relay_two_user_failures():
+        if not OHTTP_RELAY_TWO_USER_EVIDENCE.is_file():
+            return [f"{OHTTP_RELAY_TWO_USER_EVIDENCE.name} is missing"]
+
+        evidence_text = OHTTP_RELAY_TWO_USER_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "split-ohttp two-user: passed": "split-OHTTP two-user evidence",
+            "both privacy hops: passed": "both privacy hops evidence",
+            "ohttp relay: passed": "OHTTP relay evidence",
+            "application relay: passed": "application relay evidence",
+            "exchange propagation: passed": "exchange propagation evidence",
+            "update propagation: passed": "update propagation evidence",
+            "exact-value assertions: passed": "exact-value assertion evidence",
+            "blocking e2e pipeline: passed": "blocking E2E pipeline evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1032,6 +1058,10 @@ release-gates:
         gid == "RG-2" and done
         for gid, _name, done, _detail in hard
     )
+    ohttp_relay_two_user_done = any(
+        gid == "RG-3" and done
+        for gid, _name, done, _detail in hard
+    )
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     privacy_done = any(
         gid == "RG-6" and done
@@ -1062,6 +1092,9 @@ release-gates:
     )
     local_two_user_failures = (
         local_two_user_failures() if local_two_user_done else []
+    )
+    ohttp_relay_two_user_failures = (
+        ohttp_relay_two_user_failures() if ohttp_relay_two_user_done else []
     )
     config_failures = release_config_failures() if rg7_done else []
     service_boundary_privacy_failures = (
@@ -1157,6 +1190,10 @@ release-gates:
         print("\n  >>> RG-2 local two-user evidence failure <<<")
         for failure in local_two_user_failures:
             print(f"      - {failure}")
+    if ohttp_relay_two_user_failures:
+        print("\n  >>> RG-3 OHTTP relay evidence failure <<<")
+        for failure in ohttp_relay_two_user_failures:
+            print(f"      - {failure}")
     if ohttp_fail_closed_failures:
         print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
         for failure in ohttp_fail_closed_failures:
@@ -1191,6 +1228,7 @@ release-gates:
             config_failures
             or frontend_journey_failures
             or local_two_user_failures
+            or ohttp_relay_two_user_failures
             or service_boundary_privacy_failures
             or ohttp_fail_closed_failures
             or status_failures
@@ -1215,6 +1253,7 @@ release-gates:
         and not config_failures
         and not frontend_journey_failures
         and not local_two_user_failures
+        and not ohttp_relay_two_user_failures
         and not service_boundary_privacy_failures
         and not ohttp_fail_closed_failures
         and not status_failures
