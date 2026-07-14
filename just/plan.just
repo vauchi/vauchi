@@ -620,6 +620,10 @@ release-gates:
         "_private/docs/testing/release/"
         "long-lived-contact-continuity.md"
     )
+    PRODUCTION_DISTRIBUTION_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "production-distribution.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -1077,6 +1081,32 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def production_distribution_failures():
+        if not PRODUCTION_DISTRIBUTION_EVIDENCE.is_file():
+            return [f"{PRODUCTION_DISTRIBUTION_EVIDENCE.name} is missing"]
+
+        evidence_text = PRODUCTION_DISTRIBUTION_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        for consumer in PRODUCTION_CONSUMERS:
+            if consumer not in lowered:
+                failures.append(f"{consumer} distribution evidence is missing")
+
+        required_phrases = {
+            "signing: passed": "signing evidence",
+            "packaging: passed": "packaging evidence",
+            "installation: passed": "installation evidence",
+            "store submission: passed": "store submission evidence",
+            "notarization: passed": "notarization evidence",
+            "distribution-channel acceptance: passed": (
+                "distribution-channel acceptance evidence"
+            ),
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1225,6 +1255,10 @@ release-gates:
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
     )
+    production_distribution_done = any(
+        gid == "RG-14" and done
+        for gid, _name, done, _detail in hard
+    )
     humble_ui_done = any(
         gid == "RG-11" and done
         for gid, _name, done, _detail in hard
@@ -1268,6 +1302,9 @@ release-gates:
     )
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
+    )
+    production_distribution_failures = (
+        production_distribution_failures() if production_distribution_done else []
     )
     humble_ui_failures = humble_ui_failures() if humble_ui_done else []
     accessibility_evidence_failures = (
@@ -1388,6 +1425,10 @@ release-gates:
         print("\n  >>> Core binding release evidence failure <<<")
         for failure in core_binding_release_failures:
             print(f"      - {failure}")
+    if production_distribution_failures:
+        print("\n  >>> RG-14 production distribution evidence failure <<<")
+        for failure in production_distribution_failures:
+            print(f"      - {failure}")
     if humble_ui_failures:
         print("\n  >>> RG-11 Humble UI evidence failure <<<")
         for failure in humble_ui_failures:
@@ -1420,6 +1461,7 @@ release-gates:
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
             or core_binding_release_failures
+            or production_distribution_failures
             or humble_ui_failures
             or accessibility_evidence_failures
             or usability_evidence_failures
@@ -1449,6 +1491,7 @@ release-gates:
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
         and not core_binding_release_failures
+        and not production_distribution_failures
         and not humble_ui_failures
         and not accessibility_evidence_failures
         and not usability_evidence_failures
