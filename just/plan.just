@@ -624,6 +624,10 @@ release-gates:
         "_private/docs/testing/release/"
         "production-distribution.md"
     )
+    USER_DATA_CONVERGENCE_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "user-data-convergence.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -1107,6 +1111,46 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def user_data_convergence_failures():
+        if not USER_DATA_CONVERGENCE_EVIDENCE.is_file():
+            return [f"{USER_DATA_CONVERGENCE_EVIDENCE.name} is missing"]
+
+        evidence_text = USER_DATA_CONVERGENCE_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "user data convergence: passed": "user data convergence evidence",
+            "complete owner-private state convergence: passed": (
+                "complete owner-private state convergence evidence"
+            ),
+            "myinfo update/removal: passed": "MyInfo update/removal evidence",
+            "presentation cards: passed": "presentation-card evidence",
+            "group identity/membership/visibility/overrides: passed": (
+                "group identity/membership/visibility/override evidence"
+            ),
+            "tag change/deletion: passed": "tag change/deletion evidence",
+            "contacts/private notes: passed": "contacts/private notes evidence",
+            "all six devices synchronized: passed": (
+                "all-six-devices synchronized evidence"
+            ),
+            "canonical owner-private state: passed": (
+                "canonical owner-private state evidence"
+            ),
+            "permitted presentation state only: passed": (
+                "permitted presentation state evidence"
+            ),
+            "no private state leaked to bob or relay: passed": (
+                "private-state non-leakage evidence"
+            ),
+            "adr-020 deterministic convergence: passed": (
+                "ADR-020 deterministic convergence evidence"
+            ),
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1255,6 +1299,10 @@ release-gates:
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
     )
+    user_data_convergence_done = any(
+        gid == "RG-10" and done
+        for gid, _name, done, _detail in hard
+    )
     production_distribution_done = any(
         gid == "RG-14" and done
         for gid, _name, done, _detail in hard
@@ -1302,6 +1350,9 @@ release-gates:
     )
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
+    )
+    user_data_convergence_failures = (
+        user_data_convergence_failures() if user_data_convergence_done else []
     )
     production_distribution_failures = (
         production_distribution_failures() if production_distribution_done else []
@@ -1425,6 +1476,10 @@ release-gates:
         print("\n  >>> Core binding release evidence failure <<<")
         for failure in core_binding_release_failures:
             print(f"      - {failure}")
+    if user_data_convergence_failures:
+        print("\n  >>> RG-10 user-data convergence evidence failure <<<")
+        for failure in user_data_convergence_failures:
+            print(f"      - {failure}")
     if production_distribution_failures:
         print("\n  >>> RG-14 production distribution evidence failure <<<")
         for failure in production_distribution_failures:
@@ -1461,6 +1516,7 @@ release-gates:
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
             or core_binding_release_failures
+            or user_data_convergence_failures
             or production_distribution_failures
             or humble_ui_failures
             or accessibility_evidence_failures
@@ -1491,6 +1547,7 @@ release-gates:
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
         and not core_binding_release_failures
+        and not user_data_convergence_failures
         and not production_distribution_failures
         and not humble_ui_failures
         and not accessibility_evidence_failures
