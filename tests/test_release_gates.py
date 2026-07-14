@@ -40,6 +40,7 @@ def plan_with_gates(
     all_completed: bool = False,
     status_line: str = "All 15 release gates are open.",
     ship_criteria: str | None = CANONICAL_SHIP_CRITERIA,
+    extra_body: str = "",
 ) -> str:
     gates = []
     for gate_number in range(1, 16):
@@ -57,6 +58,8 @@ def plan_with_gates(
             "",
             ship_criteria or "",
             "",
+            extra_body,
+            "",
             "**Release gates**",
             "",
             "1. Complete all production release gates",
@@ -69,13 +72,24 @@ def plan_with_gates(
 
 class ReleaseGatesTest(unittest.TestCase):
     def run_release_gates(
-        self, plan: str, deploy_config: str | None = None
+        self,
+        plan: str,
+        deploy_config: str | None = None,
+        adr_065: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
             plan_path.write_text(plan)
+            if adr_065 is not None:
+                adr_path = (
+                    workspace
+                    / "_private/docs/decisions/"
+                    "adr-065-first-release-protocol-version-contract.md"
+                )
+                adr_path.parent.mkdir(parents=True)
+                adr_path.write_text(adr_065)
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -164,6 +178,7 @@ class ReleaseGatesTest(unittest.TestCase):
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
             ),
             deploy_config="""
 servers:
@@ -190,6 +205,7 @@ accessories:
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
             ),
             deploy_config="""
 servers:
@@ -216,6 +232,7 @@ accessories:
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
             ),
             deploy_config="""
 servers:
@@ -229,6 +246,11 @@ accessories:
     host: gateway-host
     labels:
       app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
 """,
         )
 
@@ -271,6 +293,69 @@ accessories:
         self.assertIn("Protocol v2", result.stdout)
         self.assertIn("E2E ignored tests", result.stdout)
 
+    def test_checked_protocol_v2_requires_accepted_adr_065(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Proposed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("Protocol v2 evidence failure", result.stdout)
+        self.assertIn("ADR-065 status is Proposed, not Accepted", result.stdout)
+
+    def test_checked_protocol_v2_requires_master_plan_adr_065_citation(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("Protocol v2 evidence failure", result.stdout)
+        self.assertIn("master plan does not cite ADR-065", result.stdout)
+
     def test_checked_hard_ship_criteria_can_pass_with_completed_rg_gates(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -286,6 +371,7 @@ accessories:
 | [x] E2E ignored tests | no more than 5 | hard |
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
 """,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
             ),
             deploy_config="""
 servers:
@@ -299,6 +385,11 @@ accessories:
     host: gateway-host
     labels:
       app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
 """,
         )
 

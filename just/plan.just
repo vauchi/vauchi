@@ -569,6 +569,10 @@ release-gates:
 
     PLAN = "_private/docs/planning/master-plan.plan.md"
     DEPLOY_CONFIG = Path("_private/infra/config/deploy.combined.yml")
+    ADR_065 = Path(
+        "_private/docs/decisions/"
+        "adr-065-first-release-protocol-version-contract.md"
+    )
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
@@ -631,6 +635,26 @@ release-gates:
         ):
             failures.append(
                 f"operator identities are not distinct ('{relay_operator}')"
+            )
+        return failures
+
+    def protocol_v2_failures(plan_text):
+        failures = []
+        if "ADR-065" not in plan_text:
+            failures.append("master plan does not cite ADR-065")
+        if not ADR_065.is_file():
+            failures.append(f"{ADR_065} is missing")
+            return failures
+
+        adr_text = ADR_065.read_text()
+        status_match = re.search(
+            r"(?m)^\*\*Status\*\*:\s*([^\n]+)$",
+            adr_text,
+        )
+        status = status_match.group(1).strip() if status_match else ""
+        if status != "Accepted":
+            failures.append(
+                f"ADR-065 status is {status or 'missing'}, not Accepted"
             )
         return failures
 
@@ -747,6 +771,13 @@ release-gates:
     open_ship = [criterion for criterion in ship_criteria if not criterion[2]]
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     config_failures = release_config_failures() if rg7_done else []
+    protocol_v2_done = any(
+        criterion == "Protocol v2" and done
+        for criterion, _required_state, done in ship_criteria
+    )
+    protocol_v2_evidence_failures = (
+        protocol_v2_failures(text) if protocol_v2_done else []
+    )
     status_failures = []
     if done_hard and re.search(
         r"\bAll\s+15\s+release\s+gates\s+are\s+open\b",
@@ -789,7 +820,18 @@ release-gates:
             "      ADR-037 requires distinct OHTTP gateway and application "
             "relay operators."
         )
-    if not open_hard and (config_failures or status_failures):
+    if protocol_v2_evidence_failures:
+        print("\n  >>> Protocol v2 evidence failure <<<")
+        for failure in protocol_v2_evidence_failures:
+            print(f"      - {failure}")
+    if (
+        not open_hard
+        and (
+            config_failures
+            or status_failures
+            or protocol_v2_evidence_failures
+        )
+    ):
         print("\n  Release remains blocked by release-configuration evidence.")
     elif open_hard:
         pass
@@ -802,6 +844,7 @@ release-gates:
         and not open_ship
         and not config_failures
         and not status_failures
+        and not protocol_v2_evidence_failures
         else 1
     )
     PYEOF
