@@ -44,7 +44,7 @@ test:release-gates:
   before_script:
     - apk add --no-cache just python3
   script:
-    - just test-release-gates
+    - JUST_UNSTABLE=1 just test-release-gates
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
