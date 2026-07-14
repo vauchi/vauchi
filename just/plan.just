@@ -612,6 +612,10 @@ release-gates:
         "_private/docs/testing/release/"
         "every-linked-device-exchange.md"
     )
+    SELECTABLE_EXCHANGE_EVIDENCE = Path(
+        "_private/docs/testing/usability/"
+        "selectable-exchange-mode-acceptance.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -1007,6 +1011,30 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def selectable_exchange_failures():
+        if not SELECTABLE_EXCHANGE_EVIDENCE.is_file():
+            return [f"{SELECTABLE_EXCHANGE_EVIDENCE.name} is missing"]
+
+        evidence_text = SELECTABLE_EXCHANGE_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "selectable exchange modes: passed": (
+                "selectable exchange modes acceptance evidence"
+            ),
+            "functionality: passed": "functionality acceptance evidence",
+            "latency: accepted": "latency acceptance evidence",
+            "enjoyment: accepted": "enjoyment acceptance evidence",
+            "accessibility: passed": "accessibility acceptance evidence",
+            "cancellation: passed": "cancellation acceptance evidence",
+            "retry: passed": "retry acceptance evidence",
+            "recovery: passed": "recovery acceptance evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1147,6 +1175,10 @@ release-gates:
         gid == "RG-8" and done
         for gid, _name, done, _detail in hard
     )
+    selectable_exchange_done = any(
+        gid == "RG-9" and done
+        for gid, _name, done, _detail in hard
+    )
     binding_release_done = any(
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
@@ -1184,6 +1216,9 @@ release-gates:
     )
     ohttp_fail_closed_failures = (
         ohttp_fail_closed_failures() if ohttp_fail_closed_done else []
+    )
+    selectable_exchange_failures = (
+        selectable_exchange_failures() if selectable_exchange_done else []
     )
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
@@ -1288,6 +1323,10 @@ release-gates:
         print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
         for failure in ohttp_fail_closed_failures:
             print(f"      - {failure}")
+    if selectable_exchange_failures:
+        print("\n  >>> RG-9 selectable exchange evidence failure <<<")
+        for failure in selectable_exchange_failures:
+            print(f"      - {failure}")
     if protocol_v2_evidence_failures:
         print("\n  >>> Protocol v2 evidence failure <<<")
         for failure in protocol_v2_evidence_failures:
@@ -1323,6 +1362,7 @@ release-gates:
             or every_linked_device_failures
             or service_boundary_privacy_failures
             or ohttp_fail_closed_failures
+            or selectable_exchange_failures
             or status_failures
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
@@ -1350,6 +1390,7 @@ release-gates:
         and not every_linked_device_failures
         and not service_boundary_privacy_failures
         and not ohttp_fail_closed_failures
+        and not selectable_exchange_failures
         and not status_failures
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
