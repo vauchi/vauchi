@@ -580,6 +580,18 @@ release-gates:
         "_private/docs/testing/usability/"
         "first-release-unassisted-sessions.md"
     )
+    ACCESSIBILITY_EVIDENCE = Path(
+        "_private/docs/testing/accessibility/"
+        "native-frontend-acceptance.md"
+    )
+    SUPPORTED_NATIVE_FRONTENDS = (
+        "android",
+        "ios",
+        "macos",
+        "windows",
+        "linux-gtk",
+        "linux-qt",
+    )
     FRONTEND_REPOS = (
         Path("android"),
         Path("ios"),
@@ -767,6 +779,22 @@ release-gates:
             )
         return failures
 
+    def accessibility_evidence_failures():
+        if not ACCESSIBILITY_EVIDENCE.is_file():
+            return [f"{ACCESSIBILITY_EVIDENCE.name} is missing"]
+
+        evidence_text = ACCESSIBILITY_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        for frontend in SUPPORTED_NATIVE_FRONTENDS:
+            if frontend not in lowered:
+                failures.append(f"{frontend} accessibility evidence is missing")
+        if "physical screen-reader" not in lowered:
+            failures.append("physical screen-reader walkthrough evidence is missing")
+        if "blocking accessibility defects: zero" not in lowered:
+            failures.append("zero blocking accessibility defects evidence is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -887,6 +915,10 @@ release-gates:
         gid == "RG-11" and done
         for gid, _name, done, _detail in hard
     )
+    accessibility_done = any(
+        gid == "RG-12" and done
+        for gid, _name, done, _detail in hard
+    )
     usability_done = any(
         gid == "RG-13" and done
         for gid, _name, done, _detail in hard
@@ -896,6 +928,9 @@ release-gates:
         core_binding_release_failures() if binding_release_done else []
     )
     humble_ui_failures = humble_ui_failures() if humble_ui_done else []
+    accessibility_evidence_failures = (
+        accessibility_evidence_failures() if accessibility_done else []
+    )
     usability_evidence_failures = (
         usability_evidence_failures() if usability_done else []
     )
@@ -980,6 +1015,10 @@ release-gates:
         print("\n  >>> RG-11 Humble UI evidence failure <<<")
         for failure in humble_ui_failures:
             print(f"      - {failure}")
+    if accessibility_evidence_failures:
+        print("\n  >>> RG-12 accessibility evidence failure <<<")
+        for failure in accessibility_evidence_failures:
+            print(f"      - {failure}")
     if usability_evidence_failures:
         print("\n  >>> RG-13 usability evidence failure <<<")
         for failure in usability_evidence_failures:
@@ -993,6 +1032,7 @@ release-gates:
             or e2e_ignored_test_failures
             or core_binding_release_failures
             or humble_ui_failures
+            or accessibility_evidence_failures
             or usability_evidence_failures
         )
     ):
@@ -1012,6 +1052,7 @@ release-gates:
         and not e2e_ignored_test_failures
         and not core_binding_release_failures
         and not humble_ui_failures
+        and not accessibility_evidence_failures
         and not usability_evidence_failures
         else 1
     )
