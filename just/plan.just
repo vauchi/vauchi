@@ -596,6 +596,10 @@ release-gates:
         "_private/docs/testing/frontend/"
         "core-user-journey.md"
     )
+    LOCAL_TWO_USER_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "local-two-user-propagation.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -888,6 +892,27 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def local_two_user_failures():
+        if not LOCAL_TWO_USER_EVIDENCE.is_file():
+            return [f"{LOCAL_TWO_USER_EVIDENCE.name} is missing"]
+
+        evidence_text = LOCAL_TWO_USER_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "local two-user: passed": "local two-user evidence",
+            "representative two-device run: passed": (
+                "representative two-device run evidence"
+            ),
+            "mutual exchange: passed": "mutual exchange evidence",
+            "update propagation: passed": "update propagation evidence",
+            "exact-value assertions: passed": "exact-value assertion evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1003,6 +1028,10 @@ release-gates:
         gid == "RG-1" and done
         for gid, _name, done, _detail in hard
     )
+    local_two_user_done = any(
+        gid == "RG-2" and done
+        for gid, _name, done, _detail in hard
+    )
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     privacy_done = any(
         gid == "RG-6" and done
@@ -1030,6 +1059,9 @@ release-gates:
     )
     frontend_journey_failures = (
         frontend_journey_failures() if frontend_journey_done else []
+    )
+    local_two_user_failures = (
+        local_two_user_failures() if local_two_user_done else []
     )
     config_failures = release_config_failures() if rg7_done else []
     service_boundary_privacy_failures = (
@@ -1121,6 +1153,10 @@ release-gates:
         print("\n  >>> RG-1 frontend journey evidence failure <<<")
         for failure in frontend_journey_failures:
             print(f"      - {failure}")
+    if local_two_user_failures:
+        print("\n  >>> RG-2 local two-user evidence failure <<<")
+        for failure in local_two_user_failures:
+            print(f"      - {failure}")
     if ohttp_fail_closed_failures:
         print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
         for failure in ohttp_fail_closed_failures:
@@ -1154,6 +1190,7 @@ release-gates:
         and (
             config_failures
             or frontend_journey_failures
+            or local_two_user_failures
             or service_boundary_privacy_failures
             or ohttp_fail_closed_failures
             or status_failures
@@ -1177,6 +1214,7 @@ release-gates:
         and not open_ship
         and not config_failures
         and not frontend_journey_failures
+        and not local_two_user_failures
         and not service_boundary_privacy_failures
         and not ohttp_fail_closed_failures
         and not status_failures
