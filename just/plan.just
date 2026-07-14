@@ -669,6 +669,41 @@ release-gates:
         )
         sys.exit(2)
 
+    ship_criteria = []
+    table_match = re.search(
+        r"(?ms)^\*\*Ship criteria\*\*\n\n(?P<table>(?:^\|.*\|\n)+)",
+        text,
+    )
+    if table_match:
+        for row in table_match.group("table").splitlines():
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+            if len(cells) != 3:
+                continue
+            criterion, required_state, classification = cells
+            if (
+                criterion == "Criterion"
+                or set(criterion) == {"-"}
+                or classification.lower() != "hard"
+            ):
+                continue
+            # Rows that name RG coverage are enforced by the RG checkbox list
+            # above. Keep this section for hard criteria that otherwise had no
+            # executable representation.
+            if re.search(r"\bRG-\d+\b", criterion):
+                continue
+            done = False
+            done_match = re.match(r"^\[x\]\s+(.+)$", criterion, re.IGNORECASE)
+            if done_match:
+                done = True
+                criterion = done_match.group(1).strip()
+            ship_criteria.append(
+                (
+                    criterion,
+                    required_state,
+                    done,
+                )
+            )
+
     hard = sorted(
         [
             (
@@ -685,6 +720,8 @@ release-gates:
     # --- Output ---
     done_hard = [h for h in hard if h[2]]
     open_hard = [h for h in hard if not h[2]]
+    done_ship = [criterion for criterion in ship_criteria if criterion[2]]
+    open_ship = [criterion for criterion in ship_criteria if not criterion[2]]
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     config_failures = release_config_failures() if rg7_done else []
     status_failures = []
@@ -707,8 +744,16 @@ release-gates:
         suffix = f"  ({detail})" if detail and not done else ""
         print(f"  [{icon}]  #{gid:<6s} {name}{suffix}")
 
+    if ship_criteria:
+        print(f"\nHARD SHIP CRITERIA ({len(done_ship)}/{len(ship_criteria)} done):")
+        for criterion, required_state, done in ship_criteria:
+            icon = "DONE" if done else "TODO"
+            print(f"  [{icon}]  {criterion} — {required_state}")
+
     if open_hard:
         print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
+    if open_ship:
+        print(f"\n  >>> {len(open_ship)} HARD SHIP CRITERIA block release <<<")
     if status_failures:
         print("\n  >>> master-plan status contradiction <<<")
         for failure in status_failures:
@@ -728,7 +773,14 @@ release-gates:
     else:
         print(f"\n  All hard gates passed!")
 
-    sys.exit(0 if not open_hard and not config_failures and not status_failures else 1)
+    sys.exit(
+        0
+        if not open_hard
+        and not open_ship
+        and not config_failures
+        and not status_failures
+        else 1
+    )
     PYEOF
 
 # Detect satellite docs that duplicate master plan status (run in session-init)

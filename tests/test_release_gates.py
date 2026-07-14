@@ -17,6 +17,7 @@ def plan_with_gates(
     excluded_gate: int | None = None,
     all_completed: bool = False,
     status_line: str = "All 15 release gates are open.",
+    ship_criteria: str = "",
 ) -> str:
     gates = []
     for gate_number in range(1, 16):
@@ -31,6 +32,8 @@ def plan_with_gates(
             "**Status**",
             "",
             status_line,
+            "",
+            ship_criteria,
             "",
             "**Release gates**",
             "",
@@ -181,6 +184,77 @@ accessories:
         )
 
         self.assertEqual(0, result.returncode)
+        self.assertIn("All hard gates passed", result.stdout)
+
+    def test_open_hard_ship_criteria_block_release(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria="""
+**Ship criteria**
+
+| Criterion | Required state | Classification |
+|-----------|----------------|----------------|
+| Release gates RG-1 through RG-15 | complete | hard |
+| Protocol v2 | finalized | hard |
+| E2E ignored tests | no more than 5 | hard |
+| Accessibility acceptance (RG-12) | every frontend passes | hard |
+""",
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("HARD SHIP CRITERIA (0/2 done)", result.stdout)
+        self.assertIn("Protocol v2", result.stdout)
+        self.assertIn("E2E ignored tests", result.stdout)
+
+    def test_checked_hard_ship_criteria_can_pass_with_completed_rg_gates(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria="""
+**Ship criteria**
+
+| Criterion | Required state | Classification |
+|-----------|----------------|----------------|
+| Release gates RG-1 through RG-15 | complete | hard |
+| [x] Protocol v2 | finalized | hard |
+| [x] E2E ignored tests | no more than 5 | hard |
+| Accessibility acceptance (RG-12) | every frontend passes | hard |
+""",
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+        )
+
+        self.assertEqual(0, result.returncode)
+        self.assertIn("HARD SHIP CRITERIA (2/2 done)", result.stdout)
         self.assertIn("All hard gates passed", result.stdout)
 
 
