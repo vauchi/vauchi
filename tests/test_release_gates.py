@@ -82,6 +82,7 @@ class ReleaseGatesTest(unittest.TestCase):
         humble_todo_count: int | None = None,
         usability_evidence: str | None = None,
         accessibility_evidence: str | None = None,
+        privacy_evidence: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -166,6 +167,14 @@ class ReleaseGatesTest(unittest.TestCase):
                 )
                 accessibility_path.parent.mkdir(parents=True)
                 accessibility_path.write_text(accessibility_evidence)
+            if privacy_evidence is not None:
+                privacy_path = (
+                    workspace
+                    / "_private/docs/testing/privacy/"
+                    "service-boundary-no-decryptability.md"
+                )
+                privacy_path.parent.mkdir(parents=True)
+                privacy_path.write_text(privacy_evidence)
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -351,6 +360,18 @@ approved study protocol: yes
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
+""",
+            privacy_evidence="""
+# Service-boundary no-decryptability evidence
+
+relay storage: inspected
+ohttp relay storage: inspected
+logs: inspected
+metrics: inspected
+traces: inspected
+configuration: inspected
+service-held secrets: inspected
+plaintext/key access: none
 """,
         )
 
@@ -622,6 +643,64 @@ accessories:
         self.assertIn("RG-13 usability evidence failure", result.stdout)
         self.assertIn("first-release-unassisted-sessions.md is missing", result.stdout)
 
+    def test_completed_rg6_requires_service_boundary_privacy_evidence(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization. "
+                    "Core !1391 publishes current core main as 0.55.2 bindings."
+                ),
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+            ignored_test_count=5,
+            core_tags=["v0.55.2"],
+            humble_todo_count=0,
+            usability_evidence="""
+# First-release unassisted usability sessions
+
+representative users: yes
+unassisted central journey: yes
+approved study protocol: yes
+
+## Sessions
+
+- Session 1: completed central journey without assistance.
+- Session 2: completed central journey without assistance.
+- Session 3: completed central journey without assistance.
+""",
+            accessibility_evidence="""
+# Native frontend accessibility acceptance
+
+supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+physical screen-reader walkthroughs: complete
+blocking accessibility defects: zero
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-6 service-boundary privacy evidence failure", result.stdout)
+        self.assertIn("service-boundary-no-decryptability.md is missing", result.stdout)
+
     def test_checked_protocol_v2_requires_accepted_adr_065(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -742,6 +821,18 @@ approved study protocol: yes
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
+""",
+            privacy_evidence="""
+# Service-boundary no-decryptability evidence
+
+relay storage: inspected
+ohttp relay storage: inspected
+logs: inspected
+metrics: inspected
+traces: inspected
+configuration: inspected
+service-held secrets: inspected
+plaintext/key access: none
 """,
         )
 

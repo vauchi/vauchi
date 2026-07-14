@@ -584,6 +584,10 @@ release-gates:
         "_private/docs/testing/accessibility/"
         "native-frontend-acceptance.md"
     )
+    PRIVACY_EVIDENCE = Path(
+        "_private/docs/testing/privacy/"
+        "service-boundary-no-decryptability.md"
+    )
     SUPPORTED_NATIVE_FRONTENDS = (
         "android",
         "ios",
@@ -795,6 +799,28 @@ release-gates:
             failures.append("zero blocking accessibility defects evidence is missing")
         return failures
 
+    def service_boundary_privacy_failures():
+        if not PRIVACY_EVIDENCE.is_file():
+            return [f"{PRIVACY_EVIDENCE.name} is missing"]
+
+        evidence_text = PRIVACY_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "relay storage": "relay storage inspection",
+            "ohttp relay storage": "OHTTP relay storage inspection",
+            "logs": "log inspection",
+            "metrics": "metrics inspection",
+            "traces": "trace inspection",
+            "configuration": "configuration inspection",
+            "service-held secrets": "service-held secret inspection",
+            "plaintext/key access: none": "plaintext/key access negative evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -907,6 +933,10 @@ release-gates:
     done_ship = [criterion for criterion in ship_criteria if criterion[2]]
     open_ship = [criterion for criterion in ship_criteria if not criterion[2]]
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
+    privacy_done = any(
+        gid == "RG-6" and done
+        for gid, _name, done, _detail in hard
+    )
     binding_release_done = any(
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
@@ -924,6 +954,9 @@ release-gates:
         for gid, _name, done, _detail in hard
     )
     config_failures = release_config_failures() if rg7_done else []
+    service_boundary_privacy_failures = (
+        service_boundary_privacy_failures() if privacy_done else []
+    )
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
     )
@@ -999,6 +1032,10 @@ release-gates:
             "      ADR-037 requires distinct OHTTP gateway and application "
             "relay operators."
         )
+    if service_boundary_privacy_failures:
+        print("\n  >>> RG-6 service-boundary privacy evidence failure <<<")
+        for failure in service_boundary_privacy_failures:
+            print(f"      - {failure}")
     if protocol_v2_evidence_failures:
         print("\n  >>> Protocol v2 evidence failure <<<")
         for failure in protocol_v2_evidence_failures:
@@ -1027,6 +1064,7 @@ release-gates:
         not open_hard
         and (
             config_failures
+            or service_boundary_privacy_failures
             or status_failures
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
@@ -1047,6 +1085,7 @@ release-gates:
         if not open_hard
         and not open_ship
         and not config_failures
+        and not service_boundary_privacy_failures
         and not status_failures
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
