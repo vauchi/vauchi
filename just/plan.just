@@ -575,85 +575,52 @@ release-gates:
         print(f"ERROR: {PLAN} not found", file=sys.stderr)
         sys.exit(1)
 
-    hard = []  # (id, name, done, detail)
-    soft = []  # (id, name, done, detail)
-    seen_ids = set()
+    gate_matches = list(re.finditer(
+        r'^\s+-\s+(?:(\[x\])\s+)?(RG-(\d+))\s+—\s+(.+?)\s*$',
+        text,
+        re.MULTILINE | re.IGNORECASE,
+    ))
+    if not gate_matches:
+        print("ERROR: no RG release gates found in master plan", file=sys.stderr)
+        sys.exit(2)
 
-    def add_hard(gid, name, done, detail=""):
-        if gid not in seen_ids:
-            seen_ids.add(gid)
-            hard.append((gid, name, done, detail))
+    expected_ids = {f"RG-{number}" for number in range(1, 16)}
+    found_ids = {match.group(2).upper() for match in gate_matches}
+    if found_ids != expected_ids or len(gate_matches) != len(expected_ids):
+        missing = sorted(expected_ids - found_ids, key=lambda gid: int(gid[3:]))
+        unexpected = sorted(found_ids - expected_ids)
+        details = []
+        if missing:
+            details.append(f"missing: {', '.join(missing)}")
+        if unexpected:
+            details.append(f"unexpected: {', '.join(unexpected)}")
+        if len(gate_matches) != len(found_ids):
+            details.append("duplicate RG task IDs")
+        print(
+            "ERROR: expected RG-1 through RG-15 exactly once"
+            + (f" ({'; '.join(details)})" if details else ""),
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
-    # P0 Audit Hard Gates (items 44-47)
-    # Done: "44. ~~**HARD GATE**: Name~~ **DONE**"
-    for m in re.finditer(
-        r'^(\d+)\.\s+~~\*\*HARD GATE\*\*:\s*(.+?)~~\s*\*\*DONE\*\*',
-        text, re.MULTILINE
-    ):
-        add_hard(m.group(1), m.group(2).strip(), True)
-
-    # Open: "45. **HARD GATE**: Name — status"
-    for m in re.finditer(
-        r'^(\d+)\.\s+\*\*HARD GATE\*\*:\s*(.+?)$',
-        text, re.MULTILINE
-    ):
-        parts = m.group(2).split("\u2014", 1)  # em-dash
-        name = parts[0].strip()
-        detail = parts[1].strip() if len(parts) > 1 else ""
-        add_hard(m.group(1), name, False, detail)
-
-    # Items with ~~text~~ **DONE** but without HARD GATE prefix (e.g. item 47, 48-54)
-    # "47. ~~core/SECURITY.md Wrong Crypto~~ **DONE**"
-    for m in re.finditer(
-        r'^(\d+)\.\s+~~(.+?)~~\s*\*\*DONE\*\*',
-        text, re.MULTILINE
-    ):
-        add_hard(m.group(1), m.group(2).strip().rstrip(":"), True)
-
-    # SP-33 Sealed Mailbox Tokens (skip if already captured under a numbered item)
-    if not any("Sealed Mailbox" in h[1] for h in hard):
-        if re.search(r'~~SP-33.*~~.*\*?\*?DONE', text):
-            add_hard("SP-33", "Sealed Mailbox Tokens", True)
-
-    # Remaining HARD GATES table — only data rows (skip header/separator)
-    in_table = False
-    for line in text.splitlines():
-        if line.startswith("## Remaining HARD GATES"):
-            in_table = True
-            continue
-        if in_table and line.startswith("## "):
-            break
-        if not in_table:
-            continue
-        # Skip header row and separator
-        if re.match(r'^\|\s*#\s*\|', line) or re.match(r'^\|[-\s|]+\|$', line):
-            continue
-        # Split by | and clean up
-        cells = [c.strip() for c in line.split('|')]
-        cells = [c for c in cells if c]  # remove empty from leading/trailing |
-        if len(cells) >= 3:
-            gid = re.sub(r'\*', '', cells[0]).strip()
-            name = re.sub(r'\*', '', cells[1]).strip()
-            status = re.sub(r'[\*`]', '', cells[2]).strip()
-            done = 'done' in status.lower() or 'merged' in status.lower()
-            add_hard(gid, name, done, "" if done else status)
-
-    # Inline hard gates in other sections
-    if "Relay uptime monitoring" not in ' '.join(h[1] for h in hard):
-        if re.search(r'Relay uptime monitoring.*HARD GATE', text):
-            add_hard("SP-25", "Relay uptime monitoring", False, "config done, needs DNS + deploy")
-
-    # Soft gates
-    if re.search(r'SP-11.*soft gate', text, re.IGNORECASE):
-        soft.append(("SP-11", "Accessibility (screen reader)", False, "~50%"))
-    if re.search(r'SP-12c.*SOFT GATE', text):
-        soft.append(("SP-12c", "Performance and Robustness", False, "intake, 0%"))
+    hard = sorted(
+        [
+            (
+                match.group(2).upper(),
+                match.group(4).strip(),
+                match.group(1) is not None,
+                "",
+            )
+            for match in gate_matches
+        ],
+        key=lambda gate: int(gate[0][3:]),
+    )
 
     # --- Output ---
     done_hard = [h for h in hard if h[2]]
     open_hard = [h for h in hard if not h[2]]
 
-    print(f"v0.2.0 Release Readiness — {date.today()}")
+    print(f"Production Release Readiness — {date.today()}")
     print(f"Source: master-plan.plan.md (single source of truth)\n")
 
     print(f"HARD GATES ({len(done_hard)}/{len(hard)} done):")
@@ -666,15 +633,6 @@ release-gates:
         print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
     else:
         print(f"\n  All hard gates passed!")
-
-    if soft:
-        done_soft = [s for s in soft if s[2]]
-        print(f"\nSOFT GATES ({len(done_soft)}/{len(soft)} done):")
-        for gid, name, done, detail in soft:
-            icon = "DONE" if done else "    "
-            suffix = f"  ({detail})" if detail else ""
-            print(f"  [{icon}]  #{gid:<6s} {name}{suffix}")
-        print(f"\n  Soft gates are recommended but do not block release.")
 
     sys.exit(0 if not open_hard else 1)
     PYEOF
