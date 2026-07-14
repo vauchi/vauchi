@@ -36,6 +36,24 @@ stages:
 
 # REUSE compliance provided by vauchi/scripts ci-templates/reuse.yml
 
+test:release-gates:
+  stage: lint
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  tags: [docker]
+  needs: []
+  before_script:
+    - apk add --no-cache just python3
+  script:
+    - just test-release-gates
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        compare_to: refs/heads/$CI_DEFAULT_BRANCH
+        paths:
+          - .gitlab-ci.yml
+          - just/plan.just
+          - tests/test_release_gates.py
+
 # lint:claude-md retired 2026-06-12: the .claude tree moved to the
 # _private repo (root .claude is a symlink), so this repo's CI checkout
 # can no longer see it — CLAUDE.md ↔ .claude/docs consistency is checked
