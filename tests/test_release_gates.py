@@ -87,6 +87,7 @@ class ReleaseGatesTest(unittest.TestCase):
         frontend_journey_evidence: str | None = None,
         local_two_user_evidence: str | None = None,
         ohttp_relay_two_user_evidence: str | None = None,
+        six_device_convergence_evidence: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -211,6 +212,14 @@ class ReleaseGatesTest(unittest.TestCase):
                 )
                 ohttp_relay_two_user_path.parent.mkdir(parents=True, exist_ok=True)
                 ohttp_relay_two_user_path.write_text(ohttp_relay_two_user_evidence)
+            if six_device_convergence_evidence is not None:
+                six_device_path = (
+                    workspace
+                    / "_private/docs/testing/release/"
+                    "six-device-convergence.md"
+                )
+                six_device_path.parent.mkdir(parents=True, exist_ok=True)
+                six_device_path.write_text(six_device_convergence_evidence)
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -450,6 +459,18 @@ exchange propagation: passed
 update propagation: passed
 exact-value assertions: passed
 blocking e2e pipeline: passed
+""",
+            six_device_convergence_evidence="""
+# Six-device convergence evidence
+
+six-device topology: passed
+alice devices: a1, a2, a3
+bob devices: b1, b2, b3
+three linked devices per user: passed
+socket-backed topology: passed
+real link ceremony: passed
+convergence at every target: passed
+reorder and duplicate handling: passed
 """,
         )
 
@@ -1051,6 +1072,118 @@ exact-value assertions: passed
         self.assertIn("RG-3 OHTTP relay evidence failure", result.stdout)
         self.assertIn("ohttp-relay-two-user-propagation.md is missing", result.stdout)
 
+    def test_completed_rg4_requires_six_device_convergence_evidence(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization. "
+                    "Core !1391 publishes current core main as 0.55.2 bindings."
+                ),
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+            ignored_test_count=5,
+            core_tags=["v0.55.2"],
+            humble_todo_count=0,
+            usability_evidence="""
+# First-release unassisted usability sessions
+
+representative users: yes
+unassisted central journey: yes
+approved study protocol: yes
+
+## Sessions
+
+- Session 1: completed central journey without assistance.
+- Session 2: completed central journey without assistance.
+- Session 3: completed central journey without assistance.
+""",
+            accessibility_evidence="""
+# Native frontend accessibility acceptance
+
+supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+physical screen-reader walkthroughs: complete
+blocking accessibility defects: zero
+""",
+            privacy_evidence="""
+# Service-boundary no-decryptability evidence
+
+relay storage: inspected
+ohttp relay storage: inspected
+logs: inspected
+metrics: inspected
+traces: inspected
+configuration: inspected
+service-held secrets: inspected
+plaintext/key access: none
+""",
+            ohttp_fail_closed_evidence="""
+# OHTTP fail-closed evidence
+
+supported production consumers: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
+plaintext path: fails closed
+tls-only path: fails closed
+direct path: fails closed
+bootstrap path: fails closed
+reachability-probe path: fails closed
+no bypass: verified
+""",
+            frontend_journey_evidence="""
+# Core user journey evidence
+
+supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
+create card: passed
+edit card: passed
+exchange contact: passed
+receive update: passed
+block or ignore: passed
+""",
+            local_two_user_evidence="""
+# Local two-user propagation evidence
+
+local two-user: passed
+representative two-device run: passed
+mutual exchange: passed
+update propagation: passed
+exact-value assertions: passed
+""",
+            ohttp_relay_two_user_evidence="""
+# OHTTP relay two-user propagation evidence
+
+split-ohttp two-user: passed
+both privacy hops: passed
+ohttp relay: passed
+application relay: passed
+exchange propagation: passed
+update propagation: passed
+exact-value assertions: passed
+blocking e2e pipeline: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-4 six-device convergence evidence failure", result.stdout)
+        self.assertIn("six-device-convergence.md is missing", result.stdout)
+
     def test_completed_rg8_requires_ohttp_fail_closed_evidence(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -1295,6 +1428,18 @@ exchange propagation: passed
 update propagation: passed
 exact-value assertions: passed
 blocking e2e pipeline: passed
+""",
+            six_device_convergence_evidence="""
+# Six-device convergence evidence
+
+six-device topology: passed
+alice devices: a1, a2, a3
+bob devices: b1, b2, b3
+three linked devices per user: passed
+socket-backed topology: passed
+real link ceremony: passed
+convergence at every target: passed
+reorder and duplicate handling: passed
 """,
         )
 

@@ -604,6 +604,10 @@ release-gates:
         "_private/docs/testing/release/"
         "ohttp-relay-two-user-propagation.md"
     )
+    SIX_DEVICE_CONVERGENCE_EVIDENCE = Path(
+        "_private/docs/testing/release/"
+        "six-device-convergence.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -939,6 +943,34 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def six_device_convergence_failures():
+        if not SIX_DEVICE_CONVERGENCE_EVIDENCE.is_file():
+            return [f"{SIX_DEVICE_CONVERGENCE_EVIDENCE.name} is missing"]
+
+        evidence_text = SIX_DEVICE_CONVERGENCE_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        required_phrases = {
+            "six-device topology: passed": "six-device topology evidence",
+            "alice devices: a1, a2, a3": "Alice A1/A2/A3 evidence",
+            "bob devices: b1, b2, b3": "Bob B1/B2/B3 evidence",
+            "three linked devices per user: passed": (
+                "three-linked-devices-per-user evidence"
+            ),
+            "socket-backed topology: passed": "socket-backed topology evidence",
+            "real link ceremony: passed": "real link ceremony evidence",
+            "convergence at every target: passed": (
+                "convergence-at-every-target evidence"
+            ),
+            "reorder and duplicate handling: passed": (
+                "reorder/duplicate handling evidence"
+            ),
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -1062,6 +1094,10 @@ release-gates:
         gid == "RG-3" and done
         for gid, _name, done, _detail in hard
     )
+    six_device_convergence_done = any(
+        gid == "RG-4" and done
+        for gid, _name, done, _detail in hard
+    )
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     privacy_done = any(
         gid == "RG-6" and done
@@ -1095,6 +1131,9 @@ release-gates:
     )
     ohttp_relay_two_user_failures = (
         ohttp_relay_two_user_failures() if ohttp_relay_two_user_done else []
+    )
+    six_device_convergence_failures = (
+        six_device_convergence_failures() if six_device_convergence_done else []
     )
     config_failures = release_config_failures() if rg7_done else []
     service_boundary_privacy_failures = (
@@ -1194,6 +1233,10 @@ release-gates:
         print("\n  >>> RG-3 OHTTP relay evidence failure <<<")
         for failure in ohttp_relay_two_user_failures:
             print(f"      - {failure}")
+    if six_device_convergence_failures:
+        print("\n  >>> RG-4 six-device convergence evidence failure <<<")
+        for failure in six_device_convergence_failures:
+            print(f"      - {failure}")
     if ohttp_fail_closed_failures:
         print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
         for failure in ohttp_fail_closed_failures:
@@ -1229,6 +1272,7 @@ release-gates:
             or frontend_journey_failures
             or local_two_user_failures
             or ohttp_relay_two_user_failures
+            or six_device_convergence_failures
             or service_boundary_privacy_failures
             or ohttp_fail_closed_failures
             or status_failures
@@ -1254,6 +1298,7 @@ release-gates:
         and not frontend_journey_failures
         and not local_two_user_failures
         and not ohttp_relay_two_user_failures
+        and not six_device_convergence_failures
         and not service_boundary_privacy_failures
         and not ohttp_fail_closed_failures
         and not status_failures
