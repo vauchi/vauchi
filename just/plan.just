@@ -554,6 +554,10 @@ plan-stale days='30':
     echo "$STALE stale plan(s) found."
 
 # Live v0.2.0 release readiness — generated from master plan (single source of truth)
+[group('tests')]
+test-release-gates:
+    python3 "{{justfile_directory()}}/tests/test_release_gates.py" "{{justfile_directory()}}/justfile"
+
 [group('tools')]
 [script]
 release-gates:
