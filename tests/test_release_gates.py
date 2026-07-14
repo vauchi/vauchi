@@ -79,6 +79,7 @@ class ReleaseGatesTest(unittest.TestCase):
         adr_065: str | None = None,
         ignored_test_count: int | None = None,
         core_tags: list[str] | None = None,
+        humble_todo_count: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -135,6 +136,18 @@ class ReleaseGatesTest(unittest.TestCase):
                 fake_git.chmod(0o755)
                 env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
                 env["RELEASE_GATE_TEST_CORE_TAGS"] = str(tag_list)
+            if humble_todo_count is not None:
+                android_source = workspace / "android/app/src/main/kotlin/Humble.kt"
+                android_source.parent.mkdir(parents=True)
+                android_source.write_text(
+                    "\n".join(
+                        [
+                            f"// TODO(HUMBLE): remaining migration {index}"
+                            for index in range(humble_todo_count)
+                        ]
+                    )
+                    or "// native UI migration complete\n"
+                )
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -300,6 +313,7 @@ accessories:
 """,
             ignored_test_count=5,
             core_tags=["v0.55.2"],
+            humble_todo_count=0,
         )
 
         self.assertEqual(0, result.returncode)
@@ -443,6 +457,44 @@ accessories:
         self.assertIn("Core binding release evidence failure", result.stdout)
         self.assertIn("required core tag v0.55.2 is missing", result.stdout)
 
+    def test_completed_rg11_requires_no_humble_todos(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization. "
+                    "Core !1391 publishes current core main as 0.55.2 bindings."
+                ),
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+            ignored_test_count=5,
+            core_tags=["v0.55.2"],
+            humble_todo_count=1,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
+        self.assertIn("1 TODO(HUMBLE) site(s) remain", result.stdout)
+
     def test_checked_protocol_v2_requires_accepted_adr_065(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -543,6 +595,7 @@ accessories:
 """,
             ignored_test_count=5,
             core_tags=["v0.55.2"],
+            humble_todo_count=0,
         )
 
         self.assertEqual(0, result.returncode)

@@ -576,6 +576,16 @@ release-gates:
     E2E_DIR = Path("e2e")
     CORE_REPO = Path("core")
     REQUIRED_CORE_BINDING_TAG = "v0.55.2"
+    FRONTEND_REPOS = (
+        Path("android"),
+        Path("ios"),
+        Path("macos"),
+        Path("windows"),
+        Path("linux-gtk"),
+        Path("linux-qt"),
+        Path("cli"),
+        Path("tui"),
+    )
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
@@ -709,6 +719,25 @@ release-gates:
             return [f"required core tag {REQUIRED_CORE_BINDING_TAG} is missing"]
         return []
 
+    def humble_ui_failures():
+        todo_count = 0
+        for frontend_repo in FRONTEND_REPOS:
+            if not frontend_repo.is_dir():
+                continue
+            for path in frontend_repo.rglob("*"):
+                if not path.is_file():
+                    continue
+                if ".git" in path.parts:
+                    continue
+                try:
+                    todo_count += path.read_text(errors="ignore").count("TODO(HUMBLE)")
+                except OSError:
+                    continue
+
+        if todo_count > 0:
+            return [f"{todo_count} TODO(HUMBLE) site(s) remain"]
+        return []
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -825,10 +854,15 @@ release-gates:
         gid in {"RG-10", "RG-14"} and done
         for gid, _name, done, _detail in hard
     )
+    humble_ui_done = any(
+        gid == "RG-11" and done
+        for gid, _name, done, _detail in hard
+    )
     config_failures = release_config_failures() if rg7_done else []
     core_binding_release_failures = (
         core_binding_release_failures() if binding_release_done else []
     )
+    humble_ui_failures = humble_ui_failures() if humble_ui_done else []
     protocol_v2_done = any(
         criterion == "Protocol v2" and done
         for criterion, _required_state, done in ship_criteria
@@ -906,6 +940,10 @@ release-gates:
         print("\n  >>> Core binding release evidence failure <<<")
         for failure in core_binding_release_failures:
             print(f"      - {failure}")
+    if humble_ui_failures:
+        print("\n  >>> RG-11 Humble UI evidence failure <<<")
+        for failure in humble_ui_failures:
+            print(f"      - {failure}")
     if (
         not open_hard
         and (
@@ -914,6 +952,7 @@ release-gates:
             or protocol_v2_evidence_failures
             or e2e_ignored_test_failures
             or core_binding_release_failures
+            or humble_ui_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -931,6 +970,7 @@ release-gates:
         and not protocol_v2_evidence_failures
         and not e2e_ignored_test_failures
         and not core_binding_release_failures
+        and not humble_ui_failures
         else 1
     )
     PYEOF
