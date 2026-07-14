@@ -687,6 +687,16 @@ release-gates:
     open_hard = [h for h in hard if not h[2]]
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     config_failures = release_config_failures() if rg7_done else []
+    status_failures = []
+    if done_hard and re.search(
+        r"\bAll\s+15\s+release\s+gates\s+are\s+open\b",
+        text,
+        re.IGNORECASE,
+    ):
+        status_failures.append(
+            "master plan says all 15 gates are open but "
+            f"{len(done_hard)} RG gate(s) are checked complete"
+        )
 
     print(f"Production Release Readiness — {date.today()}")
     print(f"Source: master-plan.plan.md (single source of truth)\n")
@@ -699,6 +709,10 @@ release-gates:
 
     if open_hard:
         print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
+    if status_failures:
+        print("\n  >>> master-plan status contradiction <<<")
+        for failure in status_failures:
+            print(f"      - {failure}")
     if config_failures:
         print("\n  >>> RG-7 release config failure <<<")
         for failure in config_failures:
@@ -707,14 +721,14 @@ release-gates:
             "      ADR-037 requires distinct OHTTP gateway and application "
             "relay operators."
         )
-    if not open_hard and config_failures:
+    if not open_hard and (config_failures or status_failures):
         print("\n  Release remains blocked by release-configuration evidence.")
     elif open_hard:
         pass
     else:
         print(f"\n  All hard gates passed!")
 
-    sys.exit(0 if not open_hard and not config_failures else 1)
+    sys.exit(0 if not open_hard and not config_failures and not status_failures else 1)
     PYEOF
 
 # Detect satellite docs that duplicate master plan status (run in session-init)

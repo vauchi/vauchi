@@ -16,6 +16,7 @@ def plan_with_gates(
     completed_gate: int | None = None,
     excluded_gate: int | None = None,
     all_completed: bool = False,
+    status_line: str = "All 15 release gates are open.",
 ) -> str:
     gates = []
     for gate_number in range(1, 16):
@@ -29,7 +30,7 @@ def plan_with_gates(
             "",
             "**Status**",
             "",
-            "All 15 release gates are open.",
+            status_line,
             "",
             "**Release gates**",
             "",
@@ -78,11 +79,23 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertIn("15 HARD GATE(s) block release", result.stdout)
 
     def test_checked_rg_task_counts_as_done(self) -> None:
-        result = self.run_release_gates(plan_with_gates(completed_gate=1))
+        result = self.run_release_gates(
+            plan_with_gates(
+                completed_gate=1,
+                status_line="14 release gates are open.",
+            )
+        )
 
         self.assertEqual(1, result.returncode)
         self.assertIn("HARD GATES (1/15 done)", result.stdout)
         self.assertIn("14 HARD GATE(s) block release", result.stdout)
+
+    def test_checked_rg_task_contradicts_all_open_status(self) -> None:
+        result = self.run_release_gates(plan_with_gates(completed_gate=1))
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("master-plan status contradiction", result.stdout)
+        self.assertIn("says all 15 gates are open", result.stdout)
 
     def test_empty_gate_parse_fails_loudly(self) -> None:
         result = self.run_release_gates("# Master Plan without release gates\n")
@@ -98,7 +111,10 @@ class ReleaseGatesTest(unittest.TestCase):
 
     def test_completed_rg7_requires_distinct_relay_hosts(self) -> None:
         result = self.run_release_gates(
-            plan_with_gates(all_completed=True),
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+            ),
             deploy_config="""
 servers:
   web:
@@ -120,7 +136,10 @@ accessories:
 
     def test_completed_rg7_requires_distinct_operator_labels(self) -> None:
         result = self.run_release_gates(
-            plan_with_gates(all_completed=True),
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+            ),
             deploy_config="""
 servers:
   web:
@@ -142,7 +161,10 @@ accessories:
 
     def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
         result = self.run_release_gates(
-            plan_with_gates(all_completed=True),
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+            ),
             deploy_config="""
 servers:
   web:
