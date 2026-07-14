@@ -670,39 +670,62 @@ release-gates:
         sys.exit(2)
 
     ship_criteria = []
+    expected_ship_criteria = {
+        "Protocol v2",
+        "E2E ignored tests",
+    }
     table_match = re.search(
         r"(?ms)^\*\*Ship criteria\*\*\n\n(?P<table>(?:^\|.*\|\n)+)",
         text,
     )
-    if table_match:
-        for row in table_match.group("table").splitlines():
-            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
-            if len(cells) != 3:
-                continue
-            criterion, required_state, classification = cells
-            if (
-                criterion == "Criterion"
-                or set(criterion) == {"-"}
-                or classification.lower() != "hard"
-            ):
-                continue
-            # Rows that name RG coverage are enforced by the RG checkbox list
-            # above. Keep this section for hard criteria that otherwise had no
-            # executable representation.
-            if re.search(r"\bRG-\d+\b", criterion):
-                continue
-            done = False
-            done_match = re.match(r"^\[x\]\s+(.+)$", criterion, re.IGNORECASE)
-            if done_match:
-                done = True
-                criterion = done_match.group(1).strip()
-            ship_criteria.append(
-                (
-                    criterion,
-                    required_state,
-                    done,
-                )
+    if not table_match:
+        print("ERROR: Ship criteria table not found in master plan", file=sys.stderr)
+        sys.exit(2)
+
+    for row in table_match.group("table").splitlines():
+        cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+        if len(cells) != 3:
+            continue
+        criterion, required_state, classification = cells
+        if (
+            criterion == "Criterion"
+            or set(criterion) == {"-"}
+            or classification.lower() != "hard"
+        ):
+            continue
+        # Rows that name RG coverage are enforced by the RG checkbox list
+        # above. Keep this section for hard criteria that otherwise had no
+        # executable representation.
+        if re.search(r"\bRG-\d+\b", criterion):
+            continue
+        done = False
+        done_match = re.match(r"^\[x\]\s+(.+)$", criterion, re.IGNORECASE)
+        if done_match:
+            done = True
+            criterion = done_match.group(1).strip()
+        ship_criteria.append(
+            (
+                criterion,
+                required_state,
+                done,
             )
+        )
+
+    found_ship_criteria = {criterion for criterion, _state, _done in ship_criteria}
+    if found_ship_criteria != expected_ship_criteria:
+        missing = sorted(expected_ship_criteria - found_ship_criteria)
+        unexpected = sorted(found_ship_criteria - expected_ship_criteria)
+        details = []
+        if missing:
+            details.append(f"missing: {', '.join(missing)}")
+        if unexpected:
+            details.append(f"unexpected: {', '.join(unexpected)}")
+        print(
+            "ERROR: expected hard ship criteria exactly once"
+            + (f" ({'; '.join(details)})" if details else ""),
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     hard = sorted(
         [

@@ -11,13 +11,35 @@ from pathlib import Path
 
 JUSTFILE = Path(sys.argv.pop(1)).resolve()
 
+CANONICAL_SHIP_CRITERIA = """
+**Ship criteria**
+
+| Criterion | Required state | Classification |
+|-----------|----------------|----------------|
+| Release gates RG-1 through RG-15 | complete | hard |
+| Protocol v2 | finalized | hard |
+| E2E ignored tests | no more than 5 | hard |
+| Accessibility acceptance (RG-12) | every frontend passes | hard |
+"""
+
+CHECKED_SHIP_CRITERIA = """
+**Ship criteria**
+
+| Criterion | Required state | Classification |
+|-----------|----------------|----------------|
+| Release gates RG-1 through RG-15 | complete | hard |
+| [x] Protocol v2 | finalized | hard |
+| [x] E2E ignored tests | no more than 5 | hard |
+| Accessibility acceptance (RG-12) | every frontend passes | hard |
+"""
+
 
 def plan_with_gates(
     completed_gate: int | None = None,
     excluded_gate: int | None = None,
     all_completed: bool = False,
     status_line: str = "All 15 release gates are open.",
-    ship_criteria: str = "",
+    ship_criteria: str | None = CANONICAL_SHIP_CRITERIA,
 ) -> str:
     gates = []
     for gate_number in range(1, 16):
@@ -33,7 +55,7 @@ def plan_with_gates(
             "",
             status_line,
             "",
-            ship_criteria,
+            ship_criteria or "",
             "",
             "**Release gates**",
             "",
@@ -112,11 +134,36 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("ERROR: expected RG-1 through RG-15", result.stderr)
 
+    def test_missing_ship_criteria_table_fails_loudly(self) -> None:
+        result = self.run_release_gates(plan_with_gates(ship_criteria=None))
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("ERROR: Ship criteria table not found", result.stderr)
+
+    def test_missing_expected_hard_ship_criterion_fails_loudly(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                ship_criteria="""
+**Ship criteria**
+
+| Criterion | Required state | Classification |
+|-----------|----------------|----------------|
+| Release gates RG-1 through RG-15 | complete | hard |
+| Protocol v2 | finalized | hard |
+""",
+            )
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("ERROR: expected hard ship criteria", result.stderr)
+        self.assertIn("E2E ignored tests", result.stderr)
+
     def test_completed_rg7_requires_distinct_relay_hosts(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
             ),
             deploy_config="""
 servers:
@@ -142,6 +189,7 @@ accessories:
             plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
             ),
             deploy_config="""
 servers:
@@ -167,6 +215,7 @@ accessories:
             plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
             ),
             deploy_config="""
 servers:
