@@ -592,6 +592,10 @@ release-gates:
         "_private/docs/testing/privacy/"
         "ohttp-fail-closed.md"
     )
+    FRONTEND_JOURNEY_EVIDENCE = Path(
+        "_private/docs/testing/frontend/"
+        "core-user-journey.md"
+    )
     PRODUCTION_CONSUMERS = (
         "android",
         "ios",
@@ -861,6 +865,29 @@ release-gates:
                 failures.append(f"{label} is missing")
         return failures
 
+    def frontend_journey_failures():
+        if not FRONTEND_JOURNEY_EVIDENCE.is_file():
+            return [f"{FRONTEND_JOURNEY_EVIDENCE.name} is missing"]
+
+        evidence_text = FRONTEND_JOURNEY_EVIDENCE.read_text(errors="ignore")
+        lowered = evidence_text.lower()
+        failures = []
+        for consumer in PRODUCTION_CONSUMERS:
+            if consumer not in lowered:
+                failures.append(f"{consumer} core journey evidence is missing")
+
+        required_phrases = {
+            "create card: passed": "card creation evidence",
+            "edit card: passed": "card edit evidence",
+            "exchange contact: passed": "contact exchange evidence",
+            "receive update: passed": "update receipt evidence",
+            "block or ignore: passed": "block/ignore outcome evidence",
+        }
+        for phrase, label in required_phrases.items():
+            if phrase not in lowered:
+                failures.append(f"{label} is missing")
+        return failures
+
     try:
         with open(PLAN) as f:
             text = f.read()
@@ -972,6 +999,10 @@ release-gates:
     open_hard = [h for h in hard if not h[2]]
     done_ship = [criterion for criterion in ship_criteria if criterion[2]]
     open_ship = [criterion for criterion in ship_criteria if not criterion[2]]
+    frontend_journey_done = any(
+        gid == "RG-1" and done
+        for gid, _name, done, _detail in hard
+    )
     rg7_done = any(gid == "RG-7" and done for gid, _name, done, _detail in hard)
     privacy_done = any(
         gid == "RG-6" and done
@@ -996,6 +1027,9 @@ release-gates:
     usability_done = any(
         gid == "RG-13" and done
         for gid, _name, done, _detail in hard
+    )
+    frontend_journey_failures = (
+        frontend_journey_failures() if frontend_journey_done else []
     )
     config_failures = release_config_failures() if rg7_done else []
     service_boundary_privacy_failures = (
@@ -1083,6 +1117,10 @@ release-gates:
         print("\n  >>> RG-6 service-boundary privacy evidence failure <<<")
         for failure in service_boundary_privacy_failures:
             print(f"      - {failure}")
+    if frontend_journey_failures:
+        print("\n  >>> RG-1 frontend journey evidence failure <<<")
+        for failure in frontend_journey_failures:
+            print(f"      - {failure}")
     if ohttp_fail_closed_failures:
         print("\n  >>> RG-8 OHTTP fail-closed evidence failure <<<")
         for failure in ohttp_fail_closed_failures:
@@ -1115,6 +1153,7 @@ release-gates:
         not open_hard
         and (
             config_failures
+            or frontend_journey_failures
             or service_boundary_privacy_failures
             or ohttp_fail_closed_failures
             or status_failures
@@ -1137,6 +1176,7 @@ release-gates:
         if not open_hard
         and not open_ship
         and not config_failures
+        and not frontend_journey_failures
         and not service_boundary_privacy_failures
         and not ohttp_fail_closed_failures
         and not status_failures
