@@ -573,6 +573,7 @@ release-gates:
         "_private/docs/decisions/"
         "adr-065-first-release-protocol-version-contract.md"
     )
+    E2E_DIR = Path("e2e")
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
@@ -655,6 +656,32 @@ release-gates:
         if status != "Accepted":
             failures.append(
                 f"ADR-065 status is {status or 'missing'}, not Accepted"
+            )
+        return failures
+
+    def e2e_ignored_test_failures(required_state):
+        failures = []
+        if not E2E_DIR.is_dir():
+            return ["e2e test tree is missing"]
+
+        rust_files = list(E2E_DIR.rglob("*.rs"))
+        ignored_count = 0
+        for rust_file in rust_files:
+            ignored_count += len(
+                re.findall(r"(?m)^\s*#\s*\[\s*ignore\s*\]", rust_file.read_text())
+            )
+
+        ceiling_match = re.search(r"\bno more than\s+(\d+)\b", required_state)
+        if not ceiling_match:
+            failures.append(
+                "E2E ignored-test required state does not declare a ceiling"
+            )
+            return failures
+        ceiling = int(ceiling_match.group(1))
+        if ignored_count > ceiling:
+            failures.append(
+                f"{ignored_count} ignored Rust E2E test(s), expected "
+                f"no more than {ceiling}"
             )
         return failures
 
@@ -778,6 +805,22 @@ release-gates:
     protocol_v2_evidence_failures = (
         protocol_v2_failures(text) if protocol_v2_done else []
     )
+    e2e_ignored_done = any(
+        criterion == "E2E ignored tests" and done
+        for criterion, _required_state, done in ship_criteria
+    )
+    e2e_ignored_required_state = next(
+        (
+            required_state
+            for criterion, required_state, _done in ship_criteria
+            if criterion == "E2E ignored tests"
+        ),
+        "",
+    )
+    e2e_ignored_test_failures = (
+        e2e_ignored_test_failures(e2e_ignored_required_state)
+        if e2e_ignored_done else []
+    )
     status_failures = []
     if done_hard and re.search(
         r"\bAll\s+15\s+release\s+gates\s+are\s+open\b",
@@ -824,12 +867,17 @@ release-gates:
         print("\n  >>> Protocol v2 evidence failure <<<")
         for failure in protocol_v2_evidence_failures:
             print(f"      - {failure}")
+    if e2e_ignored_test_failures:
+        print("\n  >>> E2E ignored-test evidence failure <<<")
+        for failure in e2e_ignored_test_failures:
+            print(f"      - {failure}")
     if (
         not open_hard
         and (
             config_failures
             or status_failures
             or protocol_v2_evidence_failures
+            or e2e_ignored_test_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -845,6 +893,7 @@ release-gates:
         and not config_failures
         and not status_failures
         and not protocol_v2_evidence_failures
+        and not e2e_ignored_test_failures
         else 1
     )
     PYEOF

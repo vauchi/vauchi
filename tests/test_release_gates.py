@@ -76,6 +76,7 @@ class ReleaseGatesTest(unittest.TestCase):
         plan: str,
         deploy_config: str | None = None,
         adr_065: str | None = None,
+        ignored_test_count: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -90,6 +91,18 @@ class ReleaseGatesTest(unittest.TestCase):
                 )
                 adr_path.parent.mkdir(parents=True)
                 adr_path.write_text(adr_065)
+            if ignored_test_count is not None:
+                e2e_tests = workspace / "e2e/tests/it/ignored_tests.rs"
+                e2e_tests.parent.mkdir(parents=True)
+                e2e_tests.write_text(
+                    "\n".join(
+                        [
+                            "#[ignore]\n#[test]\nfn ignored_case_"
+                            f"{index}() {{}}"
+                            for index in range(ignored_test_count)
+                        ]
+                    )
+                )
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
@@ -252,6 +265,7 @@ accessories:
 
 **Status**: Accepted
 """,
+            ignored_test_count=5,
         )
 
         self.assertEqual(0, result.returncode)
@@ -292,6 +306,71 @@ accessories:
         self.assertIn("HARD SHIP CRITERIA (0/2 done)", result.stdout)
         self.assertIn("Protocol v2", result.stdout)
         self.assertIn("E2E ignored tests", result.stdout)
+
+    def test_checked_e2e_ignored_tests_require_e2e_tree(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("E2E ignored-test evidence failure", result.stdout)
+        self.assertIn("e2e test tree is missing", result.stdout)
+
+    def test_checked_e2e_ignored_tests_require_count_at_or_below_ceiling(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config="""
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: relay-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: gateway-operator
+""",
+            adr_065="""
+# ADR-065: First-Release Protocol Version Contract
+
+**Status**: Accepted
+""",
+            ignored_test_count=6,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("E2E ignored-test evidence failure", result.stdout)
+        self.assertIn("6 ignored Rust E2E test(s), expected no more than 5", result.stdout)
 
     def test_checked_protocol_v2_requires_accepted_adr_065(self) -> None:
         result = self.run_release_gates(
@@ -391,6 +470,7 @@ accessories:
 
 **Status**: Accepted
 """,
+            ignored_test_count=5,
         )
 
         self.assertEqual(0, result.returncode)
