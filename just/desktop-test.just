@@ -36,7 +36,6 @@ test-desktop-all *args='':
 # Dump the AT-SPI accessibility tree for a running app (for debugging)
 # Usage: just a11y-audit linux-gtk   or   just a11y-audit linux-qt
 [group('desktop-test')]
-[script]
 a11y-audit repo:
     #!/usr/bin/env bash
     set -euo pipefail
