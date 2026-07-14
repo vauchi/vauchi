@@ -1418,7 +1418,7 @@ lint-file-size repo='':
 [script]
 check-no-allow-direct:
     set -euo pipefail
-    scripts/scripts/check-no-allow-direct.sh core cli tui
+    scripts/scripts/check-no-allow-direct.sh core cli tui e2e
 
 # Forbid view-layer reads of MobileContact.is_imported / .isImported.
 # Core's ContactDetailEngine + vauchi-platform 0.24.0's
