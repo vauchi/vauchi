@@ -20,6 +20,7 @@ test:
 [no-cd]
 [script]
 create name *repos='':
+    #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
     set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -119,6 +120,7 @@ create name *repos='':
 [no-cd]
 [script]
 list:
+    #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
     set -euo pipefail
     wt_base=".worktrees"
@@ -177,6 +179,7 @@ list:
 [no-cd]
 [script]
 remove name:
+    #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
     set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
@@ -280,6 +283,7 @@ remove name:
 [no-cd]
 [script]
 remove-force name:
+    #!/usr/bin/env bash
     set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just worktree remove-force <branch-name>" >&2
