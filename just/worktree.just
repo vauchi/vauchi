@@ -78,6 +78,19 @@ create name *repos='':
                 failed+=("$label")
                 rmdir "$wt_path" 2>/dev/null || true
             fi
+        elif git -C "$dir" fetch origin \
+              "refs/heads/{{ name }}:refs/remotes/origin/{{ name }}" --quiet 2>/dev/null; then
+            # A remote-only branch is existing work too; attach it rather than
+            # creating a divergent branch with the same name from main.
+            if git -C "$dir" worktree add "$(pwd)/$wt_path" -b "{{ name }}" \
+                  --track "origin/{{ name }}" --quiet 2>/dev/null; then
+                status_ok "$label" "created (remote branch, $wt_path)"
+                created+=("$label")
+            else
+                status_fail "$label" "FAILED"
+                failed+=("$label")
+                rmdir "$wt_path" 2>/dev/null || true
+            fi
         elif git -C "$dir" fetch origin main --quiet && \
               git -C "$dir" worktree add "$(pwd)/$wt_path" -b "{{ name }}" origin/main --quiet 2>/dev/null; then
             # New work starts from the freshly fetched shared base.
