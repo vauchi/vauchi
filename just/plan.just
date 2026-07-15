@@ -782,7 +782,10 @@ release-gates:
                 )
                 continue
             matches = re.findall(
-                r"(?mi)^\s*core binding tag:\s*(v\d+\.\d+\.\d+)\s*$",
+                r"(?mi)^\s*core binding tag:\s*"
+                r"(v(?:0|[1-9][0-9]*)\."
+                r"(?:0|[1-9][0-9]*)\."
+                r"(?:0|[1-9][0-9]*))\s*$",
                 evidence_path.read_text(errors="ignore"),
             )
             if len(matches) != 1:
