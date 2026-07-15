@@ -690,42 +690,43 @@ accessories:
         self.assertIn("E2E ignored-test evidence failure", result.stdout)
         self.assertIn("6 ignored Rust E2E test(s), expected no more than 5", result.stdout)
 
-    def test_completed_convergence_gates_require_current_core_binding_tag(self) -> None:
+    def test_completed_rg10_requires_binding_tag_named_by_its_evidence(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
-                all_completed=True,
-                status_line="All hard gates passed.",
+                completed_gate=10,
+                status_line="14 release gates are open.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
-                extra_body=(
-                    "ADR-065 defines Protocol v2 finalization. "
-                    "Core !1391 publishes current core main as 0.55.2 bindings."
-                ),
+                extra_body="ADR-065 defines Protocol v2 finalization.",
             ),
-            deploy_config="""
-servers:
-  web:
-    hosts:
-      - relay-host
-    labels:
-      app.vauchi.operator: relay-operator
-accessories:
-  ohttp-relay:
-    host: gateway-host
-    labels:
-      app.vauchi.operator: gateway-operator
-""",
             adr_065="""
 # ADR-065: First-Release Protocol Version Contract
 
 **Status**: Accepted
 """,
             ignored_test_count=5,
-            core_tags=["v0.55.1"],
+            core_tags=["v0.55.2"],
+            user_data_convergence_evidence="""
+# User data convergence evidence
+
+core binding tag: v0.55.4
+user data convergence: passed
+complete owner-private state convergence: passed
+myinfo update/removal: passed
+presentation cards: passed
+group identity/membership/visibility/overrides: passed
+tag change/deletion: passed
+contacts/private notes: passed
+all six devices synchronized: passed
+canonical owner-private state: passed
+permitted presentation state only: passed
+no private state leaked to Bob or relay: passed
+ADR-020 deterministic convergence: passed
+""",
         )
 
         self.assertEqual(1, result.returncode)
         self.assertIn("Core binding release evidence failure", result.stdout)
-        self.assertIn("required core tag v0.55.2 is missing", result.stdout)
+        self.assertIn("required core tag v0.55.4 is missing", result.stdout)
 
     def test_completed_rg10_requires_user_data_convergence_evidence(self) -> None:
         result = self.run_release_gates(
