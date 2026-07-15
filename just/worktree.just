@@ -9,6 +9,10 @@
 # Directory structure: .worktrees/<flat-name>/<repo>/
 # Branch names are flattened: bugfix/crash-fix → bugfix--crash-fix
 
+[group('tests')]
+test:
+    python3 "{{ justfile_directory() }}/tests/test_worktree_recipe.py" "{{ justfile_directory() }}/just/worktree.just"
+
 # Create a worktree for parallel development across repos
 # Each worktree is a separate directory with its own checkout
 # Usage: just worktree create bugfix/crash-fix              (all repos)
