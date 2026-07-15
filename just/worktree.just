@@ -18,7 +18,6 @@ test:
 # Usage: just worktree create bugfix/crash-fix              (all repos)
 #        just worktree create bugfix/crash-fix core cli      (specific repos)
 [no-cd]
-[script]
 create name *repos='':
     #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
@@ -118,7 +117,6 @@ create name *repos='':
 
 # List all worktrees across repos
 [no-cd]
-[script]
 list:
     #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
@@ -177,7 +175,6 @@ list:
 # Remove a worktree and clean up
 # Usage: just worktree remove bugfix/crash-fix
 [no-cd]
-[script]
 remove name:
     #!/usr/bin/env bash
     source scripts/scripts/output-helpers.sh
@@ -281,7 +278,6 @@ remove name:
 # Remove a worktree non-interactively (for automation/Claude)
 # Usage: just worktree remove-force bugfix/crash-fix
 [no-cd]
-[script]
 remove-force name:
     #!/usr/bin/env bash
     set -euo pipefail
