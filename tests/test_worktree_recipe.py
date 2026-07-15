@@ -65,10 +65,7 @@ class WorktreeRecipeTest(unittest.TestCase):
         module = checkout / "worktree.just"
         shutil.copyfile(WORKTREE_JUSTFILE, module)
         wrapper = checkout / "justfile"
-        wrapper.write_text(
-            'set script-interpreter := ["bash", "-eu"]\n'
-            "mod worktree 'worktree.just'\n"
-        )
+        wrapper.write_text("mod worktree 'worktree.just'\n")
         return subprocess.run(
             [
                 "just",
@@ -105,6 +102,17 @@ class WorktreeRecipeTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             created = checkout / ".worktrees/fix--new-work/root"
             self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_main)
+
+    def test_script_recipes_select_bash_explicitly(self) -> None:
+        lines = WORKTREE_JUSTFILE.read_text().splitlines()
+        script_markers = [
+            index for index, line in enumerate(lines) if line == "[script]"
+        ]
+
+        self.assertGreater(len(script_markers), 0)
+        for marker in script_markers:
+            recipe_body = marker + 2
+            self.assertEqual(lines[recipe_body].strip(), "#!/usr/bin/env bash")
 
     def test_existing_branch_is_attached_without_rebasing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
