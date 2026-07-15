@@ -730,25 +730,26 @@ ADR-020 deterministic convergence: passed
         self.assertIn("Core binding release evidence failure", result.stdout)
         self.assertIn("required core tag v0.55.4 is missing", result.stdout)
 
-    def test_completed_rg10_rejects_noncanonical_binding_tag(self) -> None:
-        result = self.run_release_gates(
-            plan_with_gates(
-                completed_gate=10,
-                status_line="14 release gates are open.",
-                ship_criteria=CHECKED_SHIP_CRITERIA,
-                extra_body="ADR-065 defines Protocol v2 finalization.",
-            ),
-            adr_065="""
+    def test_completed_rg10_rejects_noncanonical_binding_tags(self) -> None:
+        for tag in ("v0.055.4", "V0.55.4"):
+            result = self.run_release_gates(
+                plan_with_gates(
+                    completed_gate=10,
+                    status_line="14 release gates are open.",
+                    ship_criteria=CHECKED_SHIP_CRITERIA,
+                    extra_body="ADR-065 defines Protocol v2 finalization.",
+                ),
+                adr_065="""
 # ADR-065: First-Release Protocol Version Contract
 
 **Status**: Accepted
 """,
-            ignored_test_count=5,
-            core_tags=["v0.055.4"],
-            user_data_convergence_evidence="""
+                ignored_test_count=5,
+                core_tags=[tag],
+                user_data_convergence_evidence=f"""
 # User data convergence evidence
 
-core binding tag: v0.055.4
+core binding tag: {tag}
 user data convergence: passed
 complete owner-private state convergence: passed
 myinfo update/removal: passed
@@ -762,11 +763,12 @@ permitted presentation state only: passed
 no private state leaked to Bob or relay: passed
 ADR-020 deterministic convergence: passed
 """,
-        )
+            )
 
-        self.assertEqual(1, result.returncode)
-        self.assertIn("Core binding release evidence failure", result.stdout)
-        self.assertIn("must declare exactly one", result.stdout)
+            with self.subTest(tag=tag):
+                self.assertEqual(1, result.returncode)
+                self.assertIn("Core binding release evidence failure", result.stdout)
+                self.assertIn("must declare exactly one", result.stdout)
 
     def test_completed_rg10_requires_user_data_convergence_evidence(self) -> None:
         result = self.run_release_gates(
