@@ -105,14 +105,15 @@ class WorktreeRecipeTest(unittest.TestCase):
 
     def test_script_recipes_select_bash_explicitly(self) -> None:
         lines = WORKTREE_JUSTFILE.read_text().splitlines()
-        script_markers = [
-            index for index, line in enumerate(lines) if line == "[script]"
-        ]
-
-        self.assertGreater(len(script_markers), 0)
-        for marker in script_markers:
-            recipe_body = marker + 2
-            self.assertEqual(lines[recipe_body].strip(), "#!/usr/bin/env bash")
+        self.assertNotIn("[script]", lines)
+        for recipe in [
+            "create name *repos='':",
+            "list:",
+            "remove name:",
+            "remove-force name:",
+        ]:
+            recipe_line = lines.index(recipe)
+            self.assertEqual(lines[recipe_line + 1].strip(), "#!/usr/bin/env bash")
 
     def test_existing_branch_is_attached_without_rebasing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
