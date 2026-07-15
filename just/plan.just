@@ -782,7 +782,7 @@ release-gates:
                 )
                 continue
             matches = re.findall(
-                r"(?mi)^\s*core binding tag:\s*"
+                r"(?m)^\s*core binding tag:\s*"
                 r"(v(?:0|[1-9][0-9]*)\."
                 r"(?:0|[1-9][0-9]*)\."
                 r"(?:0|[1-9][0-9]*))\s*$",
