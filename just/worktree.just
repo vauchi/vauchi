@@ -68,13 +68,20 @@ create name *repos='':
 
         wt_path="$wt_base/$label"
 
-        # Create worktree with a new branch based on current HEAD
-        if git -C "$dir" worktree add "$(pwd)/$wt_path" -b "{{ name }}" --quiet 2>/dev/null; then
+        if git -C "$dir" show-ref --verify --quiet "refs/heads/{{ name }}"; then
+            # Preserve an existing branch exactly as-is.
+            if git -C "$dir" worktree add "$(pwd)/$wt_path" "{{ name }}" --quiet 2>/dev/null; then
+                status_ok "$label" "created (existing branch, $wt_path)"
+                created+=("$label")
+            else
+                status_fail "$label" "FAILED"
+                failed+=("$label")
+                rmdir "$wt_path" 2>/dev/null || true
+            fi
+        elif git -C "$dir" fetch origin main --quiet && \
+              git -C "$dir" worktree add "$(pwd)/$wt_path" -b "{{ name }}" origin/main --quiet 2>/dev/null; then
+            # New work starts from the freshly fetched shared base.
             status_ok "$label" "created ($wt_path)"
-            created+=("$label")
-        elif git -C "$dir" worktree add "$(pwd)/$wt_path" "{{ name }}" --quiet 2>/dev/null; then
-            # Branch already exists — attach to it
-            status_ok "$label" "created (existing branch, $wt_path)"
             created+=("$label")
         else
             status_fail "$label" "FAILED"
