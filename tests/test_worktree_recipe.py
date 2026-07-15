@@ -118,6 +118,22 @@ class WorktreeRecipeTest(unittest.TestCase):
             created = checkout / ".worktrees/fix--existing-work/root"
             self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_head)
 
+    def test_remote_only_branch_is_attached_without_diverging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            seed, checkout = self.create_fixture(Path(temporary_directory))
+            self.git(seed, "switch", "-c", "fix/remote-work")
+            (seed / "remote-work.txt").write_text("remote work\n")
+            self.git(seed, "add", "remote-work.txt")
+            self.git(seed, "commit", "-m", "remote branch work")
+            self.git(seed, "push", "-u", "origin", "fix/remote-work")
+            expected_head = self.git(seed, "rev-parse", "HEAD")
+
+            result = self.run_create(checkout, "fix/remote-work")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            created = checkout / ".worktrees/fix--remote-work/root"
+            self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_head)
+
 
 if __name__ == "__main__":
     unittest.main()
