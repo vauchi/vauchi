@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -61,11 +62,19 @@ class WorktreeRecipeTest(unittest.TestCase):
         return seed, checkout
 
     def run_create(self, checkout: Path, branch: str) -> subprocess.CompletedProcess[str]:
+        module = checkout / "worktree.just"
+        shutil.copyfile(WORKTREE_JUSTFILE, module)
+        wrapper = checkout / "justfile"
+        wrapper.write_text(
+            'set script-interpreter := ["bash", "-eu"]\n'
+            "mod worktree 'worktree.just'\n"
+        )
         return subprocess.run(
             [
                 "just",
                 "--justfile",
-                str(WORKTREE_JUSTFILE),
+                str(wrapper),
+                "worktree",
                 "create",
                 branch,
                 "root",
