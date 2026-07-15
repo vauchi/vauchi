@@ -575,7 +575,6 @@ release-gates:
     )
     E2E_DIR = Path("e2e")
     CORE_REPO = Path("core")
-    REQUIRED_CORE_BINDING_TAG = "v0.55.2"
     USABILITY_EVIDENCE = Path(
         "_private/docs/testing/usability/"
         "first-release-unassisted-sessions.md"
@@ -768,6 +767,42 @@ release-gates:
         return failures
 
     def core_binding_release_failures():
+        evidence_paths = []
+        if user_data_convergence_done:
+            evidence_paths.append(USER_DATA_CONVERGENCE_EVIDENCE)
+        if production_distribution_done:
+            evidence_paths.append(PRODUCTION_DISTRIBUTION_EVIDENCE)
+
+        failures = []
+        evidence_tags = []
+        for evidence_path in evidence_paths:
+            if not evidence_path.is_file():
+                failures.append(
+                    f"{evidence_path.name} cannot name the core binding tag"
+                )
+                continue
+            matches = re.findall(
+                r"(?mi)^\s*core binding tag:\s*(v\d+\.\d+\.\d+)\s*$",
+                evidence_path.read_text(errors="ignore"),
+            )
+            if len(matches) != 1:
+                failures.append(
+                    f"{evidence_path.name} must declare exactly one "
+                    "'core binding tag: vX.Y.Z'"
+                )
+                continue
+            evidence_tags.append(matches[0])
+
+        distinct_tags = sorted(set(evidence_tags))
+        if len(distinct_tags) > 1:
+            failures.append(
+                "binding evidence names conflicting core tags: "
+                + ", ".join(distinct_tags)
+            )
+        if failures or not distinct_tags:
+            return failures
+
+        required_tag = distinct_tags[0]
         if not CORE_REPO.is_dir():
             return ["core repository is missing"]
         result = subprocess.run(
@@ -777,7 +812,7 @@ release-gates:
                 str(CORE_REPO),
                 "tag",
                 "--list",
-                REQUIRED_CORE_BINDING_TAG,
+                required_tag,
             ],
             check=False,
             capture_output=True,
@@ -785,8 +820,8 @@ release-gates:
         )
         if result.returncode != 0:
             return [f"cannot inspect core tags: {result.stderr.strip()}"]
-        if result.stdout.strip() != REQUIRED_CORE_BINDING_TAG:
-            return [f"required core tag {REQUIRED_CORE_BINDING_TAG} is missing"]
+        if result.stdout.strip() != required_tag:
+            return [f"required core tag {required_tag} is missing"]
         return []
 
     def humble_ui_failures():

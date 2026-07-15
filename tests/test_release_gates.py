@@ -560,6 +560,7 @@ no re-exchange required: passed
             production_distribution_evidence="""
 # Production distribution evidence
 
+core binding tag: v0.55.2
 supported platforms: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
 signing: passed
 packaging: passed
@@ -571,6 +572,7 @@ distribution-channel acceptance: passed
             user_data_convergence_evidence="""
 # User data convergence evidence
 
+core binding tag: v0.55.2
 user data convergence: passed
 complete owner-private state convergence: passed
 myinfo update/removal: passed
@@ -2200,6 +2202,7 @@ no re-exchange required: passed
             production_distribution_evidence="""
 # Production distribution evidence
 
+core binding tag: v0.55.2
 supported platforms: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
 signing: passed
 packaging: passed
@@ -2211,6 +2214,7 @@ distribution-channel acceptance: passed
             user_data_convergence_evidence="""
 # User data convergence evidence
 
+core binding tag: v0.55.2
 user data convergence: passed
 complete owner-private state convergence: passed
 myinfo update/removal: passed
