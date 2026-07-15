@@ -42,9 +42,10 @@ test:release-gates:
   tags: [docker]
   needs: []
   before_script:
-    - apk add --no-cache bash just python3
+    - apk add --no-cache bash git just python3
   script:
     - JUST_UNSTABLE=1 just test-release-gates
+    - JUST_UNSTABLE=1 just worktree test
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -52,7 +53,9 @@ test:release-gates:
         paths:
           - .gitlab-ci.yml
           - just/plan.just
+          - just/worktree.just
           - tests/test_release_gates.py
+          - tests/test_worktree_recipe.py
 
 # lint:claude-md retired 2026-06-12: the .claude tree moved to the
 # _private repo (root .claude is a symlink), so this repo's CI checkout
