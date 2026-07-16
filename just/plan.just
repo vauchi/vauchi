@@ -654,6 +654,7 @@ release-gates:
         Path("linux-qt"),
         Path("cli"),
         Path("tui"),
+        Path("web-demo"),
     )
 
     def first_match(pattern, text):
@@ -878,9 +879,12 @@ release-gates:
         evidence_text = ACCESSIBILITY_EVIDENCE.read_text(errors="ignore")
         lowered = evidence_text.lower()
         failures = []
+        # A pass is required per supported native frontend — listing the
+        # frontend names anywhere in the document is not evidence.
         for frontend in SUPPORTED_NATIVE_FRONTENDS:
-            if frontend not in lowered:
-                failures.append(f"{frontend} accessibility evidence is missing")
+            phrase = f"{frontend} accessibility acceptance: passed"
+            if phrase not in lowered:
+                failures.append(f"{phrase} evidence is missing")
         if "physical screen-reader" not in lowered:
             failures.append("physical screen-reader walkthrough evidence is missing")
         if "blocking accessibility defects: zero" not in lowered:
@@ -942,20 +946,20 @@ release-gates:
         evidence_text = FRONTEND_JOURNEY_EVIDENCE.read_text(errors="ignore")
         lowered = evidence_text.lower()
         failures = []
+        # Per-consumer matrix: a global "create card: passed" line cannot
+        # stand in for a consumer that never ran the journey.
+        journeys = (
+            "create card",
+            "edit card",
+            "exchange contact",
+            "receive update",
+            "block or ignore",
+        )
         for consumer in PRODUCTION_CONSUMERS:
-            if consumer not in lowered:
-                failures.append(f"{consumer} core journey evidence is missing")
-
-        required_phrases = {
-            "create card: passed": "card creation evidence",
-            "edit card: passed": "card edit evidence",
-            "exchange contact: passed": "contact exchange evidence",
-            "receive update: passed": "update receipt evidence",
-            "block or ignore: passed": "block/ignore outcome evidence",
-        }
-        for phrase, label in required_phrases.items():
-            if phrase not in lowered:
-                failures.append(f"{label} is missing")
+            for journey in journeys:
+                phrase = f"{consumer} {journey}: passed"
+                if phrase not in lowered:
+                    failures.append(f"{phrase} evidence is missing")
         return failures
 
     def local_two_user_failures():
@@ -1130,23 +1134,30 @@ release-gates:
         evidence_text = PRODUCTION_DISTRIBUTION_EVIDENCE.read_text(errors="ignore")
         lowered = evidence_text.lower()
         failures = []
+        # Per-consumer matrix: every consumer proves signing, packaging,
+        # installation, and its distribution-channel acceptance. Store
+        # submission applies to the P0 store platforms (App Store, Google
+        # Play — problem 2026-06-11-store-submission-blockers); notarization
+        # applies to the Apple platforms.
+        steps = (
+            "signing",
+            "packaging",
+            "installation",
+            "distribution-channel acceptance",
+        )
         for consumer in PRODUCTION_CONSUMERS:
-            if consumer not in lowered:
-                failures.append(f"{consumer} distribution evidence is missing")
-
-        required_phrases = {
-            "signing: passed": "signing evidence",
-            "packaging: passed": "packaging evidence",
-            "installation: passed": "installation evidence",
-            "store submission: passed": "store submission evidence",
-            "notarization: passed": "notarization evidence",
-            "distribution-channel acceptance: passed": (
-                "distribution-channel acceptance evidence"
-            ),
-        }
-        for phrase, label in required_phrases.items():
+            for step in steps:
+                phrase = f"{consumer} {step}: passed"
+                if phrase not in lowered:
+                    failures.append(f"{phrase} evidence is missing")
+        for consumer in ("android", "ios"):
+            phrase = f"{consumer} store submission: passed"
             if phrase not in lowered:
-                failures.append(f"{label} is missing")
+                failures.append(f"{phrase} evidence is missing")
+        for consumer in ("ios", "macos"):
+            phrase = f"{consumer} notarization: passed"
+            if phrase not in lowered:
+                failures.append(f"{phrase} evidence is missing")
         return failures
 
     def user_data_convergence_failures():

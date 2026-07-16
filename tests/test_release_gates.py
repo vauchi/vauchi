@@ -80,6 +80,7 @@ class ReleaseGatesTest(unittest.TestCase):
         ignored_test_count: int | None = None,
         core_tags: list[str] | None = None,
         humble_todo_count: int | None = None,
+        web_demo_todo_count: int | None = None,
         usability_evidence: str | None = None,
         accessibility_evidence: str | None = None,
         privacy_evidence: str | None = None,
@@ -160,6 +161,18 @@ class ReleaseGatesTest(unittest.TestCase):
                         ]
                     )
                     or "// native UI migration complete\n"
+                )
+            if web_demo_todo_count is not None:
+                web_demo_source = workspace / "web-demo/src/humble.ts"
+                web_demo_source.parent.mkdir(parents=True)
+                web_demo_source.write_text(
+                    "\n".join(
+                        [
+                            f"// TODO(HUMBLE): remaining migration {index}"
+                            for index in range(web_demo_todo_count)
+                        ]
+                    )
+                    or "// web demo migration complete\n"
                 )
             if usability_evidence is not None:
                 usability_path = (
@@ -448,6 +461,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -477,12 +496,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -562,12 +615,42 @@ no re-exchange required: passed
 
 core binding tag: v0.55.2
 supported platforms: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-signing: passed
-packaging: passed
-installation: passed
-store submission: passed
-notarization: passed
-distribution-channel acceptance: passed
+android signing: passed
+android packaging: passed
+android installation: passed
+android distribution-channel acceptance: passed
+android store submission: passed
+ios signing: passed
+ios packaging: passed
+ios installation: passed
+ios distribution-channel acceptance: passed
+ios store submission: passed
+ios notarization: passed
+macos signing: passed
+macos packaging: passed
+macos installation: passed
+macos distribution-channel acceptance: passed
+macos notarization: passed
+windows signing: passed
+windows packaging: passed
+windows installation: passed
+windows distribution-channel acceptance: passed
+linux-gtk signing: passed
+linux-gtk packaging: passed
+linux-gtk installation: passed
+linux-gtk distribution-channel acceptance: passed
+linux-qt signing: passed
+linux-qt packaging: passed
+linux-qt installation: passed
+linux-qt distribution-channel acceptance: passed
+cli signing: passed
+cli packaging: passed
+cli installation: passed
+cli distribution-channel acceptance: passed
+tui signing: passed
+tui packaging: passed
+tui installation: passed
+tui distribution-channel acceptance: passed
 """,
             user_data_convergence_evidence="""
 # User data convergence evidence
@@ -970,6 +1053,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1028,6 +1117,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1109,6 +1204,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1138,12 +1239,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
         )
 
@@ -1200,6 +1335,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1229,12 +1370,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -1300,6 +1475,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1329,12 +1510,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -1412,6 +1627,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1441,12 +1662,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -1536,6 +1791,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1608,6 +1869,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1637,12 +1904,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -1749,6 +2050,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1778,12 +2085,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -1897,6 +2238,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -1926,12 +2273,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -2130,6 +2511,12 @@ approved study protocol: yes
 # Native frontend accessibility acceptance
 
 supported native frontends: android, ios, macos, windows, linux-gtk, linux-qt
+android accessibility acceptance: passed
+ios accessibility acceptance: passed
+macos accessibility acceptance: passed
+windows accessibility acceptance: passed
+linux-gtk accessibility acceptance: passed
+linux-qt accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
 blocking accessibility defects: zero
 """,
@@ -2159,12 +2546,46 @@ no bypass: verified
             frontend_journey_evidence="""
 # Core user journey evidence
 
-supported frontends: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-create card: passed
-edit card: passed
-exchange contact: passed
-receive update: passed
-block or ignore: passed
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+ios create card: passed
+ios edit card: passed
+ios exchange contact: passed
+ios receive update: passed
+ios block or ignore: passed
+macos create card: passed
+macos edit card: passed
+macos exchange contact: passed
+macos receive update: passed
+macos block or ignore: passed
+windows create card: passed
+windows edit card: passed
+windows exchange contact: passed
+windows receive update: passed
+windows block or ignore: passed
+linux-gtk create card: passed
+linux-gtk edit card: passed
+linux-gtk exchange contact: passed
+linux-gtk receive update: passed
+linux-gtk block or ignore: passed
+linux-qt create card: passed
+linux-qt edit card: passed
+linux-qt exchange contact: passed
+linux-qt receive update: passed
+linux-qt block or ignore: passed
+cli create card: passed
+cli edit card: passed
+cli exchange contact: passed
+cli receive update: passed
+cli block or ignore: passed
+tui create card: passed
+tui edit card: passed
+tui exchange contact: passed
+tui receive update: passed
+tui block or ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
@@ -2244,12 +2665,42 @@ no re-exchange required: passed
 
 core binding tag: v0.55.2
 supported platforms: android, ios, macos, windows, linux-gtk, linux-qt, cli, tui
-signing: passed
-packaging: passed
-installation: passed
-store submission: passed
-notarization: passed
-distribution-channel acceptance: passed
+android signing: passed
+android packaging: passed
+android installation: passed
+android distribution-channel acceptance: passed
+android store submission: passed
+ios signing: passed
+ios packaging: passed
+ios installation: passed
+ios distribution-channel acceptance: passed
+ios store submission: passed
+ios notarization: passed
+macos signing: passed
+macos packaging: passed
+macos installation: passed
+macos distribution-channel acceptance: passed
+macos notarization: passed
+windows signing: passed
+windows packaging: passed
+windows installation: passed
+windows distribution-channel acceptance: passed
+linux-gtk signing: passed
+linux-gtk packaging: passed
+linux-gtk installation: passed
+linux-gtk distribution-channel acceptance: passed
+linux-qt signing: passed
+linux-qt packaging: passed
+linux-qt installation: passed
+linux-qt distribution-channel acceptance: passed
+cli signing: passed
+cli packaging: passed
+cli installation: passed
+cli distribution-channel acceptance: passed
+tui signing: passed
+tui packaging: passed
+tui installation: passed
+tui distribution-channel acceptance: passed
 """,
             user_data_convergence_evidence="""
 # User data convergence evidence
@@ -2273,6 +2724,125 @@ ADR-020 deterministic convergence: passed
         self.assertEqual(0, result.returncode)
         self.assertIn("HARD SHIP CRITERIA (2/2 done)", result.stdout)
         self.assertIn("All hard gates passed", result.stdout)
+
+
+    def test_completed_rg1_requires_per_consumer_journey_results(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            # Only android completed its journey matrix; every other
+            # consumer's rows must be reported individually.
+            frontend_journey_evidence="""
+# Core user journey evidence
+
+android create card: passed
+android edit card: passed
+android exchange contact: passed
+android receive update: passed
+android block or ignore: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-1 frontend journey evidence failure", result.stdout)
+        self.assertIn("ios create card: passed evidence is missing", result.stdout)
+        self.assertIn("tui block or ignore: passed evidence is missing", result.stdout)
+        self.assertNotIn("android create card: passed evidence is missing", result.stdout)
+
+    def test_completed_rg12_requires_per_frontend_accessibility_pass(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            # Only android has a pass row; every other frontend's missing
+            # pass must be reported individually.
+            accessibility_evidence="""
+# Native frontend accessibility acceptance
+
+android accessibility acceptance: passed
+physical screen-reader walkthroughs: complete
+blocking accessibility defects: zero
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-12 accessibility evidence failure", result.stdout)
+        self.assertIn(
+            "ios accessibility acceptance: passed evidence is missing",
+            result.stdout,
+        )
+        self.assertIn(
+            "linux-qt accessibility acceptance: passed evidence is missing",
+            result.stdout,
+        )
+        self.assertNotIn(
+            "android accessibility acceptance: passed evidence is missing",
+            result.stdout,
+        )
+
+    def test_completed_rg14_requires_per_consumer_distribution_results(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            core_tags=["v0.55.2"],
+            # Only android completed its distribution rows (including its
+            # store submission); every other consumer's rows must be
+            # reported individually.
+            production_distribution_evidence="""
+# Production distribution evidence
+
+android signing: passed
+android packaging: passed
+android installation: passed
+android distribution-channel acceptance: passed
+android store submission: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-14 production distribution evidence failure", result.stdout)
+        self.assertIn("ios signing: passed evidence is missing", result.stdout)
+        self.assertIn("tui packaging: passed evidence is missing", result.stdout)
+        self.assertIn(
+            "ios store submission: passed evidence is missing", result.stdout
+        )
+        self.assertIn("ios notarization: passed evidence is missing", result.stdout)
+        self.assertIn("macos notarization: passed evidence is missing", result.stdout)
+        # A complete consumer produces no rows; store submission applies only
+        # to the P0 store platforms, notarization only to Apple.
+        self.assertNotIn("android signing: passed evidence is missing", result.stdout)
+        self.assertNotIn("android store submission: passed", result.stdout)
+        self.assertNotIn("macos store submission: passed", result.stdout)
+        self.assertNotIn("windows store submission: passed", result.stdout)
+        self.assertNotIn("android notarization: passed", result.stdout)
+        self.assertNotIn("cli notarization: passed", result.stdout)
+
+    def test_completed_rg11_counts_web_demo_humble_todos(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            humble_todo_count=0,
+            web_demo_todo_count=2,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
+        self.assertIn("2 TODO(HUMBLE) site(s) remain", result.stdout)
 
 
 if __name__ == "__main__":
