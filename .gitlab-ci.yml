@@ -45,6 +45,7 @@ test:release-gates:
     - apk add --no-cache bash git just python3
   script:
     - JUST_UNSTABLE=1 just test-release-gates
+    - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just worktree test
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -53,7 +54,9 @@ test:release-gates:
         paths:
           - .gitlab-ci.yml
           - just/plan.just
+          - just/dev.just
           - just/worktree.just
+          - tests/test_core_freshness_recipe.py
           - tests/test_release_gates.py
           - tests/test_worktree_recipe.py
 

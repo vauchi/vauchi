@@ -67,6 +67,11 @@ schema-regen:
 # CORE FRESHNESS
 # ═══════════════════════════════════════════════════════════════════
 
+# Regression check for the Android binding-version parser used by core-freshness.
+[group('tests')]
+test-core-freshness:
+    python3 "{{justfile_directory()}}/tests/test_core_freshness_recipe.py" "{{justfile_directory()}}/just/dev.just"
+
 # Check if mobile bindings and Rust consumers are up to date with core
 [group('dev')]
 [script]
@@ -138,7 +143,7 @@ core-freshness:
     # Android — check build.gradle.kts dependency version
     ANDROID_GRADLE="$ROOT/android/app/build.gradle.kts"
     if [ -f "$ANDROID_GRADLE" ]; then
-        ANDROID_VER=$(sed -n 's/.*com\.vauchi:vauchi-platform:\(.*\)".*/\1/p' "$ANDROID_GRADLE")
+        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE")
         if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
             _dev_status "Android:" "$GREEN" "v$ANDROID_VER (matches latest tag)"
         else
