@@ -1031,6 +1031,20 @@ release-gates:
         for phrase, label in required_phrases.items():
             if phrase not in lowered:
                 failures.append(f"{label} is missing")
+        # Fault and device-lifecycle contract from the multi-device ratchet
+        # topology record's six-device matrix: convergence must also hold
+        # under concurrent writes, offline catch-up, relay restart, and the
+        # device lifecycle (revocation, replacement, clock skew).
+        for phrase in (
+            "simultaneous edits: passed",
+            "offline catch-up: passed",
+            "relay restart during delivery: passed",
+            "device revocation: passed",
+            "device replacement: passed",
+            "clock skew: passed",
+        ):
+            if phrase not in lowered:
+                failures.append(f"{phrase} evidence is missing")
         return failures
 
     def every_linked_device_failures():
@@ -1063,6 +1077,12 @@ release-gates:
         for phrase, label in required_phrases.items():
             if phrase not in lowered:
                 failures.append(f"{label} is missing")
+        # The ratchet-topology record lists Bob-originated updates as
+        # remaining six-device work; per-device exchange evidence must
+        # prove both directions, not only Alice-originated fan-out.
+        phrase = "bob-originated updates: passed"
+        if phrase not in lowered:
+            failures.append(f"{phrase} evidence is missing")
         return failures
 
     def selectable_exchange_failures():

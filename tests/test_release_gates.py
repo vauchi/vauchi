@@ -569,6 +569,12 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
             every_linked_device_evidence="""
 # Every linked device exchange evidence
@@ -581,6 +587,7 @@ third device initiation: passed
 independent per-device ratchet sessions: passed
 nine-pair ratchet matrix: passed
 sender-token wire inspection: passed
+bob-originated updates: passed
 """,
             selectable_exchange_evidence="""
 # Selectable exchange-mode acceptance evidence
@@ -1735,12 +1742,92 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
         )
 
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-5 every-linked-device evidence failure", result.stdout)
         self.assertIn("every-linked-device-exchange.md is missing", result.stdout)
+
+    def test_completed_rg4_requires_fault_and_lifecycle_coverage(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            # Topology phrases present; the fault and device-lifecycle rows
+            # from the ratchet-topology record's six-device matrix contract
+            # (offline catch-up, simultaneous edits, retry, duplication,
+            # reordering, revocation, replacement, clock skew) are absent.
+            six_device_convergence_evidence="""
+six-device topology: passed
+alice devices: a1, a2, a3
+bob devices: b1, b2, b3
+three linked devices per user: passed
+socket-backed topology: passed
+real link ceremony: passed
+convergence at every target: passed
+reorder and duplicate handling: passed
+evidence variant: rg4 fault-lifecycle red fixture
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn(
+            "RG-4 six-device convergence evidence failure", result.stdout
+        )
+        for phrase in (
+            "simultaneous edits: passed",
+            "offline catch-up: passed",
+            "relay restart during delivery: passed",
+            "device revocation: passed",
+            "device replacement: passed",
+            "clock skew: passed",
+        ):
+            self.assertIn(f"{phrase} evidence is missing", result.stdout)
+        self.assertNotIn(
+            "reorder/duplicate handling evidence is missing", result.stdout
+        )
+
+    def test_completed_rg5_requires_bob_originated_updates(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            # Every current phrase present except the Bob-originated
+            # direction the ratchet-topology record lists as remaining work.
+            every_linked_device_evidence="""
+active linked devices: a1, a2, a3, b1, b2, b3
+exchange from every active device: passed
+update from every active device: passed
+secondary device initiation: passed
+third device initiation: passed
+independent per-device ratchet sessions: passed
+nine-pair ratchet matrix: passed
+sender-token wire inspection: passed
+evidence variant: rg5 bob-originated red fixture
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-5 every-linked-device evidence failure", result.stdout)
+        self.assertIn(
+            "bob-originated updates: passed evidence is missing", result.stdout
+        )
+        self.assertNotIn(
+            "nine-pair ratchet matrix evidence is missing", result.stdout
+        )
 
     def test_completed_rg8_requires_ohttp_fail_closed_evidence(self) -> None:
         result = self.run_release_gates(
@@ -1977,6 +2064,12 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
             every_linked_device_evidence="""
 # Every linked device exchange evidence
@@ -1989,6 +2082,7 @@ third device initiation: passed
 independent per-device ratchet sessions: passed
 nine-pair ratchet matrix: passed
 sender-token wire inspection: passed
+bob-originated updates: passed
 """,
         )
 
@@ -2158,6 +2252,12 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
             every_linked_device_evidence="""
 # Every linked device exchange evidence
@@ -2170,6 +2270,7 @@ third device initiation: passed
 independent per-device ratchet sessions: passed
 nine-pair ratchet matrix: passed
 sender-token wire inspection: passed
+bob-originated updates: passed
 """,
             selectable_exchange_evidence="""
 # Selectable exchange-mode acceptance evidence
@@ -2346,6 +2447,12 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
             every_linked_device_evidence="""
 # Every linked device exchange evidence
@@ -2358,6 +2465,7 @@ third device initiation: passed
 independent per-device ratchet sessions: passed
 nine-pair ratchet matrix: passed
 sender-token wire inspection: passed
+bob-originated updates: passed
 """,
             selectable_exchange_evidence="""
 # Selectable exchange-mode acceptance evidence
@@ -2619,6 +2727,12 @@ socket-backed topology: passed
 real link ceremony: passed
 convergence at every target: passed
 reorder and duplicate handling: passed
+simultaneous edits: passed
+offline catch-up: passed
+relay restart during delivery: passed
+device revocation: passed
+device replacement: passed
+clock skew: passed
 """,
             every_linked_device_evidence="""
 # Every linked device exchange evidence
@@ -2631,6 +2745,7 @@ third device initiation: passed
 independent per-device ratchet sessions: passed
 nine-pair ratchet matrix: passed
 sender-token wire inspection: passed
+bob-originated updates: passed
 """,
             selectable_exchange_evidence="""
 # Selectable exchange-mode acceptance evidence
