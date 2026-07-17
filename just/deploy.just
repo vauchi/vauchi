@@ -156,8 +156,8 @@ deploy-check:
 # Hand me the deploy button that is guaranteed to ship the newest main
 # build. Does not deploy and changes no deploy config: it verifies the
 # service repo's origin/main image is built, mints a FRESH _private main
-# pipeline (its manual deploy:<service> job uses :latest by existing
-# rule), and prints that job's URL. Sha-pinned buttons on older
+# pipeline (its manual kamal:deploy:<service>-production job uses :latest
+# by existing rule), and prints that job's URL. Sha-pinned buttons on older
 # pipelines go stale the moment another MR merges — this one cannot.
 [group('deploy')]
 deploy-latest service:
@@ -168,11 +168,9 @@ deploy-latest service:
         docs)        REPO="docs" ;;
         landing)     REPO="website" ;;
         relay)       REPO="relay" ;;
+        cdn)         REPO="website" ;;
         ohttp-relay) REPO="ohttp-relay" ;;
-        # cdn is excluded: its image lives at vauchi/website/cdn and
-        # ci-deploy-service.sh has no :latest fallback for it — the
-        # minted button would fail (verified 2026-07-10).
-        *) echo "Unknown service: $SERVICE (docs|landing|relay|ohttp-relay)"; exit 1 ;;
+        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay)"; exit 1 ;;
     esac
 
     git -C "{{justfile_directory()}}/$REPO" fetch origin main --quiet 2>/dev/null || true
@@ -204,13 +202,13 @@ deploy-latest service:
     JOB_URL=""
     for _ in 1 2 3 4 5 6; do
         JOB_URL=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/jobs?per_page=100" 2>/dev/null \
-            | jq -r --arg n "deploy:${SERVICE}" '.[] | select(.name==$n) | .web_url' | head -1)
+            | jq -r --arg n "kamal:deploy:${SERVICE}-production" '.[] | select(.name==$n) | .web_url' | head -1)
         [[ -n "$JOB_URL" ]] && break
         sleep 5
     done
 
     if [[ -z "$JOB_URL" ]]; then
-        echo "Pipeline created but deploy:${SERVICE} job not visible yet:"
+        echo "Pipeline created but kamal:deploy:${SERVICE}-production job not visible yet:"
         echo "  https://gitlab.com/vauchi/private/-/pipelines/${PIPE}"
         exit 1
     fi
@@ -239,27 +237,27 @@ proxy-list:
     ssh {{ssh_target}} "docker exec kamal-proxy kamal-proxy list"
 
 # ═══════════════════════════════════════════════════════════════════
-# APP DEPLOYS (via CI — kamal deployer retired 2026-07-11)
+# APP DEPLOYS (via CI — Kamal 2)
 # ═══════════════════════════════════════════════════════════════════
 #
-# Apps (relay, landing, cdn, docs, ohttp-relay) deploy in CI via
-# infra/scripts/ci-deploy-service.sh, gated by GitLab protected-environment
-# approval. Mint a fresh, always-current deploy button with:
+# Apps (relay, landing, cdn, docs, ohttp-relay) deploy in CI via Kamal 2
+# (kamal:deploy:<service>-production jobs), gated by GitLab
+# protected-environment approval. Mint a fresh, always-current deploy button
+# with:
 #
 #     just deploy-latest <service>
 #
-# The former kamal-based `deploy` / `deploy-with-build` / `deploy-version`
-# recipes were retired: they duplicated the CI path (a second way to mint
-# containers) and drove the container name/label drift that broke the
-# landing dashboards twice. kamal is retained ONLY for kamal-proxy
-# lifecycle (see proxy-upgrade / proxy-list above).
+# The former hand-rolled `ci-deploy-service.sh` path was retired in 2026-07;
+# it duplicated Kamal's health-gated swap/rollback logic and drove the
+# container name/label drift behind the 2026-07-12 outage. kamal is also
+# retained for kamal-proxy lifecycle (see proxy-upgrade / proxy-list above).
 
 # Verify website image contains only expected files (no workspace leaks)
 [group('deploy')]
 test-website-image:
     ./_private/infra/scripts/test-website-image.sh
 
-# Show relay logs (CI-deployed container, discovered by service label)
+# Show relay logs (Kamal-deployed container, discovered by service label)
 [group('deploy')]
 relay-logs:
     #!/usr/bin/env bash
@@ -274,38 +272,29 @@ relay-logs:
     fi
     ssh "{{ssh_target}}" "docker logs -f $C"
 
-# Show cold-rollback candidates + commands for a CI-deployed service.
-# CI (ci-deploy-service.sh) stops — but keeps — the previous few
-# containers per service, so rollback is: start the previous one and
-# re-point kamal-proxy at it. This prints the plan for review rather than
-# executing a traffic switch blind; run the shown commands to apply, or
-# roll forward with `just deploy-latest {{service}}`.
+# Show the Kamal rollback command for a service. Does not execute the
+# rollback — print it for review, then run it manually. Roll forward with
+# `just deploy-latest {{service}}`.
 [group('deploy')]
 deploy-rollback service:
     #!/usr/bin/env bash
     set -euo pipefail
     SVC="{{service}}"
     case "$SVC" in
-        relay)       PROXY=vauchi-relay-web;    HOST=relay.vauchi.app; PORT=8080; HP=/health ;;
-        ohttp-relay) PROXY=vauchi-ohttp-relay;  HOST=ohttp.vauchi.app; PORT=8082; HP=/health ;;
-        cdn)         PROXY=vauchi-cdn-web;       HOST=cdn.vauchi.app;   PORT=80;   HP=/health ;;
-        docs)        PROXY=vauchi-docs-web;      HOST=docs.vauchi.app;  PORT=80;   HP=/health ;;
-        landing)     echo "landing runs via the compose/systemd stack — roll back by redeploying the"; \
-                     echo "previous image: just deploy-latest landing (pins :latest), or restart"; \
-                     echo "landing-compose.service with a previous IMAGE_TAG on the host."; exit 0 ;;
-        *) echo "Unknown service: $SVC (relay|ohttp-relay|cdn|docs|landing)"; exit 1 ;;
+        relay|landing|cdn|docs|ohttp-relay)
+            CONFIG="_private/infra/config/deploy.${SVC}.yml"
+            ;;
+        *) echo "Unknown service: $SVC (relay|landing|cdn|docs|ohttp-relay)"; exit 1 ;;
     esac
-    echo "── Containers for $SVC (newest first; [*]=running) ──"
-    ssh "{{ssh_target}}" "docker ps -a --filter 'label=app.vauchi.service=$SVC' --format '{{{{.Names}}\t{{{{.Status}}' | head -6" \
-        || { echo "No labelled containers yet (label ships with the app.vauchi.service MR); falling back to name."; \
-             ssh "{{ssh_target}}" "docker ps -a --filter 'name=vauchi-$SVC-' --format '{{{{.Names}}\t{{{{.Status}}' | head -6"; }
+    echo "── Running containers for $SVC (newest first) ──"
+    ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=$SVC' --format '{{{{.Names}}\t{{{{.Status}}\t{{{{.Image}}' | head -6" \
+        || echo "No running labelled containers found."
     echo ""
-    echo "── To roll back, pick a previous (stopped) container <PREV> and run: ──"
-    echo "  ssh {{ssh_target}} \"docker start <PREV>\""
-    echo "  ssh {{ssh_target}} \"docker exec kamal-proxy kamal-proxy deploy $PROXY \\"
-    echo "      --target <PREV>:$PORT --host $HOST --health-check-path $HP --tls\""
+    echo "── To roll back to the previous deployed version, run: ──"
+    echo "  kamal rollback -c ${CONFIG} -d production"
     echo ""
-    echo "This mirrors ci-deploy-service.sh's proxy switch (health-gated). Verify with: just deploy-check"
+    echo "This swaps traffic back to the previous container Kamal kept."
+    echo "Verify with: just deploy-check"
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL DEPLOYMENT
