@@ -448,6 +448,35 @@ session-end:
             echo "  WARN: work-board claim format issues (see above)"
     fi
 
+    # VHC01: AI-harness config parity (warn at session-end; root CI enforces).
+    # Page: _private/docs/lint-errors/vhc01-harness-parity.md
+    if [[ -x scripts/scripts/check-harness-parity.sh ]]; then
+        scripts/scripts/check-harness-parity.sh . || \
+            echo "  WARN: harness config parity issues (see above)"
+    fi
+
+    # VIC01: shared .idea config hygiene (warn at session-end; root CI enforces).
+    # Page: _private/docs/lint-errors/vic01-idea-config-hygiene.md
+    if [[ -x scripts/scripts/check-idea-config.sh ]]; then
+        scripts/scripts/check-idea-config.sh . || \
+            echo "  WARN: .idea config hygiene issues (see above)"
+    fi
+
+    # VSP01: stale ci-template pins (warn at session-end; root CI enforces).
+    # Page: _private/docs/lint-errors/vsp01-stale-ci-template-pin.md
+    if [[ -x scripts/scripts/check-stale-ci-pin.sh ]]; then
+        SE_RECENT="$SE_TMP/recent-ci-tags.txt"
+        git -C scripts tag --sort=-v:refname 2>/dev/null | grep '^ci-templates-v' | head -8 > "$SE_RECENT" 2>/dev/null || true
+        if [[ -s "$SE_RECENT" ]]; then
+            for _yaml in _private/.gitlab-ci.yml .gitlab-ci.yml; do
+                if [[ -f "$_yaml" ]]; then
+                    scripts/scripts/check-stale-ci-pin.sh "$_yaml" "$SE_RECENT" "$_yaml" || \
+                        echo "  WARN: stale ci-template pin in $_yaml (see above)"
+                fi
+            done
+        fi
+    fi
+
     # Source resolve-repo for MR check (if available)
     GLAB_OK=0
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
