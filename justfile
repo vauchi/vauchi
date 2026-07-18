@@ -862,6 +862,7 @@ release-prod repo="core":
         echo "  Update Cargo.toml to a clean version (e.g., 0.2.3) before PROD release"
         exit 1
     fi
+    just release-gates
     TAG="v${VERSION}"
     echo "Creating PROD tag for $REPO: $TAG"
     echo "  This will trigger the FULL release pipeline:"

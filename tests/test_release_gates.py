@@ -81,6 +81,8 @@ class ReleaseGatesTest(unittest.TestCase):
         core_tags: list[str] | None = None,
         humble_todo_count: int | None = None,
         web_demo_todo_count: int | None = None,
+        humble_release_zero_exit: int = 0,
+        humble_release_zero_output: str = "humble_check: release-zero gate passed",
         usability_evidence: str | None = None,
         accessibility_evidence: str | None = None,
         privacy_evidence: str | None = None,
@@ -174,6 +176,27 @@ class ReleaseGatesTest(unittest.TestCase):
                     )
                     or "// web demo migration complete\n"
                 )
+            humble_checker = workspace / "scripts/scripts/humble_check.py"
+            humble_checker.parent.mkdir(parents=True)
+            humble_checker.write_text(
+                "\n".join(
+                    [
+                        "import sys",
+                        "required = {'--workspace-root', '--config', '--check', "
+                        "'--release-zero'}",
+                        "missing = required.difference(sys.argv[1:])",
+                        "if missing:",
+                        "    print(f'missing release-zero argument(s): "
+                        "{sorted(missing)}')",
+                        "    sys.exit(2)",
+                        f"print({humble_release_zero_output!r})",
+                        f"sys.exit({humble_release_zero_exit})",
+                        "",
+                    ]
+                )
+            )
+            (workspace / "scripts/humble_check_rules.json").write_text("{}\n")
+            (workspace / "scripts/humble_check.baseline.json").write_text("{}\n")
             if usability_evidence is not None:
                 usability_path = (
                     workspace
@@ -2958,6 +2981,36 @@ android store submission: passed
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
         self.assertIn("2 TODO(HUMBLE) site(s) remain", result.stdout)
+
+    def test_completed_rg11_requires_zero_humble_ratchet_debt(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            humble_todo_count=0,
+            humble_release_zero_exit=1,
+            humble_release_zero_output=(
+                "android.domain_component: live=4, baseline=4"
+            ),
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
+        self.assertIn(
+            "android.domain_component: live=4, baseline=4",
+            result.stdout,
+        )
+
+    def test_release_prod_runs_release_gates_before_prompting(self) -> None:
+        justfile_text = JUSTFILE.read_text()
+        recipe = justfile_text.split('release-prod repo="core":', 1)[1]
+        recipe = recipe.split("# Show version promotion history", 1)[0]
+
+        self.assertIn("just release-gates", recipe)
+        self.assertLess(recipe.index("just release-gates"), recipe.index("read -p"))
 
 
 if __name__ == "__main__":

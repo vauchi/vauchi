@@ -656,6 +656,9 @@ release-gates:
         Path("tui"),
         Path("web-demo"),
     )
+    HUMBLE_CHECKER = Path("scripts/scripts/humble_check.py")
+    HUMBLE_RULES = Path("scripts/humble_check_rules.json")
+    HUMBLE_BASELINE = Path("scripts/humble_check.baseline.json")
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
@@ -829,6 +832,7 @@ release-gates:
         return []
 
     def humble_ui_failures():
+        failures = []
         todo_count = 0
         for frontend_repo in FRONTEND_REPOS:
             if not frontend_repo.is_dir():
@@ -844,8 +848,40 @@ release-gates:
                     continue
 
         if todo_count > 0:
-            return [f"{todo_count} TODO(HUMBLE) site(s) remain"]
-        return []
+            failures.append(f"{todo_count} TODO(HUMBLE) site(s) remain")
+
+        required_paths = (HUMBLE_CHECKER, HUMBLE_RULES, HUMBLE_BASELINE)
+        missing_paths = [path for path in required_paths if not path.is_file()]
+        if missing_paths:
+            failures.extend(f"{path} is missing" for path in missing_paths)
+            return failures
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(HUMBLE_CHECKER),
+                "--workspace-root",
+                ".",
+                "--config",
+                str(HUMBLE_RULES),
+                "--check",
+                str(HUMBLE_BASELINE),
+                "--release-zero",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            output = "\n".join(
+                part.strip() for part in (result.stdout, result.stderr) if part.strip()
+            )
+            failures.extend(
+                output.splitlines()
+                if output
+                else ["Humble UI release-zero checker failed without output"]
+            )
+        return failures
 
     def usability_evidence_failures():
         if not USABILITY_EVIDENCE.is_file():
