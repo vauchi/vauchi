@@ -2735,99 +2735,15 @@ public-api crate="all":
 # DOCUMENTATION LINTING
 # ═══════════════════════════════════════════════════════════════════
 
+# Regression check for repository scoping in lint-docs.
+[group('tests')]
+test-lint-docs:
+    python3 "{{justfile_directory()}}/tests/test_lint_docs_recipe.py" "{{justfile_directory()}}/just/lint-docs.sh"
+
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
-[script]
 lint-docs:
-    set -euo pipefail
-    ERRORS=0
-
-    # Only scan repos we author (not generated repos like vauchi-platform-*)
-    # Note: docs/ is now a mkdocs site without date-prefix convention
-    REPOS=("." "_private" "scripts" "assets")
-
-    echo "═══ Checking doc naming convention ═══"
-    for repo in "${REPOS[@]}"; do
-      [ -d "$repo" ] || continue
-      while IFS= read -r -d '' file; do
-        filename=$(basename "$file")
-        dirname=$(dirname "$file")
-
-        # Skip well-known filenames that don't need date prefixes
-        case "$filename" in
-          README.md|CLAUDE.md|roadmap.md|VISIBILITY_POLICY.md) continue ;;
-          STRUCTURE.md|ARCHITECTURE.md|SECURITY.md|CHECKLIST.md) continue ;;
-          investigation.md|implementation-plan.md|retrospective.md|post-mortem.md|rejected-solutions.md) continue ;;
-        esac
-
-        # Skip directories where date prefix convention doesn't apply
-        echo "$dirname" | grep -q "diagrams" && continue
-        echo "$dirname" | grep -q "ideas" && continue
-        echo "$dirname" | grep -q "strategy" && continue
-        echo "$dirname" | grep -q "infra" && continue
-        echo "$dirname" | grep -q "knowledge" && continue
-        echo "$dirname" | grep -q "archive" && continue
-        echo "$dirname" | grep -q "runbooks" && continue
-        [ "$dirname" = "$repo" ] && continue
-        echo "$dirname" | grep -q "/\." && continue
-
-        # Skip non-doc repos (code repos and assets have their own conventions)
-        echo "$file" | grep -qE "^\./?(core|relay|cli|tui|android|ios|e2e|features|assets|macos|windows|linux-gtk|linux-qt|web-demo)/" && continue
-
-        if ! echo "$filename" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-'; then
-          echo "  FAIL: $file (missing date prefix)"
-          ERRORS=$((ERRORS + 1))
-        fi
-      done < <(find "$repo" -name "*.md" -not -path "*/node_modules/*" -not -path "*/target/*" -not -path "*/.git/*" -not -path "*/.spm-packages/*" -print0)
-    done
-
-    echo ""
-    echo "═══ Checking for wrong license references ═══"
-    # Only check files that declare OUR license (## License sections, CONTRIBUTING, README footers)
-    # Grep for lines that say we are MIT-licensed — not references to other projects' licenses
-    WRONG_PATTERNS=(
-      "licensed under MIT"
-      "License: MIT"
-    )
-    for pattern in "${WRONG_PATTERNS[@]}"; do
-      for repo in "${REPOS[@]}"; do
-        [ -d "$repo" ] || continue
-        MATCHES=$(grep -rn --include="*.md" -i "$pattern" "$repo" \
-          --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git \
-          --exclude-dir=.spm-packages --exclude-dir=knowledge \
-          --exclude-dir=problems 2>/dev/null \
-          | grep -iv "catppuccin\|dracula\|nord\|solarized\|gruvbox\|third.party\|external\|dependency" || true)
-        if [ -n "$MATCHES" ]; then
-          echo "$MATCHES"
-          echo "  FAIL: Wrong license reference: '$pattern'"
-          ERRORS=$((ERRORS + 1))
-        fi
-      done
-    done
-
-    echo ""
-    echo "═══ Checking for broken links ═══"
-    if command -v lychee &>/dev/null; then
-      for repo in "${REPOS[@]}"; do
-        [ -d "$repo" ] || continue
-        echo "  Checking $repo/"
-        lychee --offline --no-progress \
-          --exclude-path node_modules \
-          --exclude-path target \
-          --exclude-path .git \
-          --exclude-path .spm-packages \
-          "$repo/**/*.md" 2>/dev/null || ERRORS=$((ERRORS + 1))
-      done
-    else
-      echo "  SKIP: lychee not installed (brew install lychee / cargo install lychee)"
-    fi
-
-    echo ""
-    if [ $ERRORS -gt 0 ]; then
-      echo "FAILED: $ERRORS issue(s) found"
-      exit 1
-    fi
-    echo "All documentation checks passed."
+    bash "{{justfile_directory()}}/just/lint-docs.sh"
 
 # Lint markdown files (line length with backtick-path exemption)
 # Usage: just lint-markdown [fix] [paths...]
