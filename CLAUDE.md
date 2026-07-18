@@ -59,45 +59,29 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 
 **Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
 
-**Subagent budget (MANDATORY)** — each `Agent` call adds significant
-per-invocation overhead (system prompt + agent definition + skills
-list) *before* it does any work. Anthropic's costs doc cites "~7×
-more tokens for agent-team sessions" as the only documented number;
-the often-quoted ~5–10 K absolute figure is community speculation, not
-Anthropic-published. Empirical: 62 `Explore` invocations in 30 days
-= the largest single token cost in this project, dwarfing every
-config-level optimization combined. Rules:
+**Subagent budget (MANDATORY)** — each `Agent` call pays per-invocation
+overhead (system prompt + agent definition + skills list) before doing
+any work, and Kimi/Codex subagents have no cheap model tier — every
+spawn runs at full session-model price. Evidence and cost data:
+`.claude/docs/token-budget.md`. Rules:
 
-- **Never `Agent` for ≤2 search queries.** Use `Grep` / `Read` /
-  `Glob` directly. One `Grep` with a wide pattern beats two `Agent`
-  calls.
+- **Never `Agent` for ≤2 search queries.** One wide `Grep` beats two
+  `Agent` calls.
 - **`Agent` is appropriate when**: (a) ≥3 independent searches across
-  unrelated files, (b) the result would be many KB and you need it
-  digested before returning to main context, or (c) the task matches
-  a specialized agent's description (e.g. `adr-check`, `rust-reviewer`,
-  `ci-fixer`).
-- **Never `Agent` for**: a single grep, reading one file, finding one
-  symbol, listing files in a directory, or anything you could express
-  as a single tool call.
+  unrelated files, (b) the result is many KB and needs digesting before
+  returning to main context, or (c) the task matches a specialized
+  agent (`adr-check`, `rust-reviewer`, `ci-fixer`).
+- **Never `Agent` for**: a single grep, one file read, one symbol, one
+  directory listing — anything expressible as a single tool call.
 - **Parallelize before delegating.** Two `Grep` calls in one message
   are cheaper than one `Agent` call.
-- **Route the spawn to the cheapest model that fits.** Project agents
-  already pin cheap models (search/git/audit → `haiku`/`sonnet`); the
-  built-in `Explore`/`general-purpose` agents inherit the session model
-  (Opus) and have no cheap default — when one is genuinely warranted,
-  pass `model: "haiku"` (search) or `"sonnet"` (light reasoning) in the
-  `Agent` call. Empirically (2026-07 session-cost analysis) subagent
-  share drove cost-per-commit 5× in the worst week; wrong-tier search
-  agents were the largest slice.
-- **Cascade mechanical work to Haiku (docs/tidy/chore ≈ 53% of commits).**
-  When on an expensive session model and facing a *batch* of judgment-free
-  edits — docs/README prose, tidy renames/formatting, chore version bumps,
-  locale key additions — delegate to the `mechanical-edit` agent (Haiku)
-  rather than doing it inline on Opus. It self-verifies and returns an
-  `ESCALATE:` reason for anything needing judgment, which comes back to
-  you. Threshold: batches or multi-file changes — a single one-line fix is
-  cheaper done inline (agent spawn overhead). Cheap model first, escalate
-  on judgment.
+- **Claude: route spawns to the cheapest model that fits** — pass
+  `model: "haiku"` (search) or `"sonnet"` (light reasoning); project
+  agents already pin cheap models, the built-ins inherit the session
+  model.
+- **Cascade batches of judgment-free edits** (docs prose, tidy renames,
+  version bumps, locale keys) to the `mechanical-edit` agent (Haiku);
+  single one-line fixes stay inline.
 
 **Tool output discipline (MANDATORY)** — a single noisy command
 (`git log`, `cargo check`, `just test`, large `Read`) routinely dumps
@@ -198,7 +182,7 @@ Contributing guide: `docs/src/developers/contributing.md`.
 
 ## Reference Docs
 
-`.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`, `exchange-protocol.md`, `tls-backend-decisions.md`, `audit-scope.md`, `agent-selection.md`
+`.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`, `exchange-protocol.md`, `tls-backend-decisions.md`, `audit-scope.md`, `agent-selection.md`, `token-budget.md`
 `_private/docs/testing/`: `manual-testing.md`, `device-automation/`, also `.claude/docs/device-testing.md`
 
 **Per-repo docs** (read when working in matching repos — NOT auto-loaded):
@@ -208,69 +192,45 @@ Contributing guide: `docs/src/developers/contributing.md`.
 
 - `.claude/docs/log_reasoning_errors.md` — committed, shared,
   lightweight session entries. Append when self-caught, user-corrected,
-  or when reviewing past work reveals a wrong claim / implementation /
-  tool usage. Saves tokens for future sessions by short-circuiting
-  known dead ends. Promote a one-liner to "Common waste patterns"
-  below after 3+ occurrences. (The earlier two-tier model via
-  `claude-errors-and-misjudgments.md` was retired 2026-05-08; that
-  E## file sat empty below E30 while real promotions went straight
-  from the log to this section.)
+  or when review reveals a wrong claim / implementation / tool usage.
+  Promote a one-liner to "Common waste patterns" below after 3+
+  occurrences.
 
 ### Common waste patterns (pattern-match before acting)
 
-Recurring failure modes drawn from the archive
-(`archive/claude-errors-2026-03.md`, 30 patterns; bias note: Claude
-"optimizes for task completion over process compliance under friction"
-drove 15 of those 30) and the active log. Each costs 5–50 K tokens per
-occurrence — preventing one outweighs this section's load cost many
-times over.
+Recurring failure modes from the archive and active log. Each costs
+5–50 K tokens per occurrence — preventing one outweighs this section's
+load cost many times over. Attribution and history:
+`.claude/docs/token-budget.md`.
 
 - **Process-bypass under friction.** A failing test, blocked hook, or
   red CI tempts a "make it pass" shortcut (`--no-verify`, exclude file
-  from lint, mock the check, suppress the warning). Default: fix the
-  source first. Read CC-21 (Chesterton's Fence) before muting any
-  check.
+  from lint, mock the check, suppress the warning). Fix the source
+  first; read CC-21 (Chesterton's Fence) before muting any check.
 - **"Works on host" assumption.** GNU coreutils on a Linux host does
-  not predict BusyBox on `alpine:3.21` CI. For shell that runs in
-  alpine, test inside the same image
-  (`docker run --rm -v "$PWD":/work -w /work alpine:3.21 sh -c '…'`).
-  Same shape: macOS BSD vs Linux GNU.
+  not predict BusyBox on `alpine:3.21` CI or BSD on macOS. Test shell
+  in the target image (`docker run --rm -v "$PWD":/work -w /work
+  alpine:3.21 sh -c '…'`).
 - **Header-comment-as-spec.** Comments age faster than the code they
-  describe; an inverted-intent header is common. Trust the body. Run a
-  sentinel-input test before wiring an unfamiliar script into CI.
-- **Wrong-layer audit.** Optimizing at file/config layer when the cost
-  lives in behavior (Agent calls, large `Read`s, retry cycles). Sample
-  empirically where tokens actually go (jsonl logs, hook counts) before
-  optimizing.
+  describe; an inverted-intent header is common. Trust the body;
+  sentinel-test unfamiliar scripts before wiring them into CI.
+- **Wrong-layer audit.** The cost lives in behavior (Agent calls, large
+  `Read`s, retry cycles), not in files/config. Sample jsonl logs and
+  hook counts before optimizing.
 - **Retry-instead-of-think.** If the second attempt at a problem isn't
   right, STOP and re-read carefully. Attempt 3+ costs more tokens than
-  the planning time it skipped — this is the dominant in-session waste
-  pattern by frequency.
-- **Memory-loaded-but-unused.** A relevant memory entry is in context,
-  yet the next action ignores it (e.g. reflexive `cd` despite the
-  `git -C` memory). When starting a multi-step action, scan the
-  loaded memory for entries that name the action verb.
-- **Stale local checkout as evidence.** Diagnosing, diffing, or
-  branching from a sub-repo's local main without fetching first. In a
-  20-repo workspace with concurrent sessions, any unfetched checkout
-  is weeks old; conclusions drawn from it (and branches built on it)
-  get clobbered by reality at push time. `git -C <repo> fetch origin`
+  the planning time it skipped.
+- **Memory-loaded-but-unused.** Before a multi-step action, scan the
+  loaded memory/rules for entries that name the action verb.
+- **Stale local checkout as evidence.** `git -C <repo> fetch origin`
   before reading state you'll act on; compare against `origin/main`,
-  not the working tree. (3 occurrences: 2026-05-04 bootstrap, 2×
-  2026-06-11 website + locales.)
-- **Blocked twice or unsure → ask.** When a hook/check/permission
-  blocks a second attempt, or a fix rests on a semantic guess you
-  can't verify, stop and ask the user — never bypass, never
-  third-retry. The archive attributes 15/30 logged errors to
-  process-bypass under friction; a question is always cheaper than
-  the cleanup.
+  not the working tree.
+- **Blocked twice or unsure → ask.** Never bypass, never third-retry —
+  a question is always cheaper than the cleanup.
 - **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
-  paths — a dead old path aborts the whole `git add`, and
-  `2>/dev/null` turns the abort into silent content loss (the commit
-  lands renames with 0 insertions). Never silence `git add` stderr;
-  verify `git show --stat` shows nonzero insertions before pushing a
-  commit that should carry content. (3 occurrences: 2026-06-08, 2×
-  2026-06-11.)
+  paths — a dead old path aborts the whole `git add`. Never silence
+  `git add` stderr; verify `git show --stat` shows nonzero insertions
+  before pushing a commit that should carry content.
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.
