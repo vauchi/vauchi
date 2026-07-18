@@ -477,6 +477,17 @@ session-end:
         fi
     fi
 
+    # VFL01: flaky-quarantine SLA (warn at session-end; scheduled CI enforces).
+    # Page: _private/docs/lint-errors/vfl01-flaky-sla.md
+    if [[ -x scripts/scripts/check-flaky-sla.sh ]]; then
+        for _repo in core cli tui e2e relay linux-gtk; do
+            if [[ -d "$_repo" ]]; then
+                scripts/scripts/check-flaky-sla.sh "$_repo" || \
+                    echo "  WARN: flaky-SLA issues in $_repo (see above)"
+            fi
+        done
+    fi
+
     # Source resolve-repo for MR check (if available)
     GLAB_OK=0
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
