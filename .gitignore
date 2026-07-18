@@ -77,8 +77,9 @@
 .continue/
 .cursor/
 .kamal/
-.idea/
 .ai/
+# .idea/ tracks a curated subset (run configs, scopes, code style, copyright,
+# templates, excludes); per-user churn is excluded via .idea/.gitignore
 # AI memory and local session state
 .junie/
 # .claude/ is tracked (skills, agents, shared settings)

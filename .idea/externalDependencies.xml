@@ -1,0 +1,7 @@
+<component name="ExternalDependencies">
+  <plugin id="com.jetbrains.rust" />
+  <plugin id="org.mvnsearch.plugins.justPlugin" />
+  <plugin id="gherkin" />
+  <plugin id="dev.j-a.swift" />
+  <plugin id="com.jetbrains.kmm" />
+</component>

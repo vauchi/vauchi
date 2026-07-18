@@ -1,0 +1,8 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="SPDX-FileCopyrightText: $today.year Mattia Egloff &lt;mattia.egloff@pm.me&gt;&#10;&#10;SPDX-License-Identifier: GPL-3.0-or-later" />
+    <option name="keyword" value="SPDX-License-Identifier" />
+    <option name="myName" value="Vauchi" />
+    <option name="myLocal" value="true" />
+  </copyright>
+</component>

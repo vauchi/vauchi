@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Frontends" pattern="file:android//*||file:ios//*||file:macos//*||file:windows//*||file:linux-gtk//*||file:linux-qt//*||file:web-demo//*||file:tui//*" />
+</component>

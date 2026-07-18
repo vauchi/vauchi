@@ -1,0 +1,18 @@
+# Per-user IDE state — never shared. The rest of .idea/ is a curated,
+# tracked project setup (run configs, scopes, code style, copyright,
+# templates, module excludes).
+/shelf/
+/workspace.xml
+/usage.statistics.xml
+/tasks.xml
+/contentModel.xml
+/aws.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Ignored default folder with query files
+/queries/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Assistant / plugin local state
+/copilot/
