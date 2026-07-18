@@ -285,6 +285,20 @@ mr-merge id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab mr merge "{{id}}" --yes -R "$p"
 
+# Merge a merge request when its pipeline succeeds (auto-merge / MWPS).
+# Unlike mr-merge (immediate), this queues the merge so you don't babysit the
+# pipeline — the intended finisher for the dependent-mrs unblock flow once an
+# upstream tier is in and the downstream MR's own pipeline is running/green.
+[no-cd]
+[script]
+mr-merge-when-green id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr merge "{{id}}" --auto-merge --yes -R "$p"
+
 # Close a merge request
 [no-cd]
 [script]

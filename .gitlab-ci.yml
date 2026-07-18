@@ -29,6 +29,24 @@ include:
 variables:
   VAUCHI_SCRIPTS_REF: "ci-templates-v2026.07.2"
 
+# Superseded pipelines auto-cancel so stale runs don't hog shared runners
+# (the dominant queue-time cause). Jobs are interruptible by default and
+# retry only on infrastructure failures — never a real test/lint failure
+# (CC-18). Root runs MR/schedule pipelines only, so no push-dedup rule is
+# needed. The deploy-stage cleanup job overrides interruptible: false.
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
+default:
+  interruptible: true
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - unknown_failure
+
 stages:
   - lint
   - security
@@ -81,6 +99,7 @@ secret_detection:
 # Fetches cleanup script from vauchi/scripts at runtime.
 cleanup:prerelease:
   stage: deploy
+  interruptible: false
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/python:3.12-slim
   tags: [docker]
   needs: []
