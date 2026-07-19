@@ -474,6 +474,14 @@ lint *args:
         # check-text-literal-count.sh respectively. The baseline may DROP as
         # strings are routed through locales; it may never RISE.
         scripts/scripts/audit-frontend-i18n-strings.sh --check scripts/scripts/audit-frontend-i18n-strings.baseline.json
+        # Shell-surface ratchet (2026-07-18 planning-coherence audit):
+        # frontend Mobile* type refs (iOS/Android/macOS) + hardware-executor
+        # domain vocabulary — the residual "frontends are shells" debt now
+        # that mobile_pub_fns is 0. Baseline may DROP, never RISE.
+        scripts/scripts/audit-shell-surface.sh --check scripts/scripts/audit-shell-surface.baseline.json
+        # Frontend handwritten-LOC budget — "less code is better":
+        # per-frontend LOC may DROP as logic moves to core, never RISE.
+        scripts/scripts/loc-budget.sh --check scripts/scripts/loc-budget.baseline.json
     fi
 
 # Interactive commit across repos with changes
