@@ -223,7 +223,7 @@ branch-health mode='audit':
     gone=0
     active=0
 
-    cutoff_14d=$(date -v-14d +%s 2>/dev/null || date -d "14 days ago" +%s 2>/dev/null)
+    cutoff_14d=$(( $(date +%s) - 14 * 86400 ))
 
     _BH_C1=18  # repo column
     _BH_C2=32  # branch column
@@ -242,7 +242,11 @@ branch-health mode='audit':
         [[ "$label" == "vauchi (root)" ]] && label="root"
 
         local branches
-        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[* ]*//' | grep -v '^main$' || true)
+        # Strip the leading marker: `* ` (current), `+ ` (checked out in another
+        # worktree), or two spaces. Missing `+` here left worktree branches named
+        # "+ <name>", so every ref lookup below failed and last_epoch fell back to
+        # 0 → a bogus ~20653-day age that misclassified them all as stale.
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[*+ ]*//' | grep -v '^main$' || true)
         [[ -z "$branches" ]] && return 0
 
         while IFS= read -r br; do
@@ -250,7 +254,13 @@ branch-health mode='audit':
 
             last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
             now=$(date +%s)
-            age_days=$(( (now - last_epoch) / 86400 ))
+            # last_epoch==0 means the date could not be read; show 0d rather than
+            # ~20653d, and never let it fall through to the stale bucket below.
+            if [[ "$last_epoch" -gt 0 ]]; then
+                age_days=$(( (now - last_epoch) / 86400 ))
+            else
+                age_days=0
+            fi
 
             status="active"
             action="-"
@@ -286,7 +296,7 @@ branch-health mode='audit':
                 status="gone"
                 action="RECOVER"
                 gone=$((gone + 1))
-            elif [[ "$last_epoch" -lt "$cutoff_14d" ]]; then
+            elif [[ "$last_epoch" -gt 0 && "$last_epoch" -lt "$cutoff_14d" ]]; then
                 status="stale"
                 action="REVIEW"
                 stale=$((stale + 1))
@@ -428,7 +438,7 @@ stale-branches days='14':
     source scripts/scripts/git-helpers.sh
     set -euo pipefail
     threshold="{{ days }}"
-    cutoff=$(date -v-${threshold}d +%s 2>/dev/null || date -d "$threshold days ago" +%s 2>/dev/null)
+    cutoff=$(( $(date +%s) - threshold * 86400 ))
 
     # Fetch so origin/main is current for status checks
     _sb_fetch() {
@@ -455,7 +465,7 @@ stale-branches days='14':
         local label="$1" d="$2"
 
         local branches
-        branches=$(git -C "$d" branch --no-color 2>/dev/null | grep -v 'main$' | sed 's/^[* ]*//' || true)
+        branches=$(git -C "$d" branch --no-color 2>/dev/null | sed 's/^[*+ ]*//' | grep -v '^main$' || true)
         [[ -z "$branches" ]] && return 0
 
         while IFS= read -r br; do
@@ -463,7 +473,7 @@ stale-branches days='14':
             local last_epoch last_date
             last_epoch=$(git -C "$d" log -1 --format=%ct "$br" 2>/dev/null || echo "0")
             last_date=$(git -C "$d" log -1 --format=%ci "$br" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
-            if [[ "$last_epoch" -lt "$cutoff" ]]; then
+            if [[ "$last_epoch" -gt 0 && "$last_epoch" -lt "$cutoff" ]]; then
                 local now age_days status
                 now=$(date +%s)
                 age_days=$(( (now - last_epoch) / 86400 ))
