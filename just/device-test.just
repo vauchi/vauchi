@@ -934,6 +934,8 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
     echo "Screenshot saved to {{file}}"
 
 # Real-device usability gate — golden-path flows on physical hardware + evidence
+# PLATFORM: ios | android | linux | all (just rejects a variadic after a
+# default parameter, so PLATFORM is required; pass `all` explicitly).
 [group('device-test')]
-device-gate PLATFORM="all" *FLAGS:
+device-gate PLATFORM *FLAGS:
     scripts/scripts/device-gate.sh {{PLATFORM}} {{FLAGS}}
