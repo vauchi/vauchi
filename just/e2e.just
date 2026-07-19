@@ -373,6 +373,12 @@ e2e-maestro platform="all":
             hide_contact
             send_emergency_broadcast
             visibility_labels
+            # Duress PIN setup requires selecting a real contact as the
+            # alert recipient (Save is gated on >=1 recipient);
+            # single-device runs have no contacts (decoys live in a
+            # separate table and never appear in the recipient list).
+            setup_duress_pin
+            duress_unlock
         )
 
         # Flows that exercise app-password / duress-PIN auth. They change the

@@ -254,7 +254,9 @@ _dt-package-ios core_dir:
 
     BINDINGS_DIR="$CORE_DIR/target/bindings/ios/generated"
     DEVICE_LIB="$CORE_DIR/target/aarch64-apple-ios/release/libvauchi_platform.a"
-    XCFW_DIR="$CORE_DIR/target/xcframework-build/VauchiPlatformFFI.xcframework"
+    # Absolute — the SPM symlink below must resolve from inside
+    # vauchi-platform-swift/ (a relative `core/target/...` link dangles).
+    XCFW_DIR="$WORKSPACE_ROOT/$CORE_DIR/target/xcframework-build/VauchiPlatformFFI.xcframework"
     SPM_DIR="$WORKSPACE_ROOT/vauchi-platform-swift"
 
     # Extract version from workspace Cargo.toml
@@ -366,9 +368,10 @@ _dt-package-ios core_dir:
     # Sync xcframework into SPM package (supports both symlink and real directory)
     SPM_XCFW="$SPM_DIR/VauchiPlatformFFI.xcframework"
     if [[ -L "$SPM_XCFW" ]]; then
-        # Already a symlink — update if pointing to wrong place
+        # Already a symlink — recreate if dangling or pointing elsewhere
+        # (-e follows the link; dangling links fail the test).
         SYMLINK_TARGET=$(readlink "$SPM_XCFW")
-        if [[ "$SYMLINK_TARGET" != *"$CORE_DIR"* && "$SYMLINK_TARGET" != "$XCFW_DIR" ]]; then
+        if [[ ! -e "$SPM_XCFW" ]] || [[ "$SYMLINK_TARGET" != "$XCFW_DIR" ]]; then
             echo -e "${YELLOW}  Updating SPM symlink...${NC}"
             rm -f "$SPM_XCFW"
             ln -s "$XCFW_DIR" "$SPM_XCFW"
@@ -461,6 +464,10 @@ _dt-build-ios:
     rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
     # Use -workspace (not -project) so SPM picks up the local
     # vauchi-platform-swift override declared in the workspace.
+    # Without this env var, the vauchi-platform-swift manifest emits a URL
+    # binaryTarget and SPM silently links the PUBLISHED (stale) core —
+    # local Rust changes never reach the device (mobile.just:75-79).
+    export VAUCHI_PLATFORM_USE_LOCAL_XCFRAMEWORK=1
     xcodebuild -workspace Vauchi.xcworkspace \
         -scheme Vauchi \
         -configuration Debug \
@@ -925,3 +932,8 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
         exit 1
     fi
     echo "Screenshot saved to {{file}}"
+
+# Real-device usability gate — golden-path flows on physical hardware + evidence
+[group('device-test')]
+device-gate PLATFORM="all" *FLAGS:
+    scripts/scripts/device-gate.sh {{PLATFORM}} {{FLAGS}}
