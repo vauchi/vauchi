@@ -125,6 +125,7 @@ _dt-build-mobile-libs-ios core_dir:
     source "$(pwd)/just/device-test-lib.sh"
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
+    export VAUCHI_LOCALES_DIR="{{justfile_directory()}}/locales"
     export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
     printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
@@ -140,6 +141,7 @@ _dt-build-mobile-libs-android core_dir:
     source "$(pwd)/just/device-test-lib.sh"
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
+    export VAUCHI_LOCALES_DIR="{{justfile_directory()}}/locales"
 
     dt_setup_android_ndk
     printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
@@ -155,6 +157,7 @@ _dt-build-mobile-libs core_dir:
     source "$(pwd)/just/device-test-lib.sh"
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
+    export VAUCHI_LOCALES_DIR="{{justfile_directory()}}/locales"
     export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
     # iOS device

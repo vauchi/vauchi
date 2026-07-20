@@ -36,6 +36,16 @@ class DeviceTestRecipeTest(unittest.TestCase):
 
         self.assertIn("unset IPHONEOS_DEPLOYMENT_TARGET", native_build)
 
+    def test_physical_device_builds_use_the_workspace_locale_catalog(self) -> None:
+        source = DEVICE_TEST_JUSTFILE.read_text()
+
+        self.assertGreaterEqual(
+            source.count(
+                'export VAUCHI_LOCALES_DIR="{{justfile_directory()}}/locales"'
+            ),
+            3,
+        )
+
     def test_ios_build_clears_the_workspace_package_resolution(self) -> None:
         source = DEVICE_TEST_JUSTFILE.read_text()
         ios_build = source.split("_dt-build-ios:", maxsplit=1)[1].split(
