@@ -198,7 +198,12 @@ dt_provision_ios_local_spm() {
 
     artifact_id=$(git hash-object "$device_binary" | cut -c1-16)
     mirror="$HOME/.cache/vauchi-platform-swift-device-mirror"
-    mirror="$mirror/v${version}-${artifact_id}"
+    # SwiftPM derives a mirror's package identity from the file:// URL's last
+    # path component; Xcode 26 / Swift 6.3 rejects the override unless it
+    # equals the original identity ("vauchi-platform-swift"). Keep the
+    # version+artifact as a parent dir (reproducible per-artifact cache key,
+    # a77218f) and name the mirror leaf to match the identity.
+    mirror="$mirror/v${version}-${artifact_id}/vauchi-platform-swift"
     mirror_ready="$mirror/.device-mirror-ready"
 
     if [[ ! -f "$mirror_ready" ]]; then
