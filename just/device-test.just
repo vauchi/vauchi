@@ -8,6 +8,12 @@
 # DEVICE TESTING (physical device workflow)
 # ═══════════════════════════════════════════════════════════════════
 
+[group('tests')]
+test-device-test-recipes:
+    python3 "{{justfile_directory()}}/tests/test_device_test_recipe.py" \
+        "{{justfile_directory()}}/just/device-test.just" \
+        "{{justfile_directory()}}/just/device-test-lib.sh"
+
 # Build, package, and install both apps on physical devices
 [group('device-test')]
 [script]
@@ -16,9 +22,9 @@ prepare-device-test core_dir="":
     source "$(pwd)/just/device-test-lib.sh"
 
     CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
-    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║     Prepare Device Test — Full Pipeline       ║${NC}"
-    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
+    printf "%b\n" "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    printf "%b\n" "${YELLOW}║     Prepare Device Test — Full Pipeline       ║${NC}"
+    printf "%b\n" "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "Core directory: $CORE_DIR"
     echo ""
@@ -28,37 +34,37 @@ prepare-device-test core_dir="":
     TOTAL_START=$SECONDS
 
     echo ""
-    echo -e "${BLUE}[1/6] Building mobile libraries...${NC}"
+    printf "%b\n" "${BLUE}[1/6] Building mobile libraries...${NC}"
     just _dt-build-mobile-libs "$CORE_DIR"
 
     echo ""
-    echo -e "${BLUE}[2/6] Generating UniFFI bindings...${NC}"
+    printf "%b\n" "${BLUE}[2/6] Generating UniFFI bindings...${NC}"
     just _dt-generate-bindings "$CORE_DIR"
 
     echo ""
-    echo -e "${BLUE}[3/6] Packaging iOS bindings...${NC}"
+    printf "%b\n" "${BLUE}[3/6] Packaging iOS bindings...${NC}"
     just _dt-package-ios "$CORE_DIR"
 
     echo ""
-    echo -e "${BLUE}[4/6] Packaging Android bindings...${NC}"
+    printf "%b\n" "${BLUE}[4/6] Packaging Android bindings...${NC}"
     just _dt-package-android "$CORE_DIR"
 
     echo ""
-    echo -e "${BLUE}[5/6] Building apps...${NC}"
+    printf "%b\n" "${BLUE}[5/6] Building apps...${NC}"
     just _dt-build-ios
     just _dt-build-android
 
     echo ""
-    echo -e "${BLUE}[6/6] Installing apps on devices...${NC}"
+    printf "%b\n" "${BLUE}[6/6] Installing apps on devices...${NC}"
     just _dt-install-ios
     just _dt-install-android
 
     ELAPSED=$((SECONDS - TOTAL_START))
     echo ""
-    echo -e "${GREEN}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║     Device Test Preparation Complete           ║${NC}"
-    echo -e "${GREEN}║     Total time: ${ELAPSED}s                            ${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════╝${NC}"
+    printf "%b\n" "${GREEN}╔════════════════════════════════════════════════╗${NC}"
+    printf "%b\n" "${GREEN}║     Device Test Preparation Complete           ║${NC}"
+    printf "%b\n" "${GREEN}║     Total time: ${ELAPSED}s                            ${NC}"
+    printf "%b\n" "${GREEN}╚════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "Both apps installed and ready for testing."
 
@@ -70,7 +76,7 @@ rebuild-ios core_dir="":
     source "$(pwd)/just/device-test-lib.sh"
 
     CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
-    echo -e "${YELLOW}═══ Rebuild iOS (device) ═══${NC}"
+    printf "%b\n" "${YELLOW}═══ Rebuild iOS (device) ═══${NC}"
     echo "Core directory: $CORE_DIR"
     echo ""
 
@@ -83,7 +89,7 @@ rebuild-ios core_dir="":
     just _dt-install-ios
 
     echo ""
-    echo -e "${GREEN}iOS app installed and ready for testing.${NC}"
+    printf "%b\n" "${GREEN}iOS app installed and ready for testing.${NC}"
 
 # Rebuild + install Android only (skip iOS)
 [group('device-test')]
@@ -93,7 +99,7 @@ rebuild-android core_dir="":
     source "$(pwd)/just/device-test-lib.sh"
 
     CORE_DIR=$(dt_resolve_core_dir "{{core_dir}}")
-    echo -e "${YELLOW}═══ Rebuild Android (device) ═══${NC}"
+    printf "%b\n" "${YELLOW}═══ Rebuild Android (device) ═══${NC}"
     echo "Core directory: $CORE_DIR"
     echo ""
 
@@ -106,7 +112,7 @@ rebuild-android core_dir="":
     just _dt-install-android
 
     echo ""
-    echo -e "${GREEN}Android app installed and ready for testing.${NC}"
+    printf "%b\n" "${GREEN}Android app installed and ready for testing.${NC}"
 
 # ─── Internal sub-recipes ────────────────────────────────────────
 
@@ -121,9 +127,9 @@ _dt-build-mobile-libs-ios core_dir:
     unset RUSTC_WRAPPER
     export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
-    echo -e "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
-    cargo build -p vauchi-platform --target aarch64-apple-ios --release
-    echo -e "${GREEN}  iOS device library built${NC}"
+    printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-apple-ios --release --features dev-logging
+    printf "%b\n" "${GREEN}  iOS device library built${NC}"
 
 # Build vauchi-platform for Android device target (aarch64-linux-android)
 [group('device-test')]
@@ -136,9 +142,9 @@ _dt-build-mobile-libs-android core_dir:
     unset RUSTC_WRAPPER
 
     dt_setup_android_ndk
-    echo -e "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
-    cargo build -p vauchi-platform --target aarch64-linux-android --release
-    echo -e "${GREEN}  Android device library built${NC}"
+    printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-linux-android --release --features dev-logging
+    printf "%b\n" "${GREEN}  Android device library built${NC}"
 
 # Build vauchi-platform for both device targets + native (for Kotlin bindgen)
 [group('device-test')]
@@ -152,20 +158,21 @@ _dt-build-mobile-libs core_dir:
     export IPHONEOS_DEPLOYMENT_TARGET="10.0"
 
     # iOS device
-    echo -e "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
-    cargo build -p vauchi-platform --target aarch64-apple-ios --release
-    echo -e "${GREEN}  iOS device library built${NC}"
+    printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-apple-ios (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-apple-ios --release --features dev-logging
+    printf "%b\n" "${GREEN}  iOS device library built${NC}"
 
     # Android device
     dt_setup_android_ndk
-    echo -e "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
-    cargo build -p vauchi-platform --target aarch64-linux-android --release
-    echo -e "${GREEN}  Android device library built${NC}"
+    printf "%b\n" "${YELLOW}Building vauchi-platform for aarch64-linux-android (device)...${NC}"
+    cargo build -p vauchi-platform --target aarch64-linux-android --release --features dev-logging
+    printf "%b\n" "${GREEN}  Android device library built${NC}"
 
     # Native macOS (needed for Kotlin binding generation)
-    echo -e "${YELLOW}Building vauchi-platform native (for Kotlin bindgen)...${NC}"
+    unset IPHONEOS_DEPLOYMENT_TARGET
+    printf "%b\n" "${YELLOW}Building vauchi-platform native (for Kotlin bindgen)...${NC}"
     RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
-    echo -e "${GREEN}  Native macOS library built${NC}"
+    printf "%b\n" "${GREEN}  Native macOS library built${NC}"
 
 # Generate Swift bindings from iOS .a
 [group('device-test')]
@@ -177,14 +184,14 @@ _dt-generate-bindings-swift core_dir:
     cd "{{core_dir}}"
     unset RUSTC_WRAPPER
 
-    echo -e "${YELLOW}Generating Swift bindings...${NC}"
+    printf "%b\n" "${YELLOW}Generating Swift bindings...${NC}"
     BINDINGS_OUT="target/bindings/ios/generated"
     mkdir -p "$BINDINGS_OUT"
     cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
         --library target/aarch64-apple-ios/release/libvauchi_platform.a \
         --language swift \
         --out-dir "$BINDINGS_OUT"
-    echo -e "${GREEN}  Swift bindings generated at $BINDINGS_OUT${NC}"
+    printf "%b\n" "${GREEN}  Swift bindings generated at $BINDINGS_OUT${NC}"
 
 # Generate Kotlin bindings from native macOS .dylib
 [group('device-test')]
@@ -200,17 +207,17 @@ _dt-generate-bindings-kotlin core_dir:
     # changed, but skipping entirely means a stale dylib can leak removed
     # UniFFI symbols into the Kotlin bindings while the fresh Android .so
     # no longer exports them, causing UnsatisfiedLinkError on app startup.
-    echo -e "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
+    printf "%b\n" "${YELLOW}Building native macOS library (for Kotlin bindgen)...${NC}"
     RUSTFLAGS="-Cstrip=none" cargo build -p vauchi-platform --release
 
-    echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
+    printf "%b\n" "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
     BINDINGS_OUT="target/bindings/android/kotlin"
     mkdir -p "$BINDINGS_OUT"
     cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
         --library target/release/libvauchi_platform.dylib \
         --language kotlin \
         --out-dir "$BINDINGS_OUT"
-    echo -e "${GREEN}  Kotlin bindings generated at $BINDINGS_OUT${NC}"
+    printf "%b\n" "${GREEN}  Kotlin bindings generated at $BINDINGS_OUT${NC}"
 
 # Generate both Swift and Kotlin bindings
 [group('device-test')]
@@ -223,24 +230,24 @@ _dt-generate-bindings core_dir:
     unset RUSTC_WRAPPER
 
     # Swift bindings from iOS .a
-    echo -e "${YELLOW}Generating Swift bindings...${NC}"
+    printf "%b\n" "${YELLOW}Generating Swift bindings...${NC}"
     SWIFT_OUT="target/bindings/ios/generated"
     mkdir -p "$SWIFT_OUT"
     cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
         --library target/aarch64-apple-ios/release/libvauchi_platform.a \
         --language swift \
         --out-dir "$SWIFT_OUT"
-    echo -e "${GREEN}  Swift bindings generated${NC}"
+    printf "%b\n" "${GREEN}  Swift bindings generated${NC}"
 
     # Kotlin bindings from macOS .dylib
-    echo -e "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
+    printf "%b\n" "${YELLOW}Generating Kotlin bindings from macOS .dylib...${NC}"
     KOTLIN_OUT="target/bindings/android/kotlin"
     mkdir -p "$KOTLIN_OUT"
     cargo run -p vauchi-platform --bin uniffi-bindgen -- generate \
         --library target/release/libvauchi_platform.dylib \
         --language kotlin \
         --out-dir "$KOTLIN_OUT"
-    echo -e "${GREEN}  Kotlin bindings generated${NC}"
+    printf "%b\n" "${GREEN}  Kotlin bindings generated${NC}"
 
 # Package iOS: copy .a, Swift bindings, header, modulemap into xcframework
 [group('device-test')]
@@ -265,12 +272,12 @@ _dt-package-ios core_dir:
 
     # Verify source artifacts exist
     if [[ ! -f "$DEVICE_LIB" ]]; then
-        echo -e "${RED}ERROR: iOS device library not found: $DEVICE_LIB${NC}"
+        printf "%b\n" "${RED}ERROR: iOS device library not found: $DEVICE_LIB${NC}"
         echo "Run: just _dt-build-mobile-libs-ios $CORE_DIR"
         exit 1
     fi
     if [[ ! -f "$BINDINGS_DIR/vauchi_platform.swift" ]]; then
-        echo -e "${RED}ERROR: Swift bindings not found: $BINDINGS_DIR/vauchi_platform.swift${NC}"
+        printf "%b\n" "${RED}ERROR: Swift bindings not found: $BINDINGS_DIR/vauchi_platform.swift${NC}"
         echo "Run: just _dt-generate-bindings-swift $CORE_DIR"
         exit 1
     fi
@@ -286,13 +293,13 @@ _dt-package-ios core_dir:
         --bindings "$BINDINGS_DIR/vauchi_platform.swift"
 
     # Ensure xcframework directory structure exists
-    echo -e "${YELLOW}Packaging iOS xcframework...${NC}"
+    printf "%b\n" "${YELLOW}Packaging iOS xcframework...${NC}"
     DEVICE_FW="$XCFW_DIR/ios-arm64/VauchiPlatformFFI.framework"
     SIM_FW="$XCFW_DIR/ios-arm64_x86_64-simulator/VauchiPlatformFFI.framework"
 
     # Create xcframework structure if it doesn't exist yet
     if [[ ! -d "$XCFW_DIR" ]]; then
-        echo -e "${YELLOW}  Creating xcframework structure from scratch...${NC}"
+        printf "%b\n" "${YELLOW}  Creating xcframework structure from scratch...${NC}"
         mkdir -p "$DEVICE_FW/Headers" "$DEVICE_FW/Modules"
         mkdir -p "$SIM_FW/Headers" "$SIM_FW/Modules"
     fi
@@ -372,7 +379,7 @@ _dt-package-ios core_dir:
         # (-e follows the link; dangling links fail the test).
         SYMLINK_TARGET=$(readlink "$SPM_XCFW")
         if [[ ! -e "$SPM_XCFW" ]] || [[ "$SYMLINK_TARGET" != "$XCFW_DIR" ]]; then
-            echo -e "${YELLOW}  Updating SPM symlink...${NC}"
+            printf "%b\n" "${YELLOW}  Updating SPM symlink...${NC}"
             rm -f "$SPM_XCFW"
             ln -s "$XCFW_DIR" "$SPM_XCFW"
         fi
@@ -382,11 +389,11 @@ _dt-package-ios core_dir:
         cp -R "$XCFW_DIR/" "$SPM_XCFW/"
     else
         # Neither — create symlink
-        echo -e "${YELLOW}  Creating SPM symlink to xcframework...${NC}"
+        printf "%b\n" "${YELLOW}  Creating SPM symlink to xcframework...${NC}"
         ln -s "$XCFW_DIR" "$SPM_XCFW"
     fi
 
-    echo -e "${GREEN}  iOS packaging complete${NC}"
+    printf "%b\n" "${GREEN}  iOS packaging complete${NC}"
     echo "  XCFramework: $XCFW_DIR"
     echo "  SPM package: $SPM_XCFW"
     echo "  Info.plist files: 3 (device + simulator + root)"
@@ -407,12 +414,12 @@ _dt-package-android core_dir:
     ANDROID_DIR="$WORKSPACE_ROOT/android"
 
     if [[ ! -f "$ANDROID_SO" ]]; then
-        echo -e "${RED}ERROR: Android .so not found: $ANDROID_SO${NC}"
+        printf "%b\n" "${RED}ERROR: Android .so not found: $ANDROID_SO${NC}"
         echo "Run: just _dt-build-mobile-libs-android $CORE_DIR"
         exit 1
     fi
 
-    echo -e "${YELLOW}Packaging Android bindings...${NC}"
+    printf "%b\n" "${YELLOW}Packaging Android bindings...${NC}"
 
     # Copy .so to jniLibs
     echo "  Copying .so to android/app/src/main/jniLibs/arm64-v8a/..."
@@ -428,7 +435,7 @@ _dt-package-android core_dir:
         # Remove stale bindings from default source set if present
         rm -f "$ANDROID_DIR/app/src/main/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
     else
-        echo -e "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt${NC}"
+        printf "%b\n" "${RED}ERROR: Kotlin bindings not found: $KOTLIN_DIR/uniffi/vauchi_platform/vauchi_platform.kt${NC}"
         exit 1
     fi
 
@@ -442,7 +449,7 @@ _dt-package-android core_dir:
         --artifact "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so" \
         --bindings "$ANDROID_DIR/app/src/local-bindings/kotlin/uniffi/vauchi_platform/vauchi_platform.kt"
 
-    echo -e "${GREEN}  Android packaging complete${NC}"
+    printf "%b\n" "${GREEN}  Android packaging complete${NC}"
     ls -lh "$ANDROID_DIR/app/src/main/jniLibs/arm64-v8a/libvauchi_platform.so"
 
 # Build iOS app for physical device
@@ -453,15 +460,23 @@ _dt-build-ios:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
+    WORKSPACE_ROOT=$(pwd)
     IOS_DEVICE_ID=$(dt_detect_ios_device)
-    echo -e "${YELLOW}Building iOS app for device $IOS_DEVICE_ID...${NC}"
+    printf "%b\n" "${YELLOW}Building iOS app for device $IOS_DEVICE_ID...${NC}"
+
+    security unlock-keychain -p "build" "$HOME/Library/Keychains/build.keychain-db"
+    security set-keychain-settings -t 300 \
+        "$HOME/Library/Keychains/build.keychain-db"
+
+    dt_provision_ios_local_spm "$WORKSPACE_ROOT"
+    trap dt_restore_ios_spm_config EXIT
 
     cd ios
-    # SPM resolve/build never advances branch pins — it honors Package.resolved
-    # and workspace-state.json as lock files. Delete both so SPM re-resolves to
-    # the latest branch tip. The bare repo cache stays warm so this is fast.
-    rm -f .spm-packages/workspace-state.json
+    # Drop both possible workspace locks so SwiftPM resolves the synthetic
+    # local-mirror tag containing the freshly packaged XCFramework.
+    rm -f "$DT_IOS_SPM_CACHE_PATH/workspace-state.json"
     rm -f Vauchi.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+    rm -f Vauchi.xcworkspace/xcshareddata/swiftpm/Package.resolved
     # Use -workspace (not -project) so SPM picks up the local
     # vauchi-platform-swift override declared in the workspace.
     # Without this env var, the vauchi-platform-swift manifest emits a URL
@@ -474,10 +489,12 @@ _dt-build-ios:
         -destination "id=$IOS_DEVICE_ID" \
         -derivedDataPath build \
         -allowProvisioningUpdates \
-        -clonedSourcePackagesDirPath .spm-packages \
+        -clonedSourcePackagesDirPath "$DT_IOS_SPM_CACHE_PATH" \
         clean build 2>&1 | tail -20
 
-    echo -e "${GREEN}  iOS build complete${NC}"
+    dt_restore_ios_spm_config
+    trap - EXIT
+    printf "%b\n" "${GREEN}  iOS build complete${NC}"
 
 # Build Android APK
 [group('device-test')]
@@ -487,10 +504,10 @@ _dt-build-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${YELLOW}Building Android APK (assembleDebug -PlocalBindings)...${NC}"
+    printf "%b\n" "${YELLOW}Building Android APK (assembleDebug -PlocalBindings)...${NC}"
     cd android
     ./gradlew assembleDebug -PlocalBindings 2>&1 | tail -10
-    echo -e "${GREEN}  Android build complete${NC}"
+    printf "%b\n" "${GREEN}  Android build complete${NC}"
     ls -lh app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || true
 
 # Install iOS app on connected device
@@ -502,7 +519,7 @@ _dt-install-ios:
     source "$(pwd)/just/device-test-lib.sh"
 
     IOS_DEVICE_ID=$(dt_detect_ios_device)
-    echo -e "${YELLOW}Installing iOS app on device $IOS_DEVICE_ID...${NC}"
+    printf "%b\n" "${YELLOW}Installing iOS app on device $IOS_DEVICE_ID...${NC}"
 
     # Find the built .app bundle
     APP_PATH=$(find ios/build -name "Vauchi.app" -path "*/Debug-iphoneos/*" 2>/dev/null | head -1)
@@ -512,14 +529,14 @@ _dt-install-ios:
     fi
 
     if [[ -z "$APP_PATH" ]]; then
-        echo -e "${RED}ERROR: Could not find built Vauchi.app${NC}"
+        printf "%b\n" "${RED}ERROR: Could not find built Vauchi.app${NC}"
         echo "The xcodebuild step may have failed. Check build output above."
         exit 1
     fi
 
     echo "  App bundle: $APP_PATH"
     xcrun devicectl device install app --device "$IOS_DEVICE_ID" "$APP_PATH"
-    echo -e "${GREEN}  iOS app installed${NC}"
+    printf "%b\n" "${GREEN}  iOS app installed${NC}"
 
 # Install Android APK on connected device
 [group('device-test')]
@@ -531,16 +548,16 @@ _dt-install-android:
 
     APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
     if [[ ! -f "$APK_PATH" ]]; then
-        echo -e "${RED}ERROR: APK not found: $APK_PATH${NC}"
+        printf "%b\n" "${RED}ERROR: APK not found: $APK_PATH${NC}"
         echo "Run: just _dt-build-android"
         exit 1
     fi
 
-    echo -e "${YELLOW}Installing Android APK via adb...${NC}"
+    printf "%b\n" "${YELLOW}Installing Android APK via adb...${NC}"
     ANDROID_SERIAL=$(dt_detect_android_device)
     echo "  Device: $ANDROID_SERIAL"
     adb -s "$ANDROID_SERIAL" install -r "$APK_PATH"
-    echo -e "${GREEN}  Android app installed${NC}"
+    printf "%b\n" "${GREEN}  Android app installed${NC}"
 
 # ─── Diagnostics & log capture ────────────────────────────────────
 
@@ -594,7 +611,7 @@ dt-verify-builds:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${BLUE}=== Build Verification ===${NC}"
+    printf "%b\n" "${BLUE}=== Build Verification ===${NC}"
 
     # Android — check all connected devices
     DEVICES=$(adb devices 2>/dev/null | grep -w "device$" | awk '{print $1}')
@@ -602,18 +619,18 @@ dt-verify-builds:
         for SERIAL in $DEVICES; do
             MODEL=$(adb -s "$SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
             echo ""
-            echo -e "${YELLOW}Android ($MODEL — $SERIAL):${NC}"
+            printf "%b\n" "${YELLOW}Android ($MODEL — $SERIAL):${NC}"
             adb -s "$SERIAL" shell dumpsys package app.vauchi 2>/dev/null | grep -E "versionName|versionCode" | head -2 || echo "  App not installed"
             echo "  Core version (from logcat):"
             adb -s "$SERIAL" logcat -d -s "Vauchi:I" 2>/dev/null | grep "Build:" | tail -1 || echo "  No build log found — launch app first"
         done
     else
-        echo -e "${YELLOW}Android: no device connected${NC}"
+        printf "%b\n" "${YELLOW}Android: no device connected${NC}"
     fi
 
     # iOS — capture build version via idevicesyslog (falls back to pymobiledevice3)
     echo ""
-    echo -e "${YELLOW}iOS:${NC}"
+    printf "%b\n" "${YELLOW}iOS:${NC}"
     if command -v idevicesyslog &>/dev/null; then
         UDID=$(dt_detect_ios_device 2>/dev/null || true)
         if [[ -n "$UDID" ]]; then
@@ -663,14 +680,14 @@ dt-android-permission-test:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
     SERIAL=$(dt_detect_android_device)
-    echo -e "${YELLOW}Running exchange permission-denial test on $SERIAL...${NC}"
-    echo -e "${YELLOW}(install the debug APK first via 'just rebuild-android' if needed)${NC}"
+    printf "%b\n" "${YELLOW}Running exchange permission-denial test on $SERIAL...${NC}"
+    printf "%b\n" "${YELLOW}(install the debug APK first via 'just rebuild-android' if needed)${NC}"
     cd android
     ANDROID_SERIAL="$SERIAL" ./gradlew connectedDebugAndroidTest \
         -PlocalBindings \
         -Pandroid.testInstrumentationRunnerArguments.class=app.vauchi.ui.PermissionDeniedExchangeTest \
         2>&1 | tail -40
-    echo -e "${GREEN}  Permission-denial test run complete${NC}"
+    printf "%b\n" "${GREEN}  Permission-denial test run complete${NC}"
 
 # Take a screenshot from connected Android device. Auto-selects device if multiple connected.
 [group('device-test')]
@@ -769,22 +786,22 @@ dt-clean-devices:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║     Clean Devices — Uninstall Vauchi          ║${NC}"
-    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
+    printf "%b\n" "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    printf "%b\n" "${YELLOW}║     Clean Devices — Uninstall Vauchi          ║${NC}"
+    printf "%b\n" "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
     echo ""
 
     # Android (all connected devices)
-    ANDROID_SERIALS=$(adb devices 2>/dev/null | grep -E "^\S+\s+device$" | awk '{print $1}')
+    ANDROID_SERIALS=$(adb devices 2>/dev/null | grep -E "^[^[:space:]]+[[:space:]]+device$" | awk '{print $1}')
     if [[ -n "$ANDROID_SERIALS" ]]; then
         while IFS= read -r SERIAL; do
-            echo -e "${BLUE}Uninstalling from Android ($SERIAL)...${NC}"
+            printf "%b\n" "${BLUE}Uninstalling from Android ($SERIAL)...${NC}"
             adb -s "$SERIAL" uninstall app.vauchi 2>/dev/null && \
-                echo -e "${GREEN}  Android app uninstalled${NC}" || \
-                echo -e "${YELLOW}  Android app not installed (skipped)${NC}"
+                printf "%b\n" "${GREEN}  Android app uninstalled${NC}" || \
+                printf "%b\n" "${YELLOW}  Android app not installed (skipped)${NC}"
         done <<< "$ANDROID_SERIALS"
     else
-        echo -e "${YELLOW}No Android device connected (skipped)${NC}"
+        printf "%b\n" "${YELLOW}No Android device connected (skipped)${NC}"
     fi
 
     # iOS — pymobiledevice3 apps uninstall exits 0 with "Installation succeed"
@@ -792,24 +809,24 @@ dt-clean-devices:
     # naive `&& uninstalled || skip` pattern always took the success branch.
     # Determine real state via `apps list` and verify the uninstall took effect.
     if UDID=$(dt_detect_ios_device 2>/dev/null); then
-        echo -e "${BLUE}Uninstalling from iOS ($UDID)...${NC}"
+        printf "%b\n" "${BLUE}Uninstalling from iOS ($UDID)...${NC}"
         if pymobiledevice3 apps list 2>/dev/null | python3 -c "import sys,json; sys.exit(0 if 'app.vauchi.ios' in json.load(sys.stdin) else 1)" 2>/dev/null; then
             pymobiledevice3 apps uninstall app.vauchi.ios 2>/dev/null || true
             if pymobiledevice3 apps list 2>/dev/null | python3 -c "import sys,json; sys.exit(0 if 'app.vauchi.ios' in json.load(sys.stdin) else 1)" 2>/dev/null; then
-                echo -e "${RED}  ERROR: pymobiledevice3 reported success but app.vauchi.ios is still installed.${NC}" >&2
+                printf "%b\n" "${RED}  ERROR: pymobiledevice3 reported success but app.vauchi.ios is still installed.${NC}" >&2
                 echo "         (pymobiledevice3 apps uninstall exits 0 regardless of outcome.)" >&2
                 exit 1
             fi
-            echo -e "${GREEN}  iOS app uninstalled${NC}"
+            printf "%b\n" "${GREEN}  iOS app uninstalled${NC}"
         else
-            echo -e "${YELLOW}  iOS app not installed (skipped)${NC}"
+            printf "%b\n" "${YELLOW}  iOS app not installed (skipped)${NC}"
         fi
     else
-        echo -e "${YELLOW}No iOS device connected (skipped)${NC}"
+        printf "%b\n" "${YELLOW}No iOS device connected (skipped)${NC}"
     fi
 
     echo ""
-    echo -e "${GREEN}Devices cleaned. Run 'just prepare-device-test' to install fresh.${NC}"
+    printf "%b\n" "${GREEN}Devices cleaned. Run 'just prepare-device-test' to install fresh.${NC}"
 
 # ─── iOS UI Automation (WebDriverAgent) ──────────────────────────
 
@@ -829,7 +846,7 @@ dt-wda-start:
     WDA_DIR="${HOME}/Workspace/.tools/WebDriverAgent"
 
     if [[ ! -d "$WDA_DIR" ]]; then
-        echo -e "${YELLOW}Cloning WebDriverAgent...${NC}"
+        printf "%b\n" "${YELLOW}Cloning WebDriverAgent...${NC}"
         mkdir -p "$(dirname "$WDA_DIR")"
         git clone https://github.com/appium/WebDriverAgent.git "$WDA_DIR"
     fi
@@ -837,7 +854,7 @@ dt-wda-start:
     UDID=$(dt_detect_ios_device)
     TEAM_ID="L2853TNSJ4"
 
-    echo -e "${YELLOW}Starting WebDriverAgent on device $UDID...${NC}"
+    printf "%b\n" "${YELLOW}Starting WebDriverAgent on device $UDID...${NC}"
     echo "First run requires Touch ID / passcode on device ('Enable UI Automation')"
     echo ""
     cd "$WDA_DIR"
@@ -845,7 +862,7 @@ dt-wda-start:
     # the app on the device" / missing products) — build-for-testing
     # first when no Runner app exists yet (2026-06-11 session).
     if ! ls "$HOME/Library/Developer/Xcode/DerivedData"/WebDriverAgent-*/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app >/dev/null 2>&1; then
-        echo -e "${YELLOW}No WDA build products found — running build-for-testing first...${NC}"
+        printf "%b\n" "${YELLOW}No WDA build products found — running build-for-testing first...${NC}"
         xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
             -destination "id=$UDID" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
