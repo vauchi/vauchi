@@ -805,6 +805,22 @@ session-end:
         fi
     fi
 
+    # ── intervention ledger (observe-only; meta-churn direction 0) ──
+    # Evidence base ranking the 2026-07-21 audit records:
+    # _private/docs/backlog/2026-07-21-process-meta-churn-ratio.md
+    IL="_private/docs/intervention-ledger.md"
+    if [[ -f "$IL" ]]; then
+        WEEK_AGO=$(date -d '7 days ago' +%F 2>/dev/null || date -v-7d +%F)
+        N7=$(awk -v w="$WEEK_AGO" '/^- 20[0-9][0-9]-/{if ($2 >= w) n++} END{print n+0}' "$IL")
+        echo ""
+        echo "── intervention ledger: $N7 entries in last 7 days ──"
+        echo "  Maintainer interruptions beyond normal feature work this"
+        echo "  session? Append one line each, no quotes needed:"
+        echo "    just ledger <fanout|vet|gate|other> <lt5m|5-30m|gt30m>"
+        echo "         <authoring|retry|review|wait>"
+        echo "         <prevented-defect|mechanical|false-positive> [note...]"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"
@@ -816,6 +832,48 @@ session-end:
     else
         echo "── Session end: all clear ──"
     fi
+
+# Append one line to the maintainer intervention ledger
+# (_private/docs/intervention-ledger.md) — the evidence base for
+# _private/docs/backlog/2026-07-21-process-meta-churn-ratio.md
+# (direction 0). Note words need no quotes:
+#   just ledger vet 5-30m retry mechanical exemption resync flapped
+[group('setup')]
+[script]
+ledger area bucket kind outcome *note:
+    set -euo pipefail
+    LEDGER="_private/docs/intervention-ledger.md"
+    case "{{ area }}" in fanout|vet|gate|other) ;; *)
+        echo "area must be: fanout|vet|gate|other"; exit 1 ;; esac
+    case "{{ bucket }}" in lt5m|5-30m|gt30m) ;; *)
+        echo "bucket must be: lt5m|5-30m|gt30m"; exit 1 ;; esac
+    case "{{ kind }}" in authoring|retry|review|wait) ;; *)
+        echo "kind must be: authoring|retry|review|wait"; exit 1 ;; esac
+    case "{{ outcome }}" in prevented-defect|mechanical|false-positive) ;; *)
+        echo "outcome must be: prevented-defect|mechanical|false-positive"
+        exit 1 ;; esac
+    if [[ ! -f "$LEDGER" ]]; then
+        echo "missing $LEDGER — merge the _private ledger MR first"
+        exit 1
+    fi
+    LINE="- $(date +%F) | {{ area }} | {{ bucket }} | {{ kind }} | {{ outcome }}"
+    NOTE="{{ note }}"
+    if [[ -n "$NOTE" ]]; then
+        LINE="$LINE | $NOTE"
+    fi
+    # 80-col cap keeps the ledger inside the _private markdownlint gate.
+    if [[ "${#LINE}" -gt 80 ]]; then
+        echo "entry is ${#LINE} chars (>80, markdownlint) — shorten the note"
+        exit 1
+    fi
+    # MD022/MD032: first entry needs a blank line after "## Entries"
+    # (formatters strip a pre-seeded trailing blank, so ensure it here).
+    if [[ "$(tail -n 1 "$LEDGER")" == "## Entries" ]]; then
+        printf '\n' >> "$LEDGER"
+    fi
+    printf '%s\n' "$LINE" >> "$LEDGER"
+    echo "appended: $LINE"
+    echo "commit it with the session's _private doc updates"
 
 # Generate a draft PreToolUse hook from observed patterns in
 # .claude/.session-errors. Use after session-end flags a category
