@@ -564,8 +564,23 @@ pipeline-list repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab ci list -R "$p"
 
+# Trigger a new pipeline on a ref (default main). Validate-only unless a
+# deploy trigger var is passed, so it is safe to run on protected main.
+[no-cd]
+[script]
+pipeline-run ref='main' repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    glab api "projects/${enc}/pipeline" -X POST -f "ref={{ref}}" \
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"Triggered pipeline {d['id']} on {d['ref']}: {d['status']} — {d['web_url']}\")"
+
 # List jobs in a pipeline. `glab ci list` has no `--pipeline` flag
-# (removed upstream) — hit the pipeline jobs API directly instead.
+# (removed upstream) — hit the pipeline jobs API directly instead. Prints the
+# numeric job id first (feed it to pipeline-log).
 [no-cd]
 [script]
 pipeline-jobs id repo='':
@@ -576,7 +591,7 @@ pipeline-jobs id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
     glab api "projects/${enc}/pipelines/{{id}}/jobs" --paginate \
-      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}\") for j in jobs]"
+      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['id']:>10} {j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}\") for j in jobs]"
 
 # View job log output
 [no-cd]
