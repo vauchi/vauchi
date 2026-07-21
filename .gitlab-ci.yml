@@ -62,6 +62,7 @@ test:release-gates:
   before_script:
     - apk add --no-cache bash git just python3
   script:
+    - JUST_UNSTABLE=1 just test-codex-layout
     - JUST_UNSTABLE=1 just test-release-gates
     - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just test-lint-docs
@@ -71,12 +72,15 @@ test:release-gates:
       changes:
         compare_to: refs/heads/$CI_DEFAULT_BRANCH
         paths:
+          - .agents
+          - .agents/**/*
           - .gitlab-ci.yml
           - just/plan.just
           - just/dev.just
           - just/lint-docs.sh
           - just/worktree.just
           - tests/test_core_freshness_recipe.py
+          - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py
           - tests/test_release_gates.py
           - tests/test_worktree_recipe.py

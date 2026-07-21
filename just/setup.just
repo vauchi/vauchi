@@ -4,6 +4,11 @@
 
 # Setup & maintenance recipes
 
+# Verify Codex skill discovery avoids a sandbox-incompatible root symlink.
+[group('tests')]
+test-codex-layout:
+    python3 "{{justfile_directory()}}/tests/test_codex_layout.py" "{{justfile_directory()}}"
+
 # Check that required tools are installed before setup
 [group('setup')]
 check-prerequisites:
