@@ -53,10 +53,14 @@ runners-health:
     just gitlab _check-auth
     set -euo pipefail
 
-    # Runner registry: id:name:host
+    # Runner registry: id:name:host — keep in sync with
+    # _private/docs/reference/runner-runbook.md (IDs change when a
+    # runner is re-registered, e.g. after a host reinstall)
     RUNNERS=(
-        "51793663:nell-shell:nell"
+        "51792534:allyson-shell:allyson"
         "52407190:allyson-docker:allyson"
+        "52767355:nell-shell:nell"
+        "54440366:shelly-ann-arm64:shelly-ann"
     )
     STALE_THRESHOLD=300  # 5 minutes in seconds
 
