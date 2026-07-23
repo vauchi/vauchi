@@ -927,6 +927,10 @@ session-efficiency-test private_root="_private":
         python3 "$test_file"
     done
 
+[group('reports')]
+session-efficiency-report private_root="_private":
+    @python3 "{{ private_root }}/scripts/session_efficiency_analyzer.py"
+
 # Report hooks present in one agent harness's hook dir but not the other
 # (.claude/hooks vs .kimi-code/hooks). Catches a guardrail added to one
 # harness but never mirrored. --strict exits 1 on drift (for gating).
