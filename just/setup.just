@@ -901,6 +901,19 @@ gen-hook-from-pattern category="" force="":
 token-report *args:
     @python3 scripts/scripts/token-report.py "$@"
 
+[group('tests')]
+token-report-test scripts_root="scripts":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tests=("{{ scripts_root }}"/scripts/tests/token-report-*.test.py)
+    if [[ ! -e "${tests[0]}" ]]; then
+        echo "ERROR: no token-report tests under {{ scripts_root }}/scripts/tests" >&2
+        exit 1
+    fi
+    for test_file in "${tests[@]}"; do
+        python3 "$test_file"
+    done
+
 # Report hooks present in one agent harness's hook dir but not the other
 # (.claude/hooks vs .kimi-code/hooks). Catches a guardrail added to one
 # harness but never mirrored. --strict exits 1 on drift (for gating).
