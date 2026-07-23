@@ -78,6 +78,7 @@ test:release-gates:
           - .gitlab-ci.yml
           - just/plan.just
           - just/dev.just
+          - just/setup.just
           - just/lint-docs.sh
           - just/worktree.just
           - just/claude-layout-lib.sh
