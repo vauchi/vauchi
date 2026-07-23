@@ -765,6 +765,7 @@ branch-status:
 [script]
 branch name *repos='':
     source scripts/scripts/output-helpers.sh
+    source scripts/scripts/for-each-repo.sh
     set -euo pipefail
     if [[ -z "{{ name }}" ]]; then
         echo "Usage: just git branch <branch-name> [repo1 repo2 ...]" >&2
@@ -782,10 +783,15 @@ branch name *repos='':
             fi
         done
     else
-        # All repos
-        for dir in */; do
-            [[ -d "${dir}.git" ]] && targets+=("${dir%/}")
-        done
+        # for_each_repo, not `for dir in */` — the glob cannot see the
+        # workspace repo itself, so "all repos" silently skipped root and
+        # left it behind on whatever branch it was already on. Same
+        # helper `just git resume` uses, so the pair stays symmetric.
+        _collect_all() {
+            local label="$1" dir="$2"
+            targets+=("$dir")
+        }
+        for_each_repo _collect_all
     fi
 
     # Safety check: warn about uncommitted changes before switching
