@@ -9,6 +9,11 @@
 test-codex-layout:
     python3 "{{justfile_directory()}}/tests/test_codex_layout.py" "{{justfile_directory()}}"
 
+# Verify the .claude layout gate flags real strays and only real strays.
+[group('tests')]
+test-claude-layout:
+    python3 "{{justfile_directory()}}/tests/test_claude_layout.py" "{{justfile_directory()}}"
+
 # Check that required tools are installed before setup
 [group('setup')]
 check-prerequisites:

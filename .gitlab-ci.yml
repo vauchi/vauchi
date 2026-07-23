@@ -63,6 +63,7 @@ test:release-gates:
     - apk add --no-cache bash git just python3
   script:
     - JUST_UNSTABLE=1 just test-codex-layout
+    - JUST_UNSTABLE=1 just test-claude-layout
     - JUST_UNSTABLE=1 just test-release-gates
     - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just test-lint-docs
@@ -79,7 +80,9 @@ test:release-gates:
           - just/dev.just
           - just/lint-docs.sh
           - just/worktree.just
+          - just/claude-layout-lib.sh
           - tests/test_core_freshness_recipe.py
+          - tests/test_claude_layout.py
           - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py
           - tests/test_release_gates.py
