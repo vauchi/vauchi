@@ -914,6 +914,19 @@ token-report-test scripts_root="scripts":
         python3 "$test_file"
     done
 
+[group('tests')]
+session-efficiency-test private_root="_private":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tests=("{{ private_root }}"/scripts/tests/session-efficiency-*.test.py)
+    if [[ ! -e "${tests[0]}" ]]; then
+        echo "ERROR: no session-efficiency tests under {{ private_root }}/scripts/tests" >&2
+        exit 1
+    fi
+    for test_file in "${tests[@]}"; do
+        python3 "$test_file"
+    done
+
 # Report hooks present in one agent harness's hook dir but not the other
 # (.claude/hooks vs .kimi-code/hooks). Catches a guardrail added to one
 # harness but never mirrored. --strict exits 1 on drift (for gating).
