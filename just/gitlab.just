@@ -727,29 +727,43 @@ pipeline-wait repo='':
     while true; do
         # Get pipeline status via glab ci status
         output=$(glab ci status --branch "$branch" -R "$p" 2>&1 || true)
-        # Check for terminal states
-        if echo "$output" | grep -qiE "passed|success"; then
-            echo "$output"
-            echo ""
-            echo "Pipeline PASSED"
-            exit 0
-        elif echo "$output" | grep -qiE "failed"; then
-            echo "$output"
-            echo ""
-            echo "Pipeline FAILED"
-            exit 1
-        elif echo "$output" | grep -qiE "canceled|cancelled"; then
-            echo "$output"
-            echo ""
-            echo "Pipeline CANCELED"
-            exit 1
-        elif echo "$output" | grep -qiE "no pipeline"; then
-            echo "  No pipeline found yet..."
-        else
-            # Still running — show compact status
-            timestamp=$(date +%H:%M:%S)
-            echo "  [$timestamp] Running..."
-        fi
+        pipeline_state=$(printf '%s\n' "$output" \
+            | sed -n 's/^Pipeline state: //p' \
+            | tail -1 \
+            | tr '[:upper:]' '[:lower:]')
+        case "$pipeline_state" in
+            success|passed)
+                echo "$output"
+                echo ""
+                echo "Pipeline PASSED"
+                exit 0
+                ;;
+            failed)
+                echo "$output"
+                echo ""
+                echo "Pipeline FAILED"
+                exit 1
+                ;;
+            canceled|cancelled)
+                echo "$output"
+                echo ""
+                echo "Pipeline CANCELED"
+                exit 1
+                ;;
+            "")
+                if echo "$output" | grep -qiE "no pipeline"; then
+                    echo "  No pipeline found yet..."
+                else
+                    echo "$output"
+                    echo "ERROR: could not determine aggregate pipeline state" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                timestamp=$(date +%H:%M:%S)
+                echo "  [$timestamp] Pipeline state: $pipeline_state"
+                ;;
+        esac
         sleep 30
     done
 
