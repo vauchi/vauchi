@@ -44,6 +44,11 @@ check_claude_layout() {
     # and nested deeper (e.g. _private/docs/planning/todo/.claude).
     # Empty scratch is removed silently; anything with files needs a
     # human decision. Root .claude is a symlink, so -type d skips it.
+    #
+    # .worktrees/ is pruned: a worktree of _private checks out the
+    # canonical .claude tree, which is tracked content, not scratch —
+    # flagging it made session-end fail on every parallel branch, and
+    # the "remove it" remedy would have deleted real repo content.
     local d
     while IFS= read -r d; do
         [[ -n "$d" ]] || continue
@@ -59,7 +64,8 @@ check_claude_layout() {
         fi
     done < <(find . -maxdepth 5 \
         \( -name node_modules -o -name target -o -name build \
-           -o -name .git -o -name worktrees -o -name .derived-data \
+           -o -name .git -o -name worktrees -o -name .worktrees \
+           -o -name .derived-data \
            -o -name .spm-packages \) -prune \
         -o -type d -name .claude -print 2>/dev/null)
 
