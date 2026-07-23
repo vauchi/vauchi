@@ -224,7 +224,13 @@ load cost many times over. Attribution and history:
   loaded memory/rules for entries that name the action verb.
 - **Stale local checkout as evidence.** `git -C <repo> fetch origin`
   before reading state you'll act on; compare against `origin/main`,
-  not the working tree.
+  not the working tree. Applies equally when *creating* — the check that
+  matters before a new doc or mechanism is "does this already exist",
+  and fetching answers only half of it: **no local git state reveals an
+  open Draft MR**, so also run `just gitlab mr-list <repo>`. Run
+  `just session-init` and both are covered. 6 recurrences; now
+  warn-enforced as **VGT09**
+  (`_private/docs/lint-errors/vgt09-session-init-receipt.md`).
 - **Blocked twice or unsure → ask.** Never bypass, never third-retry —
   a question is always cheaper than the cleanup.
 - **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
