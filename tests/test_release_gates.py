@@ -3012,6 +3012,14 @@ android store submission: passed
         self.assertIn("just release-gates", recipe)
         self.assertLess(recipe.index("just release-gates"), recipe.index("read -p"))
 
+    def test_pipeline_wait_uses_aggregate_pipeline_state(self) -> None:
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        recipe = gitlab_recipes.split("pipeline-wait repo='':", 1)[1]
+        recipe = recipe.split("# Retry failed jobs", 1)[0]
+
+        self.assertIn("Pipeline state:", recipe)
+        self.assertNotIn('grep -qiE "passed|success"', recipe)
+
 
 if __name__ == "__main__":
     unittest.main()
