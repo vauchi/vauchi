@@ -2972,10 +2972,13 @@ drift *args:
     # Self-heal: ensure dependencies and native modules match current Node ABI.
     # Without this, a Node upgrade silently breaks `just drift` (audit finding F3,
     # 2026-04-17): better-sqlite3's prebuilt .node file is ABI-versioned.
+    # The check must instantiate a Database: the native binding loads lazily,
+    # so a bare require() passes even when the .node file is missing (seen
+    # 2026-07-24 when npm 12 allowScripts blocked the install script).
     if [[ ! -d node_modules ]]; then
         echo "Installing drift-detector dependencies..."
         npm install --silent
-    elif ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+    elif ! node -e 'new (require("better-sqlite3"))(":memory:").close()' 2>/dev/null; then
         echo "Rebuilding drift-detector native modules (Node ABI mismatch)..."
         npm rebuild better-sqlite3 --silent
     fi
@@ -3010,7 +3013,7 @@ drift-ci *args:
     if [[ ! -d node_modules ]]; then
         echo "Installing drift-detector dependencies..."
         npm install --silent
-    elif ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+    elif ! node -e 'new (require("better-sqlite3"))(":memory:").close()' 2>/dev/null; then
         echo "Rebuilding drift-detector native modules (Node ABI mismatch)..."
         npm rebuild better-sqlite3 --silent
     fi
