@@ -3020,6 +3020,22 @@ android store submission: passed
         self.assertIn("Pipeline state:", recipe)
         self.assertNotIn('grep -qiE "passed|success"', recipe)
 
+    def test_pipeline_email_recipe_is_failure_only_and_verified(self) -> None:
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        recipe = gitlab_recipes.split(
+            "pipeline-email-enable repo recipient:",
+            1,
+        )[1]
+        recipe = recipe.split("# Disable pipeline failure emails", 1)[0]
+
+        self.assertIn("integrations/pipelines-email", recipe)
+        self.assertIn("notify_only_broken_pipelines=true", recipe)
+        self.assertIn("branches_to_be_notified=default", recipe)
+        self.assertIn("pipeline_events=true", recipe)
+        self.assertIn("recipients", recipe)
+        self.assertIn("glab api", recipe)
+        self.assertIn("jq -e", recipe)
+
 
 if __name__ == "__main__":
     unittest.main()

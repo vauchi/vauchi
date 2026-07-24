@@ -22,6 +22,52 @@ _check-auth:
         exit 1
     fi
 
+# ── Pipeline Notifications ─────────────────────────────────────────
+
+# Enable broken-pipeline email for a project's default branch.
+# Usage: just gitlab pipeline-email-enable <repo> <recipient>
+[no-cd]
+[script]
+pipeline-email-enable repo recipient:
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    endpoint="projects/vauchi%2F${r}/integrations/pipelines-email"
+    glab api -X PUT "$endpoint" \
+      -f "recipients={{recipient}}" \
+      -f "notify_only_broken_pipelines=true" \
+      -f "branches_to_be_notified=default" \
+      -f "pipeline_events=true" >/dev/null
+    settings=$(glab api "$endpoint")
+    if ! printf '%s\n' "$settings" | jq -e --arg recipient "{{recipient}}" '
+      .active == true
+      and ((.pipeline_events // .properties.pipeline_events) == true)
+      and ((.notify_only_broken_pipelines
+            // .properties.notify_only_broken_pipelines) == true)
+      and ((.branches_to_be_notified
+            // .properties.branches_to_be_notified) == "default")
+      and (((.recipients // .properties.recipients) | split(","))
+            | index($recipient) != null)
+    ' >/dev/null; then
+        echo "ERROR: pipeline email integration verification failed for vauchi/$r" >&2
+        exit 1
+    fi
+    echo "Enabled broken default-branch pipeline emails for vauchi/$r -> {{recipient}}"
+
+# Disable pipeline failure emails for a project.
+# Usage: just gitlab pipeline-email-disable <repo>
+[no-cd]
+[script]
+pipeline-email-disable repo:
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    glab api -X DELETE \
+      "projects/vauchi%2F${r}/integrations/pipelines-email" >/dev/null
+    echo "Disabled pipeline emails for vauchi/$r"
+
 # ── MR Operations ──────────────────────────────────────────────────
 
 # List open merge requests

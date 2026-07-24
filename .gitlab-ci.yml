@@ -79,6 +79,7 @@ test:release-gates:
           - just/plan.just
           - just/dev.just
           - just/setup.just
+          - just/gitlab.just
           - just/lint-docs.sh
           - just/worktree.just
           - just/claude-layout-lib.sh
