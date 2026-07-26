@@ -20,11 +20,15 @@ validate *FLAGS:
 # STATUS
 # ═══════════════════════════════════════════════════════════════════
 
-# Check deployed versions against source
+# Check deployed versions against source (pass --running for a deep SSH check
+# of what the proxy-active container is actually running on the VPS)
 [group('deploy')]
-deploy-check:
+deploy-check *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    _DS_DEEP=0
+    for _a in {{ARGS}}; do [ "$_a" = "--running" ] && _DS_DEEP=1; done
 
     source scripts/scripts/output-helpers.sh
     echo "Checking deployed service versions..."
@@ -34,6 +38,15 @@ deploy-check:
     _DS_C1=12  # service name column
     _DS_C2=28  # status column (fits "STALE (99 commits behind)")
     _DS_STALE=0
+
+    # Newest SUCCESSFUL main build SHA — the true "latest deployable" version.
+    # origin/main HEAD may be unbuilt (pipeline still running) or failed, in
+    # which case comparing against it reports a STALE that cannot actually be
+    # deployed. Empty on API failure (caller falls back to origin/main).
+    _latest_built_sha() {
+        glab api "projects/vauchi%2F${1}/pipelines?ref=main&status=success&per_page=1" 2>/dev/null \
+            | jq -r '.[0].sha // empty' 2>/dev/null
+    }
 
     check_service() {
         local name="$1" url="$2" repo="$3"
@@ -58,14 +71,27 @@ deploy-check:
         git -C "{{justfile_directory()}}/$repo" fetch origin main --quiet 2>/dev/null || true
         local main_sha
         main_sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "unknown")
-        local main_short="${main_sha:0:8}"
 
-        if [ "$deployed_sha" = "$main_sha" ]; then
+        # Compare against the newest SUCCESSFUL build, not origin/main HEAD:
+        # an unbuilt or failed HEAD is not deployable, so "STALE vs HEAD" would
+        # be a verdict you cannot act on. Fall back to HEAD if the API is down.
+        local ref_sha ref_short unbuilt=""
+        ref_sha=$(_latest_built_sha "$repo")
+        [ -z "$ref_sha" ] && ref_sha="$main_sha"
+        ref_short="${ref_sha:0:8}"
+        # Note when main has advanced past the newest build (HEAD not yet built).
+        if [ "$ref_sha" != "$main_sha" ] && [ "$main_sha" != "unknown" ]; then
+            local ahead
+            ahead=$(git -C "{{justfile_directory()}}/$repo" rev-list "$ref_sha..origin/main" --count 2>/dev/null || echo "?")
+            unbuilt=" [HEAD +$ahead unbuilt]"
+        fi
+
+        if [ "$deployed_sha" = "$ref_sha" ]; then
             status_text="UP TO DATE"
             status_color="$GREEN"
         else
             local behind
-            behind=$(git -C "{{justfile_directory()}}/$repo" rev-list "$deployed_sha..origin/main" --count 2>/dev/null || echo "?")
+            behind=$(git -C "{{justfile_directory()}}/$repo" rev-list "$deployed_sha..$ref_sha" --count 2>/dev/null || echo "?")
             status_text="STALE ($behind behind)"
             status_color="$RED"
             _DS_STALE=$(( _DS_STALE + 1 ))
@@ -73,8 +99,8 @@ deploy-check:
 
         local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
         local _p2=$(( _DS_C2 - ${#status_text} )); [[ $_p2 -lt 1 ]] && _p2=1
-        printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s main=%-10s  %s\n" \
-            "$name" "$_p" "" "$status_text" "$_p2" "" "$short_sha" "$main_short" "$deployed_time"
+        printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s built=%-10s  %s%s\n" \
+            "$name" "$_p" "" "$status_text" "$_p2" "" "$short_sha" "$ref_short" "$deployed_time" "$unbuilt"
     }
 
     # For services whose public surface deliberately hides version info
@@ -146,6 +172,12 @@ deploy-check:
     # commit — compare against website/origin/main. Reports UNKNOWN until the
     # cdn image starts baking build-info.json (vauchi/website!109).
     check_service "cdn"     "https://cdn.vauchi.app/build-info.json"  "website"
+
+    # --running: reconcile against what the proxy-active container on the VPS
+    # is actually running (SSH). Informational — does not change the exit code.
+    if [ "$_DS_DEEP" -eq 1 ]; then
+        bash "{{justfile_directory()}}/just/deploy-running.sh" "{{ssh_target}}" || true
+    fi
 
     echo ""
     if [[ "$_DS_STALE" -gt 0 ]]; then
