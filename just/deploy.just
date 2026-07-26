@@ -142,6 +142,10 @@ deploy-check:
     check_service_gitlab "ohttp" "ohttp-relay" "ohttp-relay-prod"
     check_service "website" "https://vauchi.app/build-info.json"  "website"
     check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
+    # cdn is built from the website repo, so its build-info sha is a website
+    # commit — compare against website/origin/main. Reports UNKNOWN until the
+    # cdn image starts baking build-info.json (vauchi/website!109).
+    check_service "cdn"     "https://cdn.vauchi.app/build-info.json"  "website"
 
     echo ""
     if [[ "$_DS_STALE" -gt 0 ]]; then
