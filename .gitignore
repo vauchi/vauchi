@@ -128,3 +128,10 @@ relay/.cargo/config.toml
 
 # Local semantic search index (just semindex / semsearch)
 .cache/
+
+# Accidental absolute-path build output — a build wrote to $PWD/Users/...
+# instead of an absolute /Users/... path, nesting artifacts inside the repo.
+/Users/
+
+# Local macOS log captures (device/system debugging, e.g. `log collect`)
+/system_logs.logarchive/
