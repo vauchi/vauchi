@@ -131,7 +131,7 @@ mr-update repo='' title='':
         # `title=...` invocation form leaks the prefix in verbatim — strip it.
         mr_title="${mr_title#title=}"
     else
-        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
     # Body: rebuild from commit bodies, strip Co-Authored-By, escape @mentions,
     # collapse blanks — identical pipeline to mr-create so the two stay in sync.
@@ -140,7 +140,7 @@ mr-update repo='' title='':
         | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
         | cat -s)
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
     # Defence in depth: no bare `@word` reaches GitLab (mirrors mr-create).
@@ -199,7 +199,7 @@ mr-create repo='' title='':
         # `title=...` invocation form leaks the prefix in verbatim — strip it.
         mr_title="${mr_title#title=}"
     else
-        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+        mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
     # Build description from commit bodies:
     # 1. Strip Co-Authored-By trailers (added once at the bottom instead)
@@ -214,7 +214,7 @@ mr-create repo='' title='':
         | cat -s)
     # Append single co-author credit if any commit had one
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
     # Defence in depth: validate that no bare `@word` survives the
@@ -461,7 +461,7 @@ mr-create-all title='':
                 # Positional module args: a `title=...` form leaks the prefix.
                 mr_title="${mr_title#title=}"
             else
-                mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | head -1)
+                mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
             fi
             PUSH_OPTS+=(-o "merge_request.title=$mr_title")
             # Build description with @ escaped to prevent GitLab mentions
@@ -471,7 +471,7 @@ mr-create-all title='':
             # Append single co-author credit if any commit had one
             if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
                 local coauthor
-                coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | head -1)
+                coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
                 mr_desc=$(printf '%s\n\n%s' "$mr_desc" "$coauthor")
             fi
             PUSH_OPTS+=(-o "merge_request.description=$mr_desc")
@@ -528,7 +528,7 @@ mr-create-all title='':
             coauthor_line=""
             if git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep -q '^Co-Authored-By:'; then
                 local ca
-                ca=$(git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep '^Co-Authored-By:' | head -1)
+                ca=$(git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep '^Co-Authored-By:' | sed -n 1p)
                 coauthor_line="\n${ca}"
             fi
             desc="## Summary\n\n${commits}\n\n## Related MRs\n\n${other_mrs}\n---\n_${files}_${coauthor_line}"
