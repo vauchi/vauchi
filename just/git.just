@@ -608,6 +608,20 @@ sync:
     set -euo pipefail
     timer_start
 
+    # The path-override fence and its regenerated Cargo.lock are local-only
+    # and unstashable in practice: `pull --rebase --autostash` stashes them,
+    # pulls a main that moved Cargo.lock, then cannot merge the pop — so
+    # every sync left conflict markers plus an orphan autostash behind.
+    # Strip before pulling, restore after. The trap covers the mid-sync
+    # failure path; without it a fetch error would leave the tree stripped.
+    _po=scripts/scripts/path-overrides.sh
+    _po_restore=0
+    if bash "$_po" status; then
+        _po_restore=1
+        bash "$_po" clean >/dev/null
+    fi
+    trap '[[ "$_po_restore" == 1 ]] && bash "$_po" apply >/dev/null 2>&1 || true' EXIT
+
     # Count repos for progress
     repo_total=1
     for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
