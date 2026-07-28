@@ -618,7 +618,7 @@ sync:
     _po_restore=0
     if bash "$_po" status; then
         _po_restore=1
-        bash "$_po" clean >/dev/null
+        bash "$_po" clean --restore-lock >/dev/null
     fi
     trap '[[ "$_po_restore" == 1 ]] && bash "$_po" apply >/dev/null 2>&1 || true' EXIT
 
