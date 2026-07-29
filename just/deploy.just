@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Deployment recipes
-# Config: _private/infra/config/deploy.combined.yml
-
-ssh_target := "vauchi@bold-hopper-vps"
+# Routine production operations are mediated by protected GitLab jobs.
+# Exceptional host access starts from Hety's reviewed operator shell.
 
 # ═══════════════════════════════════════════════════════════════════
 # VALIDATION
@@ -20,8 +19,7 @@ validate *FLAGS:
 # STATUS
 # ═══════════════════════════════════════════════════════════════════
 
-# Check deployed versions against source (pass --running for a deep SSH check
-# of what the proxy-active container is actually running on the VPS)
+# Check deployed versions against public and GitLab evidence.
 [group('deploy')]
 deploy-check *ARGS:
     #!/usr/bin/env bash
@@ -29,6 +27,11 @@ deploy-check *ARGS:
 
     _DS_DEEP=0
     for _a in {{ARGS}}; do [ "$_a" = "--running" ] && _DS_DEEP=1; done
+    if [ "$_DS_DEEP" -eq 1 ]; then
+        echo "--running requires Hety's reviewed operator shell." >&2
+        echo "Follow _private/docs/runbooks/ci-cd-deployment.md." >&2
+        exit 2
+    fi
 
     source scripts/scripts/output-helpers.sh
     echo "Checking deployed service versions..."
@@ -173,12 +176,6 @@ deploy-check *ARGS:
     # cdn image starts baking build-info.json (vauchi/website!109).
     check_service "cdn"     "https://cdn.vauchi.app/build-info.json"  "website"
 
-    # --running: reconcile against what the proxy-active container on the VPS
-    # is actually running (SSH). Informational — does not change the exit code.
-    if [ "$_DS_DEEP" -eq 1 ]; then
-        bash "{{justfile_directory()}}/just/deploy-running.sh" "{{ssh_target}}" || true
-    fi
-
     echo ""
     if [[ "$_DS_STALE" -gt 0 ]]; then
         # Exit nonzero so callers (session-init) surface the drift — a
@@ -261,16 +258,20 @@ deploy-latest service:
 # PROXY MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════
 
-# Upgrade kamal-proxy to latest version (brief downtime ~2-3s)
+# Proxy mutation requires protected GitLab approval.
 [group('deploy')]
-[confirm('This will restart kamal-proxy with brief downtime. Continue?')]
 proxy-upgrade:
-    kamal proxy reboot -c _private/infra/config/deploy.combined.yml --confirmed
+    @echo "Proxy upgrades are unavailable from the daily driver."
+    @echo "Add a protected GitLab job through review before routine use."
+    @echo "Use Hety only for recorded break-glass recovery."
+    @exit 1
 
-# Show kamal-proxy routing table
+# Proxy inspection requires Hety's reviewed operator shell.
 [group('deploy')]
 proxy-list:
-    ssh {{ssh_target}} "docker exec kamal-proxy kamal-proxy list"
+    @echo "Direct production inspection is unavailable from the daily driver."
+    @echo "Use GitLab deployment evidence or Hety's reviewed operator shell."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # APP DEPLOYS (via CI — Kamal 2)
@@ -285,206 +286,188 @@ proxy-list:
 #
 # The former hand-rolled `ci-deploy-service.sh` path was retired in 2026-07;
 # it duplicated Kamal's health-gated swap/rollback logic and drove the
-# container name/label drift behind the 2026-07-12 outage. kamal is also
-# retained for kamal-proxy lifecycle (see proxy-upgrade / proxy-list above).
+# container name/label drift behind the 2026-07-12 outage.
 
 # Verify website image contains only expected files (no workspace leaks)
 [group('deploy')]
 test-website-image:
     ./_private/infra/scripts/test-website-image.sh
 
-# Show relay logs (Kamal-deployed container, discovered by service label)
+# Relay logs are available through centralized monitoring or reviewed access.
 [group('deploy')]
 relay-logs:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    C=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=relay' --format '{{{{.Names}}' | head -1")
-    if [ -z "$C" ]; then
-        C=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-' --format '{{{{.Names}}' | grep -v landing | head -1")
-    fi
-    if [ -z "$C" ]; then
-        echo "ERROR: no running relay container found"
-        exit 1
-    fi
-    ssh "{{ssh_target}}" "docker logs -f $C"
+    @echo "Direct production logs are unavailable from the daily driver."
+    @echo "Use Grafana, GitLab deployment evidence, or Hety's reviewed operator shell."
+    @exit 1
 
-# Show the Kamal rollback command for a service. Does not execute the
-# rollback — print it for review, then run it manually. Roll forward with
-# `just deploy-latest {{service}}`.
+# Rollback uses immutable GitLab deployment evidence and protected approval.
 [group('deploy')]
 deploy-rollback service:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    SVC="{{service}}"
-    case "$SVC" in
-        relay|landing|cdn|docs|ohttp-relay)
-            CONFIG="_private/infra/config/deploy.${SVC}.yml"
-            ;;
-        *) echo "Unknown service: $SVC (relay|landing|cdn|docs|ohttp-relay)"; exit 1 ;;
-    esac
-    echo "── Running containers for $SVC (newest first) ──"
-    ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=$SVC' --format '{{{{.Names}}\t{{{{.Status}}\t{{{{.Image}}' | head -6" \
-        || echo "No running labelled containers found."
-    echo ""
-    echo "── To roll back to the previous deployed version, run: ──"
-    echo "  kamal rollback -c ${CONFIG} -d production"
-    echo ""
-    echo "This swaps traffic back to the previous container Kamal kept."
-    echo "Verify with: just deploy-check"
+    @echo "Local rollback of {{service}} is unavailable from the daily driver."
+    @echo "Use the protected GitLab environment and immutable image evidence."
+    @echo "Use Hety's reviewed operator shell only for break-glass recovery."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL DEPLOYMENT
 # ═══════════════════════════════════════════════════════════════════
 
-# Sync mail config + restart changed services
+# Mail changes require protected GitLab approval.
 [group('deploy')]
 deploy-mail:
-    ./_private/infra/scripts/deploy-mail.sh
+    @echo "Mail deployment is unavailable from the daily driver."
+    @echo "Use the protected GitLab production job."
+    @exit 1
 
-# Preview mail config changes (dry run)
+# Preview mail changes in a protected GitLab pipeline.
 [group('deploy')]
 deploy-mail-dry:
-    ./_private/infra/scripts/deploy-mail.sh --dry-run
+    @echo "Mail deployment preview is unavailable from the daily driver."
+    @echo "Use the GitLab validation pipeline."
+    @exit 1
 
-# Prepare mail server for first-time setup
+# Initial mail preparation requires reviewed Hety access.
 [group('deploy')]
 mail-prepare:
-    ./_private/infra/mail/prepare-mail.sh
+    @echo "Mail host preparation is unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell and the current deployment runbook."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # BACKUP & RESTORE
 # ═══════════════════════════════════════════════════════════════════
 
-# Run backup on the VPS
+# Backup execution requires Hety's FIDO2 operator boundary.
 [group('deploy')]
 backup:
-    ssh {{ssh_target}} "/opt/vauchi-infra/scripts/backup.sh"
+    @echo "Backup is intentionally unavailable from the daily driver."
+    @echo "Use Hety and _private/docs/runbooks/2026-07-11-backup-restore.md."
+    @exit 1
 
-# Verify latest backup is restorable (runs on VPS)
+# Restore verification requires independent credentials obtained on Hety.
 [group('deploy')]
 verify-backup:
-    ssh {{ssh_target}} "/opt/vauchi-infra/scripts/verify-backup.sh"
+    @echo "Backup verification is intentionally unavailable from the daily driver."
+    @echo "Use Hety and _private/docs/runbooks/2026-07-11-backup-restore.md."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # MONITORING (Prometheus + Grafana)
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy / update monitoring stack (Prometheus + Grafana + node_exporter)
+# Monitoring changes require protected GitLab approval.
 [group('deploy')]
 deploy-monitoring:
-    ./_private/infra/scripts/deploy-monitoring.sh
+    @echo "Monitoring deployment is unavailable from the daily driver."
+    @echo "Use the protected GitLab production job."
+    @exit 1
 
-# Show monitoring stack status
+# Monitoring status is available through Grafana or reviewed access.
 [group('deploy')]
 monitoring-status:
-    ./_private/infra/scripts/deploy-monitoring.sh --status
+    @echo "Direct production status is unavailable from the daily driver."
+    @echo "Use Grafana, GitLab deployment evidence, or Hety's reviewed operator shell."
+    @exit 1
 
-# Follow Grafana logs
+# Monitoring logs are available through reviewed access.
 [group('deploy')]
 monitoring-logs:
-    ./_private/infra/scripts/deploy-monitoring.sh --logs
+    @echo "Direct production logs are unavailable from the daily driver."
+    @echo "Use Grafana or Hety's reviewed operator shell."
+    @exit 1
 
-# Re-create relay alias on monitoring network (run after each relay deploy)
+# Monitoring-network repair requires reviewed Hety access.
 [group('deploy')]
 monitoring-relay-alias:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Discover by the stable app.vauchi.service label (set on every deploy
-    # path); the name filter is a fallback for containers deployed before
-    # the label existed. Name filters drift across deploy schemes.
-    RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=relay' --format '{{{{.Names}}' | head -1")
-    if [ -z "$RELAY" ]; then
-        RELAY=$(ssh "{{ssh_target}}" "docker ps --filter 'name=vauchi-relay-web-' --format '{{{{.Names}}' | head -1")
-    fi
-    if [ -z "$RELAY" ]; then
-        echo "ERROR: No running relay container found"
-        exit 1
-    fi
-    ssh "{{ssh_target}}" "docker network disconnect monitoring_monitoring $RELAY 2>/dev/null || true"
-    ssh "{{ssh_target}}" "docker network connect --alias vauchi-relay-web monitoring_monitoring $RELAY"
-    echo "Connected $RELAY to monitoring network as 'vauchi-relay-web'"
+    @echo "Monitoring-network repair is unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell and record the break-glass action."
+    @exit 1
 
-# Re-create landing page alias on monitoring network (run after each landing deploy)
+# Landing monitoring-network repair requires reviewed Hety access.
 [group('deploy')]
 monitoring-landing-alias:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Discover by the stable app.vauchi.service label (compose sets it).
-    # The name filter is a fallback for pre-label containers; it matches
-    # both deploy schemes (vauchi-landing-<digest>, vauchi-relay-landing)
-    # after a path-specific filter went stale twice and left the landing
-    # dashboards dark (2026-07-10, 2026-07-11).
-    LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'label=app.vauchi.service=landing' --format '{{{{.Names}}' | head -1")
-    if [ -z "$LANDING" ]; then
-        LANDING=$(ssh "{{ssh_target}}" "docker ps --filter 'name=landing' --format '{{{{.Names}}' | head -1")
-    fi
-    if [ -z "$LANDING" ]; then
-        echo "ERROR: No running landing container found"
-        exit 1
-    fi
-    ssh "{{ssh_target}}" "docker network disconnect monitoring_monitoring $LANDING 2>/dev/null || true"
-    ssh "{{ssh_target}}" "docker network connect --alias vauchi-landing-web monitoring_monitoring $LANDING"
-    echo "Connected $LANDING to monitoring network as 'vauchi-landing-web'"
+    @echo "Monitoring-network repair is unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell and record the break-glass action."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # VRT (Visual Regression Tracker)
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy / update VRT stack (Visual Regression Tracker). Pass-through args,
-# e.g. `just deploy-vrt --dry-run`.
+# VRT changes require protected GitLab approval.
 [group('deploy')]
 deploy-vrt *args:
-    ./_private/infra/scripts/deploy-vrt.sh {{ args }}
+    @echo "VRT deployment is unavailable from the daily driver."
+    @echo "Use the protected GitLab production job."
+    @exit 1
 
-# Show VRT stack status
+# VRT status requires reviewed access.
 [group('deploy')]
 vrt-status:
-    ./_private/infra/scripts/deploy-vrt.sh --status
+    @echo "Direct production status is unavailable from the daily driver."
+    @echo "Use GitLab deployment evidence or Hety's reviewed operator shell."
+    @exit 1
 
-# Follow VRT logs
+# VRT logs require reviewed access.
 [group('deploy')]
 vrt-logs:
-    ./_private/infra/scripts/deploy-vrt.sh --logs
+    @echo "Direct production logs are unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # DEPLOY EVERYTHING
 # ═══════════════════════════════════════════════════════════════════
 
-# Deploy the support stacks (mail + monitoring + VRT). Apps (relay,
-# landing, …) deploy via CI — see the APP DEPLOYS section / just deploy-latest.
+# Support-stack deployment requires protected GitLab jobs.
 [group('deploy')]
-deploy-all: deploy-mail deploy-monitoring deploy-vrt
+deploy-all:
+    @echo "Support-stack deployment is unavailable from the daily driver."
+    @echo "Use the protected GitLab production jobs."
+    @exit 1
 
 # ═══════════════════════════════════════════════════════════════════
 # MAIL MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════
 
-# Show mail server logs
+# Mail logs require reviewed access.
 [group('deploy')]
 mail-logs:
-    ssh {{ssh_target}} "cd /opt/mail && docker compose logs -f mailserver"
+    @echo "Direct production logs are unavailable from the daily driver."
+    @echo "Use centralized monitoring or Hety's reviewed operator shell."
+    @exit 1
 
-# Mail server status
+# Mail status requires reviewed access.
 [group('deploy')]
 mail-status:
-    ssh {{ssh_target}} "cd /opt/mail && docker compose ps && echo '' && ./setup.sh email list"
+    @echo "Direct production status is unavailable from the daily driver."
+    @echo "Use monitoring or Hety's reviewed operator shell."
+    @exit 1
 
-# Webmail logs
+# Webmail logs require reviewed access.
 [group('deploy')]
 mail-webmail-logs:
-    ssh {{ssh_target}} "cd /opt/mail && docker compose logs -f roundcube webmail-nginx"
+    @echo "Direct production logs are unavailable from the daily driver."
+    @echo "Use centralized monitoring or Hety's reviewed operator shell."
+    @exit 1
 
-# Add mail user
+# Mail-user administration requires reviewed access.
 [group('deploy')]
 mail-add-user email:
-    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email add {{email}}"
+    @echo "Mail-user changes are unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell and record the administrative action."
+    @exit 1
 
-# Update mail user password
+# Mail-user administration requires reviewed access.
 [group('deploy')]
 mail-update-password email:
-    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email update {{email}}"
+    @echo "Mail-user changes are unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell and record the administrative action."
+    @exit 1
 
-# List mail users
+# Mail-user listing requires reviewed access.
 [group('deploy')]
 mail-list-users:
-    ssh {{ssh_target}} "cd /opt/mail && ./setup.sh email list"
+    @echo "Mail-user listing is unavailable from the daily driver."
+    @echo "Use Hety's reviewed operator shell."
+    @exit 1

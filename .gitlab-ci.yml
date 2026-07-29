@@ -68,6 +68,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just test-lint-docs
     - JUST_UNSTABLE=1 just worktree test
+    - python3 -m unittest tests/test_backup_recipe_authority.py
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -83,6 +84,9 @@ test:release-gates:
           - just/lint-docs.sh
           - just/worktree.just
           - just/claude-layout-lib.sh
+          - just/deploy.just
+          - just/deploy-running.sh
+          - tests/test_backup_recipe_authority.py
           - tests/test_core_freshness_recipe.py
           - tests/test_claude_layout.py
           - tests/test_codex_layout.py
