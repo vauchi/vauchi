@@ -1466,7 +1466,7 @@ lint-no-direct-clipboard-writes:
 [script]
 lint-parser-parity:
     set -euo pipefail
-    python3 scripts/scripts/check-component-parser-parity.py
+    python3 scripts/scripts/check-component-parser-parity.py --protocol presentation
 
 # G5 (ScreenModel API gaps): forbid view-layer reads of MobileContact /
 # MobileDeliveryRecord domain conditionals that should be decided in
