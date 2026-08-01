@@ -31,30 +31,64 @@ case "$OSTYPE" in
     *)       PLATFORM="unknown" ;;
 esac
 
+# Resolving on PATH is not the same as working. cargo/rustc/rustfmt are
+# rustup shims that exit non-zero when no default toolchain is
+# configured; the old `|| ver="(installed)"` fallback turned that failure
+# into a ✓, so setup reported "All required tools present" and then died
+# on `cargo update` three repos later (2026-08-01).
+probe_version() {
+    local cmd="$1" ver
+    if ver=$("$cmd" --version 2>/dev/null | head -1) && [[ -n "$ver" ]]; then
+        printf '%s' "$ver"
+        return 0
+    fi
+    return 1
+}
+
+report_broken() {
+    local cmd="$1"
+    case "$cmd" in
+        cargo|rustc|rustfmt|clippy-driver)
+            echo "    A rustup shim with no toolchain does this — try: rustup default stable"
+            ;;
+        *)
+            echo "    It resolves on PATH but exits non-zero — reinstall it."
+            ;;
+    esac
+}
+
 check_required() {
-    local cmd="$1" purpose="$2" install_hint="$3"
-    if command -v "$cmd" &>/dev/null; then
-        local ver
-        ver=$("$cmd" --version 2>/dev/null | head -1) || ver="(installed)"
-        echo "  ✓ $cmd — $ver"
-    else
+    local cmd="$1" purpose="$2" install_hint="$3" ver
+    if ! command -v "$cmd" &>/dev/null; then
         echo "  ✗ $cmd — MISSING ($purpose)"
         echo "    Install: $install_hint"
         MISSING=$((MISSING + 1))
+        return
     fi
+    if ver=$(probe_version "$cmd"); then
+        echo "  ✓ $cmd — $ver"
+        return
+    fi
+    echo "  ✗ $cmd — not runnable ($purpose)"
+    report_broken "$cmd"
+    MISSING=$((MISSING + 1))
 }
 
 check_recommended() {
-    local cmd="$1" purpose="$2" install_hint="$3"
-    if command -v "$cmd" &>/dev/null; then
-        local ver
-        ver=$("$cmd" --version 2>/dev/null | head -1) || ver="(installed)"
-        echo "  ✓ $cmd — $ver"
-    else
+    local cmd="$1" purpose="$2" install_hint="$3" ver
+    if ! command -v "$cmd" &>/dev/null; then
         echo "  ~ $cmd — not found ($purpose)"
         echo "    Install: $install_hint"
         WARN=$((WARN + 1))
+        return
     fi
+    if ver=$(probe_version "$cmd"); then
+        echo "  ✓ $cmd — $ver"
+        return
+    fi
+    echo "  ~ $cmd — not runnable ($purpose)"
+    report_broken "$cmd"
+    WARN=$((WARN + 1))
 }
 
 # ── Required ──────────────────────────────────────────────────────
@@ -251,7 +285,7 @@ fi
 
 # ── Summary ───────────────────────────────────────────────────────
 if [[ "$MISSING" -gt 0 ]]; then
-    echo "✗ $MISSING required tool(s) missing — install them and re-run: just setup"
+    echo "✗ $MISSING required tool(s) missing or not runnable — fix them and re-run: just setup"
     exit 1
 elif [[ "$WARN" -gt 0 ]]; then
     echo "✓ All required tools present ($WARN recommended tool(s) missing — setup will continue)"
