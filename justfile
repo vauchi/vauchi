@@ -2768,6 +2768,11 @@ public-api crate="all":
 test-lint-docs:
     python3 "{{justfile_directory()}}/tests/test_lint_docs_recipe.py" "{{justfile_directory()}}/just/lint-docs.sh"
 
+# Regression check: a tool on PATH that cannot run is not present.
+[group('tests')]
+test-check-prerequisites:
+    python3 "{{justfile_directory()}}/tests/test_check_prerequisites.py" "{{justfile_directory()}}/just/check-prerequisites.sh"
+
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
 lint-docs:
