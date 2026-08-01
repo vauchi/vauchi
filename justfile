@@ -1397,6 +1397,25 @@ docs:
 install-hooks:
     bash scripts/install-hooks.sh
 
+# Usage: just socratic-review [repo] [codex|kimi|both]
+#   just socratic-review core           # both reviewers
+#   just socratic-review _private kimi  # one reviewer
+#
+# Codex and Kimi interrogate `origin/main...HEAD` and return questions
+# only — no patches, no verdict. Provider diversity is the point: a
+# Claude session reviewing its own diff with Claude agrees with itself.
+# Advisory, not a gate.
+#
+# Socratic review of the current branch by Codex + Kimi (advisory)
+[group('tools')]
+[no-cd]
+[script]
+socratic-review repo='' reviewer='both':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    dir=$(repo_dir "{{repo}}")
+    bash scripts/scripts/socratic-review.sh "$dir" "{{reviewer}}"
+
 # Check file sizes against thresholds (src: 500/1000, test: 800/1200)
 [group('tools')]
 [script]
