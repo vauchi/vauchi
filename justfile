@@ -147,7 +147,7 @@ build *args:
                     [[ "$r" == "macos" ]] && xc_dest='platform=macOS'
                     (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -configuration Debug -skipPackageUpdates build -quiet 2>&1)
                     ;;
-                mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
+                mdbook)  (cd "$dir" && mdbook build 2>&1) ;;
                 *)       echo "  (no build step for $tc)"; return 0 ;;
             esac
         }
@@ -197,7 +197,7 @@ test *args:
                     fi
                     (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -skipPackageUpdates test -quiet 2>&1)
                     ;;
-                mkdocs)  (cd "$dir" && mkdocs build --strict 2>&1) ;;
+                mdbook)  (cd "$dir" && mdbook build 2>&1) ;;
                 *)       echo "  (no test step for $tc)"; return 0 ;;
             esac
         }
@@ -422,7 +422,7 @@ lint *args:
                             Vauchi/VauchiApp.swift 2>&1
                     fi
                     ;;
-                mkdocs)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
+                mdbook)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
                 python)
                     if [[ -f "$dir/scripts/validate.py" ]]; then
                         (cd "$dir" && python3 scripts/validate.py 2>&1)
