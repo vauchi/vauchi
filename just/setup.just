@@ -987,7 +987,10 @@ install-dev-deps:
 
     # ── Cargo tools (via binstall for speed) ─────────────────────────
     echo "── Cargo tools ──"
-    cargo_tools=(cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat cargo-sweep typos-cli)
+    # cargo-nextest is required, not optional: `just test-name` / `just test-file`
+    # and the coverage recipes in perf.just invoke `cargo nextest` directly, and
+    # `just test` silently falls back to the slower `cargo test` without it.
+    cargo_tools=(cargo-nextest cargo-watch cargo-audit cargo-deny cargo-llvm-cov sccache cargo-duplicates cargo-bloat cargo-sweep typos-cli)
     for tool in "${cargo_tools[@]}"; do
         bin_name="$tool"
         if cargo install --list | grep -q "^${tool} "; then
