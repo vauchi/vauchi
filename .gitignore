@@ -69,7 +69,9 @@
 # - .gitlab-ci.yml
 # - .github/
 # - CLAUDE.md, KIMI.md, and AGENTS.md
-# - .claude, .kimi-code, .codex, and .agents (symlinks)
+# - .claude and .kimi-code (symlinks into _private)
+# - .codex and .agents (real dirs of symlinks — a symlinked root makes
+#   bubblewrap refuse to start Codex's sandbox; see just/codex-layout-lib.sh)
 # - CONTRIBUTING.md (symlink)
 
 # IDE / AI agent configs

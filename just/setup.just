@@ -96,6 +96,18 @@ session-init:
         WARN=1
     fi
 
+    # Codex config layout (.codex real dir → symlinks into _private/.codex).
+    # Deliberately the opposite shape to .claude: a symlinked .codex makes
+    # bubblewrap refuse to start, breaking every sandboxed Codex command.
+    echo ""
+    echo "── codex config ──"
+    source just/codex-layout-lib.sh
+    if check_codex_layout; then
+        echo "  OK: .codex dir → _private/.codex entries"
+    else
+        WARN=1
+    fi
+
     # Fetch all repos in parallel + prune stale refs
     echo ""
     echo "── fetch ──"
@@ -780,6 +792,18 @@ session-end:
     source just/claude-layout-lib.sh
     if check_claude_layout; then
         echo "  OK: .claude → _private/.claude, no strays"
+    else
+        ERRORS=1
+    fi
+
+    # ── Codex config layout ──
+    # Gates the shape, not just the contents: a session that left .codex as a
+    # symlink hands the next Codex run a sandbox that cannot start at all.
+    echo ""
+    echo "── codex config layout ──"
+    source just/codex-layout-lib.sh
+    if check_codex_layout; then
+        echo "  OK: .codex dir → _private/.codex entries, no strays"
     else
         ERRORS=1
     fi
