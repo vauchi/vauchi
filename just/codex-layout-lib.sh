@@ -10,19 +10,34 @@
 # _private/.codex, but the workspace root entry must be a REAL DIRECTORY
 # whose children are symlinks into it — not a symlink like .claude.
 #
-# Why the shapes differ: Codex bind-mounts <workspace>/.codex read-only so a
-# session cannot rewrite its own hooks or config mid-turn. bubblewrap refuses
-# to enforce a read-only path that crosses a writable symlink — the symlink
-# sits in the writable workspace root, so an agent could repoint it and escape
-# the protection. With .codex a symlink, EVERY sandboxed command dies with:
+# Why the shapes differ: Codex bind-mounts <workspace>/.codex read-only, and
+# bubblewrap refuses to enforce a read-only path that crosses a writable
+# symlink. With .codex a symlink, EVERY sandboxed command dies with:
 #
 #   error building bubblewrap command: Fatal error: cannot enforce sandbox
 #   read-only path <root>/.codex because it crosses writable symlink
 #
-# read-only mode is unaffected, which is why this hid for so long. .agents
-# already uses this real-dir-with-symlinked-children shape for the same
-# reason (tests/test_codex_layout.py). .claude and .kimi-code stay symlinks:
-# neither Claude Code nor Kimi bind-mounts its config dir.
+# read-only mode is unaffected, which is why this hid for so long.
+#
+# SCOPE — this is a startup-compatibility fix, NOT a security control. The
+# read-only bind protects the directory ENTRIES (a sandboxed session cannot
+# create .codex/newhook.sh), but every entry is a symlink into _private, which
+# is inside the writable workspace. Measured behaviour:
+#
+#   create .codex/newhook.sh   -> blocked (read-only file system)
+#   append .codex/config.toml  -> SUCCEEDS (writes through the link)
+#   append _private/.codex/*   -> SUCCEEDS
+#
+# So a sandboxed session CAN still rewrite its own hooks and config mid-turn.
+# The upstream protection cannot hold while the canonical tree lives in a
+# writable path; restoring it would mean moving the tree out of the workspace
+# or giving _private/.codex its own read-only bind. Do not cite this layout as
+# a self-modification guard. .agents/skills has the identical hole.
+#
+# .claude and .kimi-code stay symlinks: neither Claude Code nor Kimi bind-mounts
+# its config dir, so neither hits the bubblewrap failure. That asymmetry is a
+# per-tool compatibility fact, not a pattern to copy — check the new tool's
+# sandbox behaviour before assuming either shape.
 #
 # Returns 0 when the layout is sound, 1 when an issue needs a human.
 # Prints two-space-indented lines matching the session recipes' style.
