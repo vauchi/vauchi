@@ -11,6 +11,13 @@ from pathlib import Path
 
 WORKSPACE_ROOT = Path(sys.argv.pop(1)).resolve()
 
+# Root-repo CI checks out only this repo, so _private/ is absent there and every
+# link into it dangles. Assertions must therefore read link TARGETS
+# (os.readlink works on a dangling link) rather than resolve them; anything that
+# needs the canonical tree present goes behind this flag.
+CANONICAL_CODEX = WORKSPACE_ROOT / "_private/.codex"
+CANONICAL_PRESENT = CANONICAL_CODEX.is_dir()
+
 
 class CodexLayoutTest(unittest.TestCase):
     def test_agents_root_is_a_real_directory(self) -> None:
@@ -41,23 +48,36 @@ class CodexConfigRootLayoutTest(unittest.TestCase):
         self.assertFalse(codex_root.is_symlink())
 
     def test_every_entry_links_into_the_canonical_tree(self) -> None:
-        canonical = WORKSPACE_ROOT / "_private/.codex"
-        expected = {entry.name: f"../_private/.codex/{entry.name}" for entry in canonical.iterdir()}
-        self.assertNotEqual(expected, {}, "_private/.codex is empty — is _private cloned?")
+        entries = sorted((WORKSPACE_ROOT / ".codex").iterdir())
+        self.assertNotEqual(entries, [], ".codex is empty — no config would be discovered")
 
         actual = {
-            entry.name: os.readlink(entry) if entry.is_symlink() else None
-            for entry in (WORKSPACE_ROOT / ".codex").iterdir()
+            entry.name: os.readlink(entry) if entry.is_symlink() else None for entry in entries
         }
+        expected = {entry.name: f"../_private/.codex/{entry.name}" for entry in entries}
 
         self.assertEqual(actual, expected)
 
-    def test_config_resolves_through_the_links(self) -> None:
+    def test_config_link_targets_the_canonical_tree(self) -> None:
         config = WORKSPACE_ROOT / ".codex/config.toml"
 
         self.assertTrue(config.is_symlink())
+        self.assertEqual(os.readlink(config), "../_private/.codex/config.toml")
+
+    @unittest.skipUnless(CANONICAL_PRESENT, "_private not cloned (root-repo CI)")
+    def test_links_resolve_when_private_is_cloned(self) -> None:
+        """In a full workspace the links must actually resolve — a dangling
+        entry means Codex silently loads no project hooks at all.
+        """
+        config = WORKSPACE_ROOT / ".codex/config.toml"
+
         self.assertTrue(config.is_file(), "dangling link — Codex would load no project hooks")
-        self.assertEqual(config.resolve(), (WORKSPACE_ROOT / "_private/.codex/config.toml").resolve())
+        self.assertEqual(config.resolve(), (CANONICAL_CODEX / "config.toml").resolve())
+
+        linked = {entry.name for entry in (WORKSPACE_ROOT / ".codex").iterdir()}
+        canonical = {entry.name for entry in CANONICAL_CODEX.iterdir()}
+
+        self.assertEqual(linked, canonical)
 
     def test_claude_and_kimi_roots_stay_symlinks(self) -> None:
         """The asymmetry with .codex is deliberate, not drift: neither Claude
