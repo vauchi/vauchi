@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# shellcheck shell=bash
+# Sourced by session-init/session-end, never executed — no shebang to infer
+# the dialect from, so declare it for shellcheck (SC2148).
+
 # Workspace .claude layout invariant (CLAUDE.md §Dependencies & Repo
 # Layout): the real config tree lives in _private/.claude; the root
 # .claude is a relative symlink so Claude Code — which only discovers
