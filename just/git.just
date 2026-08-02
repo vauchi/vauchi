@@ -351,17 +351,28 @@ push-all mode='full':
     fi
     pushed=()
     wip_blocked=()
+    push_failed=()
     skipped=0
     push_repo() {
         local label="$1" dir="$2"
-        local ahead head_msg branch
+        local ahead head_msg branch first_push=0
         branch=$(git -C "$dir" branch --show-current 2>/dev/null)
         # Skip repos on main — main is protected, use MRs instead
         if [[ "$branch" == "main" ]]; then
             skipped=$((skipped + 1))
             return
         fi
-        ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        # A branch that has never been pushed has no @{u}, so the rev-list
+        # below fails and the old `|| echo "0"` reported it as "nothing to
+        # push" — silently skipping the first push of every new branch,
+        # which is precisely when you need this recipe. Fall back to
+        # origin/main and set the upstream on the way out.
+        if git -C "$dir" rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+            ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        else
+            first_push=1
+            ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+        fi
         if [[ "$ahead" -gt 0 ]]; then
             # Block pushing WIP commits
             head_msg=$(git -C "$dir" log -1 --format=%s 2>/dev/null || true)
@@ -370,12 +381,17 @@ push-all mode='full':
                 wip_blocked+=("$label")
                 return
             fi
-            status_info "$label" "pushing ($ahead commits ahead)..."
-            if git -C "$dir" push; then
+            if [[ "$first_push" -eq 1 ]]; then
+                status_info "$label" "pushing new branch ($ahead commits ahead)..."
+            else
+                status_info "$label" "pushing ($ahead commits ahead)..."
+            fi
+            if { [[ "$first_push" -eq 1 ]] && git -C "$dir" push -u origin "$branch"; } \
+                || { [[ "$first_push" -eq 0 ]] && git -C "$dir" push; }; then
                 status_ok "$label" "pushed"
             else
                 status_fail "$label" "push FAILED"
-                wip_blocked+=("$label")  # reuse array for all failures
+                push_failed+=("$label")
                 return
             fi
             pushed+=("$label")
@@ -386,15 +402,22 @@ push-all mode='full':
     source scripts/scripts/for-each-repo.sh
     for_each_repo push_repo
     elapsed=$(timer_elapsed)
-    if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 ]]; then
+    if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 && ${#push_failed[@]} -eq 0 ]]; then
         status_ok "all repos" "nothing to push"
     fi
     if [[ ${#wip_blocked[@]} -gt 0 ]]; then
         printf "\n%sWIP-blocked (%d): %s%s\n" "$YELLOW" "${#wip_blocked[@]}" "${wip_blocked[*]}" "$NC"
         printf "%sUndo WIP commits first: just git wip-undo%s\n" "$DIM" "$NC"
     fi
-    if [[ ${#pushed[@]} -gt 0 || ${#wip_blocked[@]} -gt 0 ]]; then
-        summary_mix "${#pushed[@]}" "${#wip_blocked[@]}" "$elapsed"
+    # Kept separate from wip_blocked on purpose: a rejected push reported
+    # as "WIP-blocked" sends you looking for a wip: commit that is not
+    # there, while the real cause (a pre-push gate) scrolls past above.
+    if [[ ${#push_failed[@]} -gt 0 ]]; then
+        printf "\n%sPush failed (%d): %s%s\n" "$RED" "${#push_failed[@]}" "${push_failed[*]}" "$NC"
+        printf "%sRe-run the push in that repo to read the gate's message.%s\n" "$DIM" "$NC"
+    fi
+    if [[ ${#pushed[@]} -gt 0 || ${#wip_blocked[@]} -gt 0 || ${#push_failed[@]} -gt 0 ]]; then
+        summary_mix "${#pushed[@]}" "$((${#wip_blocked[@]} + ${#push_failed[@]}))" "$elapsed"
     fi
 
 # Push a single repo, retrying with --force-with-lease on non-fast-forward failure.
