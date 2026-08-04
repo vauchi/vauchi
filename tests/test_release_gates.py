@@ -3030,6 +3030,14 @@ android store submission: passed
         self.assertIn("Pipeline state:", recipe)
         self.assertNotIn('grep -qiE "passed|success"', recipe)
 
+    def test_ci_classifier_passes_gitlab_failure_reason(self) -> None:
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        recipe = gitlab_recipes.split("ci-classify repo job_id:", 1)[1]
+        recipe = recipe.split("# Show pipeline status", 1)[0]
+
+        self.assertIn('jobs/{{job_id}}" | jq -r ".failure_reason // empty"', recipe)
+        self.assertIn('--failure-reason "$failure_reason"', recipe)
+
     def test_pipeline_email_recipe_is_failure_only_and_verified(self) -> None:
         gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
         recipe = gitlab_recipes.split(
