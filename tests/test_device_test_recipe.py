@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import sys
+import os
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -12,6 +14,42 @@ DEVICE_TEST_LIBRARY = Path(sys.argv.pop(1)).resolve()
 
 
 class DeviceTestRecipeTest(unittest.TestCase):
+    def test_ios_auth_args_include_team_key_credentials(self) -> None:
+        env = os.environ.copy()
+        env.update(
+            {
+                "VAUCHI_ASC_KEY_PATH": "/secure/AuthKey_TEAM.p8",
+                "VAUCHI_ASC_KEY_ID": "TEAMKEY123",
+                "VAUCHI_ASC_ISSUER_ID": "issuer-uuid",
+            }
+        )
+        result = subprocess.run(
+            [
+                "/bin/bash",
+                "-c",
+                f'source "{DEVICE_TEST_LIBRARY}"; '
+                'dt_set_xcode_auth_args; printf "<%s>\\n" '
+                '"${DT_XCODE_AUTH_ARGS[@]}"',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            [
+                "<-authenticationKeyPath>",
+                "</secure/AuthKey_TEAM.p8>",
+                "<-authenticationKeyID>",
+                "<TEAMKEY123>",
+                "<-authenticationKeyIssuerID>",
+                "<issuer-uuid>",
+            ],
+        )
+
     def test_physical_device_libraries_enable_dev_logging(self) -> None:
         source = DEVICE_TEST_JUSTFILE.read_text()
 

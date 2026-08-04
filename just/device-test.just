@@ -471,6 +471,7 @@ _dt-build-ios:
     security set-keychain-settings -t 300 \
         "$HOME/Library/Keychains/build.keychain-db"
 
+    dt_set_xcode_auth_args
     dt_provision_ios_local_spm "$WORKSPACE_ROOT"
     trap dt_restore_ios_spm_config EXIT
 
@@ -492,6 +493,7 @@ _dt-build-ios:
         -destination "id=$IOS_DEVICE_ID" \
         -derivedDataPath build \
         -allowProvisioningUpdates \
+        "${DT_XCODE_AUTH_ARGS[@]}" \
         -clonedSourcePackagesDirPath "$DT_IOS_SPM_CACHE_PATH" \
         clean build 2>&1 | tail -20
 

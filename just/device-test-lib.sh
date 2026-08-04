@@ -16,6 +16,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+dt_set_xcode_auth_args() {
+    DT_XCODE_AUTH_ARGS=()
+    if [[ -n "${VAUCHI_ASC_KEY_PATH:-}" \
+       && -n "${VAUCHI_ASC_KEY_ID:-}" \
+       && -n "${VAUCHI_ASC_ISSUER_ID:-}" ]]; then
+        # Consumed by device-test.just after sourcing this library.
+        # shellcheck disable=SC2034
+        DT_XCODE_AUTH_ARGS=(
+            -authenticationKeyPath "$VAUCHI_ASC_KEY_PATH"
+            -authenticationKeyID "$VAUCHI_ASC_KEY_ID"
+            -authenticationKeyIssuerID "$VAUCHI_ASC_ISSUER_ID"
+        )
+    fi
+}
+
 # Resolve the core directory.
 # Priority: explicit argument > worktree of current branch > core/
 dt_resolve_core_dir() {
