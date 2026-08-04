@@ -238,13 +238,15 @@ deploy-latest service:
 
     DEPLOY_IMAGE="registry.gitlab.com/vauchi/${REPO}:${SHA}"
     echo "minting SHA-pinned _private main pipeline..."
+    PIPE_REQUEST=$(jq -n \
+        --arg service "$SERVICE" \
+        --arg deploy_image "$DEPLOY_IMAGE" \
+        '{ref: "main", variables: [
+            {key: "DEPLOY_SERVICE", value: $service},
+            {key: "DEPLOY_IMAGE", value: $deploy_image}
+        ]}')
     PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
-        -f "ref=main" \
-        -f "variables[0][key]=DEPLOY_SERVICE" \
-        -f "variables[0][value]=${SERVICE}" \
-        -f "variables[1][key]=DEPLOY_IMAGE" \
-        -f "variables[1][value]=${DEPLOY_IMAGE}" \
-        | jq -er '.id')
+        --input - <<< "$PIPE_REQUEST" | jq -er '.id')
 
     PIPE_VARIABLES=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables")
     CREATED_SERVICE=$(jq -r '.[] | select(.key=="DEPLOY_SERVICE") | .value' <<< "$PIPE_VARIABLES")
