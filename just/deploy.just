@@ -246,6 +246,7 @@ deploy-latest service:
             {key: "DEPLOY_IMAGE", value: $deploy_image}
         ]}')
     PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
+        -H "Content-Type: application/json" \
         --input - <<< "$PIPE_REQUEST" | jq -er '.id')
 
     PIPE_VARIABLES=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables")
