@@ -2,6 +2,11 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+[private]
+test-e2e-recipes:
+    python3 "{{ justfile_directory() }}/tests/test_e2e_recipe.py" \
+        "{{ justfile_directory() }}/justfile"
+
 # End-to-end testing recipes
 
 # ═══════════════════════════════════════════════════════════════════
@@ -492,7 +497,7 @@ e2e-maestro platform="all":
 #   create_identity.yaml     — prerequisite for the others
 [group('e2e')]
 [script]
-e2e-maestro-critical platform="all":
+e2e-maestro-critical platform="all" device="":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then
         echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
@@ -510,6 +515,10 @@ e2e-maestro-critical platform="all":
     run_critical() {
         local plat="$1"
         local dir="e2e/maestro/$plat"
+        local device_args=()
+        if [[ -n "{{ device }}" ]]; then
+            device_args+=(--device "{{ device }}")
+        fi
         # Maestro 2.x does not inherit arbitrary shell env vars; pass the
         # flow parameters explicitly via --env. Defaults match the documented
         # variables in add_field.yaml / create_identity.yaml.
@@ -527,7 +536,7 @@ e2e-maestro-critical platform="all":
                 continue
             fi
             echo "  → $name"
-            if maestro test "$flow" --platform "$plat" "${maestro_env[@]}"; then
+            if maestro test "${device_args[@]}" "$flow" --platform "$plat" "${maestro_env[@]}"; then
                 echo "  ✓ $name"
             else
                 echo "  ✗ FAILED: $name"
