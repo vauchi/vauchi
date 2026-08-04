@@ -224,6 +224,60 @@ test *args:
     done
     print_summary "test" || exit 1
 
+# Run the Rust tests behind web-demo's WASM boundary, then prove that the same
+# crate still builds for the browser target. The generic web test recipe
+# exercises the TypeScript shell.
+[group('extended')]
+[script]
+test-web-wasm:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    dir=$(repo_dir web-demo)
+    [[ "$dir" = /* && -d "$dir/wasm" ]] || {
+        echo "Invalid web-demo WASM path: $dir/wasm" >&2
+        exit 1
+    }
+    cd "$dir/wasm"
+    command -v wasm-pack >/dev/null 2>&1 || {
+        echo "wasm-pack is required for the browser-target build" >&2
+        exit 1
+    }
+    if command -v cargo-nextest >/dev/null 2>&1; then
+        cargo nextest run --locked
+    else
+        cargo test --locked
+    fi
+    wasm-pack build --target web -- --locked
+
+# Refresh a Rust consumer's Core lock entries without loading path overrides
+# from the coordinator checkout. Cargo discovers config from its invocation
+# directory, so run from a temporary directory outside the workspace.
+[group('tools')]
+[script]
+refresh-core-lock repo:
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    repo={{ quote(repo) }}
+    dir=$(repo_dir "$repo")
+    [[ "$dir" = /* ]] || {
+        echo "Repository path must be absolute: $dir" >&2
+        exit 1
+    }
+    case "$repo" in
+        web-demo) manifest="$dir/wasm/Cargo.toml" ;;
+        cli|tui|linux-gtk|e2e) manifest="$dir/Cargo.toml" ;;
+        *) echo "Unsupported Core consumer: $repo" >&2; exit 1 ;;
+    esac
+    manifest_dir=$(dirname "$manifest")
+    if [[ -e "$dir/.cargo/config.toml" || -e "$dir/.cargo/config" \
+       || -e "$manifest_dir/.cargo/config.toml" || -e "$manifest_dir/.cargo/config" ]]; then
+        echo "Refusing to ignore repository-local Cargo config for $repo" >&2
+        exit 1
+    fi
+    scratch=$(mktemp -d /tmp/vauchi-refresh-core-lock.XXXXXX)
+    trap 'rm -rf "$scratch"' EXIT
+    (cd "$scratch" && cargo update --manifest-path "$manifest" -p vauchi-core -p vauchi-app)
+
 # Check binding/artifact UniFFI ABI parity (Layer 2 gate).
 # Plan: _private/docs/planning/todo/2026-04-20-frontend-correctness-strategy-plan.md Task 2.1.
 #
