@@ -171,10 +171,29 @@ test *args:
         _do_step() {
             case "$tc" in
                 rust)
-                    if command -v cargo-nextest &>/dev/null; then
-                        (cd "$dir" && cargo nextest run --workspace $tfeats 2>&1)
+                    # E2E tests spawn multiple CLI/relay processes per test and
+                    # share the local loopback stack; running them concurrently
+                    # exposes timing flakes (see
+                    # _private/docs/problems/2026-08-04-e2e-bounded-clock-skew-still-flaky).
+                    # Serialise the E2E suite while leaving other Rust repos
+                    # at their default parallelism.
+                    if [[ "$r" == "e2e" ]]; then
+                        # E2E tests are serialised (--test-threads=1) because
+                        # they spawn multiple CLI/relay processes per test and
+                        # share the local loopback stack. The bounded clock-skew
+                        # certification test is still sensitive to cumulative
+                        # runner load, so we run it first while the process is
+                        # fresh and then run the rest of the suite. See problem
+                        # record 2026-08-04-e2e-bounded-clock-skew-still-flaky.
+                        local skew_test="integration_six_device_bounded_clock_skew_converges_to_later_update"
+                        (cd "$dir" && cargo test --workspace "$skew_test" -- --test-threads=1 2>&1)
+                        (cd "$dir" && cargo test --workspace -- --test-threads=1 --skip "$skew_test" 2>&1)
                     else
-                        (cd "$dir" && cargo test --workspace $tfeats 2>&1)
+                        if command -v cargo-nextest &>/dev/null; then
+                            (cd "$dir" && cargo nextest run --workspace $tfeats 2>&1)
+                        else
+                            (cd "$dir" && cargo test --workspace $tfeats 2>&1)
+                        fi
                     fi
                     ;;
                 npm)     (cd "$dir" && npx playwright test --project=chromium --grep-invert "@visual|@a11y" 2>&1) ;;
