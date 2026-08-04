@@ -555,7 +555,7 @@ plan-stale days='30':
 
 # Live v0.2.0 release readiness — generated from master plan (single source of truth)
 [group('tests')]
-test-release-gates:
+test-release-gates: test-e2e-recipes
     python3 "{{justfile_directory()}}/tests/test_release_gates.py" "{{justfile_directory()}}/justfile"
 
 [group('tools')]
