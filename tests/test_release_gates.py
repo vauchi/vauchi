@@ -3012,6 +3012,16 @@ android store submission: passed
         self.assertIn("just release-gates", recipe)
         self.assertLess(recipe.index("just release-gates"), recipe.index("read -p"))
 
+    def test_release_gate_runner_installs_deploy_check_dependencies(self) -> None:
+        ci_config = (JUSTFILE.parent / ".gitlab-ci.yml").read_text()
+        release_gate_job = ci_config.split("test:release-gates:", 1)[1]
+        release_gate_job = release_gate_job.split("\nlint:dx-gates:", 1)[0]
+
+        self.assertIn(
+            "apk add --no-cache bash git jq just python3",
+            release_gate_job,
+        )
+
     def test_pipeline_wait_uses_aggregate_pipeline_state(self) -> None:
         gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
         recipe = gitlab_recipes.split("pipeline-wait repo='':", 1)[1]
