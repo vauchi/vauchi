@@ -246,6 +246,16 @@ deploy-latest service:
         -f "variables[1][value]=${DEPLOY_IMAGE}" \
         | jq -er '.id')
 
+    PIPE_VARIABLES=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables")
+    CREATED_SERVICE=$(jq -r '.[] | select(.key=="DEPLOY_SERVICE") | .value' <<< "$PIPE_VARIABLES")
+    CREATED_IMAGE=$(jq -r '.[] | select(.key=="DEPLOY_IMAGE") | .value' <<< "$PIPE_VARIABLES")
+    if [[ "$CREATED_SERVICE" != "$SERVICE" || "$CREATED_IMAGE" != "$DEPLOY_IMAGE" ]]; then
+        echo "ERROR: pipeline did not retain the requested deploy variables." >&2
+        echo "       Inspect: https://gitlab.com/vauchi/private/-/pipelines/${PIPE}" >&2
+        exit 1
+    fi
+    echo "pipeline:       service and SHA-pinned image verified"
+
     JOB_URL=""
     for _ in 1 2 3 4 5 6; do
         JOB_URL=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/jobs?per_page=100" 2>/dev/null \
