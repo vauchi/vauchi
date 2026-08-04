@@ -490,12 +490,13 @@ session-end:
         SE_RECENT="$SE_TMP/recent-ci-tags.txt"
         git -C scripts tag --sort=-v:refname 2>/dev/null | grep '^ci-templates-v' | head -8 > "$SE_RECENT" 2>/dev/null || true
         if [[ -s "$SE_RECENT" ]]; then
-            for _yaml in _private/.gitlab-ci.yml .gitlab-ci.yml; do
-                if [[ -f "$_yaml" ]]; then
-                    scripts/scripts/check-stale-ci-pin.sh "$_yaml" "$SE_RECENT" "$_yaml" || \
-                        echo "  WARN: stale ci-template pin in $_yaml (see above)"
-                fi
-            done
+            while IFS= read -r _yaml; do
+                scripts/scripts/check-stale-ci-pin.sh "$_yaml" "$SE_RECENT" "$_yaml" || \
+                    echo "  WARN: stale ci-template pin in $_yaml (see above)"
+            done < <(find . \
+                -path './.worktrees' -prune -o \
+                -path '*/.git' -prune -o \
+                -name .gitlab-ci.yml -type f -print)
         fi
     fi
 
