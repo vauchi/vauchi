@@ -80,6 +80,15 @@ class DeviceTestRecipeTest(unittest.TestCase):
             "VAUCHI_ASC_ISSUER_ID must be set together",
         )
 
+    def test_ios_build_keeps_xcode_argument_array_nonempty_without_key(self) -> None:
+        source = DEVICE_TEST_JUSTFILE.read_text()
+
+        self.assertIn("DT_XCODEBUILD_ARGS=(", source)
+        self.assertIn(
+            'if [[ "${#DT_XCODE_AUTH_ARGS[@]}" -gt 0 ]]; then', source
+        )
+        self.assertIn('xcodebuild "${DT_XCODEBUILD_ARGS[@]}"', source)
+
     def test_physical_device_libraries_enable_dev_logging(self) -> None:
         source = DEVICE_TEST_JUSTFILE.read_text()
 

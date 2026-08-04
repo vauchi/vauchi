@@ -487,15 +487,22 @@ _dt-build-ios:
     # binaryTarget and SPM silently links the PUBLISHED (stale) core —
     # local Rust changes never reach the device (mobile.just:75-79).
     export VAUCHI_PLATFORM_USE_LOCAL_XCFRAMEWORK=1
-    xcodebuild -workspace Vauchi.xcworkspace \
-        -scheme Vauchi \
-        -configuration Debug \
-        -destination "id=$IOS_DEVICE_ID" \
-        -derivedDataPath build \
-        -allowProvisioningUpdates \
-        "${DT_XCODE_AUTH_ARGS[@]}" \
-        -clonedSourcePackagesDirPath "$DT_IOS_SPM_CACHE_PATH" \
-        clean build 2>&1 | tail -20
+    DT_XCODEBUILD_ARGS=(
+        -workspace Vauchi.xcworkspace
+        -scheme Vauchi
+        -configuration Debug
+        -destination "id=$IOS_DEVICE_ID"
+        -derivedDataPath build
+        -allowProvisioningUpdates
+    )
+    if [[ "${#DT_XCODE_AUTH_ARGS[@]}" -gt 0 ]]; then
+        DT_XCODEBUILD_ARGS+=("${DT_XCODE_AUTH_ARGS[@]}")
+    fi
+    DT_XCODEBUILD_ARGS+=(
+        -clonedSourcePackagesDirPath "$DT_IOS_SPM_CACHE_PATH"
+        clean build
+    )
+    xcodebuild "${DT_XCODEBUILD_ARGS[@]}" 2>&1 | tail -20
 
     dt_restore_ios_spm_config
     trap - EXIT
