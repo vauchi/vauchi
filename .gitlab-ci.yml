@@ -68,6 +68,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just test-lint-docs
     - JUST_UNSTABLE=1 just test-check-prerequisites
+    - JUST_UNSTABLE=1 just test-deploy-latest
     - JUST_UNSTABLE=1 just worktree test
     - python3 -m unittest tests/test_backup_recipe_authority.py
   rules:
@@ -91,6 +92,7 @@ test:release-gates:
           - tests/test_backup_recipe_authority.py
           - tests/test_check_prerequisites.py
           - tests/test_core_freshness_recipe.py
+          - tests/test_deploy_latest_recipe.py
           - tests/test_claude_layout.py
           - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py

@@ -19,6 +19,10 @@ validate *FLAGS:
 # STATUS
 # ═══════════════════════════════════════════════════════════════════
 
+[group('tests')]
+test-deploy-latest:
+    python3 "{{justfile_directory()}}/tests/test_deploy_latest_recipe.py" "{{justfile_directory()}}/justfile"
+
 # Check deployed versions against public and GitLab evidence.
 [group('deploy')]
 deploy-check *ARGS:
