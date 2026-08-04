@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-import sys
 import os
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -18,6 +18,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         env = os.environ.copy()
         env.update(
             {
+                "DEVICE_TEST_LIBRARY": str(DEVICE_TEST_LIBRARY),
                 "VAUCHI_ASC_KEY_PATH": "/secure/AuthKey_TEAM.p8",
                 "VAUCHI_ASC_KEY_ID": "TEAMKEY123",
                 "VAUCHI_ASC_ISSUER_ID": "issuer-uuid",
@@ -27,7 +28,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
             [
                 "/bin/bash",
                 "-c",
-                f'source "{DEVICE_TEST_LIBRARY}"; '
+                'source "$DEVICE_TEST_LIBRARY"; '
                 'dt_set_xcode_auth_args; printf "<%s>\\n" '
                 '"${DT_XCODE_AUTH_ARGS[@]}"',
             ],
@@ -54,6 +55,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         env = os.environ.copy()
         env.update(
             {
+                "DEVICE_TEST_LIBRARY": str(DEVICE_TEST_LIBRARY),
                 "VAUCHI_ASC_KEY_PATH": "/secure/AuthKey_TEAM.p8",
                 "VAUCHI_ASC_KEY_ID": "",
                 "VAUCHI_ASC_ISSUER_ID": "",
@@ -63,7 +65,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
             [
                 "/bin/bash",
                 "-c",
-                f'source "{DEVICE_TEST_LIBRARY}"; dt_set_xcode_auth_args',
+                'source "$DEVICE_TEST_LIBRARY"; dt_set_xcode_auth_args',
             ],
             check=False,
             capture_output=True,
