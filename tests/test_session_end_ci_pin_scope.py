@@ -35,7 +35,7 @@ class SessionEndCiPipelineScopeTests(unittest.TestCase):
                 pipeline.touch()
 
             result = subprocess.run(
-                ["bash", str(DISCOVER), str(workspace)],
+                ["sh", str(DISCOVER), str(workspace)],
                 check=True,
                 capture_output=True,
                 text=True,

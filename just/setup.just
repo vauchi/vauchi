@@ -493,10 +493,7 @@ session-end:
             while IFS= read -r _yaml; do
                 scripts/scripts/check-stale-ci-pin.sh "$_yaml" "$SE_RECENT" "$_yaml" || \
                     echo "  WARN: stale ci-template pin in $_yaml (see above)"
-            done < <(find . \
-                -path './.worktrees' -prune -o \
-                -path '*/.git' -prune -o \
-                -name .gitlab-ci.yml -type f -print)
+            done < <(sh just/discover-ci-pipelines.sh .)
         fi
     fi
 
