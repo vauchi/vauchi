@@ -49,6 +49,16 @@ deploy-check *ARGS:
     _DS_C1=12  # service name column
     _DS_C2=28  # status column (fits "STALE (99 commits behind)")
     _DS_STALE=0
+    _DS_UNKNOWN=0
+
+    _ds_unknown() {
+        local name="$1" reason="$2"
+        local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
+        local msg="UNKNOWN"
+        local _p2=$(( _DS_C2 - ${#msg} )); [[ $_p2 -lt 1 ]] && _p2=1
+        printf "  %s%*s ${YELLOW}%s${NC}%*s %s\n" "$name" "$_p" "" "$msg" "$_p2" "" "$reason"
+        _DS_UNKNOWN=$(( _DS_UNKNOWN + 1 ))
+    }
 
     # Newest SUCCESSFUL main build SHA — the true "latest deployable" version.
     # origin/main HEAD may be unbuilt (pipeline still running) or failed, in
@@ -64,16 +74,21 @@ deploy-check *ARGS:
         local deployed_sha deployed_time status_text status_color
 
         local info
-        info=$(curl -sf --max-time 5 "$url" 2>/dev/null) || {
-            local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
-            local msg="UNKNOWN"
-            local _p2=$(( _DS_C2 - ${#msg} )); [[ $_p2 -lt 1 ]] && _p2=1
-            printf "  %s%*s ${YELLOW}%s${NC}%*s %s\n" "$name" "$_p" "" "$msg" "$_p2" "" "Could not fetch $url"
+        info=$(curl -fsSL --max-time 5 "$url" 2>/dev/null) || {
+            _ds_unknown "$name" "Could not fetch $url"
             return
         }
 
-        deployed_sha=$(echo "$info" | jq -r '.sha // "unknown"')
-        deployed_time=$(echo "$info" | jq -r '.built // "unknown"')
+        if ! jq -e '
+            (.sha | type == "string" and test("^[0-9a-f]{40}$")) and
+            (.built | type == "string" and length > 0)
+        ' >/dev/null 2>&1 <<< "$info"; then
+            _ds_unknown "$name" "Invalid build-info JSON from $url"
+            return
+        fi
+
+        deployed_sha=$(jq -r '.sha' <<< "$info")
+        deployed_time=$(jq -r '.built' <<< "$info")
         local short_sha="${deployed_sha:0:8}"
 
         # Refresh origin/main first — comparing against an unfetched ref
@@ -143,6 +158,7 @@ deploy-check *ARGS:
             # facts the comparison below cannot prove currency.
             status_text="UNKNOWN"
             status_color="$YELLOW"
+            _DS_UNKNOWN=$(( _DS_UNKNOWN + 1 ))
         elif [[ "$dig_l" != "$dig_s" ]]; then
             # :latest is not origin/main's image — wrong image tagged
             status_text="IMAGE DRIFT"
@@ -185,13 +201,19 @@ deploy-check *ARGS:
     check_service "cdn"     "https://cdn.vauchi.app/build-info.json"  "website"
 
     echo ""
+    _DS_RESULT=0
     if [[ "$_DS_STALE" -gt 0 ]]; then
         # Exit nonzero so callers (session-init) surface the drift — a
         # stale docs deploy sat unnoticed for 10 weeks before this alarm
         # (backlog 2026-07-10-docs-deploy-drift-alarm).
         printf "${RED}DRIFT: %d service(s) behind origin/main${NC} — run: just deploy-latest <service>\n" "$_DS_STALE"
-        exit 1
+        _DS_RESULT=1
     fi
+    if [[ "$_DS_UNKNOWN" -gt 0 ]]; then
+        printf "${YELLOW}EVIDENCE: %d service(s) could not be verified${NC}\n" "$_DS_UNKNOWN"
+        _DS_RESULT=2
+    fi
+    [[ "$_DS_RESULT" -ne 0 ]] && exit "$_DS_RESULT"
     echo "Fetch latest: just git fetch"
 
 # Hand me a deploy button pinned to the newest main build. Does not deploy or
