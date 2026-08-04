@@ -19,8 +19,14 @@ NC='\033[0m'
 dt_set_xcode_auth_args() {
     DT_XCODE_AUTH_ARGS=()
     if [[ -n "${VAUCHI_ASC_KEY_PATH:-}" \
-       && -n "${VAUCHI_ASC_KEY_ID:-}" \
-       && -n "${VAUCHI_ASC_ISSUER_ID:-}" ]]; then
+       || -n "${VAUCHI_ASC_KEY_ID:-}" \
+       || -n "${VAUCHI_ASC_ISSUER_ID:-}" ]]; then
+        if [[ -z "${VAUCHI_ASC_KEY_PATH:-}" \
+           || -z "${VAUCHI_ASC_KEY_ID:-}" \
+           || -z "${VAUCHI_ASC_ISSUER_ID:-}" ]]; then
+            echo "ERROR: VAUCHI_ASC_KEY_PATH, VAUCHI_ASC_KEY_ID, and VAUCHI_ASC_ISSUER_ID must be set together" >&2
+            return 1
+        fi
         # Consumed by device-test.just after sourcing this library.
         # shellcheck disable=SC2034
         DT_XCODE_AUTH_ARGS=(

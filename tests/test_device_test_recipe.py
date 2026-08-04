@@ -50,6 +50,34 @@ class DeviceTestRecipeTest(unittest.TestCase):
             ],
         )
 
+    def test_ios_auth_args_reject_incomplete_credentials(self) -> None:
+        env = os.environ.copy()
+        env.update(
+            {
+                "VAUCHI_ASC_KEY_PATH": "/secure/AuthKey_TEAM.p8",
+                "VAUCHI_ASC_KEY_ID": "",
+                "VAUCHI_ASC_ISSUER_ID": "",
+            }
+        )
+        result = subprocess.run(
+            [
+                "/bin/bash",
+                "-c",
+                f'source "{DEVICE_TEST_LIBRARY}"; dt_set_xcode_auth_args',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(
+            result.stderr.strip(),
+            "ERROR: VAUCHI_ASC_KEY_PATH, VAUCHI_ASC_KEY_ID, and "
+            "VAUCHI_ASC_ISSUER_ID must be set together",
+        )
+
     def test_physical_device_libraries_enable_dev_logging(self) -> None:
         source = DEVICE_TEST_JUSTFILE.read_text()
 
