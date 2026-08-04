@@ -21,6 +21,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
         service: str = "ohttp-relay",
         pipelines_json: str = '[{"id":101}]',
         sha_digest: str = "sha256:current-main",
+        created_variables_json: str | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_path = Path(temporary_directory)
@@ -92,6 +93,10 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         '"web_url":"https://gitlab.example/jobs/ohttp"}',
                         "    ]'",
                         "    ;;",
+                        '  *"projects/vauchi%2Fprivate/pipelines/9001/variables"*)',
+                        '    printf "%s\\n" '
+                        '"$DEPLOY_LATEST_TEST_CREATED_VARIABLES_JSON"',
+                        "    ;;",
                         '  *"projects/vauchi%2Fprivate/pipeline"*)',
                         "    printf '{\"id\":9001}\\n'",
                         "    ;;",
@@ -115,6 +120,17 @@ class DeployLatestRecipeTests(unittest.TestCase):
             environment["DEPLOY_LATEST_TEST_PIPELINES_JSON"] = pipelines_json
             environment["DEPLOY_LATEST_TEST_SHA_DIGEST"] = sha_digest
             environment["DEPLOY_LATEST_TEST_GLAB_LOG"] = str(glab_log)
+            repository = self.repository_for(service)
+            expected_variables = (
+                '[{"key":"DEPLOY_SERVICE","value":"'
+                f'{service}"}},{{"key":"DEPLOY_IMAGE","value":"'
+                f'registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"}}]'
+            )
+            environment["DEPLOY_LATEST_TEST_CREATED_VARIABLES_JSON"] = (
+                expected_variables
+                if created_variables_json is None
+                else created_variables_json
+            )
 
             result = subprocess.run(
                 ["just", "-f", str(JUSTFILE), "deploy-latest", service],
@@ -126,13 +142,20 @@ class DeployLatestRecipeTests(unittest.TestCase):
             )
             return result, glab_log.read_text()
 
-    def test_mints_sha_pinned_pipeline_for_every_service(self) -> None:
-        service_repositories = {
+    @staticmethod
+    def repository_for(service: str) -> str:
+        return {
             "docs": "docs",
             "landing": "website",
             "cdn": "website",
             "relay": "relay",
             "ohttp-relay": "ohttp-relay",
+        }[service]
+
+    def test_mints_sha_pinned_pipeline_for_every_service(self) -> None:
+        service_repositories = {
+            service: self.repository_for(service)
+            for service in ("docs", "landing", "cdn", "relay", "ohttp-relay")
         }
 
         for service, repository in service_repositories.items():
@@ -152,6 +175,10 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 self.assertIn("variables[1][key]=DEPLOY_IMAGE", glab_log)
                 self.assertIn(
                     f"variables[1][value]={deploy_image}",
+                    glab_log,
+                )
+                self.assertIn(
+                    "projects/vauchi%2Fprivate/pipelines/9001/variables",
                     glab_log,
                 )
                 self.assertIn(f"deploys {deploy_image}", result.stdout)
@@ -174,6 +201,13 @@ class DeployLatestRecipeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no registry image", result.stderr)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_created_pipeline_variable_mismatch_fails_before_job_link(self) -> None:
+        result, glab_log = self.run_recipe(created_variables_json="[]")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("pipeline did not retain", result.stderr)
+        self.assertNotIn("pipelines/9001/jobs", glab_log)
 
 
 if __name__ == "__main__":
