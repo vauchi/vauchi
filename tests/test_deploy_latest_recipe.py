@@ -126,36 +126,53 @@ class DeployLatestRecipeTests(unittest.TestCase):
             )
             return result, glab_log.read_text()
 
-    def test_mints_sha_pinned_ohttp_pipeline(self) -> None:
-        result, glab_log = self.run_recipe()
+    def test_mints_sha_pinned_pipeline_for_every_service(self) -> None:
+        service_repositories = {
+            "docs": "docs",
+            "landing": "website",
+            "cdn": "website",
+            "relay": "relay",
+            "ohttp-relay": "ohttp-relay",
+        }
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("variables[0][key]=DEPLOY_SERVICE", glab_log)
-        self.assertIn("variables[0][value]=ohttp-relay", glab_log)
-        self.assertIn("variables[1][key]=DEPLOY_IMAGE", glab_log)
-        self.assertIn(
-            "variables[1][value]="
-            f"registry.gitlab.com/vauchi/ohttp-relay:{CURRENT_SHA}",
-            glab_log,
-        )
-        self.assertIn(
-            f"deploys registry.gitlab.com/vauchi/ohttp-relay:{CURRENT_SHA}",
-            result.stdout,
-        )
-        self.assertNotIn("deploys ohttp-relay:latest", result.stdout)
+        for service, repository in service_repositories.items():
+            with self.subTest(service=service):
+                result, glab_log = self.run_recipe(service=service)
+                deploy_image = (
+                    f"registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("ref=main", glab_log)
+                self.assertIn("variables[0][key]=DEPLOY_SERVICE", glab_log)
+                self.assertIn(
+                    f"variables[0][value]={service}",
+                    glab_log,
+                )
+                self.assertIn("variables[1][key]=DEPLOY_IMAGE", glab_log)
+                self.assertIn(
+                    f"variables[1][value]={deploy_image}",
+                    glab_log,
+                )
+                self.assertIn(f"deploys {deploy_image}", result.stdout)
+                self.assertIn(
+                    ":latest differs; this link remains pinned",
+                    result.stdout,
+                )
+                self.assertNotIn(f"deploys {repository}:latest", result.stdout)
 
     def test_missing_successful_build_fails_before_pipeline_creation(self) -> None:
         result, glab_log = self.run_recipe(pipelines_json="[]")
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("no successful pipeline", result.stdout)
+        self.assertIn("no successful pipeline", result.stderr)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
 
     def test_missing_sha_tag_fails_before_pipeline_creation(self) -> None:
         result, glab_log = self.run_recipe(sha_digest="")
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("no registry image", result.stdout)
+        self.assertIn("no registry image", result.stderr)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
 
 

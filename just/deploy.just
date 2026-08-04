@@ -190,12 +190,9 @@ deploy-check *ARGS:
     fi
     echo "Fetch latest: just git fetch"
 
-# Hand me the deploy button that is guaranteed to ship the newest main
-# build. Does not deploy and changes no deploy config: it verifies the
-# service repo's origin/main image is built, mints a FRESH _private main
-# pipeline (its manual kamal:deploy:<service>-production job uses :latest
-# by existing rule), and prints that job's URL. Sha-pinned buttons on older
-# pipelines go stale the moment another MR merges — this one cannot.
+# Hand me a deploy button pinned to the newest main build. Does not deploy or
+# change deploy config: it verifies the service repo's origin/main image and
+# gives the private pipeline that exact SHA-tagged image.
 [group('deploy')]
 deploy-latest service:
     #!/usr/bin/env bash
@@ -215,26 +212,39 @@ deploy-latest service:
     BUILT=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main&status=success" 2>/dev/null | jq 'length' || echo 0)
     echo "newest main:    $REPO ${SHA:0:8} (successful build pipelines: $BUILT)"
     if [[ "$BUILT" -eq 0 ]]; then
-        echo "WARNING: no successful pipeline for ${SHA:0:8} yet —"
-        echo "         :latest is older. Wait for the $REPO main pipeline, then rerun."
+        echo "ERROR: no successful pipeline for ${SHA:0:8} yet." >&2
+        echo "       Wait for the $REPO main pipeline, then rerun." >&2
+        exit 1
     fi
 
-    # Prove :latest actually IS this sha's image (registry digests),
-    # instead of assuming tag order.
     RID=$(glab api "projects/vauchi%2F${REPO}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${REPO}" '.[] | select(.path==$p) | .id' | head -1 || true)
-    if [[ -n "$RID" ]]; then
-        LATEST_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/latest" 2>/dev/null | jq -r '.digest // empty' || true)
-        SHA_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/${SHA}" 2>/dev/null | jq -r '.digest // empty' || true)
-        if [[ -n "$LATEST_DIGEST" && "$LATEST_DIGEST" == "$SHA_DIGEST" ]]; then
-            echo "registry:       :latest digest == :${SHA:0:8} digest — verified"
-        else
-            echo "WARNING: :latest digest differs from :${SHA:0:8} — an older or"
-            echo "         newer image holds the latest tag. Investigate before deploying."
-        fi
+    if [[ -z "$RID" ]]; then
+        echo "ERROR: no registry repository found for vauchi/$REPO." >&2
+        exit 1
     fi
 
-    echo "minting fresh _private main pipeline..."
-    PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline?ref=main" | jq -r '.id')
+    SHA_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/${SHA}" 2>/dev/null | jq -r '.digest // empty' || true)
+    if [[ -z "$SHA_DIGEST" ]]; then
+        echo "ERROR: no registry image for ${REPO}:${SHA}." >&2
+        echo "       Wait for the image build, then rerun." >&2
+        exit 1
+    fi
+    echo "registry:       :${SHA:0:8} exists (${SHA_DIGEST:0:19}...)"
+
+    LATEST_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/latest" 2>/dev/null | jq -r '.digest // empty' || true)
+    if [[ -n "$LATEST_DIGEST" && "$LATEST_DIGEST" != "$SHA_DIGEST" ]]; then
+        echo "registry note:  :latest differs; this link remains pinned to :${SHA:0:8}"
+    fi
+
+    DEPLOY_IMAGE="registry.gitlab.com/vauchi/${REPO}:${SHA}"
+    echo "minting SHA-pinned _private main pipeline..."
+    PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
+        -f "ref=main" \
+        -f "variables[0][key]=DEPLOY_SERVICE" \
+        -f "variables[0][value]=${SERVICE}" \
+        -f "variables[1][key]=DEPLOY_IMAGE" \
+        -f "variables[1][value]=${DEPLOY_IMAGE}" \
+        | jq -er '.id')
 
     JOB_URL=""
     for _ in 1 2 3 4 5 6; do
@@ -250,7 +260,7 @@ deploy-latest service:
         exit 1
     fi
     echo ""
-    echo "Press play here — this button deploys ${REPO}:latest:"
+    echo "Press play here — this button deploys ${DEPLOY_IMAGE}:"
     echo "  $JOB_URL"
     echo ""
     echo "Playing creates a deployment that waits for APPROVAL"
