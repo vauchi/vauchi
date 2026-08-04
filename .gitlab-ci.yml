@@ -60,7 +60,7 @@ test:release-gates:
   tags: [docker]
   needs: []
   before_script:
-    - apk add --no-cache bash git just python3
+    - apk add --no-cache bash git jq just python3
   script:
     - JUST_UNSTABLE=1 just test-codex-layout
     - JUST_UNSTABLE=1 just test-claude-layout
