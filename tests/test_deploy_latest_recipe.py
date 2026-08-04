@@ -172,6 +172,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("Content-Type: application/json", glab_log)
                 self.assertIn("--input\n-", glab_log)
                 self.assertIn('"ref": "main"', glab_log)
                 self.assertIn('"key": "DEPLOY_SERVICE"', glab_log)
