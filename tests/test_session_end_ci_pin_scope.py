@@ -1,30 +1,48 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Regression coverage for project-wide CI template-pin checks."""
+"""Regression coverage for project-wide CI pipeline discovery."""
 
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SETUP_JUST = ROOT / "just" / "setup.just"
+DISCOVER = ROOT / "just" / "discover-ci-pipelines.sh"
 
 
-class SessionEndCiPinScopeTests(unittest.TestCase):
-    """Protect the project-wide scope of the local alignment gate."""
+class SessionEndCiPipelineScopeTests(unittest.TestCase):
+    """Protect the project-wide scope of pipeline alignment checks."""
 
-    def test_session_end_discovers_every_pipeline_config(self) -> None:
-        recipe = SETUP_JUST.read_text(encoding="utf-8")
-        stale_pin_block = recipe.split("# VSP01:", 1)[1].split("# VFL01:", 1)[0]
+    def test_discovers_project_pipelines_and_prunes_generated_trees(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            expected = {
+                workspace / ".gitlab-ci.yml",
+                workspace / "frontend" / ".gitlab-ci.yml",
+            }
+            excluded = {
+                workspace / ".git" / ".gitlab-ci.yml",
+                workspace / ".worktrees" / "branch" / ".gitlab-ci.yml",
+                workspace / "frontend" / "build" / ".gitlab-ci.yml",
+                workspace / "frontend" / "node_modules" / ".gitlab-ci.yml",
+                workspace / "frontend" / "target" / ".gitlab-ci.yml",
+            }
+            for pipeline in expected | excluded:
+                pipeline.parent.mkdir(parents=True, exist_ok=True)
+                pipeline.touch()
 
-        self.assertIn("find .", stale_pin_block)
-        self.assertIn("-name .gitlab-ci.yml", stale_pin_block)
-        self.assertIn("-path './.worktrees' -prune", stale_pin_block)
-        self.assertNotIn(
-            "_private/.gitlab-ci.yml .gitlab-ci.yml",
-            stale_pin_block,
-        )
+            result = subprocess.run(
+                ["bash", str(DISCOVER), str(workspace)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+        discovered = {Path(line) for line in result.stdout.splitlines()}
+        self.assertEqual(discovered, expected)
 
 
 if __name__ == "__main__":
