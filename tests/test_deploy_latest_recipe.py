@@ -57,6 +57,12 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         '{ printf "CALL\\n"; printf "%s\\n" "$@"; } '
                         '>> "$DEPLOY_LATEST_TEST_GLAB_LOG"',
                         'case "$*" in',
+                        '  *"--input -"*)',
+                        '    { printf "BODY\\n"; cat; } '
+                        '>> "$DEPLOY_LATEST_TEST_GLAB_LOG"',
+                        "    ;;",
+                        "esac",
+                        'case "$*" in',
                         '  *"pipelines?sha="*)',
                         '    printf "%s\\n" "$DEPLOY_LATEST_TEST_PIPELINES_JSON"',
                         "    ;;",
@@ -166,15 +172,16 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("ref=main", glab_log)
-                self.assertIn("variables[0][key]=DEPLOY_SERVICE", glab_log)
+                self.assertIn("--input\n-", glab_log)
+                self.assertIn('"ref": "main"', glab_log)
+                self.assertIn('"key": "DEPLOY_SERVICE"', glab_log)
                 self.assertIn(
-                    f"variables[0][value]={service}",
+                    f'"value": "{service}"',
                     glab_log,
                 )
-                self.assertIn("variables[1][key]=DEPLOY_IMAGE", glab_log)
+                self.assertIn('"key": "DEPLOY_IMAGE"', glab_log)
                 self.assertIn(
-                    f"variables[1][value]={deploy_image}",
+                    f'"value": "{deploy_image}"',
                     glab_log,
                 )
                 self.assertIn(
