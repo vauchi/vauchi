@@ -289,7 +289,7 @@ maestro-setup:
 # Run Maestro iOS flows (requires booted simulator)
 [group('e2e')]
 [script]
-e2e-ios flow="create_identity":
+e2e-ios flow="create_identity" device="":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then
         echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
@@ -305,12 +305,23 @@ e2e-ios flow="create_identity":
     fi
 
     echo "Running iOS flow: {{flow}}"
-    maestro test "$FLOW_PATH" --platform ios
+    maestro_args=(
+        test "$FLOW_PATH" --platform ios
+        --env "NAME=${NAME:-E2E Test}"
+        --env "FIELD_TYPE=${FIELD_TYPE:-Email}"
+        --env "FIELD_LABEL=${FIELD_LABEL:-Work}"
+        --env "FIELD_VALUE=${FIELD_VALUE:-test@example.com}"
+    )
+    if [[ -n "{{ device }}" ]]; then
+        maestro --device "{{ device }}" "${maestro_args[@]}"
+    else
+        maestro "${maestro_args[@]}"
+    fi
 
 # Run Maestro Android flows (requires running emulator)
 [group('e2e')]
 [script]
-e2e-android flow="create_identity":
+e2e-android flow="create_identity" device="":
     set -euo pipefail
     if ! command -v maestro &>/dev/null; then
         echo "Error: Maestro CLI not found. Run 'just maestro-setup' for instructions."
@@ -326,7 +337,18 @@ e2e-android flow="create_identity":
     fi
 
     echo "Running Android flow: {{flow}}"
-    maestro test "$FLOW_PATH" --platform android
+    maestro_args=(
+        test "$FLOW_PATH" --platform android
+        --env "NAME=${NAME:-E2E Test}"
+        --env "FIELD_TYPE=${FIELD_TYPE:-Email}"
+        --env "FIELD_LABEL=${FIELD_LABEL:-Work}"
+        --env "FIELD_VALUE=${FIELD_VALUE:-test@example.com}"
+    )
+    if [[ -n "{{ device }}" ]]; then
+        maestro --device "{{ device }}" "${maestro_args[@]}"
+    else
+        maestro "${maestro_args[@]}"
+    fi
 
 # Run all Maestro flows on both platforms
 [group('e2e')]
