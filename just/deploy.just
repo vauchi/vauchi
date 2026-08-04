@@ -20,6 +20,10 @@ validate *FLAGS:
 # ═══════════════════════════════════════════════════════════════════
 
 [group('tests')]
+test-deploy-check:
+    python3 "{{justfile_directory()}}/tests/test_deploy_check_recipe.py" "{{justfile_directory()}}/just/deploy.just"
+
+[group('tests')]
 test-deploy-latest:
     python3 "{{justfile_directory()}}/tests/test_deploy_latest_recipe.py" "{{justfile_directory()}}/justfile"
 
