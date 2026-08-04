@@ -536,7 +536,7 @@ e2e-maestro-critical platform="all" device="":
                 continue
             fi
             echo "  → $name"
-            if maestro test "${device_args[@]}" "$flow" --platform "$plat" "${maestro_env[@]}"; then
+            if maestro "${device_args[@]}" test "$flow" --platform "$plat" "${maestro_env[@]}"; then
                 echo "  ✓ $name"
             else
                 echo "  ✗ FAILED: $name"

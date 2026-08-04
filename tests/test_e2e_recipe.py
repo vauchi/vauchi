@@ -58,9 +58,9 @@ class E2eRecipeTest(unittest.TestCase):
             self.assertEqual(
                 args_file.read_text().splitlines()[:4],
                 [
-                    "test",
                     "--device",
                     "emulator-5554",
+                    "test",
                     "e2e/maestro/android/create_identity.yaml",
                 ],
             )
