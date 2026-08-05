@@ -776,18 +776,14 @@ download-cabi:
     curl -sSfL -H "$HEADER" "$BASE_URL/vauchi.h" -o windows/cabi/vauchi.h 2>/dev/null || true
     echo "✓ DLL ready at windows/cabi/"
 
-# Bump core workspace version, regenerate Cargo.lock, fixtures, and schemas.
+# Bump core workspace version and regenerate Cargo.lock.
 # Usage: just bump-core <version>   e.g. just bump-core 0.19.9
 [group('core')]
 [script]
 bump-core version:
     # Ordering: every step that EDITS the manifest happens before the
-    # first step that can FAIL. So if schema-gen aborts because (e.g.)
-    # a new `ActionResult` field is missing a `JsonSchema` derive, the
-    # bump is already in a consistent state — Cargo.toml + Cargo.lock
-    # + .version are all at the new version. Fix the derive and re-run
-    # just the affected step: `just regen-schemas` or
-    # `just regen-golden-fixtures`.
+    # first step that can FAIL, so a failed bump leaves Cargo.toml and
+    # Cargo.lock in a consistent partial state.
     set -euo pipefail
     if [ -z "{{ version }}" ]; then
         echo "Usage: just bump-core <version>"
@@ -806,17 +802,7 @@ bump-core version:
     for crate in vauchi-core vauchi-app vauchi-protocol; do
         sed -i.bak "s|^\\($crate = { path = \"$crate\", version = \"\\)[^\"]*\\(\".*\\)|\\1{{ version }}\\2|" Cargo.toml && rm Cargo.toml.bak
     done
-    # 3. Golden fixture metadata (`core_version` in
-    #    vauchi-core/tests/fixtures/golden/.version) is the parity gate
-    #    `engine_golden_fixtures::*_fixture_is_fresh` reads. Sync it
-    #    NOW so a later failure (vet, fixtures, schemas) leaves a
-    #    consistent partial bump rather than tripping `just check core`
-    #    on a version-skew assertion.
-    sed -i.bak "s/\"core_version\": \"[^\"]*\"/\"core_version\": \"{{ version }}\"/" \
-        vauchi-core/tests/fixtures/golden/.version && rm vauchi-core/tests/fixtures/golden/.version.bak
-    grep -q "\"core_version\": \"{{ version }}\"" vauchi-core/tests/fixtures/golden/.version \
-        || { echo "ERROR: .version sed failed"; exit 1; }
-    # 4. Minimal lockfile update restricted to the 5 workspace crates.
+    # 3. Minimal lockfile update restricted to the 5 workspace crates.
     #    `cargo generate-lockfile` (the old recipe's call) regenerates
     #    from scratch and pulls newest compatible versions of every
     #    transitive dep — 44-line Cargo.lock churn vs the convention's
@@ -825,60 +811,7 @@ bump-core version:
     echo "Regenerating cargo-vet exemptions..."
     cargo vet regenerate exemptions 2>&1
     cargo vet fmt 2>&1
-    echo "Regenerating golden fixtures..."
-    # Engine fixtures and JSON schemas are gated behind their own
-    # features ("testing" / "schema-gen") and use #[ignore] so they only
-    # run when explicitly invoked. The original glob filter
-    # 'test(regenerate)' missed them — name the binaries directly.
-    cargo nextest run -p vauchi-core --features testing --test it \
-        --run-ignored=ignored-only \
-        -E 'test(regenerate_all_engine_fixtures) | test(regenerate_all_fixtures)' 2>&1 | tail -3
-    echo "Regenerating JSON schemas..."
-    cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored 2>&1 | tail -3
     echo "✓ Core bumped to {{ version }}. Review changes and commit."
-
-# Regenerate the engine golden fixtures (resumes a halted bump-core).
-[group('core')]
-[script]
-regen-golden-fixtures:
-    set -euo pipefail
-    cd core
-    # BOTH suites live in the `it` binary as #[ignore] regen tests:
-    # engine_golden_fixtures::regenerate_all_engine_fixtures and
-    # golden_fixtures::regenerate_all_fixtures. Naming only the engine one
-    # left the golden_fixtures suite stale after a token change (the
-    # cdce0bf9 inclusive-v2-tokens red-main).
-    cargo nextest run -p vauchi-core --features testing --test it \
-        --run-ignored=ignored-only \
-        -E 'test(regenerate_all_engine_fixtures) | test(regenerate_all_fixtures)'
-
-# Sync cli's vendored golden fixtures from core.
-# cli keeps a copy of core's golden fixtures for its screen-renderer tests;
-# they re-drift (cli's check:fixtures-drift) whenever core regenerates
-# fixtures. Run after `bump-core`/`regen-golden-fixtures` — or when the
-# drift check fails — then review and commit the result in cli.
-[group('core')]
-[script]
-sync-cli-fixtures:
-    set -euo pipefail
-    src="core/vauchi-core/tests/fixtures/golden"
-    dst="cli/tests/fixtures/golden"
-    [ -d "$src" ] || { echo "core fixtures missing at $src — run 'just setup'"; exit 1; }
-    [ -d "$dst" ] || { echo "cli fixtures dir missing at $dst"; exit 1; }
-    # Mirror core -> cli: add new fixtures, drop removed ones. Preserve cli's
-    # own README.md and skip core's .version (cli does not vendor it) — the
-    # same exclusions cli's check:fixtures-drift job diffs with.
-    rsync -a --delete --exclude='README.md' --exclude='.version' "$src/" "$dst/"
-    echo "Synced $(ls "$dst"/*.json | wc -l | tr -d ' ') golden fixtures: core -> cli."
-    echo "Review and commit in cli: git -C cli add tests/fixtures/golden"
-
-# Regenerate the JSON schemas (resumes a halted bump-core).
-[group('core')]
-[script]
-regen-schemas:
-    set -euo pipefail
-    cd core
-    cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored
 
 # Create a dev tag for fast CI feedback (lint + test only)
 # Usage: just release-dev [repo] [version]
@@ -1797,7 +1730,6 @@ help:
       just deploy-latest <svc> Mint a fresh CI deploy button (relay|landing|docs|ohttp-relay)
       just deploy-check       Check deployed versions vs origin/main
       just core-freshness     Check if bindings/consumers are up to date with core
-      just schema-check       Verify JSON schemas match core UI types
       just design-check       Validate design docs (YAML, coverage, cross-refs)
 
     Housekeeping:
@@ -3002,51 +2934,6 @@ lint-locale-keys repo='core/vauchi-app/src' language='rust':
         --language {{ language }} \
         --locales-dir locales \
         {{ repo }}
-
-# Sync vendored golden ScreenModel fixtures into a consumer repo's tree.
-# Source of truth is `core/vauchi-core/tests/fixtures/golden/`. Consumers
-# vendor a copy under `<repo>/tests/fixtures/golden/` so their snapshot
-# tests don't depend on a sibling `vauchi/core` checkout being present
-# on the CI runner — the latent break that hid behind cli's golden tests
-# until cli!233 (Wire Humble Tier 1) finally exercised them on CI.
-#
-# Usage:
-#   just sync-golden-fixtures cli       Replace cli/tests/fixtures/golden/
-#                                       with the current core source
-#
-# After running: review snapshot churn with `cargo insta review` and
-# commit fixtures + snapshots together.
-[group('tools')]
-[script]
-sync-golden-fixtures repo:
-    set -euo pipefail
-    src="core/vauchi-core/tests/fixtures/golden"
-    dst="{{repo}}/tests/fixtures/golden"
-    if [[ ! -d "$src" ]]; then
-        echo "ERROR: source fixtures missing: $src" >&2
-        exit 1
-    fi
-    if [[ ! -d "$dst" ]]; then
-        echo "ERROR: vendored dir missing: $dst (create it first to opt in)" >&2
-        exit 1
-    fi
-    # Wipe stale fixtures (preserve README.md and any hand-written
-    # extras). `.version` is core's manifest of the fixture set —
-    # vendor it alongside the JSON files so consumers can read the
-    # sourced core revision without a separate lookup.
-    find "$dst" -maxdepth 1 \( -name '*.json' -o -name '.version' \) -delete
-    cp "$src"/*.json "$dst/"
-    [[ -f "$src/.version" ]] && cp "$src/.version" "$dst/"
-    count=$(ls "$dst"/*.json 2>/dev/null | wc -l | tr -d ' ')
-    echo "Synced $count fixture(s) into $dst"
-    if ! git diff --quiet -- "$dst"; then
-        echo ""
-        echo "Drift from previous vendor — review with:"
-        echo "  git diff -- $dst"
-        echo "Then re-run snapshot tests and commit fixtures + snapshot updates together:"
-        echo "  just check {{repo}}"
-        echo "  cargo insta review"
-    fi
 
 # ═══════════════════════════════════════════════════════════════════
 # VISUAL REGRESSION TESTING

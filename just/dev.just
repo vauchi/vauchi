@@ -46,24 +46,6 @@ e2e-checklist *args:
     ./scripts/scripts/dev/e2e-test-checklist.sh {{ args }}
 
 # ═══════════════════════════════════════════════════════════════════
-# SCHEMA CHECK
-# ═══════════════════════════════════════════════════════════════════
-
-# Verify JSON schemas are up to date with core UI types
-[group('dev')]
-schema-check:
-    cd core && cargo test --features schema-gen -p vauchi-core --test schema_gen
-
-# Regenerate JSON schemas in `core/vauchi-core/schemas/` from current UI types.
-# Use after editing `ScreenModel`, `UserAction`, or `ActionResult` shapes.
-# Writes `screen-model.schema.json`, `user-action.schema.json`,
-# `action-result.schema.json`. Review the diff and commit alongside the
-# type change so `just schema-check` stays green on CI.
-[group('dev')]
-schema-regen:
-    cd core && cargo test --features schema-gen -p vauchi-core --test schema_gen -- regenerate --ignored
-
-# ═══════════════════════════════════════════════════════════════════
 # CORE FRESHNESS
 # ═══════════════════════════════════════════════════════════════════
 
