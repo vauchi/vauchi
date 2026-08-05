@@ -68,6 +68,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-core-freshness
     - JUST_UNSTABLE=1 just test-lint-docs
     - JUST_UNSTABLE=1 just test-check-prerequisites
+    - JUST_UNSTABLE=1 just test-lint-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
     - JUST_UNSTABLE=1 just worktree test
@@ -80,6 +81,9 @@ test:release-gates:
           - .agents
           - .agents/**/*
           - .gitlab-ci.yml
+          # The lint recipe lives here; without it a change to the arms
+          # guarded by test_lint_recipe_reports_failure.py never runs the job.
+          - justfile
           - just/plan.just
           - just/dev.just
           - just/setup.just
@@ -98,6 +102,7 @@ test:release-gates:
           - tests/test_claude_layout.py
           - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py
+          - tests/test_lint_recipe_reports_failure.py
           - tests/test_release_gates.py
           - tests/test_worktree_recipe.py
 

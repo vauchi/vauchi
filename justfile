@@ -412,7 +412,13 @@ lint *args:
         _do_step() {
             case "$tc" in
                 rust)
-                    (cd "$dir" && cargo clippy --workspace --all-targets -- -D warnings 2>&1)
+                    # Every checker below carries `|| return 1`: run_step calls
+                    # this function in a `||` context, which disables `set -e`
+                    # inside it, so a bare failing command is not fatal and the
+                    # arm's status becomes whatever its last statement returns.
+                    # A trailing repo-conditional then reports 0 and the failure
+                    # is lost. Guarded by tests/test_lint_recipe_reports_failure.py.
+                    (cd "$dir" && cargo clippy --workspace --all-targets -- -D warnings 2>&1) || return 1
                     # Pure-functional-core seal (program Phase 1): vauchi-core
                     # state machines own NO ambient time/rng/sleep. Hard-fail
                     # if any core_* counter regresses above 0. Runs from the
@@ -420,63 +426,65 @@ lint *args:
                     # already exempts the seam files + tests + diagnostic
                     # perf-timers). core-only; other Rust repos skip it.
                     if [[ "$r" == "core" ]]; then
-                        scripts/scripts/audit-mobile-surface.sh --check-core-purity 2>&1
+                        scripts/scripts/audit-mobile-surface.sh --check-core-purity 2>&1 || return 1
                         # VRS03: mirror of CI lint:no-default-features —
                         # the no-default build prunes feature-gated paths
                         # and surfaces dead code the default `just check`
                         # never compiles (this class previously appeared
                         # only after push). Page:
                         # _private/docs/lint-errors/vrs03-no-default-features.md
-                        (cd "$dir" && RUSTFLAGS="-D warnings" cargo check -p vauchi-app --no-default-features 2>&1)
+                        (cd "$dir" && RUSTFLAGS="-D warnings" cargo check -p vauchi-app --no-default-features 2>&1) || return 1
                     fi
                     ;;
                 npm)     (cd "$dir" && npm run lint 2>&1 && npm run lint:css 2>&1) ;;
                 gradle)
-                    (cd "$dir" && ./gradlew lint 2>&1)
+                    # `|| return 1` on every checker — see the rust arm above.
+                    (cd "$dir" && ./gradlew lint 2>&1) || return 1
                     # §1A pure-renderer guard — fences view-layer
                     # `.isImported` reads. Only meaningful for the
                     # `android` repo (scope: app/src/main/kotlin/app/vauchi/ui/).
                     if [[ "$r" == "android" ]]; then
-                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1 || return 1
                         # G5 lint guard — fences view-layer reads of
                         # isVerified / isRecoveryTrusted / isHidden /
                         # reciprocity / trustLevel / isFailed. Pairs with
                         # G1–G4 typed view-state APIs.
-                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1 || return 1
                         # Clipboard protection — fences view-layer
                         # direct setPrimaryClip(). Routes must go
                         # through ClipboardUtils.copy{,WithAutoClear}.
-                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1 || return 1
                         # Phase 1 of 2026-05-01-android-humble-ui-deep-retirement.
                         # --strict (enforcing): Phase 4.6 closed 2026-06-08
                         # after the MainViewModel diet (1,881 -> 537 LOC).
                         # Fences new Mobile* imports + identity/biometric
                         # branches in views; allowlist covers coreui/,
                         # MainViewModel.kt, MainActivity.kt, theme/Theme.kt.
-                        scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" --strict 2>&1
+                        scripts/scripts/check-no-domain-imports-in-views.sh "$(pwd)" --strict 2>&1 || return 1
                     fi
                     ;;
                 xcode)
-                    (cd "$dir" && swiftlint lint --strict --quiet 2>&1 && swiftformat --lint . 2>&1)
+                    # `|| return 1` on every checker — see the rust arm above.
+                    (cd "$dir" && swiftlint lint --strict --quiet 2>&1 && swiftformat --lint . 2>&1) || return 1
                     # §1A pure-renderer guard — fences view-layer
                     # `.isImported` reads. Only meaningful for the
                     # `ios` repo (scope: ios/Vauchi/Views/). macOS / other
                     # xcode repos don't carry the duplication.
                     if [[ "$r" == "ios" ]]; then
-                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-isimported-in-views.sh "$(pwd)" 2>&1 || return 1
                         # G5 lint guard — see android arm above.
-                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-domain-conditionals-in-views.sh "$(pwd)" 2>&1 || return 1
                         # Clipboard protection — fences view-layer
                         # direct UIPasteboard.general writes. Routes
                         # must go through ContactActions.copyToClipboard.
-                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1
+                        scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)" 2>&1 || return 1
                     fi
                     # Humble UI ratchet — fences any new domain-named
                     # view files in Vauchi/Views/ outside the per-repo
                     # allow-list. Drives the iOS / macOS retirement
                     # records (2026-05-02-{ios,macos}-humble-ui-{deep-,}retirement).
                     if [[ "$r" == "ios" || "$r" == "macos" ]]; then
-                        scripts/scripts/check-domain-named-views.sh "$dir" 2>&1
+                        scripts/scripts/check-domain-named-views.sh "$dir" 2>&1 || return 1
                     fi
                     # Humble UI G3/G4 ratchet — caps the count of
                     # hardcoded `Text("Foo")` literals at the per-repo
@@ -487,12 +495,12 @@ lint *args:
                     # (matches the audit grep).
                     if [[ "$r" == "ios" ]]; then
                         scripts/scripts/check-text-literal-count.sh \
-                            "$dir" Vauchi/Views/ 2>&1
+                            "$dir" Vauchi/Views/ 2>&1 || return 1
                     fi
                     if [[ "$r" == "macos" ]]; then
                         scripts/scripts/check-text-literal-count.sh \
                             "$dir" Vauchi/Views/ Vauchi/CoreUI/ \
-                            Vauchi/VauchiApp.swift 2>&1
+                            Vauchi/VauchiApp.swift 2>&1 || return 1
                     fi
                     ;;
                 mdbook)  (cd "$dir" && markdownlint '**/*.md' 2>&1) ;;
@@ -2845,6 +2853,11 @@ test-lint-docs:
 [group('tests')]
 test-check-prerequisites:
     python3 "{{justfile_directory()}}/tests/test_check_prerequisites.py" "{{justfile_directory()}}/just/check-prerequisites.sh"
+
+# Regression check: a failing linter must fail the recipe, not just print.
+[group('tests')]
+test-lint-recipe:
+    python3 "{{justfile_directory()}}/tests/test_lint_recipe_reports_failure.py" "{{justfile_directory()}}/justfile"
 
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
