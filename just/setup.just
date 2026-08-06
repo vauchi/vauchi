@@ -630,7 +630,8 @@ session-end:
                     excessive-reread) echo "pretool-read-cap.sh" ;;
                     excessive-reedit) echo "pretool-edit-cap.sh" ;;
                     wrong-tool)       echo "check-bash-grep.sh" ;;
-                    cwd-drift)        echo "check-cd-git.sh" ;;
+                    cwd-drift|cwd-drift-autofix) echo "check-cd-git.sh" ;;
+                    markdownlint)     echo "post-edit.sh" ;;
                     read-nudge)       echo "pre-read-nudge.sh" ;;
                     raw-cargo|raw-glab|raw-mv-archive) echo "check-use-just.sh" ;;
                     *) echo "" ;;
@@ -842,7 +843,13 @@ session-end:
     # _private/docs/backlog/2026-07-21-process-meta-churn-ratio.md
     IL="_private/docs/intervention-ledger.md"
     if [[ -f "$IL" ]]; then
-        WEEK_AGO=$(date -d '7 days ago' +%F 2>/dev/null || date -v-7d +%F)
+        # macOS vs GNU date: probe the BSD form first (BSD date silently
+        # misreads -d as a DST flag instead of erroring).
+        if date -v-7d >/dev/null 2>&1; then
+            WEEK_AGO=$(date -v-7d +%F)
+        else
+            WEEK_AGO=$(date -d '7 days ago' +%F) # portable-shell-ok: GNU branch of a probed BSD/GNU switch
+        fi
         N7=$(awk -v w="$WEEK_AGO" '/^- 20[0-9][0-9]-/{if ($2 >= w) n++} END{print n+0}' "$IL")
         echo ""
         echo "── intervention ledger: $N7 entries in last 7 days ──"
