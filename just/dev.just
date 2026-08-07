@@ -63,6 +63,32 @@ core-freshness:
 
     ROOT="{{justfile_directory()}}"
 
+    # Every number below is read out of a local checkout. Without a fetch
+    # they describe whatever was last pulled, not what is released — and
+    # `git status` will not betray that, because it compares against a
+    # remote-tracking ref that is itself stale. On 2026-08-06 that made
+    # this recipe report "Android: v0.59.4" for a pin CI had already
+    # bumped to 0.60.1 and merged, and a redundant MR was opened on the
+    # strength of it. Fetch first; if the network is unavailable, say so
+    # loudly rather than printing confident stale numbers.
+    STALE_REPOS=""
+    for _r in core android vauchi-platform-swift; do
+        [ -d "$ROOT/$_r/.git" ] || continue
+        git -C "$ROOT/$_r" fetch --quiet --tags origin 2>/dev/null \
+            || STALE_REPOS="$STALE_REPOS $_r"
+    done
+    for _r in core android vauchi-platform-swift; do
+        [ -d "$ROOT/$_r/.git" ] || continue
+        _behind=$(git -C "$ROOT/$_r" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+        [ "${_behind:-0}" -gt 0 ] && STALE_REPOS="$STALE_REPOS $_r(-$_behind)"
+    done
+    if [ -n "$STALE_REPOS" ]; then
+        printf "%b\n" "${YELLOW}WARNING: readings below may be stale —${STALE_REPOS}${NC}"
+        printf "%b\n" "${YELLOW}  a checkout behind its remote reports the version it last saw.${NC}"
+        printf "%b\n" "${YELLOW}  Run 'just git sync' before trusting these numbers.${NC}"
+        echo ""
+    fi
+
     # Core HEAD
     CORE_HEAD=$(git -C "$ROOT/core" rev-parse HEAD)
     CORE_SHORT="${CORE_HEAD:0:8}"
@@ -125,7 +151,10 @@ core-freshness:
     # Android — check build.gradle.kts dependency version
     ANDROID_GRADLE="$ROOT/android/app/build.gradle.kts"
     if [ -f "$ANDROID_GRADLE" ]; then
-        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE")
+        # build.gradle.kts pins the coordinate twice (implementation and
+        # screenshotTestImplementation), so take the first match — printing
+        # both mangled the line into "v0.60.1\n0.60.1".
+        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE" | head -1)
         if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
             _dev_status "Android:" "$GREEN" "v$ANDROID_VER (matches latest tag)"
         else
