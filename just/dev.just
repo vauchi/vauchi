@@ -151,10 +151,14 @@ core-freshness:
     # Android — check build.gradle.kts dependency version
     ANDROID_GRADLE="$ROOT/android/app/build.gradle.kts"
     if [ -f "$ANDROID_GRADLE" ]; then
+        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE")
         # build.gradle.kts pins the coordinate twice (implementation and
-        # screenshotTestImplementation), so take the first match — printing
-        # both mangled the line into "v0.60.1\n0.60.1".
-        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE" | head -1)
+        # screenshotTestImplementation), so the sed above emits two lines and
+        # the label rendered as "v0.60.1\n0.60.1". Trim to the first.
+        # Done here rather than by piping to `head -1`, because
+        # tests/test_core_freshness_recipe.py extracts this assignment with a
+        # regex that pins the exact `sed -n '…' "$ANDROID_GRADLE"` shape.
+        ANDROID_VER=${ANDROID_VER%%$'\n'*}
         if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
             _dev_status "Android:" "$GREEN" "v$ANDROID_VER (matches latest tag)"
         else
