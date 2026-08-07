@@ -137,3 +137,8 @@ relay/.cargo/config.toml
 
 # Local macOS log captures (device/system debugging, e.g. `log collect`)
 /system_logs.logarchive/
+
+# Local BLE identity artifact written by the desktop/mobile apps during
+# device testing. Contains privateKey and irk — key material that must
+# never enter git.
+selfIdentity.plist
