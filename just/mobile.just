@@ -48,9 +48,18 @@ build-ios mode="debug":
 bindings:
     ./core/scripts/build-bindings.sh
 
-# Generate bindings AND wire them into local platform builds
+# Generate bindings AND wire them into local platform builds.
+#
+# Always built with --dev-logging, unlike `just bindings`: this path exists
+# for on-device debugging, and without the native backend core's own log
+# calls are silent no-ops. A device session then has to infer core state
+# from raw GATT traffic — which is how a 2026-08-07 BLE run lost every
+# `[Exchange]` line and had to be diagnosed from characteristic UUIDs.
+# Never ship a binding from this recipe; `just bindings` stays the
+# release path.
 [group('mobile')]
-bindings-local: bindings
+bindings-local:
+    ./core/scripts/build-bindings.sh --dev-logging
     ./scripts/wire-bindings-local.sh
 
 # Revert to published (remote) bindings
