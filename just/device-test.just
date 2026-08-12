@@ -605,6 +605,21 @@ device-smoke-release:
     (cd android && ./gradlew assembleRelease -PlocalBindings 2>&1 | tail -10)
 
     ANDROID_SERIAL=$(dt_detect_android_device)
+
+    # Don't leave a release build on a shared test device: its storage key is
+    # minted with `setUserAuthenticationRequired(true)`, so whatever runs next
+    # inherits a build that demands device authentication. Uninstall rather
+    # than `pm clear` — Keystore entries outlive cleared app data.
+    #
+    # This is hygiene, not a fix for the ordering fragility in
+    # `2026-08-12-instrumented-before-gate-fails-on-a-busy-device`: that one
+    # reproduces with the uninstall in place.
+    remove_release_build() {
+        printf "%b\n" "${YELLOW}Removing the release build...${NC}"
+        adb -s "$ANDROID_SERIAL" uninstall "$PKG" || true
+    }
+    trap remove_release_build EXIT
+
     printf "%b\n" "${YELLOW}Installing release APK on $ANDROID_SERIAL...${NC}"
     adb -s "$ANDROID_SERIAL" install -r "$APK_PATH"
 
