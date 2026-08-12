@@ -571,6 +571,78 @@ _dt-install-android:
     adb -s "$ANDROID_SERIAL" install -r "$APK_PATH"
     printf "%b\n" "${GREEN}  Android app installed${NC}"
 
+# Debug keys carry `setUserAuthenticationRequired(false)`, so every other
+# device recipe exercises the one configuration in which an auth-bound
+# storage key cannot fail. That blind spot is how a launch crash reached
+# a shippable build (`2026-08-12-android-release-build-crashes-on-launch`).
+
+# Smoke-test the release build on a device: it must survive launch
+[group('device-test')]
+[script]
+device-smoke-release:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    PKG="app.vauchi"
+    APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+
+    # Signed with the local debug keystore purely to make the release
+    # variant installable. What is under test is the release build
+    # *configuration's* runtime behaviour, not distribution signing.
+    if [[ -z "${ANDROID_KEYSTORE_PATH:-}" ]]; then
+        if [[ ! -f "$HOME/.android/debug.keystore" ]]; then
+            printf "%b\n" "${RED}ERROR: no keystore available${NC}"
+            echo "Set ANDROID_KEYSTORE_PATH, or run a debug build once to create the default."
+            exit 1
+        fi
+        export ANDROID_KEYSTORE_PATH="$HOME/.android/debug.keystore"
+        export ANDROID_KEYSTORE_PASSWORD="android"
+        export ANDROID_KEY_ALIAS="androiddebugkey"
+        export ANDROID_KEY_PASSWORD="android"
+    fi
+
+    printf "%b\n" "${YELLOW}Building Android APK (assembleRelease -PlocalBindings)...${NC}"
+    (cd android && ./gradlew assembleRelease -PlocalBindings 2>&1 | tail -10)
+
+    ANDROID_SERIAL=$(dt_detect_android_device)
+    printf "%b\n" "${YELLOW}Installing release APK on $ANDROID_SERIAL...${NC}"
+    adb -s "$ANDROID_SERIAL" install -r "$APK_PATH"
+
+    adb -s "$ANDROID_SERIAL" shell am force-stop "$PKG"
+    adb -s "$ANDROID_SERIAL" logcat -c
+    adb -s "$ANDROID_SERIAL" shell am start -n "$PKG/.MainActivity" >/dev/null
+
+    # Asserts only that the process survives its own launch. It deliberately
+    # does not unlock the device or drive the auth prompt: the prompt *is*
+    # the expected first screen here, and driving it would mean polling a
+    # system-owned modal (CC-23).
+    PID=""
+    attempt=0
+    while [[ $attempt -lt 20 ]]; do
+        PID=$(adb -s "$ANDROID_SERIAL" shell pidof "$PKG" 2>/dev/null | tr -d '\r' || true)
+        if [[ -n "$PID" ]]; then break; fi
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+
+    # Started is not survived — the crash landed after first frame.
+    sleep 5
+    PID=$(adb -s "$ANDROID_SERIAL" shell pidof "$PKG" 2>/dev/null | tr -d '\r' || true)
+
+    if adb -s "$ANDROID_SERIAL" logcat -d | grep -q "FATAL EXCEPTION"; then
+        printf "%b\n" "${RED}FAIL: the release build crashed on launch${NC}"
+        adb -s "$ANDROID_SERIAL" logcat -d | grep -A 15 "FATAL EXCEPTION" | head -25
+        echo "Retrace with: android/app/build/outputs/mapping/release/mapping.txt"
+        exit 1
+    fi
+
+    if [[ -z "$PID" ]]; then
+        printf "%b\n" "${RED}FAIL: $PKG is not running after launch${NC}"
+        exit 1
+    fi
+
+    printf "%b\n" "${GREEN}  Release build survived launch (pid $PID)${NC}"
+
 # ─── Diagnostics & log capture ────────────────────────────────────
 
 # Capture Android logs (Vauchi + exchange tags). Auto-selects device if multiple connected.
