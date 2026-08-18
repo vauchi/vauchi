@@ -334,13 +334,33 @@ dt_detect_ios_device() {
             | sed 's/.*"\([^"]*\)"$/\1/')
     fi
 
-    # Fall back to xcrun devicectl
+    # Fall back to xcrun devicectl, read as JSON.
+    #
+    # The table form cannot supply this. It prints the CoreDevice
+    # `identifier` (a 8-4-4-4-12 UUID) and never the hardware UDID, which
+    # is what `xcodebuild -destination id=` expects — they are different
+    # values for the same phone. Its rows also start at column 0, so a
+    # leading-whitespace filter drops every one of them. Both together
+    # made this branch report "no iOS device" for a connected, paired
+    # iPhone and fall through to `system_profiler`.
     if [[ -z "$device_id" ]]; then
-        device_id=$(xcrun devicectl list devices 2>/dev/null \
-            | grep -E "^[[:space:]]" \
-            | grep -v "Simulator" \
-            | grep -oE '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}' \
-            | head -1)
+        local devices_json
+        devices_json="$(mktemp)"
+        if xcrun devicectl list devices --json-output "$devices_json" >/dev/null 2>&1; then
+            device_id=$(python3 -c '
+import json, sys
+try:
+    devices = json.load(open(sys.argv[1]))["result"]["devices"]
+except Exception:
+    sys.exit(0)
+for device in devices:
+    udid = device.get("hardwareProperties", {}).get("udid")
+    if udid:
+        print(udid)
+        break
+' "$devices_json" 2>/dev/null)
+        fi
+        rm -f "$devices_json"
     fi
 
     # Fall back to system_profiler
