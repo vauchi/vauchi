@@ -1040,7 +1040,7 @@ claim slug:
         # Check if stale
         COMMITTED=$(echo "$EXISTING" | jq -r '.commit.committed_date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
-            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
+            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0") # portable-shell-ok: BSD -j -f runs first and short-circuits on macOS; -d is the GNU fallback, and `|| echo 0` bounds a mismatch to a claim reading as stale
         NOW=$(date +%s)
         AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
         if [[ "$AGE_H" -ge "$EXPIRY_H" ]]; then
@@ -1113,7 +1113,7 @@ claims:
         OWNER=$(echo "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
         COMMITTED=$(echo "$b" | jq -r '.date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
-            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0")
+            || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0") # portable-shell-ok: BSD -j -f runs first and short-circuits on macOS; -d is the GNU fallback, and `|| echo 0` bounds a mismatch to a claim reading as stale
         AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
         STALE=""
         [[ "$AGE_H" -ge "$EXPIRY_H" ]] && STALE=" (STALE)"
