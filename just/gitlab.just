@@ -583,8 +583,9 @@ ci-classify repo job_id:
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     p=$(resolve_gitlab_project "{{repo}}")
-    failure_reason=$(glab api "projects/${p}/jobs/{{job_id}}" | jq -r ".failure_reason // empty")
-    glab api "projects/${p}/jobs/{{job_id}}/trace" \
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    failure_reason=$(glab api "projects/${enc}/jobs/{{job_id}}" | jq -r ".failure_reason // empty")
+    glab api "projects/${enc}/jobs/{{job_id}}/trace" \
         | scripts/scripts/classify-ci-failure.sh --failure-reason "$failure_reason"
 
 # Show pipeline status for current branch
