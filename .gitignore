@@ -138,6 +138,13 @@ relay/.cargo/config.toml
 # Local macOS log captures (device/system debugging, e.g. `log collect`)
 /system_logs.logarchive/
 
+# Output of _private/docs/testing/device-automation/capture-hover-*.sh —
+# default OUT filename, its example `log collect` archive, and the
+# two-sided capture's per-device log dir.
+/hover-run.log
+/ios.logarchive/
+/hover-capture/
+
 # Local BLE identity artifact written by the desktop/mobile apps during
 # device testing. Contains privateKey and irk — key material that must
 # never enter git.
