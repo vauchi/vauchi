@@ -533,15 +533,15 @@ _dt-install-ios:
     IOS_DEVICE_ID=$(dt_detect_ios_device)
     printf "%b\n" "${YELLOW}Installing iOS app on device $IOS_DEVICE_ID...${NC}"
 
-    # Find the built .app bundle
-    APP_PATH=$(find ios/build -name "Vauchi.app" -path "*/Debug-iphoneos/*" 2>/dev/null | head -1)
-    if [[ -z "$APP_PATH" ]]; then
-        # Try DerivedData location
-        APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Vauchi.app" -path "*/Debug-iphoneos/*" 2>/dev/null | sort -t/ -k8 -r | head -1)
-    fi
+    # Must match `-derivedDataPath build` in _dt-build-ios. Searching the
+    # tree instead let an orphan `build/device/` from an ad-hoc
+    # build-for-testing run win, and its Apple-signed XCTest frameworks make
+    # the device reject the install ("identity used to sign the executable is
+    # no longer valid").
+    APP_PATH="ios/build/Build/Products/Debug-iphoneos/Vauchi.app"
 
-    if [[ -z "$APP_PATH" ]]; then
-        printf "%b\n" "${RED}ERROR: Could not find built Vauchi.app${NC}"
+    if [[ ! -d "$APP_PATH" ]]; then
+        printf "%b\n" "${RED}ERROR: Could not find built Vauchi.app at $APP_PATH${NC}"
         echo "The xcodebuild step may have failed. Check build output above."
         exit 1
     fi
