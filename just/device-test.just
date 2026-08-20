@@ -981,13 +981,21 @@ dt-ios-tap x y wda_url="http://169.254.202.178:8100":
     set -euo pipefail
     WDA="{{wda_url}}"
 
+    RESP_FILE=$(mktemp)
+    trap 'rm -f "$RESP_FILE"' EXIT
+
     # Get or create session
-    SID=$(curl -s "$WDA/status" | python3 -c "
+    : > "$RESP_FILE"
+    STATUS=$(curl -s -o "$RESP_FILE" -w '%{http_code}' "$WDA/status") || STATUS="000"
+    if [[ "$STATUS" != "200" ]]; then
+        echo "ERROR: WDA $WDA/status returned HTTP $STATUS" >&2
+        echo "Start it with './vauchi-gui-test.sh wda-start'." >&2
+        exit 1
+    fi
+    SID=$(python3 -c "
     import sys, json
-    data = json.load(sys.stdin)
-    sid = data.get('sessionId') or ''
-    print(sid)
-    " 2>/dev/null)
+    print(json.load(sys.stdin).get('sessionId') or '')
+    " < "$RESP_FILE")
 
     if [[ -z "$SID" ]]; then
         # Pin Vauchi as the session bundle so WDA brings the app to
@@ -996,13 +1004,19 @@ dt-ios-tap x y wda_url="http://169.254.202.178:8100":
         # downstream tap/screenshot operations target the launcher
         # rather than Vauchi. Same fix the runner shipped today
         # (`vauchi-gui-test.sh wda_new_session` — `_private!1218`).
-        SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
-            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+        : > "$RESP_FILE"
+        STATUS=$(curl -s -o "$RESP_FILE" -w '%{http_code}' -X POST "$WDA/session" \
+            -H 'Content-Type: application/json' \
+            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}') || STATUS="000"
+        if [[ "$STATUS" != "200" ]]; then
+            echo "ERROR: WDA session create returned HTTP $STATUS" >&2
+            cat "$RESP_FILE" >&2
+            exit 1
+        fi
+        SID=$(python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])" < "$RESP_FILE")
     fi
 
     echo "Tapping ({{x}}, {{y}}) via WDA session $SID..."
-    RESP_FILE=$(mktemp)
-    trap 'rm -f "$RESP_FILE"' EXIT
     if ! curl -s --fail-with-body -X POST "$WDA/session/$SID/actions" -H 'Content-Type: application/json' \
         -d "{\"actions\":[{\"type\":\"pointer\",\"id\":\"finger1\",\"parameters\":{\"pointerType\":\"touch\"},\"actions\":[{\"type\":\"pointerMove\",\"duration\":0,\"x\":{{x}},\"y\":{{y}}},{\"type\":\"pointerDown\",\"button\":0},{\"type\":\"pause\",\"duration\":50},{\"type\":\"pointerUp\",\"button\":0}]}]}" > "$RESP_FILE"; then
         echo "ERROR: WDA tap returned an HTTP error:" >&2
@@ -1018,12 +1032,20 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
     set -euo pipefail
     WDA="{{wda_url}}"
 
-    SID=$(curl -s "$WDA/status" | python3 -c "
+    RESP_FILE=$(mktemp)
+    trap 'rm -f "$RESP_FILE"' EXIT
+
+    : > "$RESP_FILE"
+    STATUS=$(curl -s -o "$RESP_FILE" -w '%{http_code}' "$WDA/status") || STATUS="000"
+    if [[ "$STATUS" != "200" ]]; then
+        echo "ERROR: WDA $WDA/status returned HTTP $STATUS" >&2
+        echo "Start it with './vauchi-gui-test.sh wda-start'." >&2
+        exit 1
+    fi
+    SID=$(python3 -c "
     import sys, json
-    data = json.load(sys.stdin)
-    sid = data.get('sessionId') or ''
-    print(sid)
-    " 2>/dev/null)
+    print(json.load(sys.stdin).get('sessionId') or '')
+    " < "$RESP_FILE")
 
     if [[ -z "$SID" ]]; then
         # Pin Vauchi as the session bundle so WDA brings the app to
@@ -1032,8 +1054,16 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
         # downstream tap/screenshot operations target the launcher
         # rather than Vauchi. Same fix the runner shipped today
         # (`vauchi-gui-test.sh wda_new_session` — `_private!1218`).
-        SID=$(curl -s -X POST "$WDA/session" -H 'Content-Type: application/json' \
-            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}' | python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])")
+        : > "$RESP_FILE"
+        STATUS=$(curl -s -o "$RESP_FILE" -w '%{http_code}' -X POST "$WDA/session" \
+            -H 'Content-Type: application/json' \
+            -d '{"capabilities":{"alwaysMatch":{"bundleId":"app.vauchi.ios"}}}') || STATUS="000"
+        if [[ "$STATUS" != "200" ]]; then
+            echo "ERROR: WDA session create returned HTTP $STATUS" >&2
+            cat "$RESP_FILE" >&2
+            exit 1
+        fi
+        SID=$(python3 -c "import sys,json; print(json.load(sys.stdin)['value']['sessionId'])" < "$RESP_FILE")
     fi
 
     curl -s "$WDA/session/$SID/screenshot" | python3 -c "
