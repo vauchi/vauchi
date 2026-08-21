@@ -857,7 +857,8 @@ session-end:
         echo "  session? Append one line each, no quotes needed:"
         echo "    just ledger <fanout|vet|gate|other> <lt5m|5-30m|gt30m>"
         echo "         <authoring|retry|review|wait>"
-        echo "         <prevented-defect|mechanical|false-positive> [note...]"
+        echo "         <prevented-defect|mechanical|false-positive>"
+        echo "         <unverified-claim|stale-state|consequence|style> [note...]"
     fi
 
     echo ""
@@ -879,7 +880,7 @@ session-end:
 #   just ledger vet 5-30m retry mechanical exemption resync flapped
 [group('setup')]
 [script]
-ledger area bucket kind outcome *note:
+ledger area bucket kind outcome defect_class *note:
     set -euo pipefail
     LEDGER="_private/docs/intervention-ledger.md"
     case "{{ area }}" in fanout|vet|gate|other) ;; *)
@@ -891,18 +892,31 @@ ledger area bucket kind outcome *note:
     case "{{ outcome }}" in prevented-defect|mechanical|false-positive) ;; *)
         echo "outcome must be: prevented-defect|mechanical|false-positive"
         exit 1 ;; esac
+    # Recorded at capture time on purpose. The first four-week window was
+    # classified afterwards by reading truncated free-text notes, and that
+    # guess carried the direction-0 conclusion with nobody checking it.
+    case "{{ defect_class }}" in \
+        unverified-claim|stale-state|consequence|style) ;; *)
+        echo "defect-class must be: unverified-claim|stale-state|consequence|style"
+        exit 1 ;; esac
     if [[ ! -f "$LEDGER" ]]; then
         echo "missing $LEDGER — merge the _private ledger MR first"
         exit 1
     fi
-    LINE="- $(date +%F) | {{ area }} | {{ bucket }} | {{ kind }} | {{ outcome }}"
+    LINE="- $(date +%F) | {{ area }} | {{ bucket }} | {{ kind }}"
+    LINE="$LINE | {{ outcome }} | \`{{ defect_class }}\`"
     NOTE="{{ note }}"
     if [[ -n "$NOTE" ]]; then
         LINE="$LINE | $NOTE"
     fi
-    # 80-col cap keeps the ledger inside the _private markdownlint gate.
-    if [[ "${#LINE}" -gt 80 ]]; then
-        echo "entry is ${#LINE} chars (>80, markdownlint) — shorten the note"
+    # The gate is _private/scripts/markdownlint-rule-line-length.js, not MD013
+    # (which is set to 999 here — checking only that would have been wrong).
+    # The custom rule caps a line at 80 but exempts backtick spans entirely,
+    # which is why defect-class is emitted as code: it costs the note budget
+    # nothing. Measure the line the way the rule does, with the span removed.
+    MEASURED="${LINE/\`{{ defect_class }}\`/}"
+    if [[ "${#MEASURED}" -gt 80 ]]; then
+        echo "entry is ${#MEASURED} chars excluding backticks (>80) — shorten the note"
         exit 1
     fi
     # MD022/MD032: first entry needs a blank line after "## Entries"
