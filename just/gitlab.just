@@ -154,6 +154,10 @@ mr-update repo='' title='':
     fi
     glab mr update "$iid" -R "$p" --title "$mr_title" --description "$mr_body"
     echo "Updated $p!$iid (title + body) from $(git -C "$dir" rev-list --count origin/main..HEAD) commit(s) on $branch."
+    # The rebuild above replaced the whole description, dropping any
+    # auto-linked section. Re-run the pass so refreshing a stale title
+    # does not cost the MR its cross-repo links.
+    just gitlab _autolink "{{repo}}"
 
 # Create merge request from current branch
 # Usage: just gitlab mr-create [repo] [title]
@@ -239,9 +243,26 @@ mr-create repo='' title='':
     )
 
     # ── Auto-link Related MRs (E13/E14/E15 fix) ────────────────────
-    # Scan sibling repos for the same branch with open MRs, then
-    # cross-link them all. Idempotent: re-running rewrites the
-    # auto-generated section instead of duplicating.
+    just gitlab _autolink "{{repo}}"
+
+# Cross-link every open MR that shares this branch across sibling repos.
+# Idempotent: re-running rewrites the auto-generated section instead of
+# duplicating it. Set MR_NO_AUTOLINK=1 to skip.
+#
+# Shared by mr-create (after creating) and mr-update (after rebuilding a
+# body, which would otherwise silently delete the section — the links
+# vanish exactly when someone fixes a stale title, which is the failure
+# this pass exists to prevent).
+[private]
+[no-cd]
+[script]
+_autolink repo='':
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    dir=$(gitlab_repo_dir "{{repo}}")
+    workspace_root=$(pwd)
+    branch=$(git -C "$dir" branch --show-current)
     if [[ "${MR_NO_AUTOLINK:-0}" == "1" ]]; then
         exit 0
     fi
