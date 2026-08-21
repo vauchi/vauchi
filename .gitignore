@@ -149,3 +149,8 @@ relay/.cargo/config.toml
 # device testing. Contains privateKey and irk — key material that must
 # never enter git.
 selfIdentity.plist
+
+# Python bytecode from the tests/ recipe suite. Untracked .pyc files fail
+# `reuse lint`, which gate-push runs, so a test run blocks the next push.
+__pycache__/
+*.pyc
