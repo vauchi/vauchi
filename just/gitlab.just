@@ -125,12 +125,14 @@ mr-update repo='' title='':
         exit 1
     fi
     # Title: explicit arg, else the first commit subject (same as mr-create).
-    if [[ -n "{{ title }}" ]]; then
-        mr_title="{{ title }}"
-        # `just gitlab` recipe args are positional (module recipe), so a
-        # `title=...` invocation form leaks the prefix in verbatim — strip it.
-        mr_title="${mr_title#title=}"
-    else
+    # `quote()` shell-quotes the value. A bare "{{ title }}" splices the
+    # argument in as raw text, so any double quote in a title closes the
+    # string early and the script dies on a parse error before it runs.
+    mr_title={{ quote(title) }}
+    # `just gitlab` recipe args are positional (module recipe), so a
+    # `title=...` invocation form leaks the prefix in verbatim — strip it.
+    mr_title="${mr_title#title=}"
+    if [[ -z "$mr_title" ]]; then
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
     # Body: rebuild from commit bodies, strip Co-Authored-By, escape @mentions,
@@ -193,12 +195,13 @@ mr-create repo='' title='':
     # Build title and description explicitly to sanitize @ mentions.
     # --fill passes commit body verbatim, which may contain @tags that
     # ping people on GitLab (e.g., Co-Authored-By: ... <noreply@anthropic.com>).
-    if [[ -n "{{ title }}" ]]; then
-        mr_title="{{ title }}"
-        # `just gitlab` recipe args are positional (module recipe), so a
-        # `title=...` invocation form leaks the prefix in verbatim — strip it.
-        mr_title="${mr_title#title=}"
-    else
+    # See mr-update: quote() is required, raw interpolation breaks on
+    # any title containing a double quote.
+    mr_title={{ quote(title) }}
+    # `just gitlab` recipe args are positional (module recipe), so a
+    # `title=...` invocation form leaks the prefix in verbatim — strip it.
+    mr_title="${mr_title#title=}"
+    if [[ -z "$mr_title" ]]; then
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
     # Build description from commit bodies:
@@ -456,11 +459,11 @@ mr-create-all title='':
             PUSH_OPTS+=(-o merge_request.target=main)
             PUSH_OPTS+=(-o merge_request.remove_source_branch)
 
-            if [[ -n "{{ title }}" ]]; then
-                mr_title="{{ title }}"
-                # Positional module args: a `title=...` form leaks the prefix.
-                mr_title="${mr_title#title=}"
-            else
+            # quote() required — see mr-update.
+            mr_title={{ quote(title) }}
+            # Positional module args: a `title=...` form leaks the prefix.
+            mr_title="${mr_title#title=}"
+            if [[ -z "$mr_title" ]]; then
                 mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
             fi
             PUSH_OPTS+=(-o "merge_request.title=$mr_title")
@@ -712,7 +715,8 @@ issue-create title repo='' *args='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     # Positional module args: a `title=...` form leaks the prefix — strip it.
-    issue_title="{{title}}"
+    # quote() required — see mr-update.
+    issue_title={{ quote(title) }}
     issue_title="${issue_title#title=}"
     glab issue create --title "$issue_title" --no-editor --yes -R "$p" {{args}}
 
