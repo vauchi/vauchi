@@ -1,6 +1,3 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: Bug Report
 about: Report something that isn't working correctly
@@ -8,6 +5,9 @@ title: ''
 labels: bug
 assignees: ''
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 ## Description
 
