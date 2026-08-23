@@ -11,7 +11,8 @@ Closes #
 
 ## Related MRs
 
-<!-- For multi-repo features, list all related MRs using GitLab format: group/project!number -->
+<!-- For multi-repo features, list all related MRs using GitLab format:
+     group/project!number -->
 <!-- Remove this section if this is a single-repo change -->
 
 - vauchi/core!XX - Description

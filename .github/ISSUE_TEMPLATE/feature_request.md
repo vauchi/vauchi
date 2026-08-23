@@ -1,6 +1,3 @@
-<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 ---
 name: Feature Request
 about: Suggest an enhancement or new feature
@@ -8,6 +5,9 @@ title: ''
 labels: enhancement
 assignees: ''
 ---
+
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 ## Problem Statement
 

@@ -5,7 +5,9 @@
 
 **Privacy-focused updatable contact cards via in-person exchange.**
 
-Exchange contact info with people you meet in person. Update your details anytime — everyone who has your card sees the changes. No accounts, no server that can read your data, no tracking.
+Exchange contact info with people you meet in person. Update your details
+anytime — everyone who has your card sees the changes. No accounts, no server
+that can read your data, no tracking.
 
 ## Why Vauchi?
 
@@ -25,9 +27,12 @@ Vauchi solves this:
 
 ## Core Principles
 
-1. **Privacy is a right, not an option** — E2E encryption, oblivious privacy-preserving relay, no tracking
-2. **Trust is earned in person** — QR exchange with physical proximity, not platform-mediated
-3. **Quality through rigor** — Test-driven development, threat modeling, no shortcuts
+1. **Privacy is a right, not an option** — E2E encryption, oblivious
+   privacy-preserving relay, no tracking
+2. **Trust is earned in person** — QR exchange with physical proximity, not
+   platform-mediated
+3. **Quality through rigor** — Test-driven development, threat modeling, no
+   shortcuts
 
 See [Principles](https://vauchi.app/docs/about/principles) for the full philosophy.
 
@@ -50,7 +55,8 @@ See [Principles](https://vauchi.app/docs/about/principles) for the full philosop
         └─────────────────┘
 ```
 
-The relay sees only encrypted blobs. It cannot read contact names, phone numbers, or any content.
+The relay sees only encrypted blobs. It cannot read contact names, phone
+numbers, or any content.
 
 ## Repository Structure
 
@@ -141,7 +147,8 @@ All code must have tests. No exceptions.
 [![Sponsor on GitHub](https://img.shields.io/badge/sponsor-GitHub%20Sponsors-ea4aaa)](https://github.com/sponsors/vauchi)
 [![Donate on Liberapay](https://img.shields.io/badge/donate-Liberapay-f6c915)](https://liberapay.com/Vauchi/donate)
 
-Vauchi is open source and community-funded. No VC money, no data harvesting business model.
+Vauchi is open source and community-funded. No VC money, no data harvesting
+business model.
 
 If you believe in privacy-respecting software:
 
