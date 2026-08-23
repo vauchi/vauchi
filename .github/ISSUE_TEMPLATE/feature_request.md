@@ -23,7 +23,7 @@ What other approaches did you consider?
 
 ## Alignment with Principles
 
-How does this align with [Principles](https://docs.vauchi.app/about/principles/)?
+How does this align with [Principles](https://vauchi.app/docs/about/principles)?
 
 - [ ] Privacy: Does not compromise user privacy
 - [ ] Trust: Maintains in-person trust model
