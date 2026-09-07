@@ -198,6 +198,75 @@ gates:workspace-ratchets:
     - scripts/scripts/audit-shell-surface.sh --check scripts/scripts/audit-shell-surface.baseline.json
     - scripts/scripts/loc-budget.sh --check scripts/scripts/loc-budget.baseline.json
 
+# Core-consumer drift (scheduled only)
+#
+# bump-core-consumers.sh has existed since 2026-08-09 with no caller —
+# not a job, not a schedule, not a recipe. Its own header says a caller
+# "decides what to do with a bump that fails to build", and none existed,
+# so nothing moved the pins: cli and e2e sat three minor versions behind
+# core for a month. verify:downstream-rust did not catch it because those
+# two resolve their own tag pin rather than the triggering commit
+# (problems/2026-09-07-downstream-verify-tests-the-pin).
+#
+# NOT allow_failure. gates:workspace-ratchets is the cautionary case in
+# this same file: added advisory, failed all 29 of its runs, and the
+# muting is what kept that invisible
+# (backlog/2026-08-21-workspace-ratchets-never-passed). A drift report
+# nobody sees is worth less than no report.
+#
+# CC-27 evidence: observed failing before it was correct — on 2026-09-07
+# the bot reported `e2e FAIL could not resolve` against core's fresh
+# v0.64.0-dev.1 tag, because the version pin was derived from the tag
+# name; it passed once that was fixed (scripts !554).
+gates:core-consumer-drift:
+  stage: lint
+  tags: [linux, self-hosted]
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl build-essential
+    - |
+      for repo in scripts core cli e2e tui linux-gtk relay web-demo; do
+        git clone --branch main \
+          "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/${repo}.git" \
+          "${CI_PROJECT_DIR}/${repo}"
+      done
+    # The bot resolves the newest tag by creation date, so core needs its
+    # tags, which --depth=1 --branch main would not fetch.
+    - git -C "${CI_PROJECT_DIR}/core" fetch --tags --force
+  script:
+    # --dry-run only: it reads manifests and locks and never invokes cargo,
+    # so this alarm cannot fail for toolchain reasons on a runner whose
+    # Rust availability is not guaranteed here. Proving a bump still builds
+    # needs `--build` and a toolchain; that belongs in a follow-up once the
+    # alarm has established what normal looks like.
+    - echo "=== Consumer drift against the newest core tag ==="
+    - sh scripts/scripts/bump-core-consumers.sh --dry-run | tee drift.txt
+    - |
+      # Only tag-pinned consumers alarm. Their drift is discrete and
+      # actionable: a pin is either the newest tag or it is not, and only
+      # an edit moves it. Those lines carry an arrow ("v0.61.0 ->
+      # v0.64.0"); a branch = "main" consumer instead reports "refresh
+      # lock ... toward main", which is true on almost any day because
+      # cargo will not walk a git dep without an explicit update. Alarming
+      # on those would make this job permanently red, which is precisely
+      # how gates:workspace-ratchets above stopped being read.
+      if grep -q ' -> ' drift.txt; then
+        echo ""
+        echo "Tag-pinned consumers are behind the newest core tag:"
+        grep ' -> ' drift.txt
+        echo ""
+        echo "Bump with: sh scripts/scripts/bump-core-consumers.sh --repo <name> --build"
+        exit 1
+      fi
+      echo "Every tag-pinned consumer is on the newest core tag."
+  artifacts:
+    when: always
+    paths:
+      - drift.txt
+    expire_in: 1 week
+
 # Weekly prerelease cleanup (scheduled only)
 # Fetches cleanup script from vauchi/scripts at runtime.
 cleanup:prerelease:
