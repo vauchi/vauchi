@@ -241,9 +241,16 @@ gates:core-consumer-drift:
     # Rust availability is not guaranteed here. Proving a bump still builds
     # needs `--build` and a toolchain; that belongs in a follow-up once the
     # alarm has established what normal looks like.
-    - echo "=== Consumer drift against the newest core tag ==="
-    - sh scripts/scripts/bump-core-consumers.sh --dry-run | tee drift.txt
+    - echo "=== Consumer drift against the newest core RELEASE tag ==="
+    - sh scripts/scripts/bump-core-consumers.sh --dry-run --stable-only | tee drift.txt
     - |
+      # --stable-only, because core cuts -dev tags several times a week
+      # (32 in the 30 days to 2026-09-07; dev.1 and dev.2 landed hours
+      # apart). "Behind the newest tag" is therefore true on almost any
+      # day and would make this red by default — the same way
+      # gates:workspace-ratchets above went unread. "Behind the newest
+      # release" is the condition that stays false until it matters.
+      #
       # Only tag-pinned consumers alarm. Their drift is discrete and
       # actionable: a pin is either the newest tag or it is not, and only
       # an edit moves it. Those lines carry an arrow ("v0.61.0 ->
@@ -254,13 +261,13 @@ gates:core-consumer-drift:
       # how gates:workspace-ratchets above stopped being read.
       if grep -q ' -> ' drift.txt; then
         echo ""
-        echo "Tag-pinned consumers are behind the newest core tag:"
+        echo "Tag-pinned consumers are behind the newest core release:"
         grep ' -> ' drift.txt
         echo ""
         echo "Bump with: sh scripts/scripts/bump-core-consumers.sh --repo <name> --build"
         exit 1
       fi
-      echo "Every tag-pinned consumer is on the newest core tag."
+      echo "Every tag-pinned consumer is on the newest core release."
   artifacts:
     when: always
     paths:
