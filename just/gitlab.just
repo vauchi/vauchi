@@ -769,14 +769,23 @@ mr-status repo='':
         echo "On main branch — no MR to show"
         exit 0
     fi
-    # Find MR for this branch
-    mr_json=$(glab mr list -R "$p" --source-branch "$branch" --json iid,title,state,mergedAt,webUrl 2>/dev/null || echo "[]")
-    count=$(echo "$mr_json" | jq 'length')
-    if [[ "$count" == "0" ]]; then
-        echo "No MR found for branch '$branch' in $p"
+    # Same lookup as `mr-update`: `glab mr list --json` is not a flag this
+    # glab has, and the old `2>/dev/null || echo "[]"` turned that "Unknown
+    # flag" into a confident "No MR found" for branches that had one. `-F
+    # json` exists but embeds raw control characters from MR descriptions,
+    # which jq then rejects — so read the API and parse in python.
+    # Same lookup as `mr-update`: `glab mr list --json` is not a flag this
+    # glab has, and the old `2>/dev/null || echo "[]"` turned that "Unknown
+    # flag" into a confident "No MR found" for branches that had one. `-F
+    # json` exists but embeds raw control characters from MR descriptions,
+    # which jq then rejects — so read the API and format in python.
+    summary=$(glab api "projects/vauchi%2F${r}/merge_requests?state=opened&source_branch=${branch}" \
+      | python3 -c "import sys,json; print(''.join('MR !%s: %s\n  State: %s\n  URL:   %s\n' % (m['iid'], m['title'], m['state'], m['web_url']) for m in json.load(sys.stdin)))")
+    if [[ -z "${summary//[[:space:]]/}" ]]; then
+        echo "No open MR found for branch '$branch' in $p"
         exit 0
     fi
-    echo "$mr_json" | jq -r '.[] | "MR !\(.iid): \(.title)\n  State: \(.state)\n  URL:   \(.webUrl)\n"'
+    echo "$summary"
     # Show pipeline status
     echo "Pipeline:"
     glab ci status --branch "$branch" -R "$p" 2>/dev/null || echo "  No pipeline found"
