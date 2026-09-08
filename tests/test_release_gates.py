@@ -23,6 +23,20 @@ CANONICAL_SHIP_CRITERIA = """
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
 """
 
+SAME_OPERATOR_DISTINCT_HOSTS = """
+servers:
+  web:
+    hosts:
+      - relay-host
+    labels:
+      app.vauchi.operator: same-operator
+accessories:
+  ohttp-relay:
+    host: gateway-host
+    labels:
+      app.vauchi.operator: same-operator
+"""
+
 CHECKED_SHIP_CRITERIA = """
 **Ship criteria**
 
@@ -417,18 +431,83 @@ accessories:
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization.\n\n"
+                    "**Release stage**: release"
+                ),
+            ),
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn("operator identities are not distinct", result.stdout)
+
+    def test_completed_rg7_without_release_stage_enforces_operators(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
                 extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn("operator identities are not distinct", result.stdout)
+
+    def test_completed_rg7_alpha_stage_defers_distinct_operators(self) -> None:
+        stage_lines = {
+            "alpha": "**Release stage**: alpha",
+            "beta": "> **Release stage**: beta",
+        }
+        for stage, stage_line in stage_lines.items():
+            with self.subTest(stage=stage):
+                result = self.run_release_gates(
+                    plan_with_gates(
+                        all_completed=True,
+                        status_line="All hard gates passed.",
+                        ship_criteria=CHECKED_SHIP_CRITERIA,
+                        extra_body=(
+                            "ADR-065 defines Protocol v2 finalization.\n\n"
+                            f"{stage_line}"
+                        ),
+                    ),
+                    deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+                )
+
+                self.assertNotIn("RG-7 release config failure", result.stdout)
+                self.assertNotIn(
+                    "operator identities are not distinct", result.stdout
+                )
+                self.assertIn(
+                    "RG-7 distinct-operator requirement deferred", result.stdout
+                )
+                self.assertIn("same-operator", result.stdout)
+
+    def test_completed_rg7_alpha_stage_still_requires_distinct_hosts(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body=(
+                    "ADR-065 defines Protocol v2 finalization.\n\n"
+                    "**Release stage**: alpha"
+                ),
             ),
             deploy_config="""
 servers:
   web:
     hosts:
-      - relay-host
+      - bold-hopper-vps
     labels:
       app.vauchi.operator: same-operator
 accessories:
   ohttp-relay:
-    host: gateway-host
+    host: bold-hopper-vps
     labels:
       app.vauchi.operator: same-operator
 """,
@@ -436,7 +515,7 @@ accessories:
 
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-7 release config failure", result.stdout)
-        self.assertIn("operator identities are not distinct", result.stdout)
+        self.assertIn("application relay and OHTTP relay share host", result.stdout)
 
     def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
         result = self.run_release_gates(
