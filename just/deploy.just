@@ -74,7 +74,7 @@ deploy-check *ARGS:
         local deployed_sha deployed_time status_text status_color
 
         local info
-        info=$(curl -fsSL --max-time 5 "$url" 2>/dev/null) || {
+        info=$(curl --fail-with-body -sSL --max-time 5 "$url" 2>/dev/null) || {
             _ds_unknown "$name" "Could not fetch $url"
             return
         }
@@ -235,7 +235,16 @@ deploy-latest service:
 
     git -C "{{justfile_directory()}}/$REPO" fetch origin main --quiet 2>/dev/null || true
     SHA=$(git -C "{{justfile_directory()}}/$REPO" rev-parse origin/main)
-    BUILT=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main&status=success" 2>/dev/null | jq 'length' || echo 0)
+    # glab prints the API error body ({"message":"401 ..."}) on stdout and
+    # exits non-zero; piping it into `jq length` would count that one-key
+    # object as one successful pipeline. Capture the exit status first and
+    # only count a JSON array.
+    if ! PIPELINES=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main&status=success" 2>/dev/null); then
+        echo "ERROR: glab could not list $REPO pipelines (${PIPELINES:-no response})." >&2
+        echo "       Check the token: glab auth status, or glab auth login." >&2
+        exit 1
+    fi
+    BUILT=$(jq 'if type == "array" then length else 0 end' <<<"$PIPELINES")
     echo "newest main:    $REPO ${SHA:0:8} (successful build pipelines: $BUILT)"
     if [[ "$BUILT" -eq 0 ]]; then
         echo "ERROR: no successful pipeline for ${SHA:0:8} yet." >&2
