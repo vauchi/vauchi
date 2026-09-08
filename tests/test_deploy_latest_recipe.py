@@ -22,6 +22,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
         pipelines_json: str = '[{"id":101}]',
         sha_digest: str = "sha256:current-main",
         created_variables_json: str | None = None,
+        pipelines_exit_code: int = 0,
     ) -> tuple[subprocess.CompletedProcess[str], str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_path = Path(temporary_directory)
@@ -65,6 +66,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         'case "$*" in',
                         '  *"pipelines?sha="*)',
                         '    printf "%s\\n" "$DEPLOY_LATEST_TEST_PIPELINES_JSON"',
+                        '    exit "$DEPLOY_LATEST_TEST_PIPELINES_EXIT"',
                         "    ;;",
                         '  *"registry/repositories/12/tags/latest"*)',
                         '    printf \'{"digest":"sha256:mutable-latest"}\\n\'',
@@ -126,6 +128,9 @@ class DeployLatestRecipeTests(unittest.TestCase):
             environment["DEPLOY_LATEST_TEST_PIPELINES_JSON"] = pipelines_json
             environment["DEPLOY_LATEST_TEST_SHA_DIGEST"] = sha_digest
             environment["DEPLOY_LATEST_TEST_GLAB_LOG"] = str(glab_log)
+            environment["DEPLOY_LATEST_TEST_PIPELINES_EXIT"] = str(
+                pipelines_exit_code
+            )
             repository = self.repository_for(service)
             expected_variables = (
                 '[{"key":"DEPLOY_SERVICE","value":"'
@@ -201,6 +206,19 @@ class DeployLatestRecipeTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no successful pipeline", result.stderr)
+        self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_unauthenticated_glab_fails_before_pipeline_creation(self) -> None:
+        # glab prints the API error body on stdout and exits non-zero; the
+        # one-key object must not be counted as one successful pipeline.
+        result, glab_log = self.run_recipe(
+            pipelines_json='{"message":"401 Unauthorized"}',
+            pipelines_exit_code=1,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("glab auth login", result.stderr)
+        self.assertNotIn("successful build pipelines: 1", result.stdout)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
 
     def test_missing_sha_tag_fails_before_pipeline_creation(self) -> None:
