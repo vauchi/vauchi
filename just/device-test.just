@@ -1085,3 +1085,90 @@ dt-wda-screenshot file="screenshot-ios.png" wda_url="http://169.254.202.178:8100
 [group('device-test')]
 device-gate PLATFORM *FLAGS:
     scripts/scripts/device-gate.sh {{PLATFORM}} {{FLAGS}}
+
+# Stage a large backup blob on an Android device without the clipboard.
+#
+# `adb shell input text` cannot carry an 18 MB backup and adb cannot set
+# the clipboard, so the 10k-contact restore in problem record
+# 2026-06-11-restore-runs-without-progress-feedback had no automatable
+# path onto the device. This pushes the blob into the app's own
+# external-files directory, which adb can write without any runtime
+# permission and the app can read without one either.
+#
+# FILE may be an existing backup export, or `--generate SIZE_MB` to
+# synthesise a blob of that size for timing runs.
+#
+# Usage:
+#   just dt-stage-backup ~/exports/backup.txt
+#   just dt-stage-backup --generate 18
+[group('device-test')]
+[script]
+dt-stage-backup FILE ARG="":
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    SERIAL=$(dt_detect_android_device)
+    STAGE_DIR="/sdcard/Android/data/app.vauchi/files"
+    STAGE_PATH="$STAGE_DIR/staged-pick.txt"
+
+    if [[ "{{FILE}}" == "--generate" ]]; then
+        SIZE_MB="{{ARG}}"
+        if ! [[ "$SIZE_MB" =~ ^[0-9]+$ ]] || [[ "$SIZE_MB" -lt 1 ]]; then
+            printf "%b\n" "${RED}ERROR: --generate needs a size in MB, e.g. --generate 18${NC}" >&2
+            exit 1
+        fi
+        SRC=$(mktemp -t vauchi-staged-backup)
+        TARGET=$((SIZE_MB * 1024 * 1024))
+        # Base64 alphabet: a backup export is text, and a blob the paste
+        # field would reject is not a useful timing fixture. base64 grows
+        # 3 bytes into 4 chars, so ask for 3/4 of the target plus slack and
+        # truncate after — piping into `head -c` would SIGPIPE base64 and
+        # trip pipefail.
+        head -c "$(((TARGET * 3 / 4) + 1024))" /dev/urandom | base64 > "$SRC"
+        # Truncate portably: BSD and GNU disagree on `truncate`.
+        dd if="$SRC" of="$SRC.cut" bs=1024 count="$((TARGET / 1024))" 2>/dev/null
+        mv "$SRC.cut" "$SRC"
+        echo "Generated ${SIZE_MB} MB fixture: $SRC"
+    else
+        SRC="{{FILE}}"
+        if [[ ! -f "$SRC" ]]; then
+            printf "%b\n" "${RED}ERROR: no such file: $SRC${NC}" >&2
+            exit 1
+        fi
+    fi
+
+    SIZE=$(wc -c < "$SRC" | tr -d ' ')
+    echo "Device:   $SERIAL"
+    echo "Staging:  $SRC ($SIZE bytes)"
+
+    adb -s "$SERIAL" push "$SRC" "$STAGE_PATH" >/dev/null
+
+    # Verify rather than trust: a truncated 18 MB push produces a restore
+    # failure that looks like a decrypt bug, which is an expensive thing
+    # to debug from the wrong end.
+    # sha256 both sides: macOS has no md5sum, and Android's toybox
+    # sha256sum is present back to at least API 26 (verified on Android
+    # 8.0.0 and 12).
+    LOCAL_SUM=$(shasum -a 256 "$SRC" | awk '{print $1}')
+    REMOTE_SUM=$(adb -s "$SERIAL" shell "sha256sum $STAGE_PATH" | awk '{print $1}' | tr -d '\r')
+    if [[ "$LOCAL_SUM" != "$REMOTE_SUM" ]]; then
+        printf "%b\n" "${RED}ERROR: checksum mismatch after push${NC}" >&2
+        echo "  local:  $LOCAL_SUM" >&2
+        echo "  device: $REMOTE_SUM" >&2
+        exit 1
+    fi
+
+    printf "%b\n" "${GREEN}Staged and verified (sha256 $LOCAL_SUM)${NC}"
+    echo "On device: $STAGE_PATH"
+
+# Remove a staged backup blob from an Android device.
+[group('device-test')]
+[script]
+dt-unstage-backup:
+    set -euo pipefail
+    source "$(pwd)/just/device-test-lib.sh"
+
+    SERIAL=$(dt_detect_android_device)
+    STAGE_PATH="/sdcard/Android/data/app.vauchi/files/staged-pick.txt"
+    adb -s "$SERIAL" shell "rm -f $STAGE_PATH"
+    echo "Removed $STAGE_PATH from $SERIAL"
