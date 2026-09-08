@@ -671,9 +671,22 @@ release-gates:
         )
         return match.group("body") if match else ""
 
-    def release_config_failures():
+    RELEASE_STAGES = ("alpha", "beta", "release")
+
+    def release_stage(plan_text):
+        # Owner decision 2026-09-08: a distinct OHTTP operator is a
+        # first-release requirement, not an alpha or beta one. A plan with no
+        # declared stage is treated as the first release so the gate fails
+        # closed rather than silently deferring.
+        stage = first_match(
+            r"(?m)^(?:>\s*)?\**Release stage\**:\s*(alpha|beta|release)\b",
+            plan_text,
+        )
+        return stage if stage in RELEASE_STAGES else "release"
+
+    def release_config_report(stage="release"):
         if not DEPLOY_CONFIG.is_file():
-            return [f"{DEPLOY_CONFIG} is missing"]
+            return [f"{DEPLOY_CONFIG} is missing"], []
 
         deploy_text = DEPLOY_CONFIG.read_text()
         relay_block = first_match(
@@ -714,15 +727,21 @@ release-gates:
                 "OHTTP relay operator identity label app.vauchi.operator "
                 "is not declared"
             )
+        deferrals = []
         if (
             relay_operator
             and ohttp_operator
             and relay_operator == ohttp_operator
         ):
-            failures.append(
-                f"operator identities are not distinct ('{relay_operator}')"
-            )
-        return failures
+            if stage == "release":
+                failures.append(
+                    f"operator identities are not distinct ('{relay_operator}')"
+                )
+            else:
+                deferrals.append(
+                    f"one operator ('{relay_operator}') runs both hops"
+                )
+        return failures, deferrals
 
     def protocol_v2_failures(plan_text):
         failures = []
@@ -1443,7 +1462,10 @@ release-gates:
     every_linked_device_failures = (
         every_linked_device_failures() if every_linked_device_done else []
     )
-    config_failures = release_config_failures() if rg7_done else []
+    stage = release_stage(text)
+    config_failures, config_deferrals = (
+        release_config_report(stage) if rg7_done else ([], [])
+    )
     service_boundary_privacy_failures = (
         service_boundary_privacy_failures() if privacy_done else []
     )
@@ -1536,6 +1558,17 @@ release-gates:
         print(
             "      ADR-037 requires distinct OHTTP gateway and application "
             "relay operators."
+        )
+    if config_deferrals:
+        print(
+            f"\n  >>> RG-7 distinct-operator requirement deferred "
+            f"({stage} stage) <<<"
+        )
+        for deferral in config_deferrals:
+            print(f"      - {deferral}")
+        print(
+            "      Owner decision 2026-09-08: one operator runs both hops "
+            "until the first release (ADR-037 addendum 2026-09-08)."
         )
     if service_boundary_privacy_failures:
         print("\n  >>> RG-6 service-boundary privacy evidence failure <<<")
