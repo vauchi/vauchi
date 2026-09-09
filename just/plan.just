@@ -657,8 +657,8 @@ release-gates:
         Path("web-demo"),
     )
     HUMBLE_CHECKER = Path("scripts/scripts/humble_check.py")
-    HUMBLE_RULES = Path("scripts/humble_check_rules.json")
-    HUMBLE_BASELINE = Path("scripts/humble_check.baseline.json")
+    HUMBLE_RULES = Path("scripts/scripts/humble_check_rules.json")
+    HUMBLE_BASELINE = Path("scripts/scripts/humble_check.baseline.json")
 
     def first_match(pattern, text):
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)

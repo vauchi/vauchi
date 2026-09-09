@@ -209,8 +209,8 @@ class ReleaseGatesTest(unittest.TestCase):
                     ]
                 )
             )
-            (workspace / "scripts/humble_check_rules.json").write_text("{}\n")
-            (workspace / "scripts/humble_check.baseline.json").write_text("{}\n")
+            (workspace / "scripts/scripts/humble_check_rules.json").write_text("{}\n")
+            (workspace / "scripts/scripts/humble_check.baseline.json").write_text("{}\n")
             if usability_evidence is not None:
                 usability_path = (
                     workspace
