@@ -510,7 +510,8 @@ lint *args:
                     fi
                     ;;
                 gherkin) echo "  (gherkin lint: advisory only)"; return 0 ;;
-                shell)   (cd "$dir" && shellcheck scripts/*.sh 2>&1) ;;
+                shell)   (cd "$dir" && shellcheck scripts/*.sh 2>&1 \
+                            && bash scripts/check-seeded-violation-tests.sh 2>&1) ;;
                 html)    (cd "$dir" && htmlhint public/**/*.html 2>&1) ;;
                 *)       echo "  (no lint step for $tc)"; return 0 ;;
             esac

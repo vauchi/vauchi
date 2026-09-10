@@ -861,6 +861,15 @@ session-end:
         echo "         <unverified-claim|stale-state|consequence|style> [note...]"
     fi
 
+    # ── workflow accuracy: the four numbers behind the 2026-07-21 record ──
+    # (problems/2026-07-21-process-meta-churn-ratio). Observe-only here;
+    # the WIP ratchet and evidence gates enforce in check-problem-records.
+    if [[ -x scripts/scripts/workflow-accuracy-metrics.sh ]]; then
+        echo ""
+        scripts/scripts/workflow-accuracy-metrics.sh --days 30 || \
+            echo "  WARN: workflow-accuracy metrics failed (see above)"
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
         echo "── Session end: ISSUES FOUND ──"
@@ -1462,3 +1471,12 @@ shell-lint *files:
     fi
     echo ""
     echo "All shell scripts portable ✓"
+
+# The four workflow-accuracy numbers session-end prints (ledger entries
+# per 100 commits, stale active share, fix/feat ratio, already-fixed
+# closures). Evidence base: problems/2026-07-21-process-meta-churn-ratio.
+#   just workflow-metrics            # last 30 days
+#   just workflow-metrics --days 90
+[group('setup')]
+workflow-metrics *args:
+    scripts/scripts/workflow-accuracy-metrics.sh {{ args }}
