@@ -28,6 +28,8 @@ extend-exclude = [
 UDID = "UDID"
 
 [default.extend-words]
+# OpenType variable-font axis tag (width) in the Bricolage file name
+wdth = "wdth"
 # Domain-specific terms that are not typos
 udid = "udid"
 # PNGs is a valid plural of PNG (image format)
