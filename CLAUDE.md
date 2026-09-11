@@ -231,6 +231,16 @@ load cost many times over. Attribution and history:
   `just session-init` and both are covered. 6 recurrences; now
   warn-enforced as **VGT09**
   (`_private/docs/lint-errors/vgt09-session-init-receipt.md`).
+- **Hypothesis written as finding.** Verification is usually fine while
+  evidence is in reach; the break is at the blocked observation, where a
+  plausible mechanism gets written into a commit message, gate, record or
+  memory with the grammar of a fact. Chat hedging does not travel — the
+  commit does. Don't write `fix:` before the run is green; say
+  `diag:`/hypothesis and name the falsifier. With several candidates,
+  prefer one diagnostic that makes the system name the answer (tag them
+  all, print the flagged element) over testing candidates one at a time:
+  same single CI run, and it cannot be wrong about which one it was.
+  4 occurrences in one session, 2026-09-11 (macOS `test:ui`).
 - **Blocked twice or unsure → ask.** Never bypass, never third-retry —
   a question is always cheaper than the cleanup.
 - **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
