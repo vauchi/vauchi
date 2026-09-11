@@ -64,6 +64,22 @@ runners-health:
     )
     STALE_THRESHOLD=300  # 5 minutes in seconds
 
+    # Runner reads need a Maintainer-role token; the glab bot is Developer
+    # and gets 403. Resolve a read-only token: env first, then the
+    # Vaultwarden item via an unlocked bw session. Never fall back to the
+    # bot token — that would reproduce the 403 as a fake outage. Distinct
+    # from the CI-side RUNNER_HEALTH_TOKEN (api scope, probe observer).
+    VAULT_ITEM="GitLab runners-health token"
+    if [[ -z "${RUNNERS_HEALTH_READ_TOKEN:-}" && -n "${BW_SESSION:-}" ]] && command -v bw >/dev/null 2>&1; then
+        RUNNERS_HEALTH_READ_TOKEN=$(bw get password "$VAULT_ITEM" 2>/dev/null) || RUNNERS_HEALTH_READ_TOKEN=""
+    fi
+    if [[ -z "${RUNNERS_HEALTH_READ_TOKEN:-}" ]]; then
+        echo "ERROR: no runner-read token. Export RUNNERS_HEALTH_READ_TOKEN (group access token, Maintainer, read_api)"
+        echo "       or unlock Vaultwarden (BW_SESSION) so the '$VAULT_ITEM' item can be read."
+        exit 2
+    fi
+    export GITLAB_TOKEN="$RUNNERS_HEALTH_READ_TOKEN"
+
     NOW=$(date +%s)
     ALL_HEALTHY=true
 
