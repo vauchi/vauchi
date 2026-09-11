@@ -57,8 +57,8 @@ runners-health:
     # _private/docs/reference/runner-runbook.md (IDs change when a
     # runner is re-registered, e.g. after a host reinstall)
     RUNNERS=(
-        "51792534:allyson-shell:allyson"
-        "52407190:allyson-docker:allyson"
+        "55937316:allyson-shell:allyson"
+        "55937932:allyson-docker:allyson"
         "52767355:nell-shell:nell"
         "54440366:shelly-ann-arm64:shelly-ann"
     )
@@ -72,14 +72,22 @@ runners-health:
 
     for entry in "${RUNNERS[@]}"; do
         IFS=: read -r rid rname rhost <<< "$entry"
-        DATA=$(glab api "runners/$rid" 2>/dev/null || echo '{}')
+        # glab prints the API error body on stdout before exiting
+        # non-zero, so appending a fallback document would hand jq two
+        # JSON values and turn a 403/404 into a bogus "DEAD (epoch 0)".
+        if ! DATA=$(glab api "runners/$rid" 2>/dev/null); then
+            API_MESSAGE=$(printf '%s' "$DATA" | jq -r '.message // "API unreachable"' 2>/dev/null || echo "API unreachable")
+            printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "ERROR" "$API_MESSAGE"
+            ALL_HEALTHY=false
+            continue
+        fi
 
         CONTACTED=$(echo "$DATA" | jq -r '.contacted_at // "unknown"')
         ACTIVE=$(echo "$DATA" | jq -r '.active // false')
         PAUSED=$(echo "$DATA" | jq -r '.paused // false')
 
         if [[ "$CONTACTED" == "unknown" || "$CONTACTED" == "null" ]]; then
-            printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "ERROR" "API unreachable"
+            printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "ERROR" "no contacted_at in API response"
             ALL_HEALTHY=false
             continue
         fi
