@@ -647,8 +647,10 @@ pipeline-run ref='main' repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    # A refused call (403 for a token without the pipeline scope) answers
+    # with {"message": ...} and no id — say so instead of a KeyError.
     glab api "projects/${enc}/pipeline" -X POST -f "ref={{ref}}" \
-      | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"Triggered pipeline {d['id']} on {d['ref']}: {d['status']} — {d['web_url']}\")"
+      | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(f\"GitLab refused: {d.get('message', d)}\") if 'id' not in d else print(f\"Triggered pipeline {d['id']} on {d['ref']}: {d['status']} — {d['web_url']}\")"
 
 # List jobs in a pipeline. `glab ci list` has no `--pipeline` flag
 # (removed upstream) — hit the pipeline jobs API directly instead. Prints the
@@ -688,8 +690,10 @@ pipeline-retry id repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    # Same refusal shape as pipeline-run: the bot token gets 403 here, so
+    # name the refusal rather than crash on the missing id.
     glab api "projects/${enc}/pipelines/{{id}}/retry" -X POST \
-      | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"Retried pipeline {d['id']}: {d['status']} — {d['web_url']}\")"
+      | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(f\"GitLab refused: {d.get('message', d)}\") if 'id' not in d else print(f\"Retried pipeline {d['id']}: {d['status']} — {d['web_url']}\")"
 
 # Cancel a running pipeline
 [no-cd]
