@@ -1688,6 +1688,7 @@ help:
       just gitlab pipeline-status [repo]    Pipeline status (current branch)
       just gitlab pipeline-list [repo]      Recent pipelines
       just gitlab pipeline-log <id> [repo]  Job log output
+      just gitlab test-report <id> [repo]   Failed tests + assertion messages
       just gitlab pipeline-wait [repo]      Wait for pipeline to complete
       just gitlab issue-list [repo]         List open issues
       just gitlab issue-create <t> [repo]   Create issue

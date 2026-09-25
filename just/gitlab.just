@@ -667,6 +667,23 @@ pipeline-jobs id repo='':
     glab api "projects/${enc}/pipelines/{{id}}/jobs" --paginate \
       | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['id']:>10} {j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}\") for j in jobs]"
 
+# Failed test cases of a pipeline, with their assertion messages, from the
+# parsed JUnit report. Parallel xcodebuild logs name a failing test but drop
+# its XCTAssert message, and a JUnit file is not fetchable by artifact path
+# (404) — the pipeline test_report endpoint is where the message survives.
+# Covers every job's JUnit upload, allow_failure jobs (e.g. macOS test:ui)
+# included; match the class name against `pipeline-jobs` to tell which.
+[no-cd]
+[script]
+test-report id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    glab api "projects/${enc}/pipelines/{{id}}/test_report" \
+      | python3 -c "import sys,json; r=json.load(sys.stdin); failed=[c for s in r.get('test_suites',[]) for c in s.get('test_cases',[]) if c.get('status') in ('failed','error')]; print(f\"{r.get('total_count',0)} tests, {len(failed)} failed\"); [print(f\"{c.get('classname','')}.{c.get('name','')}\n  {(c.get('system_output') or '').strip()}\") for c in failed]"
+
 # View job log output
 [no-cd]
 [script]
