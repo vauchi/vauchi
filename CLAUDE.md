@@ -235,8 +235,9 @@ load cost many times over. Attribution and history:
   evidence is in reach; the break is at the blocked observation, where a
   plausible mechanism gets written into a commit message, gate, record or
   memory with the grammar of a fact. Chat hedging does not travel — the
-  commit does. Don't write `fix:` before the run is green; say
-  `diag:`/hypothesis and name the falsifier. With several candidates,
+  commit does. Don't write `fix:` before the run is green; commit as
+  `diag:` and name the theory — **VGT11** rejects a `fix:` whose
+  `Evidence:` has no observed `after:`. With several candidates,
   prefer one diagnostic that makes the system name the answer (tag them
   all, print the flagged element) over testing candidates one at a time:
   same single CI run, and it cannot be wrong about which one it was.
