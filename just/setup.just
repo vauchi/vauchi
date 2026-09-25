@@ -374,23 +374,39 @@ session-init:
 
     # ── Active claims (atomic locks on work items) ──
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
-        MY_SESSION=$(printf '%s:%s' "$(hostname -s)" "${CLAUDE_PROJECT_DIR:-$(pwd)}" | shasum -a 256 | cut -c1-12)
+        # Same id and expiry rules as `just gitlab claim` / `claims`.
+        MY_SESSION=$(printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" | shasum -a 256 | cut -c1-12)
+        CLAIM_EXPIRY_H=4
+        NOW=$(date +%s)
         CLAIMS=$(glab api "projects/vauchi%2Fprivate/repository/branches?search=claim/" 2>/dev/null \
             | tr -d '\000-\010\013-\037' \
-            | jq '[.[] | {name: .name, msg: .commit.message}]' 2>/dev/null \
+            | jq '[.[] | {name: .name, msg: .commit.message, date: .commit.committed_date}]' 2>/dev/null \
             || echo "[]")
-        CLAIM_COUNT=$(echo "$CLAIMS" | jq 'length' 2>/dev/null || echo "0")
-        if [[ "$CLAIM_COUNT" -gt 0 ]]; then
+        ACTIVE=""
+        EXPIRED=0
+        while IFS= read -r b; do
+            [[ -z "$b" ]] && continue
+            COMMITTED=$(echo "$b" | jq -r '.date')
+            COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
+                || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0") # portable-shell-ok: BSD -j -f runs first and short-circuits on macOS; -d is the GNU fallback, and `|| echo 0` bounds a mismatch to a claim reading as expired
+            AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
+            if [[ "$AGE_H" -ge "$CLAIM_EXPIRY_H" ]]; then
+                EXPIRED=$((EXPIRED + 1))
+                continue
+            fi
+            NAME=$(echo "$b" | jq -r '.name' | sed 's|^claim/||')
+            OWNER=$(echo "$b" | jq -r '.msg // ""' | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
+            MARKER=""
+            [[ "${OWNER:-}" == "$MY_SESSION" ]] && MARKER=" ← you"
+            ACTIVE+="  ⚡ $NAME (session:${OWNER:-unknown}${MARKER}, ${AGE_H}h)"$'\n'
+        done < <(echo "$CLAIMS" | jq -c '.[]' 2>/dev/null)
+        if [[ -n "$ACTIVE" ]]; then
             echo ""
             echo "ACTIVE CLAIMS (do not duplicate this work):"
-            echo "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
-                NAME=$(echo "$b" | jq -r '.name' | sed 's|^claim/||')
-                MSG=$(echo "$b" | jq -r '.msg // ""')
-                OWNER=$(echo "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
-                MARKER=""
-                [[ "${OWNER:-}" == "$MY_SESSION" ]] && MARKER=" ← you"
-                echo "  ⚡ $NAME (session:${OWNER:-unknown}${MARKER})"
-            done
+            printf '%s' "$ACTIVE"
+        fi
+        if [[ "$EXPIRED" -gt 0 ]]; then
+            echo "  ($EXPIRED expired claim(s) hidden — force-claimable; see \`just gitlab claims\`)"
         fi
     fi
 

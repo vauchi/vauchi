@@ -1038,19 +1038,24 @@ published:
 # ── Work item claims (atomic lock via GitLab branch creation) ──
 #
 # Prevents duplicate work when multiple sessions pick up the same
-# work board item. Branch creation is atomic on the server — two
-# workers racing to create the same branch get one 201 and one 409.
+# work board item. Branch creation is atomic on the server — of two
+# workers racing to create the same branch, exactly one succeeds; the
+# loser's status code is not pinned here, so any failure is a lost race.
 #
 # Claims auto-expire after 4 hours (stale claims can be force-claimed).
 # The lock repo is _private (vauchi/private on GitLab).
+# Refusals are appended to _private/docs/claim-collisions.md so the
+# collision rate is measured, not guessed (ADR-073 revisit input).
 
 _claim_repo := "vauchi%2Fprivate"
 _claim_prefix := "claim/"
 _claim_expiry_hours := "4"
+_claim_log := "_private/docs/claim-collisions.md"
 
-# Session ID: deterministic hash of hostname + workspace path.
-# Same workspace = same ID. Different worktrees/machines = different IDs.
-_session_id := `printf '%s:%s' "$(hostname -s)" "${CLAUDE_PROJECT_DIR:-$(pwd)}" | shasum -a 256 | cut -c1-12`
+# Session ID: hash of the harness session id when one exists, because
+# hostname + workspace path is identical for parallel sessions in one
+# checkout. VAUCHI_SESSION_ID lets Codex/Kimi wrappers supply their own.
+_session_id := `printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" | shasum -a 256 | cut -c1-12`
 
 # Claim a work item (atomic). Fails if already claimed by another session.
 # Idempotent: re-claiming your own item succeeds silently.
@@ -1088,11 +1093,12 @@ claim slug:
         else
             echo "BLOCKED: '$SLUG' claimed by session:${OWNER:-unknown} (${AGE_H}h ago)"
             echo "Wait for release, or force-claim after ${EXPIRY_H}h."
+            printf -- '- %s | %s | held-by-other | %sh\n' "$(date -u +%Y-%m-%d)" "$SLUG" "$AGE_H" >> "{{ _claim_log }}"
             exit 1
         fi
     fi
 
-    # Atomic create — races here: loser gets 400 "Branch already exists"
+    # Atomic create — the race is decided here, server-side
     if RESULT=$(glab api -X POST "projects/${REPO}/repository/branches" \
         -f branch="$BRANCH" -f ref="main" 2>&1); then
         # Stamp with session ID via a commit on the claim branch
@@ -1103,7 +1109,13 @@ claim slug:
         }' | glab api -X POST "projects/${REPO}/repository/commits" --input - &>/dev/null || true
         echo "✓ Claimed '$SLUG' (session:$SESSION)"
     else
-        echo "BLOCKED: '$SLUG' was just claimed by another session (race lost)"
+        if echo "$RESULT" | grep -qi 'already exists'; then
+            echo "BLOCKED: '$SLUG' was just claimed by another session (race lost)"
+            printf -- '- %s | %s | race-lost | 0h\n' "$(date -u +%Y-%m-%d)" "$SLUG" >> "{{ _claim_log }}"
+        else
+            echo "ERROR: could not create claim branch for '$SLUG':" >&2
+            echo "$RESULT" >&2
+        fi
         exit 1
     fi
 
