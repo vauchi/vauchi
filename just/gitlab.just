@@ -1044,13 +1044,13 @@ published:
 #
 # Claims auto-expire after 4 hours (stale claims can be force-claimed).
 # The lock repo is _private (vauchi/private on GitLab).
-# Refusals are appended to _private/docs/claim-collisions.md so the
+# Refusals are appended to _private/docs/2026-09-25-claim-collisions.md so the
 # collision rate is measured, not guessed (ADR-073 revisit input).
 
 _claim_repo := "vauchi%2Fprivate"
 _claim_prefix := "claim/"
 _claim_expiry_hours := "4"
-_claim_log := "_private/docs/claim-collisions.md"
+_claim_log := "_private/docs/2026-09-25-claim-collisions.md"
 
 # Session ID: hash of the harness session id when one exists, because
 # hostname + workspace path is identical for parallel sessions in one
