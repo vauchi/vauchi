@@ -40,6 +40,14 @@ session-init:
     source just/slot-lib.sh
     slot_acquire . || WARN=1
     slot_status . | sed 's/^/  /'
+    STRAY_WORKTREES=$(slot_linked_worktrees .)
+    if [[ -n "$STRAY_WORKTREES" ]]; then
+        echo "  LINKED WORKTREES (slots replaced them — they may hold work; merge, then remove):"
+        while read -r wt_repo wt_path wt_branch wt_dirty; do
+            echo "    $wt_repo ($wt_branch) $wt_path — $wt_dirty uncommitted"
+        done <<< "$STRAY_WORKTREES"
+        WARN=1
+    fi
 
     # Pull scripts repo (hooks, CI templates)
     echo ""
@@ -883,6 +891,25 @@ session-end:
         echo "         <authoring|retry|review|wait>"
         echo "         <prevented-defect|mechanical|false-positive>"
         echo "         <unverified-claim|stale-state|consequence|style> [note...]"
+    fi
+
+    # ── linked worktrees: slots replaced them, and work in one is invisible
+    # to the uncommitted/unpushed checks above ──
+    source just/slot-lib.sh
+    echo ""
+    echo "── linked worktrees ──"
+    STRAY_WORKTREES=$(slot_linked_worktrees .)
+    if [[ -z "$STRAY_WORKTREES" ]]; then
+        echo "  None"
+    else
+        while read -r wt_repo wt_path wt_branch wt_dirty; do
+            if [[ "$wt_dirty" -gt 0 ]]; then
+                echo "  ERROR: $wt_repo ($wt_branch) at $wt_path has $wt_dirty uncommitted file(s)"
+                ERRORS=1
+            else
+                echo "  WARN: $wt_repo ($wt_branch) at $wt_path — git -C $wt_repo worktree remove $wt_path"
+            fi
+        done <<< "$STRAY_WORKTREES"
     fi
 
     # ── workflow accuracy: the four numbers behind the 2026-07-21 record ──

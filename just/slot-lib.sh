@@ -146,3 +146,32 @@ slot_claim_owner() {
     slot=$(printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._-]+' | cut -d: -f2 || true)
     printf '%s%s\n' "${session:-unknown}" "${slot:+ @$slot}"
 }
+
+# "<repo> <path> <branch> <dirty-count>" for every linked worktree of the
+# slot's repos. Slots replaced worktrees, so any found here is stray — made
+# by hand or by a harness's own isolation — and may hold unsaved work.
+slot_linked_worktrees() {
+    local root="$1" repository main_path line path="" branch=""
+    while IFS= read -r repository; do
+        main_path=$(cd "$repository" && pwd -P)
+        while IFS= read -r line; do
+            case "$line" in
+                "worktree "*) path=${line#worktree } ;;
+                "branch "*) branch=${line#branch refs/heads/} ;;
+                "")
+                    if [[ -n "$path" && "$path" != "$main_path" ]]; then
+                        printf '%s %s %s %s\n' "$(basename "$repository")" "$path" "${branch:-detached}" \
+                            "$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+                    fi
+                    path=""
+                    branch=""
+                    ;;
+            esac
+        done <<LIST
+$(git -C "$repository" worktree list --porcelain 2>/dev/null)
+
+LIST
+    done <<REPOS
+$(slot_repositories "$root")
+REPOS
+}
