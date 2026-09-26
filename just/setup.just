@@ -34,6 +34,13 @@ session-init:
     echo "── Session init ──"
     WARN=0
 
+    # ── Workspace slot: one session per full workspace clone ──
+    echo ""
+    echo "── slot ──"
+    source just/slot-lib.sh
+    slot_acquire . || WARN=1
+    slot_status . | sed 's/^/  /'
+
     # Pull scripts repo (hooks, CI templates)
     echo ""
     echo "── scripts ──"
@@ -398,7 +405,8 @@ session-init:
             OWNER=$(echo "$b" | jq -r '.msg // ""' | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
             MARKER=""
             [[ "${OWNER:-}" == "$MY_SESSION" ]] && MARKER=" ← you"
-            ACTIVE+="  ⚡ $NAME (session:${OWNER:-unknown}${MARKER}, ${AGE_H}h)"$'\n'
+            HOLDER=$(slot_claim_owner "$(echo "$b" | jq -r '.msg // ""')")
+            ACTIVE+="  ⚡ $NAME (session:${HOLDER}${MARKER}, ${AGE_H}h)"$'\n'
         done < <(echo "$CLAIMS" | jq -c '.[]' 2>/dev/null)
         if [[ -n "$ACTIVE" ]]; then
             echo ""
@@ -895,6 +903,8 @@ session-end:
         echo "  No MR              → just gitlab mr-create <repo>"
         exit 1
     else
+        source just/slot-lib.sh
+        slot_release .
         echo "── Session end: all clear ──"
     fi
 

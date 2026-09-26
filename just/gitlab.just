@@ -1090,16 +1090,16 @@ claim slug:
 
     # Check for existing claim
     EXISTING=$(glab api "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" 2>/dev/null || true)
-    if echo "$EXISTING" | jq -e '.name' &>/dev/null; then
+    if printf '%s\n' "$EXISTING" | jq -e '.name' &>/dev/null; then
         # Branch exists — check owner via commit message
-        CLAIM_MSG=$(echo "$EXISTING" | tr -d '\000-\010\013-\037' | jq -r '.commit.message // ""')
-        OWNER=$(echo "$CLAIM_MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
+        CLAIM_MSG=$(printf '%s\n' "$EXISTING" | tr -d '\000-\010\013-\037' | jq -r '.commit.message // ""')
+        OWNER=$(printf '%s\n' "$CLAIM_MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
         if [[ "$OWNER" == "$SESSION" ]]; then
             echo "✓ Already claimed by this session ($SESSION)"
             exit 0
         fi
         # Check if stale
-        COMMITTED=$(echo "$EXISTING" | jq -r '.commit.committed_date')
+        COMMITTED=$(printf '%s\n' "$EXISTING" | jq -r '.commit.committed_date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
             || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0") # portable-shell-ok: BSD -j -f runs first and short-circuits on macOS; -d is the GNU fallback, and `|| echo 0` bounds a mismatch to a claim reading as stale
         NOW=$(date +%s)
@@ -1115,18 +1115,22 @@ claim slug:
         fi
     fi
 
+    # Tag before the branch exists, so a claim is never left unstamped
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    TAG=$(slot_claim_tag "{{ justfile_directory() }}")
+
     # Atomic create — the race is decided here, server-side
     if RESULT=$(glab api -X POST "projects/${REPO}/repository/branches" \
         -f branch="$BRANCH" -f ref="main" 2>&1); then
-        # Stamp with session ID via a commit on the claim branch
-        jq -n --arg br "$BRANCH" --arg sid "$SESSION" --arg slug "$SLUG" '{
+        # Stamp session and slot via a commit on the claim branch
+        jq -n --arg br "$BRANCH" --arg tag "$TAG" --arg slug "$SLUG" '{
             branch: $br,
-            commit_message: ("claim: " + $slug + " session:" + $sid),
-            actions: [{action:"create", file_path:".claim", content:("session:" + $sid + "\n")}]
+            commit_message: ("claim: " + $slug + " " + $tag),
+            actions: [{action:"create", file_path:".claim", content:($tag + "\n")}]
         }' | glab api -X POST "projects/${REPO}/repository/commits" --input - &>/dev/null || true
-        echo "✓ Claimed '$SLUG' (session:$SESSION)"
+        echo "✓ Claimed '$SLUG' ($TAG)"
     else
-        if echo "$RESULT" | grep -qi 'already exists'; then
+        if printf '%s\n' "$RESULT" | grep -qi 'already exists'; then
             echo "BLOCKED: '$SLUG' was just claimed by another session (race lost)"
             printf -- '- %s | %s | race-lost | 0h\n' "$(date -u +%Y-%m-%d)" "$SLUG" >> "{{ _claim_log }}"
         else
@@ -1168,18 +1172,19 @@ claims:
         | tr -d '\000-\010\013-\037' \
         | jq '[.[] | {name: .name, msg: .commit.message, date: .commit.committed_date}]' 2>/dev/null \
         || echo "[]")
-    COUNT=$(echo "$CLAIMS" | jq 'length')
+    COUNT=$(printf '%s\n' "$CLAIMS" | jq 'length')
     if [[ "$COUNT" == "0" ]]; then
         echo "  (no active claims)"
         exit 0
     fi
-    printf "%-25s %-14s %s\n" "ITEM" "SESSION" "AGE"
-    printf "%-25s %-14s %s\n" "─────────────────────────" "──────────────" "───"
-    echo "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
-        NAME=$(echo "$b" | jq -r '.name' | sed "s|^${PREFIX}||")
-        MSG=$(echo "$b" | jq -r '.msg // ""')
-        OWNER=$(echo "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
-        COMMITTED=$(echo "$b" | jq -r '.date')
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    printf "%-25s %-24s %s\n" "ITEM" "SESSION @SLOT" "AGE"
+    printf "%-25s %-24s %s\n" "─────────────────────────" "────────────────────────" "───"
+    printf '%s\n' "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
+        NAME=$(printf '%s\n' "$b" | jq -r '.name' | sed "s|^${PREFIX}||")
+        MSG=$(printf '%s\n' "$b" | jq -r '.msg // ""')
+        OWNER=$(printf '%s\n' "$MSG" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
+        COMMITTED=$(printf '%s\n' "$b" | jq -r '.date')
         COMMIT_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${COMMITTED%%.*}" +%s 2>/dev/null \
             || date -d "${COMMITTED}" +%s 2>/dev/null || echo "0") # portable-shell-ok: BSD -j -f runs first and short-circuits on macOS; -d is the GNU fallback, and `|| echo 0` bounds a mismatch to a claim reading as stale
         AGE_H=$(( (NOW - COMMIT_EPOCH) / 3600 ))
@@ -1187,5 +1192,5 @@ claims:
         [[ "$AGE_H" -ge "$EXPIRY_H" ]] && STALE=" (STALE)"
         MARKER=""
         [[ "${OWNER:-}" == "$SESSION" ]] && MARKER=" (you)"
-        printf "%-25s %-14s %s\n" "$NAME" "${OWNER:-unknown}${MARKER}" "${AGE_H}h${STALE}"
+        printf "%-25s %-24s %s\n" "$NAME" "$(slot_claim_owner "$MSG")${MARKER}" "${AGE_H}h${STALE}"
     done

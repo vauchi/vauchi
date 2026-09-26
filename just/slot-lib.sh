@@ -67,7 +67,9 @@ slot_free_names() {
         case "$(slot_lock_state "$slot")" in
             free* | stale*) names+=("$(basename "$slot")") ;;
         esac
-    done < <(slot_siblings "$1")
+    done <<EOF
+$(slot_siblings "$1")
+EOF
     echo "${names[*]:-none}"
 }
 
@@ -123,9 +125,13 @@ slot_status() {
             branch=$(git -C "$repository" branch --show-current 2>/dev/null || true)
             [[ -n "$branch" && "$branch" != main ]] && off=$((off + 1))
             [[ -n "$(git -C "$repository" status --porcelain 2>/dev/null)" ]] && dirty=$((dirty + 1))
-        done < <(slot_repositories "$slot")
+        done <<EOF
+$(slot_repositories "$slot")
+EOF
         printf '%-12s %s — %d off main, %d dirty\n' "$(basename "$slot")" "$lock" "$off" "$dirty"
-    done < <(slot_siblings "$1")
+    done <<EOF
+$(slot_siblings "$1")
+EOF
 }
 
 # Claim stamp shared by `just gitlab claim` and the claim listings.
