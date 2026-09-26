@@ -172,6 +172,26 @@ class SlotRecipeTest(unittest.TestCase):
 
         self.assertIn("Slot vauchi-2 held", output)
 
+    def test_session_id_needs_no_shasum(self) -> None:
+        # alpine:3.21 (CI) ships sha256sum but no shasum.
+        no_shasum = self.parent / "no-shasum"
+        no_shasum.mkdir()
+        (no_shasum / "shasum").write_text("#!/bin/sh\nexit 127\n")
+        (no_shasum / "shasum").chmod(0o755)
+        library = WORKSPACE_ROOT / "just/slot-lib.sh"
+        environment = {
+            **os.environ,
+            "VAUCHI_SESSION_ID": "codex-a",
+            "PATH": f"{no_shasum}:{os.environ['PATH']}",
+        }
+
+        session = subprocess.run(
+            ["bash", "-c", f'source "{library}"; slot_session_id'],
+            env=environment, check=True, capture_output=True, text=True,
+        ).stdout.strip()
+
+        self.assertRegex(session, r"^[0-9a-f]{12}$")
+
 
 if __name__ == "__main__":
     unittest.main()
