@@ -211,7 +211,9 @@ class IssueClaimTest(unittest.TestCase):
         subprocess.run([*git, "push", "--quiet", "origin", "HEAD:main"], check=True)
         subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
         if unmerged:
-            subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "work"], check=True)
+            (core / "work.txt").write_text("work\n")
+            subprocess.run([*git, "add", "work.txt"], check=True)
+            subprocess.run([*git, "commit", "--quiet", "-m", "work"], check=True)
         subprocess.run([*git, "push", "--quiet", "origin", f"issue/{number}"], check=True)
         return remote
 
@@ -228,6 +230,22 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("issue/7", self.remote_branches(remote))
         self.assertIn("core", result.stdout)
+
+    def test_release_treats_a_rebase_merged_sibling_branch_as_merged(self) -> None:
+        remote = self.sibling_with_issue_branch(7, unmerged=True)
+        core = self.slot / "core"
+        git = ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e"]
+        # GitLab rebases on merge: main gets the same change under a new hash.
+        subprocess.run([*git, "switch", "--quiet", "main"], check=True)
+        subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "other work on main"], check=True)
+        subprocess.run([*git, "cherry-pick", "issue/7"], check=True, capture_output=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.remote_branches(remote))
 
     def test_release_refuses_while_a_sibling_issue_branch_holds_work(self) -> None:
         remote = self.sibling_with_issue_branch(7, unmerged=True)
