@@ -182,6 +182,8 @@ class WorktreeRecipeTest(unittest.TestCase):
                 str((root / "_private").resolve()),
             )
             self.assertEqual((root / ".claude").read_text(), "base\n")
+            self.assertIn("Work in:  .worktrees/fix--nested/\n", result.stdout)
+            self.assertNotIn("<repo>", result.stdout)
 
     def test_list_shows_only_repositories_of_a_nested_root_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
