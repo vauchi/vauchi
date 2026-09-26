@@ -188,19 +188,52 @@ issue_comment_respond() {
 
 # Open issues by priority, marking the claimed ones: one issue listing and
 # one branch listing, never a per-issue call (ADR-073 consequence).
+# Group-board columns in lifecycle order (ADR-073 §Decision 13).
+ISSUE_BOARD_COLUMNS="backlog deferred intake refreshing investigating select-solution planning implementing review testing blocked"
+
+# Every open issue as {iid, title, priority, status, rank, blocked}, sorted by
+# priority. Paginated: the backlog alone is over 100 issues.
+_issue_open_issues() {
+    glab api "projects/$ISSUE_REPO/issues?state=opened&per_page=100" --paginate | jq -s '
+        def with_prefix($prefix): map(select(startswith($prefix)) | sub($prefix; ""))[0];
+        add // [] | map({iid, title,
+            priority: (.labels | with_prefix("priority::") // "-"),
+            status: (.labels | with_prefix("status::") // "intake"),
+            blocked: (.labels | index("blocked") != null)})
+        | map(.rank = ({"critical": 0, "high": 1, "medium": 2, "low": 3}[.priority] // 4))
+        | sort_by(.rank, .iid)'
+}
+
 issue_queue() {
     local claimed
     claimed=$(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
         | jq -r '[.[].name | sub("^issue/"; "")] | join(" ")')
-    glab api "projects/$ISSUE_REPO/issues?state=opened&per_page=100" | jq -r --arg claimed " $claimed " '
-        def rank: (map(select(startswith("priority::")) | sub("priority::"; ""))[0] // "none") as $p
-            | {"critical": 0, "high": 1, "medium": 2, "low": 3}[$p] // 4;
-        map(.iid as $number | {iid, title, labels, rank: (.labels | rank),
-             priority: ((.labels | map(select(startswith("priority::")) | sub("priority::"; "")))[0] // "-"),
-             blocked: (.labels | index("blocked") != null),
-             claimed: ($claimed | contains(" \($number) "))})
-        | sort_by(.rank, .iid)[]
-        | "  #\(.iid)\t\(.priority)\t\(if .claimed then "[claimed] " else "" end)\(if .blocked then "[blocked] " else "" end)\(.title)"'
+    _issue_open_issues | jq -r --arg claimed " $claimed " '
+        def row: "  #\(.iid)\t\(.priority)\t\(if .claimed then "[claimed] " else "" end)\(if .blocked then "[blocked] " else "" end)\(.status)\t\(.title)";
+        def section($title; $items): if ($items | length) > 0 then "  \($title)", ($items[] | row) else empty end;
+        map(.iid as $number | .claimed = ($claimed | contains(" \($number) "))) as $all
+        | ["backlog", "deferred"] as $shelf
+        | ["intake", "refreshing", "investigating", "planning"] as $agents
+        | ["select-solution", "review"] as $maintainer
+        | section("ready for agents"; [$all[] | select(.status as $s | $agents | index($s))]),
+          section("waiting on maintainer"; [$all[] | select(.status as $s | $maintainer | index($s))]),
+          section("in flight"; [$all[] | select(.status as $s | ($shelf + $agents + $maintainer) | index($s) | not)]),
+          "  (\([$all[] | select(.status == "backlog")] | length) backlog, \([$all[] | select(.status == "deferred")] | length) deferred — just gitlab board)"'
+}
+
+# The group board in the terminal: one section per non-empty column. Backlog
+# and deferred show only their count unless called with "all".
+issue_board() {
+    local fold=1
+    [[ "${1:-}" == "all" ]] && fold=0
+    _issue_open_issues | jq -r --arg columns "$ISSUE_BOARD_COLUMNS" --argjson fold "$fold" '
+        . as $all | ($columns | split(" ")) as $order
+        | ($order + ([$all[].status] | unique | map(select(. as $s | $order | index($s) | not))))[]
+        | . as $column | [$all[] | select(.status == $column)] as $items
+        | select($items | length > 0)
+        | "── \($column) (\($items | length)) ──",
+          (if $fold == 1 and ($column == "backlog" or $column == "deferred") then empty
+           else $items[] | "  #\(.iid)\t\(.priority)\t\(.title)" end)'
 }
 
 # Current issue claims with their holder: one note query per claimed issue,

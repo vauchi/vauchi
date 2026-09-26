@@ -843,6 +843,16 @@ issue-close id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue close "{{id}}" -R "$p"
 
+# Kanban board in the terminal: one section per derived status (ADR-073). Pass "all" to list backlog/deferred items
+[no-cd]
+[script]
+board mode='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    issue_board "{{mode}}"
+
 # Comment on an issue, signed with this session and slot
 [no-cd]
 [script]
