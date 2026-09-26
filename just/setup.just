@@ -430,6 +430,15 @@ session-init:
         fi
     fi
 
+    # ── Issue queue (ADR-073): the work queue lives in vauchi/private issues ──
+    if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+        source just/issue-lib.sh
+        echo ""
+        echo "── issues (vauchi/private — claim with: just gitlab claim <N>) ──"
+        ISSUE_QUEUE=$(issue_queue 2>/dev/null || true)
+        printf '%s\n' "${ISSUE_QUEUE:-  (no open issues)}"
+    fi
+
     # ── Work board ──
     echo ""
     echo "── work board ──"

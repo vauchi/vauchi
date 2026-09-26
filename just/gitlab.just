@@ -1083,6 +1083,17 @@ claim slug:
     just gitlab _check-auth
     set -euo pipefail
     SLUG="{{ slug }}"
+    # An issue number (12 or #12) claims issue #N (ADR-073); a slug is a
+    # legacy claim/<slug> branch.
+    case "${SLUG#\#}" in
+        ''|*[!0-9]*) ;;
+        *)
+            source "{{ justfile_directory() }}/just/slot-lib.sh"
+            source "{{ justfile_directory() }}/just/issue-lib.sh"
+            ISSUE_CLAIM_LOG="{{ _claim_log }}" issue_claim "${SLUG#\#}"
+            exit $?
+            ;;
+    esac
     BRANCH="{{ _claim_prefix }}${SLUG}"
     REPO="{{ _claim_repo }}"
     EXPIRY_H="{{ _claim_expiry_hours }}"
@@ -1148,6 +1159,17 @@ release slug:
     just gitlab _check-auth
     set -euo pipefail
     SLUG="{{ slug }}"
+    # An issue number (12 or #12) claims issue #N (ADR-073); a slug is a
+    # legacy claim/<slug> branch.
+    case "${SLUG#\#}" in
+        ''|*[!0-9]*) ;;
+        *)
+            source "{{ justfile_directory() }}/just/slot-lib.sh"
+            source "{{ justfile_directory() }}/just/issue-lib.sh"
+            ISSUE_CLAIM_LOG="{{ _claim_log }}" issue_release "${SLUG#\#}"
+            exit $?
+            ;;
+    esac
     BRANCH="{{ _claim_prefix }}${SLUG}"
     REPO="{{ _claim_repo }}"
     glab api -X DELETE "projects/${REPO}/repository/branches/${BRANCH//\//%2F}" &>/dev/null \
@@ -1173,8 +1195,15 @@ claims:
         | jq '[.[] | {name: .name, msg: .commit.message, date: .commit.committed_date}]' 2>/dev/null \
         || echo "[]")
     COUNT=$(printf '%s\n' "$CLAIMS" | jq 'length')
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    echo "ISSUE CLAIMS (issue/<N> branches in vauchi/private):"
+    ISSUE_CLAIMS=$(issue_claims)
+    printf '%s\n' "${ISSUE_CLAIMS:-  (none)}"
+    echo ""
+    echo "LEGACY CLAIMS (claim/<slug>):"
     if [[ "$COUNT" == "0" ]]; then
-        echo "  (no active claims)"
+        echo "  (none)"
         exit 0
     fi
     source "{{ justfile_directory() }}/just/slot-lib.sh"
