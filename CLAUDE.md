@@ -150,10 +150,10 @@ phases).
 
 | Crate | Consumers | Notes |
 |-------|-----------|-------|
-| `vauchi-core` | cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo | Git dep, `branch = "main"` |
+| `vauchi-core` | cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo | Git dep pinned to a release tag (`tag` + exact `version`); bump per consumer |
 | `vauchi-platform` | ios, macos, android | UniFFI bindings (SPM via vauchi-platform-swift; Maven AAR from core) |
 | `vauchi-cabi` | linux-qt, windows | C ABI exports |
-| `vauchi-protocol` | relay | Shared types only (serde) |
+| `vauchi-protocol` | relay | Shared types only (serde); git dep, `branch = "main"` |
 
 Local dev uses `[patch]` blocks injected into each consumer's
 `Cargo.toml` by `just setup-path-overrides`; `just check-path-overrides`
