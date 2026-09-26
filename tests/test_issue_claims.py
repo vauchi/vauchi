@@ -305,6 +305,30 @@ class IssueClaimTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(self.load()["notes"].get("7", []), [])
 
+    def test_closing_keywords_before_an_issue_reference_are_detected(self) -> None:
+        # GitLab closes these issues on merge, bypassing the status sync (#70).
+        closing = [
+            "docs: close #14 — alert delivery proven end to end",
+            "Fixes #7",
+            "resolved vauchi/private#58",
+            "Implements: #3 and more",
+            "closing issue #12",
+        ]
+        harmless = [
+            "docs: Uptime-Kuma notifies via ntfy (#14)",
+            "refs vauchi/private#58",
+            "close the gap described in #14",
+            "no issue here",
+        ]
+        for text in closing + harmless:
+            with self.subTest(text=text):
+                result = self.run_lib(f"issue_closing_reference {json.dumps(text)}", "codex-a")
+                if text in closing:
+                    self.assertEqual(result.returncode, 0, text)
+                    self.assertIn("#", result.stdout)
+                else:
+                    self.assertEqual(result.returncode, 1, result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
