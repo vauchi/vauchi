@@ -36,6 +36,13 @@ class SlotRecipeTest(unittest.TestCase):
                 ["git", "init", "--quiet", "--initial-branch=main", str(repository)],
                 check=True,
             )
+        (slot / ".gitignore").write_text("/core/\n/.slot.lock\n")
+        subprocess.run(["git", "-C", str(slot), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(slot), "-c", "user.name=t", "-c", "user.email=t@e",
+             "commit", "--quiet", "-m", "slot"],
+            check=True,
+        )
         return slot
 
     def just(
@@ -70,7 +77,7 @@ class SlotRecipeTest(unittest.TestCase):
     def test_acquire_marks_the_slot_as_held_by_this_session(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
 
-        self.assertTrue(self.status_rows("codex-a")["vauchi-1"].startswith("held by you (codex)"))
+        self.assertTrue(self.status_rows("codex-a")["vauchi-1"].startswith("held by you (codex,"))
         self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by codex"))
 
     def test_a_second_session_is_refused_and_pointed_at_a_free_slot(self) -> None:
@@ -93,7 +100,7 @@ class SlotRecipeTest(unittest.TestCase):
         result = self.just("vauchi-1", "acquire", session="kimi-b")
 
         self.assertIn("stale", result.stdout)
-        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by you (kimi)"))
+        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by you (kimi,"))
 
     def test_only_the_holder_releases(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")

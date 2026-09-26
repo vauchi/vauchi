@@ -66,6 +66,9 @@ mod gitlab 'just/gitlab.just'
 [doc('Git worktree management for parallel development')]
 mod worktree 'just/worktree.just'
 
+[doc('Workspace slots — one session per full workspace clone')]
+mod slot 'just/slot.just'
+
 [doc('Launch Codex/Kimi with their own claim session id')]
 mod harness 'just/harness.just'
 

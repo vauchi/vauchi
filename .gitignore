@@ -37,6 +37,7 @@
 # Ignore generated/cache directories
 # ===========================================
 /.worktrees/
+/.slot.lock
 /.branch-name
 /.superpowers/
 /data/
