@@ -6,7 +6,8 @@
 # Worktrees let you work on multiple branches simultaneously without switching
 # Usage: just worktree <recipe>
 #
-# Directory structure: .worktrees/<flat-name>/<repo>/
+# Directory structure: .worktrees/<flat-name>/<repo>/ — with root among the
+# repos, root is .worktrees/<flat-name>/ itself and the others nest inside it.
 # Branch names are flattened: bugfix/crash-fix → bugfix--crash-fix
 
 [group('tests')]
