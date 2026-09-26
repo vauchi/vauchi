@@ -61,7 +61,9 @@ class WorktreeRecipeTest(unittest.TestCase):
         (scripts / "for-each-repo.sh").write_text("for_each_repo() { :; }\n")
         return seed, checkout
 
-    def run_create(self, checkout: Path, branch: str) -> subprocess.CompletedProcess[str]:
+    def run_create(
+        self, checkout: Path, branch: str, *repositories: str
+    ) -> subprocess.CompletedProcess[str]:
         module = checkout / "worktree.just"
         shutil.copyfile(WORKTREE_JUSTFILE, module)
         wrapper = checkout / "justfile"
@@ -74,7 +76,7 @@ class WorktreeRecipeTest(unittest.TestCase):
                 "worktree",
                 "create",
                 branch,
-                "root",
+                *(repositories or ("root",)),
             ],
             cwd=checkout,
             check=False,
@@ -100,7 +102,7 @@ class WorktreeRecipeTest(unittest.TestCase):
             result = self.run_create(checkout, "fix/new-work")
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            created = checkout / ".worktrees/fix--new-work/root"
+            created = checkout / ".worktrees/fix--new-work"
             self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_main)
 
     def test_script_recipes_select_bash_explicitly(self) -> None:
@@ -124,7 +126,7 @@ class WorktreeRecipeTest(unittest.TestCase):
             result = self.run_create(checkout, "fix/existing-work")
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            created = checkout / ".worktrees/fix--existing-work/root"
+            created = checkout / ".worktrees/fix--existing-work"
             self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_head)
 
     def test_remote_only_branch_is_attached_without_diverging(self) -> None:
@@ -140,8 +142,32 @@ class WorktreeRecipeTest(unittest.TestCase):
             result = self.run_create(checkout, "fix/remote-work")
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            created = checkout / ".worktrees/fix--remote-work/root"
+            created = checkout / ".worktrees/fix--remote-work"
             self.assertEqual(self.git(created, "rev-parse", "HEAD"), expected_head)
+
+    def test_root_worktree_nests_repos_so_workspace_links_resolve(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            seed, checkout = self.create_fixture(Path(temporary_directory))
+            subprocess.run(
+                ["git", "clone", "--quiet", str(Path(temporary_directory) / "remote.git"),
+                 str(checkout / "_private")],
+                check=True,
+            )
+            (seed / ".claude").symlink_to("_private/history.txt")
+            self.git(seed, "add", ".claude")
+            self.git(seed, "commit", "-m", "link into the nested repo")
+            self.git(seed, "push", "origin", "main")
+
+            result = self.run_create(checkout, "fix/nested", "root", "_private")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            root = checkout / ".worktrees/fix--nested"
+            self.assertEqual(self.git(root, "rev-parse", "--show-toplevel"), str(root.resolve()))
+            self.assertEqual(
+                self.git(root / "_private", "rev-parse", "--show-toplevel"),
+                str((root / "_private").resolve()),
+            )
+            self.assertEqual((root / ".claude").read_text(), "base\n")
 
 
 if __name__ == "__main__":
