@@ -46,12 +46,27 @@ if parts[2] == "issues" and len(parts) == 3:
 if parts[2] == "issues" and len(parts) == 4:
     issue = state["issues"].get(parts[3])
     out(issue) if issue else fail("404 Not found")
+def new_note(issue, body):
+    note = {"id": 1000 + sum(len(n) for n in state["notes"].values()), "body": body,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())}
+    state["notes"].setdefault(issue, []).append(note)
+    return note
+
+if parts[2] == "issues" and parts[4] == "discussions":
+    discussions = state.setdefault("discussions", {}).setdefault(parts[3], [])
+    if method == "POST" and len(parts) == 7:
+        thread = next((d for d in discussions if d["id"] == parts[5]), None)
+        if thread is None:
+            fail("404 Discussion Not Found")
+        note = new_note(parts[3], fields["body"]); thread["notes"].append(note); out(note)
+    out(discussions)
 if parts[2] == "issues" and parts[4] == "notes":
-    notes = state["notes"].setdefault(parts[3], [])
     if method == "POST":
-        note = {"body": fields["body"], "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())}
-        notes.append(note); out(note)
-    out(list(reversed(notes)))
+        note = new_note(parts[3], fields["body"])
+        state.setdefault("discussions", {}).setdefault(parts[3], []).append(
+            {"id": "thread-%d" % note["id"], "notes": [note]})
+        out(note)
+    out(list(reversed(state["notes"].setdefault(parts[3], []))))
 if parts[2] == "repository" and parts[3] == "branches":
     if method == "POST":
         name = fields["branch"]
@@ -236,6 +251,41 @@ class IssueClaimTest(unittest.TestCase):
         self.assertIn("#9", rows[1])
         self.assertIn("claimed", rows[1])
         self.assertFalse(any("#3" in row for row in rows))
+
+    def test_comment_posts_the_body_signed_with_session_and_slot(self) -> None:
+        result = self.run_lib("issue_comment 7 'Merged in !12.'", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        note = self.load()["notes"]["7"][-1]
+        self.assertRegex(note["body"], r"^Merged in !12\.\n\n— session:[0-9a-f]{12} slot:[^ ]+/vauchi-1$")
+        self.assertIn(f"note {note['id']}", result.stdout)
+
+    def test_comment_refuses_an_empty_body(self) -> None:
+        for body in ("''", "'   '"):
+            with self.subTest(body=body):
+                result = self.run_lib(f"issue_comment 7 {body}", "codex-a")
+
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(self.load()["notes"].get("7", []), [])
+
+    def test_respond_replies_in_the_thread_of_the_named_note(self) -> None:
+        self.run_lib("issue_comment 7 'Is the relay fixed?'", "kimi-b", check=True)
+        question = self.load()["notes"]["7"][-1]
+
+        result = self.run_lib(f"issue_comment_respond 7 {question['id']} 'Yes, in !12.'", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        thread = self.load()["discussions"]["7"][0]
+        self.assertEqual(thread["notes"][0]["id"], question["id"])
+        self.assertTrue(thread["notes"][-1]["body"].startswith("Yes, in !12.\n\n— session:"))
+
+    def test_respond_to_an_unknown_note_fails_and_posts_nothing(self) -> None:
+        for note in ("424242", "not-a-number"):
+            with self.subTest(note=note):
+                result = self.run_lib(f"issue_comment_respond 7 {note} 'Reply'", "codex-a")
+
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(self.load()["notes"].get("7", []), [])
 
 
 if __name__ == "__main__":
