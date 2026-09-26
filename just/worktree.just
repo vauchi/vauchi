@@ -122,10 +122,16 @@ create name *repos='':
     if [[ ${#created[@]} -gt 0 ]]; then
         echo "Worktree '{{ name }}' created in ${#created[@]} repo(s): ${created[*]}"
         echo ""
-        echo "Work in:  $wt_base/<repo>/"
+        if $has_root; then
+            echo "Work in:  $wt_base/"
+        else
+            echo "Work in:  $wt_base/<repo>/"
+        fi
         echo "Return:   just worktree remove {{ name }}"
-        echo ""
-        echo "Example:  cd $wt_base/core && cargo test"
+        if ! $has_root; then
+            echo ""
+            echo "Example:  cd $wt_base/core && cargo test"
+        fi
     fi
     [[ ${#failed[@]} -gt 0 ]] && echo "Failed: ${failed[*]}"
     exit 0
