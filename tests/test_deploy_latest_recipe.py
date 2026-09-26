@@ -98,7 +98,9 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         '      {"name":"kamal:deploy:relay-production",'
                         '"web_url":"https://gitlab.example/jobs/relay"},',
                         '      {"name":"kamal:deploy:ohttp-relay-production",'
-                        '"web_url":"https://gitlab.example/jobs/ohttp"}',
+                        '"web_url":"https://gitlab.example/jobs/ohttp"},',
+                        '      {"name":"deploy:monitoring",'
+                        '"web_url":"https://gitlab.example/jobs/monitoring"}',
                         "    ]'",
                         "    ;;",
                         '  *"projects/vauchi%2Fprivate/pipelines/9001/variables"*)',
@@ -151,7 +153,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 text=True,
                 check=False,
             )
-            return result, glab_log.read_text()
+            return result, glab_log.read_text() if glab_log.exists() else ""
 
     @staticmethod
     def repository_for(service: str) -> str:
@@ -161,6 +163,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
             "cdn": "website",
             "relay": "relay",
             "ohttp-relay": "ohttp-relay",
+            "monitoring": "private",
         }[service]
 
     def test_mints_sha_pinned_pipeline_for_every_service(self) -> None:
@@ -200,6 +203,21 @@ class DeployLatestRecipeTests(unittest.TestCase):
                     result.stdout,
                 )
                 self.assertNotIn(f"deploys {repository}:latest", result.stdout)
+
+    def test_monitoring_mints_an_image_free_private_pipeline(self) -> None:
+        # Monitoring is config synced from _private, not an image: there is
+        # nothing to look up in a registry, and deploy:monitoring is the button.
+        result, glab_log = self.run_recipe(
+            service="monitoring",
+            created_variables_json='[{"key":"DEPLOY_SERVICE","value":"monitoring"}]',
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("https://gitlab.example/jobs/monitoring", result.stdout)
+        self.assertIn('"key": "DEPLOY_SERVICE"', glab_log)
+        self.assertIn('"value": "monitoring"', glab_log)
+        self.assertNotIn("DEPLOY_IMAGE", glab_log)
+        self.assertNotIn("registry/repositories", glab_log)
 
     def test_missing_successful_build_fails_before_pipeline_creation(self) -> None:
         result, glab_log = self.run_recipe(pipelines_json="[]")
