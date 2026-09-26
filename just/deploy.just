@@ -230,8 +230,43 @@ deploy-latest service:
         relay)       REPO="relay" ;;
         cdn)         REPO="website" ;;
         ohttp-relay) REPO="ohttp-relay" ;;
-        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay)"; exit 1 ;;
+        monitoring)  REPO="private" ;;
+        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay|monitoring)"; exit 1 ;;
     esac
+
+    # Monitoring is config synced from _private (infra/monitoring/), not an
+    # image: there is no build or registry tag to pin, and its button is the
+    # deploy:monitoring job of a _private main pipeline.
+    if [[ "$SERVICE" == monitoring ]]; then
+        echo "minting _private main pipeline for deploy:monitoring..."
+        PIPE_REQUEST=$(jq -n '{ref: "main", variables: [{key: "DEPLOY_SERVICE", value: "monitoring"}]}')
+        PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
+            -H "Content-Type: application/json" \
+            --input - <<< "$PIPE_REQUEST" | jq -er '.id')
+        CREATED_SERVICE=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables" \
+            | jq -r '.[] | select(.key=="DEPLOY_SERVICE") | .value')
+        if [[ "$CREATED_SERVICE" != monitoring ]]; then
+            echo "ERROR: pipeline did not retain DEPLOY_SERVICE=monitoring." >&2
+            echo "       Inspect: https://gitlab.com/vauchi/private/-/pipelines/${PIPE}" >&2
+            exit 1
+        fi
+        JOB_URL=""
+        for _ in 1 2 3 4 5 6; do
+            JOB_URL=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/jobs?per_page=100" 2>/dev/null \
+                | jq -r '.[] | select(.name=="deploy:monitoring") | .web_url' | head -1)
+            [[ -n "$JOB_URL" ]] && break
+            sleep 5
+        done
+        if [[ -z "$JOB_URL" ]]; then
+            echo "Pipeline created but deploy:monitoring not visible yet:"
+            echo "  https://gitlab.com/vauchi/private/-/pipelines/${PIPE}"
+            exit 1
+        fi
+        echo ""
+        echo "Press play here — this button syncs _private main's infra/monitoring/:"
+        echo "  $JOB_URL"
+        exit 0
+    fi
 
     git -C "{{justfile_directory()}}/$REPO" fetch origin main --quiet 2>/dev/null || true
     SHA=$(git -C "{{justfile_directory()}}/$REPO" rev-parse origin/main)
