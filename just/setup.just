@@ -44,7 +44,11 @@ session-init:
     if [[ -n "$STRAY_WORKTREES" ]]; then
         echo "  LINKED WORKTREES (slots replaced them — they may hold work; merge, then remove):"
         while read -r wt_repo wt_path wt_branch wt_dirty; do
-            echo "    $wt_repo ($wt_branch) $wt_path — $wt_dirty uncommitted"
+            if [[ "$wt_dirty" == missing ]]; then
+                echo "    $wt_repo ($wt_branch) $wt_path — directory gone: git -C $wt_repo worktree prune"
+            else
+                echo "    $wt_repo ($wt_branch) $wt_path — $wt_dirty uncommitted"
+            fi
         done <<< "$STRAY_WORKTREES"
         WARN=1
     fi
@@ -903,7 +907,9 @@ session-end:
         echo "  None"
     else
         while read -r wt_repo wt_path wt_branch wt_dirty; do
-            if [[ "$wt_dirty" -gt 0 ]]; then
+            if [[ "$wt_dirty" == missing ]]; then
+                echo "  WARN: $wt_repo ($wt_branch) at $wt_path — directory gone: git -C $wt_repo worktree prune"
+            elif [[ "$wt_dirty" -gt 0 ]]; then
                 echo "  ERROR: $wt_repo ($wt_branch) at $wt_path has $wt_dirty uncommitted file(s)"
                 ERRORS=1
             else

@@ -149,24 +149,25 @@ $(slot_siblings "$1")
 EOF
 }
 
-# Claim stamp shared by `just gitlab claim` and the claim listings.
+# Claim stamp shared by `just gitlab claim` and the claim listings. Slots are
+# per machine but claims are shared, so the slot is qualified by its host.
 slot_claim_tag() {
-    printf 'session:%s slot:%s\n' "$(slot_session_id)" "$(basename "$(cd "$1" && pwd -P)")"
+    printf 'session:%s slot:%s/%s\n' "$(slot_session_id)" "$(hostname -s)" "$(basename "$(cd "$1" && pwd -P)")"
 }
 
 # "<session> @<slot>" from a claim commit message; slot omitted on old claims.
 slot_claim_owner() {
     local session slot
     session=$(printf '%s' "$1" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
-    slot=$(printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._-]+' | cut -d: -f2 || true)
+    slot=$(printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._/-]+' | cut -d: -f2 || true)
     printf '%s%s\n' "${session:-unknown}" "${slot:+ @$slot}"
 }
 
-# "<repo> <path> <branch> <dirty-count>" for every linked worktree of the
+# "<repo> <path> <branch> <dirty-count|missing>" for every linked worktree of the
 # slot's repos. Slots replaced worktrees, so any found here is stray — made
 # by hand or by a harness's own isolation — and may hold unsaved work.
 slot_linked_worktrees() {
-    local root="$1" repository main_path line path="" branch=""
+    local root="$1" repository main_path line path="" branch="" state
     while IFS= read -r repository; do
         main_path=$(cd "$repository" && pwd -P)
         while IFS= read -r line; do
@@ -175,8 +176,12 @@ slot_linked_worktrees() {
                 "branch "*) branch=${line#branch refs/heads/} ;;
                 "")
                     if [[ -n "$path" && "$path" != "$main_path" ]]; then
-                        printf '%s %s %s %s\n' "$(basename "$repository")" "$path" "${branch:-detached}" \
-                            "$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+                        if [[ -d "$path" ]]; then
+                            state=$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+                        else
+                            state=missing
+                        fi
+                        printf '%s %s %s %s\n' "$(basename "$repository")" "$path" "${branch:-detached}" "$state"
                     fi
                     path=""
                     branch=""
