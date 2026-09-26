@@ -242,6 +242,19 @@ mr-create repo='' title='':
         glab mr create "${ARGS[@]}"
     )
 
+    # issue/<N> is the ADR-073 claim branch and must outlive its MRs, but
+    # every repo deletes source branches by default — even on API-made MRs.
+    if [[ "$branch" =~ ^issue/[0-9]+$ ]]; then
+        project_id=${p//\//%2F}
+        new_iid=$(glab api "projects/${project_id}/merge_requests?state=opened&source_branch=${branch}" \
+            | jq -r '.[0].iid // empty')
+        if [[ -n "$new_iid" ]]; then
+            glab api -X PUT "projects/${project_id}/merge_requests/${new_iid}" \
+                -f remove_source_branch=false >/dev/null
+            echo "  !${new_iid} keeps $branch after merge (ADR-073 claim branch)"
+        fi
+    fi
+
     # ── Auto-link Related MRs (E13/E14/E15 fix) ────────────────────
     just gitlab _autolink "{{repo}}"
 
