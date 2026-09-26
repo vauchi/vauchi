@@ -1071,7 +1071,7 @@ _claim_log := "_private/docs/2026-09-25-claim-collisions.md"
 
 # Session ID: hash of the harness session id when one exists, because
 # hostname + workspace path is identical for parallel sessions in one
-# checkout. VAUCHI_SESSION_ID lets Codex/Kimi wrappers supply their own.
+# checkout. `just harness codex|kimi` sets VAUCHI_SESSION_ID for those two.
 _session_id := `printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" | shasum -a 256 | cut -c1-12`
 
 # Claim a work item (atomic). Fails if already claimed by another session.

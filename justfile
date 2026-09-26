@@ -66,6 +66,9 @@ mod gitlab 'just/gitlab.just'
 [doc('Git worktree management for parallel development')]
 mod worktree 'just/worktree.just'
 
+[doc('Launch Codex/Kimi with their own claim session id')]
+mod harness 'just/harness.just'
+
 import 'just/apps.just'
 import 'just/setup.just'
 import 'just/mobile.just'
@@ -1722,6 +1725,11 @@ help:
       just worktree list      List active worktrees
       just worktree remove <branch>  Remove worktree (interactive)
       just worktree remove-force <branch>  Remove worktree (non-interactive)
+      (include root to nest the other repos in it, as in the workspace)
+
+    Agent harnesses:
+      just harness codex [args]  Start Codex with its own claim session id
+      just harness kimi [args]   Start Kimi with its own claim session id
 
     Apps:
       just run <platform>     Run app (cli|tui|relay|android|ios)
