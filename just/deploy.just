@@ -131,44 +131,37 @@ deploy-check *ARGS:
 
     # For services whose public surface deliberately hides version info
     # (relay R-SA1: no version disclosure on the main port), drift is
-    # checked via GitLab instead: registry digest of :latest vs the
-    # origin/main sha tag, and the last successful deployment vs the
-    # image build time. No public endpoint required or added.
+    # checked via GitLab instead: the image the last successful production
+    # deploy job pinned vs the origin/main sha. No public endpoint required
+    # or added. Registry tags are not evidence: :latest is the multi-arch
+    # index and :<sha> the amd64 image, and every rebuild of a commit
+    # re-pushes :<sha> (problems/2026-09-26-deploy-sha-tags-are-mutable).
     check_service_gitlab() {
         local name="$1" repo="$2" envpath="$3"
-        local sha rid dig_l dig_s dep_at fin_at
+        local sha deployment dep_at job_id trace dep_image dep_tag running
         git -C "{{justfile_directory()}}/$repo" fetch origin main --quiet 2>/dev/null || true
         sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "")
-        rid=$(glab api "projects/vauchi%2F${repo}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${repo}" '.[] | select(.path==$p) | .id' | head -1 || true)
-        dig_l=$(glab api "projects/vauchi%2F${repo}/registry/repositories/${rid}/tags/latest" 2>/dev/null | jq -r '.digest // empty' || true)
-        dig_s=$(glab api "projects/vauchi%2F${repo}/registry/repositories/${rid}/tags/${sha}" 2>/dev/null | jq -r '.digest // empty' || true)
-        dep_at=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&status=success&order_by=created_at&sort=desc&per_page=1" 2>/dev/null | jq -r '.[0].created_at // empty' || true)
-        # finished_at only exists on the pipeline DETAIL endpoint —
-        # the list response omits it (silently empty otherwise).
-        local pid
-        pid=$(glab api "projects/vauchi%2F${repo}/pipelines?sha=${sha}&ref=main&status=success" 2>/dev/null | jq -r '.[0].id // empty' || true)
-        fin_at=""
-        if [[ -n "$pid" ]]; then
-            fin_at=$(glab api "projects/vauchi%2F${repo}/pipelines/${pid}" 2>/dev/null | jq -r '.finished_at // empty' || true)
+        deployment=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&status=success&order_by=created_at&sort=desc&per_page=1" 2>/dev/null || true)
+        dep_at=$(jq -r 'if type == "array" then .[0].created_at // empty else empty end' <<<"$deployment" 2>/dev/null || true)
+        job_id=$(jq -r 'if type == "array" then .[0].deployable.id // empty else empty end' <<<"$deployment" 2>/dev/null || true)
+        trace=""
+        if [[ -n "$job_id" ]]; then
+            trace=$(glab api "projects/vauchi%2Fprivate/jobs/${job_id}/trace" 2>/dev/null || true)
         fi
+        dep_image=$(sed -n 's/.*production deploy image is pinned: \([^[:space:]]*\).*/\1/p' <<<"$trace" | head -1)
+        dep_tag=""
+        [[ -n "$dep_image" ]] && dep_tag="${dep_image##*:}"
+        running=$(sed -n 's/.*production running image: [^@]*@\(sha256:[0-9a-f]\{12\}\).*/\1/p' <<<"$trace" | head -1)
 
         local status_text status_color
-        if [[ -z "$sha" || -z "$dig_l" || -z "$dep_at" || -z "$fin_at" ]]; then
-            # Never green-wash on missing evidence: without all four
-            # facts the comparison below cannot prove currency.
+        if [[ -z "$sha" || -z "$dep_tag" ]]; then
+            # Never green-wash on missing evidence: without the main sha
+            # and the deployed tag the comparison cannot prove currency.
             status_text="UNKNOWN"
             status_color="$YELLOW"
             _DS_UNKNOWN=$(( _DS_UNKNOWN + 1 ))
-        elif [[ "$dig_l" != "$dig_s" ]]; then
-            # :latest is not origin/main's image — wrong image tagged
-            status_text="IMAGE DRIFT"
-            status_color="$RED"
-            _DS_STALE=$(( _DS_STALE + 1 ))
-        elif [[ "${dep_at:0:19}" < "${fin_at:0:19}" ]]; then
-            # Newest main image was built after the last deploy. A
-            # same-sha rebuild also lands here — redeploying is a no-op
-            # then, but only a deploy proves the host runs this image.
-            status_text="STALE (image newer)"
+        elif [[ "$dep_tag" != "$sha" ]]; then
+            status_text="STALE"
             status_color="$RED"
             _DS_STALE=$(( _DS_STALE + 1 ))
         else
@@ -179,7 +172,8 @@ deploy-check *ARGS:
         local _p=$(( _DS_C1 - ${#name} )); [[ $_p -lt 1 ]] && _p=1
         local _p2=$(( _DS_C2 - ${#status_text} )); [[ $_p2 -lt 1 ]] && _p2=1
         printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s main=%-10s  %s\n" \
-            "$name" "$_p" "" "$status_text" "$_p2" "" "${dep_at:0:10}" "${sha:0:8}" "img-built=${fin_at:0:16}"
+            "$name" "$_p" "" "$status_text" "$_p2" "" "${dep_tag:0:8}" "${sha:0:8}" \
+            "at=${dep_at:0:16}${running:+ running=$running}"
     }
 
     _ds_hdr() {
@@ -311,9 +305,11 @@ deploy-latest service:
     PIPE_REQUEST=$(jq -n \
         --arg service "$SERVICE" \
         --arg deploy_image "$DEPLOY_IMAGE" \
+        --arg deploy_image_digest "$SHA_DIGEST" \
         '{ref: "main", variables: [
             {key: "DEPLOY_SERVICE", value: $service},
-            {key: "DEPLOY_IMAGE", value: $deploy_image}
+            {key: "DEPLOY_IMAGE", value: $deploy_image},
+            {key: "DEPLOY_IMAGE_DIGEST", value: $deploy_image_digest}
         ]}')
     PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
         -H "Content-Type: application/json" \
@@ -322,12 +318,14 @@ deploy-latest service:
     PIPE_VARIABLES=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables")
     CREATED_SERVICE=$(jq -r '.[] | select(.key=="DEPLOY_SERVICE") | .value' <<< "$PIPE_VARIABLES")
     CREATED_IMAGE=$(jq -r '.[] | select(.key=="DEPLOY_IMAGE") | .value' <<< "$PIPE_VARIABLES")
-    if [[ "$CREATED_SERVICE" != "$SERVICE" || "$CREATED_IMAGE" != "$DEPLOY_IMAGE" ]]; then
+    CREATED_DIGEST=$(jq -r '.[] | select(.key=="DEPLOY_IMAGE_DIGEST") | .value' <<< "$PIPE_VARIABLES")
+    if [[ "$CREATED_SERVICE" != "$SERVICE" || "$CREATED_IMAGE" != "$DEPLOY_IMAGE" \
+        || "$CREATED_DIGEST" != "$SHA_DIGEST" ]]; then
         echo "ERROR: pipeline did not retain the requested deploy variables." >&2
         echo "       Inspect: https://gitlab.com/vauchi/private/-/pipelines/${PIPE}" >&2
         exit 1
     fi
-    echo "pipeline:       service and SHA-pinned image verified"
+    echo "pipeline:       service, SHA-pinned image and digest verified"
 
     JOB_URL=""
     for _ in 1 2 3 4 5 6; do
@@ -343,7 +341,8 @@ deploy-latest service:
         exit 1
     fi
     echo ""
-    echo "Press play here — this button deploys ${DEPLOY_IMAGE}:"
+    echo "Press play here — this button deploys ${DEPLOY_IMAGE}"
+    echo "(pinned to ${SHA_DIGEST}; the job refuses a re-pushed tag):"
     echo "  $JOB_URL"
     echo ""
     echo "Playing creates a deployment that waits for APPROVAL"
