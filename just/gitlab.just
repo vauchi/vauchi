@@ -239,6 +239,9 @@ mr-create repo='' title='':
         ARGS=(--yes --target-branch main -R "$p")
         ARGS+=(--title "$mr_title")
         ARGS+=(--description "$mr_body")
+        # Branch cleanup is requested per MR, not left to the project default,
+        # which is off so that ADR-073 issue/<N> branches survive web merges.
+        [[ "$branch" =~ ^issue/[0-9]+$ ]] || ARGS+=(--remove-source-branch)
         glab mr create "${ARGS[@]}"
     )
 
