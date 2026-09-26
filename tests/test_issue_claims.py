@@ -193,11 +193,11 @@ class IssueClaimTest(unittest.TestCase):
         subprocess.run(["git", "clone", "--quiet", str(remote), str(core)], check=True, capture_output=True)
         git = ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e"]
         subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "base"], check=True)
-        subprocess.run([*git, "push", "--quiet", "--no-verify", "origin", "HEAD:main"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "HEAD:main"], check=True)
         subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
         if unmerged:
             subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "work"], check=True)
-        subprocess.run([*git, "push", "--quiet", "--no-verify", "origin", f"issue/{number}"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", f"issue/{number}"], check=True)
         return remote
 
     def remote_branches(self, remote: Path) -> list[str]:

@@ -79,7 +79,7 @@ issue_claim() {
 }
 
 issue_release() {
-    local number="$1" tag body holder ahead
+    local number="$1" tag body holder ahead siblings repository
     tag=$(slot_claim_tag .)
     body=$(_issue_holder_note "$number" | jq -r '.body // ""')
     holder=$(printf '%s' "$body" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
@@ -93,9 +93,36 @@ issue_release() {
         echo "  issue/$number has $ahead commit(s) not on main — merge them first; the claim stays"
         return 1
     fi
+    siblings=$(_issue_sibling_branches "$number")
+    if printf '%s\n' "$siblings" | grep -q '^unmerged '; then
+        printf '%s\n' "$siblings" | sed -n 's/^unmerged \(.*\)/  issue\/'"$number"' in \1 has commits not on main — merge them first; the claim stays/p'
+        return 1
+    fi
     glab api -X DELETE "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null
     glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" -f "body=release: $tag" >/dev/null
+    for repository in $(printf '%s\n' "$siblings" | sed -n 's/^merged //p'); do
+        git -C "$repository" push -q origin --delete "issue/$number" \
+            && echo "  removed merged issue/$number in $(basename "$repository")"
+    done
     echo "✓ Released #$number"
+}
+
+# "merged <dir>" / "unmerged <dir>" for every other repo of the slot whose
+# remote still has issue/<N>; the vauchi/private lock is handled via the API.
+_issue_sibling_branches() {
+    local number="$1" repository
+    for repository in $(slot_repositories .); do
+        [ "$(basename "$repository")" = _private ] && continue
+        git -C "$repository" ls-remote --exit-code --heads origin "issue/$number" >/dev/null 2>&1 || continue
+        git -C "$repository" fetch -q origin \
+            "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
+            "+refs/heads/main:refs/remotes/origin/main" || continue
+        if git -C "$repository" merge-base --is-ancestor "origin/issue/$number" origin/main; then
+            echo "merged $repository"
+        else
+            echo "unmerged $repository"
+        fi
+    done
 }
 
 # Open issues by priority, marking the claimed ones: one issue listing and
