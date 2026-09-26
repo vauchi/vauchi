@@ -183,6 +183,10 @@ Contributing guide: `docs/src/developers/contributing.md`.
 ## Reference Docs
 
 `.claude/docs/`: `just-commands.md`, `repo-organization.md`, `commit-conventions.md`, `local-bindings.md`, `drift-naming.md`, `test-quality-rules.md`, `exchange-protocol.md`, `tls-backend-decisions.md`, `audit-scope.md`, `agent-selection.md`, `token-budget.md`
+`.claude/docs/operational-notes-infrastructure.md` and
+`operational-notes-development.md`: hard-won operational facts (CI hosts,
+GitLab, registry, builds, devices). They replace Claude auto-memory, which
+is off for this project; add new facts there.
 `_private/docs/testing/`: `manual-testing.md`, `device-automation/`, also `.claude/docs/device-testing.md`
 
 **Per-repo docs** (read when working in matching repos — NOT auto-loaded):
@@ -220,8 +224,8 @@ load cost many times over. Attribution and history:
 - **Retry-instead-of-think.** If the second attempt at a problem isn't
   right, STOP and re-read carefully. Attempt 3+ costs more tokens than
   the planning time it skipped.
-- **Memory-loaded-but-unused.** Before a multi-step action, scan the
-  loaded memory/rules for entries that name the action verb.
+- **Rules-loaded-but-unused.** Before a multi-step action, scan the
+  loaded rules and operational notes for entries that name the action verb.
 - **Stale local checkout as evidence.** `git -C <repo> fetch origin`
   before reading state you'll act on; compare against `origin/main`,
   not the working tree. Applies equally when *creating* — the check that
