@@ -160,6 +160,18 @@ class SlotRecipeTest(unittest.TestCase):
 
         self.assertEqual(lines, [f"core {linked.resolve()} side 1"])
 
+    def test_acquire_from_a_relative_root_names_the_slot(self) -> None:
+        library = WORKSPACE_ROOT / "just/slot-lib.sh"
+        environment = {**os.environ, "VAUCHI_SESSION_ID": "codex-a"}
+
+        output = subprocess.run(
+            ["bash", "-c", f'source "{library}"; slot_acquire .'],
+            cwd=self.parent / "vauchi-2", env=environment,
+            check=True, capture_output=True, text=True,
+        ).stdout
+
+        self.assertIn("Slot vauchi-2 held", output)
+
 
 if __name__ == "__main__":
     unittest.main()
