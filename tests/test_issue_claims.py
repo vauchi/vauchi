@@ -57,8 +57,9 @@ if parts[2] == "repository" and parts[3] == "branches":
         name = fields["branch"]
         if name in state["branches"]:
             fail("Branch already exists")
+        # GitLab reports commit dates with the committer's offset, not Z.
         state["branches"][name] = {"name": name, "ahead": 0,
-            "commit": {"committed_date": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())}}
+            "commit": {"committed_date": time.strftime("%Y-%m-%dT%H:%M:%S+02:00", time.gmtime(time.time() + 7200))}}
         out(state["branches"][name])
     if method == "DELETE":
         state["branches"].pop(parts[4].replace("%2F", "/"), None); out({})
@@ -133,6 +134,7 @@ class IssueClaimTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("BLOCKED", result.stdout)
+        self.assertIn("(active 0h ago)", result.stdout)
         self.assertIn("#7 | held-by-other", (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text())
 
     def test_reclaiming_your_own_issue_succeeds(self) -> None:
@@ -154,7 +156,7 @@ class IssueClaimTest(unittest.TestCase):
     def test_a_stale_claim_is_taken_over_with_a_note(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
         state = self.load()
-        state["branches"]["issue/7"]["commit"]["committed_date"] = "2026-01-01T00:00:00.000Z"
+        state["branches"]["issue/7"]["commit"]["committed_date"] = "2026-01-01T02:00:00+02:00"
         state["notes"]["7"][0]["created_at"] = "2026-01-01T00:00:00.000Z"
         self.save(state)
 
