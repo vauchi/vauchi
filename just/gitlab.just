@@ -260,6 +260,9 @@ mr-create repo='' title='':
         # Branch cleanup is requested per MR, not left to the project default,
         # which is off so that ADR-073 issue/<N> branches survive web merges.
         [[ "$branch" =~ ^issue/[0-9]+$ ]] || ARGS+=(--remove-source-branch)
+        # A Draft puts the issue in the board's implementing column and a
+        # ready MR in review (ADR-073 Decision 4); `just gitlab mr-ready` flips it.
+        [[ "${MR_DRAFT:-}" == "1" ]] && ARGS+=(--draft)
         glab mr create "${ARGS[@]}"
     )
 
@@ -842,6 +845,16 @@ issue-close id repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue close "{{id}}" -R "$p"
+
+# Mark a Draft MR ready: its issue moves from implementing to review on the board (ADR-073)
+[no-cd]
+[script]
+mr-ready id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr update "{{id}}" --ready -R "$p"
 
 # Kanban board in the terminal: one section per derived status (ADR-073). Pass "all" to list backlog/deferred items
 [no-cd]
