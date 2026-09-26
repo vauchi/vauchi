@@ -186,6 +186,45 @@ class IssueClaimTest(unittest.TestCase):
         self.assertIn("2 commit(s)", result.stdout)
         self.assertIn("issue/7", self.load()["branches"])
 
+    def sibling_with_issue_branch(self, number: int, unmerged: bool) -> Path:
+        remote = self.directory / "core.git"
+        subprocess.run(["git", "init", "--quiet", "--bare", "--initial-branch=main", str(remote)], check=True)
+        core = self.slot / "core"
+        subprocess.run(["git", "clone", "--quiet", str(remote), str(core)], check=True, capture_output=True)
+        git = ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e"]
+        subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "base"], check=True)
+        subprocess.run([*git, "push", "--quiet", "--no-verify", "origin", "HEAD:main"], check=True)
+        subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
+        if unmerged:
+            subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "work"], check=True)
+        subprocess.run([*git, "push", "--quiet", "--no-verify", "origin", f"issue/{number}"], check=True)
+        return remote
+
+    def remote_branches(self, remote: Path) -> list[str]:
+        return subprocess.run(["git", "-C", str(remote), "branch", "--format=%(refname:short)"],
+                              check=True, capture_output=True, text=True).stdout.split()
+
+    def test_release_deletes_merged_issue_branches_in_sibling_repos(self) -> None:
+        remote = self.sibling_with_issue_branch(7, unmerged=False)
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.remote_branches(remote))
+        self.assertIn("core", result.stdout)
+
+    def test_release_refuses_while_a_sibling_issue_branch_holds_work(self) -> None:
+        remote = self.sibling_with_issue_branch(7, unmerged=True)
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("core", result.stdout)
+        self.assertIn("issue/7", self.remote_branches(remote))
+        self.assertIn("issue/7", self.load()["branches"])
+
     def test_queue_lists_open_issues_by_priority_with_their_holder(self) -> None:
         self.run_lib("issue_claim 9", "codex-a", check=True)
 
