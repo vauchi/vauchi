@@ -136,6 +136,30 @@ class SlotRecipeTest(unittest.TestCase):
         self.assertRegex(lines[0], r"^session:[0-9a-f]{12} slot:vauchi-1$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
+    def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
+        core = self.parent / "vauchi-1/core"
+        (core / "tracked.txt").write_text("base\n")
+        subprocess.run(["git", "-C", str(core), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e",
+             "commit", "--quiet", "-m", "base"],
+            check=True,
+        )
+        linked = self.parent / "elsewhere"
+        subprocess.run(
+            ["git", "-C", str(core), "worktree", "add", "--quiet", "-b", "side", str(linked)],
+            check=True,
+        )
+        (linked / "tracked.txt").write_text("unsaved\n")
+        library = WORKSPACE_ROOT / "just/slot-lib.sh"
+
+        lines = subprocess.run(
+            ["bash", "-c", f'source "{library}"; slot_linked_worktrees "{self.parent / "vauchi-1"}"'],
+            check=True, capture_output=True, text=True,
+        ).stdout.splitlines()
+
+        self.assertEqual(lines, [f"core {linked.resolve()} side 1"])
+
 
 if __name__ == "__main__":
     unittest.main()
