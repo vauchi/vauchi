@@ -818,6 +818,32 @@ issue-close id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue close "{{id}}" -R "$p"
 
+# Comment on an issue, signed with this session and slot
+[no-cd]
+[script]
+issue-comment id body repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    # quote() required — see mr-update.
+    ISSUE_REPO=$(printf '%s' "$p" | sed 's|/|%2F|g') issue_comment "{{id}}" {{ quote(body) }}
+
+# Reply in the thread of an existing issue comment (note id from its #note_<id> link)
+[no-cd]
+[script]
+issue-comment-respond id note body repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    # quote() required — see mr-update.
+    ISSUE_REPO=$(printf '%s' "$p" | sed 's|/|%2F|g') issue_comment_respond "{{id}}" "{{note}}" {{ quote(body) }}
+
 # ── Status & Wait ─────────────────────────────────────────────────
 
 # Show MR status for current branch

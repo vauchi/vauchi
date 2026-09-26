@@ -127,6 +127,57 @@ _issue_sibling_branches() {
     done
 }
 
+# The bot account is shared, so a comment names the session that wrote it.
+_issue_signed_body() {
+    printf '%s\n\n— %s' "$1" "$(slot_claim_tag .)"
+}
+
+issue_comment() {
+    local number="$1" body="$2" response
+    if [ -z "${body//[[:space:]]/}" ]; then
+        echo "ERROR: empty comment — nothing posted to #$number"
+        return 1
+    fi
+    response=$(glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" \
+        -f "body=$(_issue_signed_body "$body")") || {
+        echo "ERROR: GitLab refused the comment on #$number: $response"
+        return 1
+    }
+    echo "✓ Commented on #$number (note $(printf '%s' "$response" | jq -r '.id'))"
+}
+
+# Replies land in the thread of an existing note, found through the issue's
+# discussions: GitLab addresses a reply by discussion id, not note id.
+issue_comment_respond() {
+    local number="$1" note="$2" body="$3" discussions thread response
+    case "$note" in
+        '' | *[!0-9]*)
+            echo "ERROR: note id must be a number, got '$note'"
+            return 1
+            ;;
+    esac
+    if [ -z "${body//[[:space:]]/}" ]; then
+        echo "ERROR: empty reply — nothing posted to #$number"
+        return 1
+    fi
+    discussions=$(glab api "projects/$ISSUE_REPO/issues/$number/discussions?per_page=100" --paginate) || {
+        echo "ERROR: could not list the discussions on #$number: $discussions"
+        return 1
+    }
+    thread=$(printf '%s' "$discussions" | jq -rs --argjson id "$note" \
+        'add | map(select(.notes | any(.id == $id))) | .[0].id // empty')
+    if [ -z "$thread" ]; then
+        echo "ERROR: #$number has no note $note — nothing posted"
+        return 1
+    fi
+    response=$(glab api -X POST "projects/$ISSUE_REPO/issues/$number/discussions/$thread/notes" \
+        -f "body=$(_issue_signed_body "$body")") || {
+        echo "ERROR: GitLab refused the reply on #$number: $response"
+        return 1
+    }
+    echo "✓ Replied to note $note on #$number (note $(printf '%s' "$response" | jq -r '.id'))"
+}
+
 # Open issues by priority, marking the claimed ones: one issue listing and
 # one branch listing, never a per-issue call (ADR-073 consequence).
 issue_queue() {
