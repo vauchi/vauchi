@@ -776,8 +776,10 @@ issue-view id repo='':
     glab issue view "{{id}}" -R "$p"
 
 # Create an issue
+# Usage: just gitlab issue-create "<title>" [repo] [glab issue create flags...]
 [no-cd]
 [script]
+[positional-arguments]
 issue-create title repo='' *args='':
     just gitlab _check-auth
     set -euo pipefail
@@ -785,19 +787,25 @@ issue-create title repo='' *args='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     # Positional module args: a `title=...` form leaks the prefix — strip it.
-    # quote() required — see mr-update.
-    issue_title={{ quote(title) }}
-    issue_title="${issue_title#title=}"
-    # glab prompts for a description when none is given, which fails in a
-    # non-interactive session; default one that names the opening session.
-    case " {{args}} " in
-        *" --description"*|*" -d "*) glab issue create --title "$issue_title" --no-editor --yes -R "$p" {{args}} ;;
-        *)
-            source "{{ justfile_directory() }}/just/slot-lib.sh"
-            glab issue create --title "$issue_title" --no-editor --yes -R "$p" \
-                --description "Opened by $(slot_claim_tag "{{ justfile_directory() }}") via just gitlab issue-create." {{args}}
-            ;;
-    esac
+    issue_title="${1#title=}"
+    # Positional arguments keep each flag value intact; interpolating the
+    # variadic parameter would re-split it on spaces and paste quotes and
+    # newlines into this script.
+    shift
+    [ $# -gt 0 ] && shift
+    has_description=false
+    for arg in "$@"; do
+        case "$arg" in --description|--description=*|-d) has_description=true ;; esac
+    done
+    if [ "$has_description" = true ]; then
+        glab issue create --title "$issue_title" --no-editor --yes -R "$p" "$@"
+    else
+        # glab prompts for a description when none is given, which fails in a
+        # non-interactive session; default one that names the opening session.
+        source "{{ justfile_directory() }}/just/slot-lib.sh"
+        glab issue create --title "$issue_title" --no-editor --yes -R "$p" \
+            --description "Opened by $(slot_claim_tag "{{ justfile_directory() }}") via just gitlab issue-create." "$@"
+    fi
 
 # Close an issue
 [no-cd]
