@@ -95,7 +95,9 @@ issue_release() {
     fi
     siblings=$(_issue_sibling_branches "$number")
     if printf '%s\n' "$siblings" | grep -q '^unmerged '; then
-        printf '%s\n' "$siblings" | sed -n 's/^unmerged \(.*\)/  issue\/'"$number"' in \1 has commits not on main — merge them first; the claim stays/p'
+        for repository in $(printf '%s\n' "$siblings" | sed -n 's/^unmerged //p'); do
+            echo "  issue/$number in $(basename "$repository") has commits not on main — merge them first; the claim stays"
+        done
         return 1
     fi
     glab api -X DELETE "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null
@@ -111,7 +113,7 @@ issue_release() {
 # remote still has issue/<N>; the vauchi/private lock is handled via the API.
 _issue_sibling_branches() {
     local number="$1" repository
-    for repository in $(slot_repositories .); do
+    for repository in $(slot_repositories "$(pwd -P)"); do
         [ "$(basename "$repository")" = _private ] && continue
         git -C "$repository" ls-remote --exit-code --heads origin "issue/$number" >/dev/null 2>&1 || continue
         git -C "$repository" fetch -q origin \
