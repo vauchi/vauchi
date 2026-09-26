@@ -13,6 +13,9 @@ from pathlib import Path
 
 JUSTFILE = Path(sys.argv.pop(1)).resolve()
 CURRENT_SHA = "360e1af8f0745af03fc8f57bf13a1474666a617a"
+CURRENT_DIGEST = (
+    "sha256:4c8b528bcc06aa02dc78b1fefa5e5b165f207f85ece456b0474b92f8dd21242f"
+)
 
 
 class DeployLatestRecipeTests(unittest.TestCase):
@@ -20,7 +23,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
         self,
         service: str = "ohttp-relay",
         pipelines_json: str = '[{"id":101}]',
-        sha_digest: str = "sha256:current-main",
+        sha_digest: str = CURRENT_DIGEST,
         created_variables_json: str | None = None,
         pipelines_exit_code: int = 0,
     ) -> tuple[subprocess.CompletedProcess[str], str]:
@@ -137,7 +140,9 @@ class DeployLatestRecipeTests(unittest.TestCase):
             expected_variables = (
                 '[{"key":"DEPLOY_SERVICE","value":"'
                 f'{service}"}},{{"key":"DEPLOY_IMAGE","value":"'
-                f'registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"}}]'
+                f'registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"}},'
+                '{"key":"DEPLOY_IMAGE_DIGEST","value":"'
+                f'{CURRENT_DIGEST}"}}]'
             )
             environment["DEPLOY_LATEST_TEST_CREATED_VARIABLES_JSON"] = (
                 expected_variables
@@ -197,7 +202,12 @@ class DeployLatestRecipeTests(unittest.TestCase):
                     "projects/vauchi%2Fprivate/pipelines/9001/variables",
                     glab_log,
                 )
+                # The SHA tag is re-pushed by every rebuild of the commit;
+                # only the digest identifies the build that was checked.
+                self.assertIn('"key": "DEPLOY_IMAGE_DIGEST"', glab_log)
+                self.assertIn(f'"value": "{CURRENT_DIGEST}"', glab_log)
                 self.assertIn(f"deploys {deploy_image}", result.stdout)
+                self.assertIn(f"pinned to {CURRENT_DIGEST}", result.stdout)
                 self.assertIn(
                     ":latest differs; this link remains pinned",
                     result.stdout,
@@ -245,6 +255,19 @@ class DeployLatestRecipeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no registry image", result.stderr)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_created_pipeline_without_digest_fails_before_job_link(self) -> None:
+        image = f"registry.gitlab.com/vauchi/ohttp-relay:{CURRENT_SHA}"
+        result, glab_log = self.run_recipe(
+            created_variables_json=(
+                '[{"key":"DEPLOY_SERVICE","value":"ohttp-relay"},'
+                f'{{"key":"DEPLOY_IMAGE","value":"{image}"}}]'
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("pipeline did not retain", result.stderr)
+        self.assertNotIn("pipelines/9001/jobs", glab_log)
 
     def test_created_pipeline_variable_mismatch_fails_before_job_link(self) -> None:
         result, glab_log = self.run_recipe(created_variables_json="[]")

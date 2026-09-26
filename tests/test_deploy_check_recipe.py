@@ -14,6 +14,7 @@ from pathlib import Path
 
 DEPLOY_JUST = Path(sys.argv.pop(1)).resolve()
 CURRENT_SHA = "a1234567890bcdefa1234567890bcdefa1234567"
+OLDER_SHA = "0ld0000000000000000000000000000000000000"
 
 
 class DeployCheckRecipeTests(unittest.TestCase):
@@ -25,6 +26,8 @@ class DeployCheckRecipeTests(unittest.TestCase):
     def run_recipe(
         self,
         malformed_url: str = "",
+        deployed_sha: str = CURRENT_SHA,
+        deploy_trace: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -72,8 +75,17 @@ class DeployCheckRecipeTests(unittest.TestCase):
                 [
                     "#!/bin/sh",
                     'case "$*" in',
+                    '  *"jobs/777/trace"*)',
+                    '    printf "%s\\n" "$DEPLOY_CHECK_TEST_TRACE"',
+                    "    ;;",
+                    # :latest is the multi-arch index and :<sha> the amd64
+                    # image, so their digests never match — that comparison
+                    # reported IMAGE DRIFT on every current deploy.
+                    '  *"registry/repositories/12/tags/latest"*)',
+                    "    printf '{\"digest\":\"sha256:index\"}\\n'",
+                    "    ;;",
                     '  *"registry/repositories/12/tags/"*)',
-                    "    printf '{\"digest\":\"sha256:current\"}\\n'",
+                    "    printf '{\"digest\":\"sha256:amd64\"}\\n'",
                     "    ;;",
                     '  *"registry/repositories"*)',
                     "    printf '%s\\n' '[",
@@ -83,7 +95,8 @@ class DeployCheckRecipeTests(unittest.TestCase):
                     "    ;;",
                     '  *"deployments?environment="*)',
                     "    printf '%s\\n' '[{",
-                    '      "created_at":"2026-08-04T06:00:00Z"',
+                    '      "created_at":"2026-08-04T06:00:00Z",',
+                    '      "deployable":{"id":777}',
                     "    }]'",
                     "    ;;",
                     '  *"pipelines?sha="*)',
@@ -140,6 +153,12 @@ class DeployCheckRecipeTests(unittest.TestCase):
             )
             environment["DEPLOY_CHECK_TEST_SHA"] = CURRENT_SHA
             environment["DEPLOY_CHECK_TEST_MALFORMED_URL"] = malformed_url
+            environment["DEPLOY_CHECK_TEST_TRACE"] = (
+                "production deploy image is pinned: "
+                f"registry.gitlab.com/vauchi/relay:{deployed_sha}"
+                if deploy_trace is None
+                else deploy_trace
+            )
             return subprocess.run(
                 ["just", "deploy-check"],
                 cwd=workspace,
@@ -169,6 +188,28 @@ class DeployCheckRecipeTests(unittest.TestCase):
         self.assertRegex(result.stdout, r"cdn\s+UP TO DATE")
         self.assertIn("EVIDENCE: 1 service(s) could not be verified", result.stdout)
         self.assertNotIn("jq: parse error", result.stderr)
+
+    def test_gitlab_services_compare_the_deployed_tag_with_main(self) -> None:
+        result = self.run_recipe()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"relay\s+UP TO DATE")
+        self.assertRegex(result.stdout, r"ohttp\s+UP TO DATE")
+        self.assertNotIn("IMAGE DRIFT", result.stdout)
+
+    def test_gitlab_service_running_an_older_commit_is_stale(self) -> None:
+        result = self.run_recipe(deployed_sha=OLDER_SHA)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"relay\s+STALE")
+        self.assertIn("deployed=0ld00000", result.stdout)
+
+    def test_deploy_job_without_pinned_image_is_unknown(self) -> None:
+        result = self.run_recipe(deploy_trace="kamal deploy ... done")
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"relay\s+UNKNOWN")
+        self.assertRegex(result.stdout, r"ohttp\s+UNKNOWN")
 
 
 if __name__ == "__main__":
