@@ -216,3 +216,14 @@ issue_claims() {
             "$(_issue_age_hours "$branch_date")"
     done
 }
+
+# Prints the first GitLab closing reference in the text ("close #14",
+# "Fixes vauchi/private#7") and succeeds; fails when there is none. GitLab
+# closes such issues on merge, before issue-status-sync can derive their
+# status, so ADR-073 MRs must not use them (#70). Mirrors GitLab's default
+# closing pattern: close/fix/resolve/implement and their -s/-d/-ing forms.
+issue_closing_reference() {
+    printf '%s\n' "$1" | grep -oiE \
+        '(^|[^A-Za-z])(close[sd]?|closing|fix(e[sd]|ing)?|resolve[sd]?|resolving|implement(s|ed|ing)?):? +(issues? +)?[A-Za-z0-9_./-]*#[0-9]+' \
+        | head -1 | grep .
+}
