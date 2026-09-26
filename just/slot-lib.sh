@@ -12,10 +12,23 @@
 SLOT_LOCK_FILE=".slot.lock"
 SLOT_LOCK_EXPIRY_HOURS="${SLOT_LOCK_EXPIRY_HOURS:-12}"
 
+# sha256sum exists on BusyBox, GNU and macOS; shasum only on macOS and Perl
+# hosts. Both print the same digest, so ids match `just gitlab claim`.
+_slot_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256
+    else
+        echo "slot-lib: need sha256sum or shasum" >&2
+        return 1
+    fi
+}
+
 # Same key as `just gitlab claim`, so a slot and a claim name one session.
 slot_session_id() {
     printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" \
-        | shasum -a 256 | cut -c1-12
+        | _slot_sha256 | cut -c1-12
 }
 
 slot_harness() {
