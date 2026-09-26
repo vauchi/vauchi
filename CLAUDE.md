@@ -10,7 +10,7 @@ E2E encrypted, decentralized.
 
 ```bash
 just setup         # Clone all repos (first time only)
-just session-init  # Sync, fetch, show work board + dashboard (every session)
+just session-init  # Sync, fetch, hold slot, show issue queue + dashboard (every session)
 just build         # Build Rust workspace
 just check         # Run all checks
 just session-end   # Verify pushed, release board claims, check staleness (every session end)

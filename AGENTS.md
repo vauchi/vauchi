@@ -32,8 +32,9 @@ the Claude-specific wording.
 - Use `just` recipes instead of raw build, test, lint, format, coverage, or MR
   commands. Run `just help` or use `$just-recipes` to find the right recipe.
 - Significant work follows the Problem to Solution Flow. Use
-  `$problem-workflow` and maintain `_private/docs/work-board.md` plus
-  `.claude/.workcontext` as described in `CLAUDE.md`.
+  `$problem-workflow`; claim the `vauchi/private` issue (`just gitlab
+  claim <N>`) and maintain `.claude/.workcontext` as described in
+  `CLAUDE.md`.
 - Follow strict TDD for code changes: failing test first, minimal
   implementation, then refactor. See `$tdd-workflow` and
   `docs/src/developers/tdd-rules.md`.

@@ -439,58 +439,6 @@ session-init:
         printf '%s\n' "${ISSUE_QUEUE:-  (no open issues)}"
     fi
 
-    # ── Work board ──
-    echo ""
-    echo "── work board ──"
-    BOARD="_private/docs/work-board.md"
-    if [[ -f "$BOARD" ]]; then
-        IN_PROGRESS=$(sed -n '/^## In Progress$/,/^## /{ /^## /d; /^$/d; /^<!--/d; p; }' "$BOARD")
-        if [[ -n "$IN_PROGRESS" ]]; then
-            echo "IN PROGRESS:"
-            echo "$IN_PROGRESS" | while IFS= read -r line; do echo "  $line"; done
-        fi
-        # Board uses priority-tiered headers since 2026-04 restructure:
-        # `## Blocked`, `## CRITICAL — Next`, `## HIGH — Next`,
-        # `## MEDIUM — Next`, `## LOW — Next`. NEXT aggregates
-        # CRITICAL+HIGH `- [ ]` items including their indented
-        # continuation lines (top of file = highest priority).
-        # Limit lives INSIDE awk: `| head -10` closed the pipe early,
-        # awk died with SIGPIPE (141), and pipefail+set -e killed the
-        # whole session-init once NEXT grew past 10 lines.
-        NEXT=$(awk '
-            /^## (CRITICAL|HIGH) — Next$/ { p=1; next }
-            /^## / { p=0 }
-            !p { next }
-            /^- \[ \]/ { if (++items > 10) exit; emit=1; print; next }
-            emit && /^  / { print; next }
-            { emit=0 }
-        ' "$BOARD")
-        if [[ -n "$NEXT" ]]; then
-            echo "NEXT:"
-            echo "$NEXT" | while IFS= read -r line; do echo "  $line"; done
-        fi
-        BLOCKED=$(awk '
-            /^## Blocked$/ { p=1; next }
-            /^## / { p=0 }
-            !p { next }
-            /^- \[ \]/ { emit=1; print; next }
-            emit && /^  / { print; next }
-            { emit=0 }
-        ' "$BOARD")
-        if [[ -n "$BLOCKED" ]]; then
-            echo "BLOCKED:"
-            echo "$BLOCKED" | while IFS= read -r line; do echo "  $line"; done
-        fi
-        # Sanity guard (CC-21): if board has `- [ ]` items but the
-        # parser finds none, the headers may have changed again.
-        TOTAL=$(grep -c '^- \[ \] ' "$BOARD" || true)
-        if [[ "$TOTAL" -gt 0 && -z "$NEXT" && -z "$BLOCKED" ]]; then
-            echo "  WARN: board has $TOTAL items but parser found none — check headers in $BOARD"
-        fi
-    else
-        echo "  (no work board at $BOARD)"
-    fi
-
     echo ""
     if [[ "$WARN" == "0" ]]; then
         echo "── Ready to work ──"
