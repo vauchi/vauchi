@@ -87,8 +87,16 @@ issue_release() {
         echo "  #$number is not held by this session ($(slot_claim_owner "$body")) — left as is"
         return 1
     fi
-    ahead=$(glab api "projects/$ISSUE_REPO/repository/compare?from=main&to=issue%2F$number" \
-        | jq '.commits | length')
+    # Merged-ness is patch equivalence (git cherry, VGT03), not ancestry:
+    # GitLab rebases a branch that is behind main when it merges it.
+    if [ -e _private/.git ] && git -C _private fetch -q origin \
+        "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
+        "+refs/heads/main:refs/remotes/origin/main" 2>/dev/null; then
+        ahead=$(git -C _private cherry origin/main "origin/issue/$number" | grep -c '^+' || true)
+    else
+        ahead=$(glab api "projects/$ISSUE_REPO/repository/compare?from=main&to=issue%2F$number" \
+            | jq '.commits | length')
+    fi
     if [ "$ahead" -gt 0 ]; then
         echo "  issue/$number has $ahead commit(s) not on main — merge them first; the claim stays"
         return 1
@@ -119,7 +127,7 @@ _issue_sibling_branches() {
         git -C "$repository" fetch -q origin \
             "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
             "+refs/heads/main:refs/remotes/origin/main" || continue
-        if git -C "$repository" merge-base --is-ancestor "origin/issue/$number" origin/main; then
+        if ! git -C "$repository" cherry origin/main "origin/issue/$number" | grep -q '^+'; then
             echo "merged $repository"
         else
             echo "unmerged $repository"
