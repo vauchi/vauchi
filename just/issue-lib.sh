@@ -13,9 +13,18 @@ ISSUE_REPO="${ISSUE_REPO:-vauchi%2Fprivate}"
 ISSUE_STALE_HOURS="${ISSUE_STALE_HOURS:-72}"
 ISSUE_CLAIM_LOG="${ISSUE_CLAIM_LOG:-_private/docs/2026-09-25-claim-collisions.md}"
 
-# Hours since an ISO-8601 timestamp; jq keeps it identical on BSD, GNU and BusyBox.
+# Hours since an ISO-8601 timestamp; jq keeps it identical on BSD, GNU and
+# BusyBox. Notes end in Z but commit dates carry the committer's offset
+# (+02:00), which fromdateiso8601 rejects, so offsets are folded in by hand.
 _issue_age_hours() {
-    printf '"%s"' "$1" | jq -r 'sub("\\.[0-9]+"; "") | fromdateiso8601 | ((now - .) / 3600 | floor)'
+    printf '"%s"' "$1" | jq -r '
+        sub("\\.[0-9]+"; "")
+        | if test("Z$") then fromdateiso8601
+          else capture("^(?<t>.{19})(?<sign>[+-])(?<h>[0-9]{2}):(?<m>[0-9]{2})$")
+               | ((.t + "Z") | fromdateiso8601)
+                 - (if .sign == "+" then 1 else -1 end) * ((.h | tonumber) * 3600 + (.m | tonumber) * 60)
+          end
+        | ((now - .) / 3600 | floor)'
 }
 
 # Latest claim or takeover note on #N, as JSON; empty when none.
