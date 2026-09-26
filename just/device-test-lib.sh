@@ -38,7 +38,7 @@ dt_set_xcode_auth_args() {
 }
 
 # Resolve the core directory.
-# Priority: explicit argument > worktree of current branch > core/
+# Priority: explicit argument > core/
 dt_resolve_core_dir() {
     local explicit="${1:-}"
 
@@ -50,33 +50,6 @@ dt_resolve_core_dir() {
         fi
         echo "$explicit"
         return
-    fi
-
-    # Auto-detect: check if vauchi-mobile-swift symlink points to a worktree
-    local spm_symlink="vauchi-mobile-swift/VauchiMobileFFI.xcframework"
-    if [[ -L "$spm_symlink" ]]; then
-        local target
-        target=$(readlink "$spm_symlink")
-        # Extract core dir from symlink target
-        # e.g., /Users/.../core/.worktrees/feature-foo/target/xcframework-build/...
-        if [[ "$target" == *"core/.worktrees/"* ]]; then
-            local worktree_dir
-            worktree_dir=$(echo "$target" | sed 's|/target/xcframework-build/.*||')
-            if [[ -d "$worktree_dir" ]]; then
-                echo "$worktree_dir"
-                return
-            fi
-        fi
-    fi
-
-    # Check if core/ has a non-main branch checked out with a worktree
-    if [[ -d "core" ]]; then
-        local current_branch
-        current_branch=$(git -C core branch --show-current 2>/dev/null || echo "main")
-        if [[ "$current_branch" != "main" && -d "core/.worktrees/$current_branch" ]]; then
-            echo "core/.worktrees/$current_branch"
-            return
-        fi
     fi
 
     # Default to core/
