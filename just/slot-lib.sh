@@ -74,7 +74,8 @@ EOF
 }
 
 slot_acquire() {
-    local root="$1" state
+    local root state
+    root=$(cd "$1" && pwd -P)
     read -r -a state <<< "$(slot_lock_state "$root")"
     if [[ "${state[0]}" == held ]]; then
         echo "HELD: slot $(basename "$root") is used by ${state[2]} session:${state[1]} (seen ${state[3]}h ago)"
@@ -90,7 +91,8 @@ slot_acquire() {
 }
 
 slot_release() {
-    local root="$1" state
+    local root state
+    root=$(cd "$1" && pwd -P)
     read -r -a state <<< "$(slot_lock_state "$root")"
     if [[ "${state[0]}" == mine ]]; then
         rm -f "$root/$SLOT_LOCK_FILE"
