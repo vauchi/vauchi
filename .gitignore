@@ -37,6 +37,7 @@
 # Ignore generated/cache directories
 # ===========================================
 /.worktrees/
+/.branch-name
 /.superpowers/
 /data/
 /tmp/

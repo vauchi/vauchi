@@ -56,9 +56,16 @@ create name *repos='':
         for_each_repo --no-root _collect_target
     fi
 
+    # Root first, at the base itself, so the other repos nest inside it as in
+    # the real workspace; otherwise root's .claude -> _private/.claude dangles.
+    has_root=false
+    ordered=()
+    for dir in "${targets[@]}"; do
+        if [[ "$dir" == "." ]]; then has_root=true; else ordered+=("$dir"); fi
+    done
+    $has_root && targets=("." ${ordered[@]+"${ordered[@]}"})
+
     mkdir -p "$wt_base"
-    # Store the original branch name for list/remove
-    echo "{{ name }}" > "$wt_base/.branch-name"
 
     created=()
     failed=()
@@ -66,7 +73,11 @@ create name *repos='':
         label="$dir"
         [[ "$dir" == "." ]] && label="root"
 
-        wt_path="$wt_base/$label"
+        if [[ "$dir" == "." ]]; then
+            wt_path="$wt_base"
+        else
+            wt_path="$wt_base/$label"
+        fi
 
         if git -C "$dir" show-ref --verify --quiet "refs/heads/{{ name }}"; then
             # Preserve an existing branch exactly as-is.
@@ -102,6 +113,9 @@ create name *repos='':
             rmdir "$wt_path" 2>/dev/null || true
         fi
     done
+
+    # Written after the root worktree exists: git worktree add needs an empty base.
+    echo "{{ name }}" > "$wt_base/.branch-name"
 
     echo ""
     if [[ ${#created[@]} -gt 0 ]]; then
@@ -143,7 +157,7 @@ list:
 
         repo_count=0
         for repo_dir in "$wt_dir"/*/; do
-            [[ ! -d "$repo_dir" ]] && continue
+            [[ -e "$repo_dir/.git" ]] || continue
             repo=$(basename "$repo_dir")
             branch=$(git -C "$repo_dir" branch --show-current 2>/dev/null || echo "detached")
             status=$(git -C "$repo_dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
@@ -196,7 +210,7 @@ remove name:
     # Check for uncommitted changes in worktree repos
     dirty=()
     for repo_dir in "$wt_base"/*/; do
-        [[ ! -d "$repo_dir" ]] && continue
+        [[ -e "$repo_dir/.git" ]] || continue
         repo=$(basename "$repo_dir")
         if [[ -n "$(git -C "$repo_dir" status --porcelain 2>/dev/null)" ]]; then
             dirty+=("$repo")
