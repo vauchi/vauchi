@@ -57,7 +57,7 @@ Key mappings: `cargo build` → `just build [repo]`, `cargo test` → `just test
 `cargo fmt && clippy && test` → `just check [repo]`, `grep -r` → `just grep <pattern>`,
 `glab mr create` → `just gitlab mr-create [repo]`
 
-**Multi-repo git, commits, branching, WIP, worktrees**: See `.claude/rules/multi-repo-awareness.md`
+**Multi-repo git, commits, branching, WIP, workspace slots**: See `.claude/rules/multi-repo-awareness.md`
 
 **Subagent budget (MANDATORY)** — each `Agent` call pays per-invocation
 overhead (system prompt + agent definition + skills list) before doing

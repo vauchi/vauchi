@@ -63,9 +63,6 @@ mod git 'just/git.just'
 [doc('GitLab MR, pipeline, and issue operations')]
 mod gitlab 'just/gitlab.just'
 
-[doc('Git worktree management for parallel development')]
-mod worktree 'just/worktree.just'
-
 [doc('Workspace slots — one session per full workspace clone')]
 mod slot 'just/slot.just'
 
@@ -1723,11 +1720,10 @@ help:
       just git cleanup        Preview merged branch cleanup
       just git cleanup run    Delete merged branches + prune refs
 
-    Worktrees (parallel development):
-      just worktree create <branch> [repos]  Create parallel checkout
-      just worktree list      List active worktrees
-      just worktree remove <branch>  Remove worktree (interactive)
-      just worktree remove-force <branch>  Remove worktree (non-interactive)
+    Workspace slots (parallel sessions — one full workspace clone each):
+      just slot status        Show every slot, its holder, repos off main/dirty
+      just slot acquire       Hold this slot (session-init does this)
+      just slot release       Release this slot (session-end does this)
       (include root to nest the other repos in it, as in the workspace)
 
     Agent harnesses:
@@ -2142,18 +2138,14 @@ housekeeping:
         ISSUES=$((ISSUES + stale_problems))
     fi
 
-    # 13. Orphaned worktrees
-    section "Orphaned worktrees"
-    if [[ -d ".worktrees" ]]; then
-        wt_count=$(ls -d .worktrees/*/ 2>/dev/null | wc -l | tr -d ' ')
-        if [[ "$wt_count" -gt 0 ]]; then
-            echo "  $wt_count active worktree(s):"
-            ls -d .worktrees/*/ 2>/dev/null | sed 's|.worktrees/||;s|/||;s/^/    /'
-            echo "  -> Remove with: just worktree remove-force <branch>"
-            ISSUES=$((ISSUES + wt_count))
-        else
-            echo "  None"
-        fi
+    # 13. Linked worktrees — parallel sessions use slots (`just slot status`)
+    section "Linked worktrees"
+    source just/slot-lib.sh
+    stray_worktrees=$(slot_linked_worktrees .)
+    if [[ -n "$stray_worktrees" ]]; then
+        printf '%s\n' "$stray_worktrees" | sed 's/^/    /'
+        echo "  -> Merge their work, then: git -C <repo> worktree remove <path>"
+        ISSUES=$((ISSUES + $(printf '%s\n' "$stray_worktrees" | wc -l | tr -d ' ')))
     else
         echo "  None"
     fi

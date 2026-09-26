@@ -37,7 +37,9 @@ the Claude-specific wording.
 - Follow strict TDD for code changes: failing test first, minimal
   implementation, then refactor. See `$tdd-workflow` and
   `docs/src/developers/tdd-rules.md`.
-- Never work directly on `main`. Use `just worktree create <slug> [repo]`.
+- Never work directly on `main`. Branch in your workspace slot (`just git
+  branch <name> [repos]`); parallel sessions use separate slots (`just slot
+  status`), never git worktrees.
 - Never force-push, bypass hooks, use `--no-verify`, skip required checks, or
   weaken tests to make a check pass.
 - All repositories have protected `main`; changes merge through merge requests.

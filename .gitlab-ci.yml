@@ -71,7 +71,6 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-lint-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
-    - JUST_UNSTABLE=1 just worktree test
     - JUST_UNSTABLE=1 just slot test
     - JUST_UNSTABLE=1 just harness test
     - python3 -m unittest tests/test_backup_recipe_authority.py
@@ -92,7 +91,6 @@ test:release-gates:
           - just/gitlab.just
           - just/check-prerequisites.sh
           - just/lint-docs.sh
-          - just/worktree.just
           - just/slot.just
           - just/slot-lib.sh
           - just/harness.just
@@ -109,7 +107,6 @@ test:release-gates:
           - tests/test_lint_docs_recipe.py
           - tests/test_lint_recipe_reports_failure.py
           - tests/test_release_gates.py
-          - tests/test_worktree_recipe.py
           - tests/test_slot_recipe.py
           - tests/test_harness_recipe.py
 
