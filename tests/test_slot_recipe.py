@@ -133,7 +133,11 @@ class SlotRecipeTest(unittest.TestCase):
             ["bash", "-c", script], env=environment, check=True, capture_output=True, text=True
         ).stdout.splitlines()
 
-        self.assertRegex(lines[0], r"^session:[0-9a-f]{12} slot:vauchi-1$")
+        host = subprocess.run(
+            ["hostname", "-s"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        # Slots are per machine; claims are shared, so the stamp names the host.
+        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{host}/vauchi-1$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
     def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
@@ -159,6 +163,31 @@ class SlotRecipeTest(unittest.TestCase):
         ).stdout.splitlines()
 
         self.assertEqual(lines, [f"core {linked.resolve()} side 1"])
+
+    def test_a_linked_worktree_whose_directory_is_gone_is_reported_missing(self) -> None:
+        core = self.parent / "vauchi-1/core"
+        (core / "tracked.txt").write_text("base\n")
+        subprocess.run(["git", "-C", str(core), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e",
+             "commit", "--quiet", "-m", "base"],
+            check=True,
+        )
+        linked = self.parent / "scratch-worktree"
+        subprocess.run(
+            ["git", "-C", str(core), "worktree", "add", "--quiet", "-b", "side", str(linked)],
+            check=True,
+        )
+        resolved = linked.resolve()
+        shutil.rmtree(linked)
+        library = WORKSPACE_ROOT / "just/slot-lib.sh"
+
+        lines = subprocess.run(
+            ["bash", "-c", f'source "{library}"; slot_linked_worktrees "{self.parent / "vauchi-1"}"'],
+            check=True, capture_output=True, text=True,
+        ).stdout.splitlines()
+
+        self.assertEqual(lines, [f"core {resolved} side missing"])
 
     def test_acquire_from_a_relative_root_names_the_slot(self) -> None:
         library = WORKSPACE_ROOT / "just/slot-lib.sh"
