@@ -42,7 +42,10 @@ def fail(message):
     print(json.dumps({"message": message})); sys.stderr.write(message + "\n"); sys.exit(1)
 
 if parts[2] == "issues" and len(parts) == 3:
-    out([i for i in state["issues"].values() if i["state"] == "opened"])
+    opened = [i for i in state["issues"].values() if i["state"] == "opened"]
+    if "--paginate" not in args:
+        opened = opened[:int(query.partition("per_page=")[2].split("&")[0] or 20)]
+    out(opened)
 if parts[2] == "issues" and len(parts) == 4:
     issue = state["issues"].get(parts[3])
     out(issue) if issue else fail("404 Not found")
@@ -269,6 +272,59 @@ class IssueClaimTest(unittest.TestCase):
         self.assertIn("#9", rows[1])
         self.assertIn("claimed", rows[1])
         self.assertFalse(any("#3" in row for row in rows))
+
+    def add_issues(self, *issues: tuple[int, str, str]) -> None:
+        state = self.load()
+        for number, priority, status in issues:
+            labels = [f"priority::{priority}"] + ([f"status::{status}"] if status else [])
+            state["issues"][str(number)] = {"iid": number, "state": "opened", "labels": labels,
+                                            "title": f"Item {number}", "web_url": f"u{number}"}
+        self.save(state)
+
+    def test_queue_groups_by_board_column_and_counts_the_shelf(self) -> None:
+        self.add_issues((11, "medium", "review"), (12, "critical", "backlog"),
+                        (13, "high", "deferred"), (14, "critical", "refreshing"),
+                        (15, "high", "implementing"), (16, "low", "select-solution"))
+
+        lines = self.run_lib("issue_queue", "kimi-b", check=True).stdout.splitlines()
+
+        def section(title: str) -> list[str]:
+            start = next(i for i, line in enumerate(lines) if title in line)
+            rows = []
+            for line in lines[start + 1:]:
+                if "#" not in line:
+                    break
+                rows.append(line.split()[0])
+            return rows
+
+        self.assertEqual(section("ready for agents"), ["#14", "#7", "#9"])
+        self.assertEqual(section("waiting on maintainer"), ["#11", "#16"])
+        self.assertEqual(section("in flight"), ["#15"])
+        self.assertIn("refreshing", next(line for line in lines if "#14" in line))
+        self.assertFalse(any("#12" in line or "#13" in line for line in lines))
+        self.assertTrue(any("1 backlog" in line and "1 deferred" in line for line in lines))
+
+    def test_queue_reads_every_page_of_open_issues(self) -> None:
+        self.add_issues(*((number, "low", "intake") for number in range(100, 205)))
+
+        output = self.run_lib("issue_queue", "kimi-b", check=True).stdout
+
+        self.assertIn("#204", output)
+
+    def test_board_prints_columns_in_lifecycle_order_and_folds_the_shelf(self) -> None:
+        self.add_issues((12, "low", "backlog"), (11, "medium", "review"),
+                        (14, "high", "refreshing"))
+
+        folded = self.run_lib("issue_board", "kimi-b", check=True).stdout
+        full = self.run_lib("issue_board all", "kimi-b", check=True).stdout
+
+        headers = [line for line in folded.splitlines() if line.startswith("──")]
+        self.assertEqual([h.split()[1] for h in headers],
+                         ["backlog", "intake", "refreshing", "review"])
+        self.assertIn("── backlog (1) ──", folded)
+        self.assertIn("── intake (2) ──", folded)
+        self.assertNotIn("#12", folded)
+        self.assertIn("#12", full)
 
     def test_comment_posts_the_body_signed_with_session_and_slot(self) -> None:
         result = self.run_lib("issue_comment 7 'Merged in !12.'", "codex-a")
