@@ -40,8 +40,10 @@ the Claude-specific wording.
 - Never work directly on `main`. Branch in your workspace slot (`just git
   branch <name> [repos]`); parallel sessions use separate slots (`just slot
   status`), never git worktrees.
-- Never force-push, bypass hooks, use `--no-verify`, skip required checks, or
-  weaken tests to make a check pass.
+- Never force-push `main`, bypass hooks, use `--no-verify`, skip required
+  checks, or weaken tests to make a check pass. The one allowed force push
+  is `git push --force-with-lease` on your own MR branch, and only when the
+  pre-push hook has just rebased it and asks for it.
 - All repositories have protected `main`; changes merge through merge requests.
 - Verify claims against current code and current git state before acting.
 - Keep private plans, audits, strategy, and internal material in `_private/`.
