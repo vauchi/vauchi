@@ -61,6 +61,20 @@ class WorktreeRecipeTest(unittest.TestCase):
         (scripts / "for-each-repo.sh").write_text("for_each_repo() { :; }\n")
         return seed, checkout
 
+    def run_list(self, checkout: Path) -> list[str]:
+        (checkout / "scripts/scripts/output-helpers.sh").write_text(
+            'status_ok() { echo "ROW $1 $2"; }\nstatus_fail() { :; }\n'
+        )
+        result = subprocess.run(
+            ["just", "--justfile", str(checkout / "justfile"), "worktree", "list"],
+            cwd=checkout,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return [line.removeprefix("ROW ") for line in result.stdout.splitlines()
+                if line.startswith("ROW ")]
+
     def run_create(
         self, checkout: Path, branch: str, *repositories: str
     ) -> subprocess.CompletedProcess[str]:
@@ -168,6 +182,26 @@ class WorktreeRecipeTest(unittest.TestCase):
                 str((root / "_private").resolve()),
             )
             self.assertEqual((root / ".claude").read_text(), "base\n")
+
+    def test_list_shows_only_repositories_of_a_nested_root_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            seed, checkout = self.create_fixture(Path(temporary_directory))
+            subprocess.run(
+                ["git", "clone", "--quiet", str(Path(temporary_directory) / "remote.git"),
+                 str(checkout / "_private")],
+                check=True,
+            )
+            (seed / "just").mkdir()
+            (seed / "just/recipe.txt").write_text("recipe\n")
+            (seed / ".gitignore").write_text("/_private/\n/.branch-name\n")
+            self.git(seed, "add", "just", ".gitignore")
+            self.git(seed, "commit", "-m", "tracked directory beside the nested repo")
+            self.git(seed, "push", "origin", "main")
+            self.assertEqual(self.run_create(checkout, "fix/list", "root", "_private").returncode, 0)
+
+            rows = self.run_list(checkout)
+
+            self.assertEqual(sorted(rows), ["_private fix/list", "root fix/list"])
 
 
 if __name__ == "__main__":
