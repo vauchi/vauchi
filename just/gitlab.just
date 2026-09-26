@@ -145,6 +145,15 @@ mr-update repo='' title='':
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
+    # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
+    # on merge, before issue-status-sync can derive its status (#70).
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    if [[ "${MR_ALLOW_CLOSING:-}" != "1" ]] && closing=$(issue_closing_reference "$mr_title"$'\n'"$mr_body"); then
+        echo "ERROR: MR text would close an issue on merge: '${closing# }'."
+        echo "       Refer to the issue without a closing keyword, e.g. '(#14)';"
+        echo "       override deliberately with MR_ALLOW_CLOSING=1."
+        exit 1
+    fi
     # Defence in depth: no bare `@word` reaches GitLab (mirrors mr-create).
     if ! printf '%s' "$mr_body" \
        | "$workspace_root/scripts/scripts/escape-mr-mentions.py" --check; then
@@ -223,6 +232,15 @@ mr-create repo='' title='':
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
+    fi
+    # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
+    # on merge, before issue-status-sync can derive its status (#70).
+    source "{{ justfile_directory() }}/just/issue-lib.sh"
+    if [[ "${MR_ALLOW_CLOSING:-}" != "1" ]] && closing=$(issue_closing_reference "$mr_title"$'\n'"$mr_body"); then
+        echo "ERROR: MR text would close an issue on merge: '${closing# }'."
+        echo "       Refer to the issue without a closing keyword, e.g. '(#14)';"
+        echo "       override deliberately with MR_ALLOW_CLOSING=1."
+        exit 1
     fi
     # Defence in depth: validate that no bare `@word` survives the
     # escape pass before reaching GitLab. Catches edge cases the
@@ -520,6 +538,13 @@ mr-create-all title='':
                 local coauthor
                 coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
                 mr_desc=$(printf '%s\n\n%s' "$mr_desc" "$coauthor")
+            fi
+            # ADR-073 / #70: no closing keyword may reach GitLab.
+            source "{{ justfile_directory() }}/just/issue-lib.sh"
+            if [[ "${MR_ALLOW_CLOSING:-}" != "1" ]] && closing=$(issue_closing_reference "$mr_title"$'\n'"$mr_desc"); then
+                echo "  ✗ MR text would close an issue on merge: '${closing# }' (MR_ALLOW_CLOSING=1 overrides)"
+                failed+=("$label")
+                return
             fi
             PUSH_OPTS+=(-o "merge_request.description=$mr_desc")
 
