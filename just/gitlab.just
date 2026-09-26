@@ -478,7 +478,14 @@ mr-create-all title='':
             PUSH_OPTS=(-u origin "$branch")
             PUSH_OPTS+=(-o merge_request.create)
             PUSH_OPTS+=(-o merge_request.target=main)
-            PUSH_OPTS+=(-o merge_request.remove_source_branch)
+            # issue/<N> is the ADR-073 claim branch: it must outlive its MRs,
+            # and every repo deletes source branches by default.
+            keep_branch=false
+            if [[ "$branch" =~ ^issue/[0-9]+$ ]]; then
+                keep_branch=true
+            else
+                PUSH_OPTS+=(-o merge_request.remove_source_branch)
+            fi
 
             # quote() required — see mr-update.
             mr_title={{ quote(title) }}
@@ -509,6 +516,11 @@ mr-create-all title='':
                 new_iid=$(glab api "projects/vauchi%2F${gl_name}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
                   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
                 [[ -n "$new_iid" ]] && mr_registry+=("${label}:${gl_name}:${new_iid}")
+                if [[ "$keep_branch" == true && -n "$new_iid" ]]; then
+                    glab api -X PUT "projects/vauchi%2F${gl_name}/merge_requests/${new_iid}" \
+                        -f remove_source_branch=false >/dev/null \
+                        && echo "  Keeps $branch after merge (ADR-073 claim branch)"
+                fi
             else
                 echo "$push_mr_output" | sed 's/^/  /'
                 echo "  ✗ Push failed — check branch protection or network"
@@ -760,7 +772,16 @@ issue-create title repo='' *args='':
     # quote() required — see mr-update.
     issue_title={{ quote(title) }}
     issue_title="${issue_title#title=}"
-    glab issue create --title "$issue_title" --no-editor --yes -R "$p" {{args}}
+    # glab prompts for a description when none is given, which fails in a
+    # non-interactive session; default one that names the opening session.
+    case " {{args}} " in
+        *" --description"*|*" -d "*) glab issue create --title "$issue_title" --no-editor --yes -R "$p" {{args}} ;;
+        *)
+            source "{{ justfile_directory() }}/just/slot-lib.sh"
+            glab issue create --title "$issue_title" --no-editor --yes -R "$p" \
+                --description "Opened by $(slot_claim_tag "{{ justfile_directory() }}") via just gitlab issue-create." {{args}}
+            ;;
+    esac
 
 # Close an issue
 [no-cd]

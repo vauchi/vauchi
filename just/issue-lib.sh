@@ -49,7 +49,9 @@ issue_claim() {
     if glab api -X POST "projects/$ISSUE_REPO/repository/branches" \
         -f "branch=issue/$number" -f ref=main >/dev/null 2>&1; then
         glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" -f "body=claim: $tag" >/dev/null
-        echo "✓ Claimed #$number ($tag) — work on branch issue/$number"
+        echo "✓ Claimed #$number ($tag)"
+        echo "  Work on branch issue/$number: git -C _private fetch origin issue/$number && git -C _private switch issue/$number"
+        echo "  Other repos: just git branch issue/$number <repos>"
         return 0
     fi
     note=$(_issue_holder_note "$number")
