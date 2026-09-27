@@ -138,8 +138,6 @@ phases).
 - **CWD gotcha**: `just` recipes use `scripts/scripts/` (double-nested).
   Recipes fail if CWD is not the workspace root. Always run `just` from
   the root, never from a sub-repo.
-- Check what's installed before suggesting tool installations.
-- When asked about pricing/hardware/real-world info, use web search.
 - Portable-shell rules auto-load when shell paths are touched
   (`.claude/rules/portable-shell.md`; VSH01–12 enforced by
   `check-portable-shell.sh`). Cargo-vet discipline is VSC01-enforced —
@@ -148,12 +146,7 @@ phases).
 
 ## Dependencies & Repo Layout
 
-| Crate | Consumers | Notes |
-|-------|-----------|-------|
-| `vauchi-core` | cli, tui, e2e, android, ios, macos, windows, linux-gtk, linux-qt, web-demo | Git dep pinned to a release tag (`tag` + exact `version`); bump per consumer |
-| `vauchi-platform` | ios, macos, android | UniFFI bindings (SPM via vauchi-platform-swift; Maven AAR from core) |
-| `vauchi-cabi` | linux-qt, windows | C ABI exports |
-| `vauchi-protocol` | relay | Shared types only (serde); git dep, `branch = "main"` |
+Crate→consumer graph and pinning: `dependency-map` skill.
 
 Local dev uses `[patch]` blocks injected into each consumer's
 `Cargo.toml` by `just setup-path-overrides`; `just check-path-overrides`
@@ -273,6 +266,5 @@ One-time activation (the tool fails loud until both are done):
 embeddings + sqlite, zero API tokens). Use to *locate* code by meaning when
 grep's exact match won't do — prefer it over an `Explore`/`general-purpose`
 agent for "where is the code that does X". Exact strings → still `just grep`.
-First run `just semindex` (incremental; re-embeds only changed files); needs
-`ollama pull nomic-embed-text` once. Search ladder: `grep` (exact) →
+Setup: `semsearch` skill. Search ladder: `grep` (exact) →
 `semsearch` (semantic) → `tell-me-about` (summarize) → frontier agent (reason).
