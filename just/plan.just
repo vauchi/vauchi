@@ -204,6 +204,11 @@ problem-list phase='':
     by_status = defaultdict(list)
 
     for d in sorted(os.listdir(problems_dir)):
+        # done/, deferred/ and rejected/ hold records one level down (counted
+        # separately below); rejected/README.md is that folder's index, not a
+        # record, and was being reported as an unknown-status record.
+        if d in ('done', 'deferred', 'rejected'):
+            continue
         # Support both README.md (current) and problem.md (legacy)
         readme = os.path.join(problems_dir, d, 'README.md')
         if not os.path.isfile(readme):
