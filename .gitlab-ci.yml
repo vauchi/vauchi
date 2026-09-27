@@ -281,6 +281,32 @@ gates:core-consumer-drift:
       - drift.txt
     expire_in: 1 week
 
+# allow_failure budget (scheduled only) — vauchi/private#72
+#
+# check-allow-failure-budget.sh ran only inside `just housekeeping` from
+# 2026-03 to 2026-09, and the count doubled with nobody seeing it. Blocking
+# for the same reason as gates:core-consumer-drift: an advisory gate here
+# would repeat gates:workspace-ratchets. The budget is the public share
+# (74, measured 2026-09-27); _private cannot be cloned here, and its share
+# is held by the script's default budget in `just housekeeping`. Lower it
+# as entries are removed; never raise it to make the job pass.
+gates:allow-failure-budget:
+  stage: lint
+  tags: [linux, self-hosted]
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+    - |
+      for repo in scripts core cli tui e2e relay ohttp-relay linux-gtk linux-qt windows web-demo ios macos android docs features website locales themes; do
+        git clone --depth=1 --branch main \
+          "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/${repo}.git" \
+          "${CI_PROJECT_DIR}/${repo}"
+      done
+  script:
+    - bash scripts/scripts/check-allow-failure-budget.sh --budget 74 .
+
 # Weekly prerelease cleanup (scheduled only)
 # Fetches cleanup script from vauchi/scripts at runtime.
 cleanup:prerelease:
