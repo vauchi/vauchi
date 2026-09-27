@@ -563,6 +563,7 @@ plan-stale days='30':
 test-release-gates: test-e2e-recipes
     python3 "{{justfile_directory()}}/tests/test_release_gates.py" "{{justfile_directory()}}/justfile"
 
+# Report first-release gate status (RG-1..15, hard ship criteria); fails while any gate is open
 [group('tools')]
 [script]
 release-gates:

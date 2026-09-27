@@ -2687,11 +2687,20 @@ check-just-docs action='check':
     DOC="{{ justfile_directory() }}/.claude/docs/just-commands.md"
     MISSING=()
     # Extract all public recipe names from just --list
+    prev=""
     while IFS= read -r line; do
         recipe=$(echo "$line" | sed 's/^[[:space:]]*//' | cut -d' ' -f1)
         [[ -z "$recipe" ]] && continue
         [[ "$recipe" =~ ^\[ ]] && continue     # skip [group] headers
         [[ "$recipe" == "Available" ]] && continue
+        # A doc comment is documentation: `just --list` shows it, so
+        # just-commands.md stays the curated agent reference instead of an
+        # exhaustive, context-loaded index of every recipe. For a long
+        # signature, `just --list` prints the comment on the line above.
+        if [[ "$line" == *"#"* || "$prev" =~ ^[[:space:]]*# ]]; then
+            prev="$line"; continue
+        fi
+        prev="$line"
         # Check if recipe name appears in docs (word boundary match)
         if ! grep -qE "(^|[^a-z-])${recipe}([^a-z-]|$)" "$DOC" 2>/dev/null; then
             MISSING+=("$recipe")

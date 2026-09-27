@@ -13,6 +13,7 @@
 # Unbounded intake (never block creation), visible bucket level,
 # backpressure when overflow (exit 1 on hard limit).
 
+# Audit problem records: status, staleness, and the intake alert
 [group('health')]
 [script]
 problem-audit:
@@ -168,6 +169,7 @@ problem-audit:
 #
 # v0.5.0 baseline (2026-03-27). Target: crypto/=0, total <100.
 
+# Count unwrap() calls in vauchi-core source
 [group('health')]
 [script]
 check-unwraps:
@@ -245,6 +247,7 @@ check-unwraps:
 # Library version tags (v0.X.Y-dev, v0.X.Y-rc) are excluded — they
 # track Cargo.toml versions, not product releases.
 
+# Check version consistency across repos
 [group('health')]
 [script]
 check-versions:
@@ -299,6 +302,7 @@ check-versions:
 # Ignored E2E tests rot silently. Budget ratchets down.
 # v0.5.0 baseline: 47 ignores. Target: <10.
 
+# Check that ignored e2e tests stay within budget
 [group('health')]
 [script]
 check-e2e-ignores:
@@ -338,6 +342,7 @@ check-e2e-ignores:
 # global Xcode/SwiftPM/sccache caches. Read-only; does not delete.
 # Use `just disk-clean` to reclaim.
 
+# Survey disk usage: volume, cargo targets, caches
 [group('health')]
 [script]
 disk:
@@ -389,6 +394,7 @@ disk:
 #   just disk-clean --tier=2 --apply
 #   just disk-clean --tier=3 --apply  # destructive, full rebuild after
 
+# Free disk space by tier (dry run unless told to apply)
 [group('health')]
 [script]
 disk-clean *args:

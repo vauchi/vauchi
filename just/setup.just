@@ -969,6 +969,7 @@ gen-hook-from-pattern category="" force="":
 token-report *args:
     @python3 scripts/scripts/token-report.py "$@"
 
+# Run the token-report script tests
 [group('tests')]
 token-report-test scripts_root="scripts":
     #!/usr/bin/env bash
@@ -982,6 +983,7 @@ token-report-test scripts_root="scripts":
         python3 "$test_file"
     done
 
+# Run the session-efficiency analyzer tests
 [group('tests')]
 session-efficiency-test private_root="_private":
     #!/usr/bin/env bash
@@ -995,6 +997,7 @@ session-efficiency-test private_root="_private":
         python3 "$test_file"
     done
 
+# Report agent session efficiency from session logs
 [group('reports')]
 session-efficiency-report private_root="_private":
     @python3 "{{ private_root }}/scripts/session_efficiency_analyzer.py"

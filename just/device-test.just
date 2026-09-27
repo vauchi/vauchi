@@ -8,6 +8,7 @@
 # DEVICE TESTING (physical device workflow)
 # ═══════════════════════════════════════════════════════════════════
 
+# Test the device-test recipes
 [group('tests')]
 test-device-test-recipes:
     python3 "{{justfile_directory()}}/tests/test_device_test_recipe.py" \
