@@ -305,7 +305,7 @@ gates:allow-failure-budget:
           "${CI_PROJECT_DIR}/${repo}"
       done
   script:
-    - bash scripts/scripts/check-allow-failure-budget.sh --budget 74 .
+    - bash scripts/scripts/check-allow-failure-budget.sh --budget 62 .
 
 # Weekly prerelease cleanup (scheduled only)
 # Fetches cleanup script from vauchi/scripts at runtime.
