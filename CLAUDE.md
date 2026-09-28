@@ -239,6 +239,11 @@ load cost many times over. Attribution and history:
   all, print the flagged element) over testing candidates one at a time:
   same single CI run, and it cannot be wrong about which one it was.
   4 occurrences in one session, 2026-09-11 (macOS `test:ui`).
+- **Xcode on the CI host.** Run `hostname` before any `xcodebuild`: on
+  `nell` (the macOS/iOS runner) never boot an iOS simulator — push the
+  red test alone and let the MR pipeline show it — and give local macOS
+  builds a scratch `-derivedDataPath`. 3 occurrences (2026-09-09,
+  2026-09-28 twice); `.claude/docs/operational-notes-infrastructure.md`.
 - **Blocked twice or unsure → ask.** Never bypass, never third-retry —
   a question is always cheaper than the cleanup.
 - **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
