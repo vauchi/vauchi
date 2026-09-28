@@ -679,8 +679,24 @@ session-end:
             done
             echo "  → Release or move them before ending session"
         else
-            echo "  No active claims"
+            echo "  No In Progress items on the legacy board"
         fi
+    fi
+
+    # ADR-073 claims live on GitLab issue/<N> branches, not the board above,
+    # which reported "No active claims" while claims were still held (#415).
+    # A claim may outlive a session (MR in review), so this warns, not blocks.
+    echo ""
+    echo "── issue claims held by this session ──"
+    if HELD=$( (source just/slot-lib.sh && source just/issue-lib.sh && issue_session_claims) ); then
+        if [[ -n "$HELD" ]]; then
+            echo "  Still claimed: $(printf '#%s ' $HELD)"
+            echo "  → just gitlab release <N> when done, or leave claimed for a handoff"
+        else
+            echo "  None"
+        fi
+    else
+        echo "  WARN: could not query GitLab claims"
     fi
 
     # ── Doc staleness check ──

@@ -250,6 +250,19 @@ issue_claims() {
     done
 }
 
+# Issue numbers of the live claims (issue/<N> branches) whose holder note
+# names the current session — what session-end must release or hand off (#415).
+issue_session_claims() {
+    local number me
+    me=$(slot_session_id)
+    for number in $(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
+        | jq -r '.[].name | sub("^issue/"; "")'); do
+        [[ "$(slot_claim_owner "$(_issue_holder_note "$number" | jq -r '.body // ""')")" == "$me"* ]] \
+            && echo "$number"
+    done
+    return 0
+}
+
 # Prints the first GitLab closing reference in the text ("close #14",
 # "Fixes vauchi/private#7") and succeeds; fails when there is none. GitLab
 # closes such issues on merge, before issue-status-sync can derive their
