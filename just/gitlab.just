@@ -741,6 +741,19 @@ pipeline-log job_id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab ci trace "{{job_id}}" -R "$p"
 
+# Download a job's artifacts from the latest successful pipeline on a ref
+# into <dest> (default: the current directory).
+# Usage: just gitlab job-artifacts <repo> <job> [ref] [dest]
+[no-cd]
+[script]
+job-artifacts repo job ref='main' dest='.':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    mkdir -p "{{dest}}"
+    glab job artifact "{{ref}}" "{{job}}" -R "$p" --path="{{dest}}/"
+
 # Retry a failed pipeline (all failed jobs). `glab ci retry` takes a JOB
 # id, not a pipeline id — passing a pipeline id 404s — so hit the
 # pipelines retry API directly.
