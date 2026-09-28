@@ -102,6 +102,41 @@ class SlotRecipeTest(unittest.TestCase):
         self.assertIn("stale", result.stdout)
         self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by you (kimi,"))
 
+    def backdate(self, slot: str, hours: int) -> str:
+        lock = self.parent / slot / ".slot.lock"
+        seen = lock.read_text().split("seen=")[1].split()[0]
+        old = str(int(time.time()) - hours * 3600)
+        lock.write_text(lock.read_text().replace(seen, old))
+        return old
+
+    # vauchi/private#414: seen= was written only at acquire, so a live
+    # session older than SLOT_LOCK_EXPIRY_HOURS read as stale and was taken over.
+    def test_touch_keeps_a_long_running_holders_lock_held(self) -> None:
+        self.just("vauchi-1", "acquire", session="codex-a")
+        self.backdate("vauchi-1", 13)
+
+        self.just("vauchi-1", "touch", session="codex-a")
+
+        result = self.just("vauchi-1", "acquire", session="kimi-b", check=False)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("HELD", result.stdout)
+        self.assertTrue(self.status_rows("codex-a")["vauchi-1"].startswith("held by you"))
+
+    def test_touch_by_another_session_leaves_the_lock_alone(self) -> None:
+        self.just("vauchi-1", "acquire", session="codex-a")
+        old = self.backdate("vauchi-1", 13)
+
+        self.just("vauchi-1", "touch", session="kimi-b")
+
+        lock = (self.parent / "vauchi-1/.slot.lock").read_text()
+        self.assertIn(f"seen={old}", lock)
+        self.assertIn("stale", self.just("vauchi-1", "acquire", session="kimi-b").stdout)
+
+    def test_touch_on_a_free_slot_creates_no_lock(self) -> None:
+        self.just("vauchi-1", "touch", session="codex-a")
+
+        self.assertFalse((self.parent / "vauchi-1/.slot.lock").exists())
+
     def test_only_the_holder_releases(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
 
