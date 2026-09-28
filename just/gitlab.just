@@ -266,17 +266,9 @@ mr-create repo='' title='':
         glab mr create "${ARGS[@]}"
     )
 
-    # issue/<N> is the ADR-073 claim branch and must outlive its MRs, but
-    # every repo deletes source branches by default — even on API-made MRs.
     if [[ "$branch" =~ ^issue/[0-9]+$ ]]; then
-        project_id=${p//\//%2F}
-        new_iid=$(glab api "projects/${project_id}/merge_requests?state=opened&source_branch=${branch}" \
-            | jq -r '.[0].iid // empty')
-        if [[ -n "$new_iid" ]]; then
-            glab api -X PUT "projects/${project_id}/merge_requests/${new_iid}" \
-                -f remove_source_branch=false >/dev/null
-            echo "  !${new_iid} keeps $branch after merge (ADR-073 claim branch)"
-        fi
+        source "{{ justfile_directory() }}/just/issue-lib.sh"
+        issue_keep_mr_branch "$p" "$branch"
     fi
 
     # ── Auto-link Related MRs (E13/E14/E15 fix) ────────────────────
@@ -561,9 +553,7 @@ mr-create-all title='':
                   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
                 [[ -n "$new_iid" ]] && mr_registry+=("${label}:${gl_name}:${new_iid}")
                 if [[ "$keep_branch" == true && -n "$new_iid" ]]; then
-                    glab api -X PUT "projects/vauchi%2F${gl_name}/merge_requests/${new_iid}" \
-                        -f remove_source_branch=false >/dev/null \
-                        && echo "  Keeps $branch after merge (ADR-073 claim branch)"
+                    issue_keep_mr_branch "vauchi/${gl_name}" "$branch" || failed+=("$label")
                 fi
             else
                 echo "$push_mr_output" | sed 's/^/  /'

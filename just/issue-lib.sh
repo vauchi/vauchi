@@ -260,3 +260,25 @@ issue_closing_reference() {
         '(^|[^A-Za-z])(close[sd]?|closing|fix(e[sd]|ing)?|resolve[sd]?|resolving|implement(s|ed|ing)?):? +(issues? +)?[A-Za-z0-9_./-]*#[0-9]+' \
         | head -1 | grep .
 }
+
+# Keeps an ADR-073 claim branch alive past its MR's merge: every repo
+# deletes source branches by default, even on API-made MRs. GitLab has
+# answered this PUT with HTTP 500 immediately after creating the MR and
+# accepted the same call moments later (!2804, core!1640), so it is retried.
+issue_keep_mr_branch() {
+    local project=${1//\//%2F} branch=$2 iid attempt
+    local delay=${ISSUE_KEEP_BRANCH_RETRY_DELAY:-3}
+    iid=$(glab api "projects/${project}/merge_requests?state=opened&source_branch=${branch//\//%2F}" \
+        | jq -r '.[0].iid // empty')
+    [[ -n "$iid" ]] || return 0
+    for attempt in 1 2 3; do
+        if glab api -X PUT "projects/${project}/merge_requests/${iid}" \
+            -f remove_source_branch=false >/dev/null; then
+            echo "  !${iid} keeps $branch after merge (ADR-073 claim branch)"
+            return 0
+        fi
+        [[ $attempt -lt 3 ]] && sleep "$delay"
+    done
+    echo "ERROR: !${iid} would delete $branch on merge — set remove_source_branch=false by hand" >&2
+    return 1
+}
