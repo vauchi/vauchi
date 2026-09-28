@@ -767,7 +767,7 @@ pipeline-cancel id repo='':
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab ci cancel "{{id}}" -R "$p"
+    glab ci cancel pipeline "{{id}}" -R "$p"
 
 # ── Issue Operations ───────────────────────────────────────────────
 
