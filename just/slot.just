@@ -24,6 +24,13 @@ acquire:
     source "{{ justfile_directory() }}/just/slot-lib.sh"
     slot_acquire "{{ justfile_directory() }}"
 
+# Refresh this session's slot lock so a long-running session is not taken over
+touch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    slot_touch "{{ justfile_directory() }}"
+
 # Release this slot if the current session holds it
 release:
     #!/usr/bin/env bash

@@ -103,6 +103,18 @@ slot_acquire() {
     echo "✓ Slot $(basename "$root") held by this session ($(slot_harness) session:$(slot_session_id))"
 }
 
+# Heartbeat: re-stamps seen= on a lock this session holds, so a live session
+# older than SLOT_LOCK_EXPIRY_HOURS is not taken over as stale (#414).
+# Silent and a no-op for a free slot or another session's lock.
+slot_touch() {
+    local root state
+    root=$(cd "$1" && pwd -P)
+    read -r -a state <<< "$(slot_lock_state "$root")"
+    [[ "${state[0]}" == mine ]] || return 0
+    printf 'session=%s harness=%s seen=%s\n' "$(slot_session_id)" "${state[1]}" "$(date +%s)" \
+        > "$root/$SLOT_LOCK_FILE"
+}
+
 slot_release() {
     local root state
     root=$(cd "$1" && pwd -P)
