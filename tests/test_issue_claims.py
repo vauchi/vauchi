@@ -89,6 +89,19 @@ if parts[2] == "repository" and parts[3] == "branches":
 if parts[2] == "repository" and parts[3] == "compare":
     to = query.partition("to=")[2].split("&")[0].replace("%2F", "/")
     out({"commits": [{}] * state["branches"][to]["ahead"]})
+if parts[2] == "merge_requests" and len(parts) == 3:
+    source = query.partition("source_branch=")[2].split("&")[0].replace("%2F", "/")
+    out([m for m in state.get("mrs", {}).values()
+         if m["state"] == "opened" and m["source_branch"] == source])
+if parts[2] == "merge_requests" and len(parts) == 4 and method == "PUT":
+    mr = state["mrs"][parts[3]]
+    # GitLab answered this PUT with a 500 right after the MR was created.
+    if state.get("put_failures", 0) > 0:
+        state["put_failures"] -= 1
+        json.dump(state, open(state_path, "w"))
+        fail("glab: 500 Internal Server Error (HTTP 500)")
+    mr["force_remove_source_branch"] = fields["remove_source_branch"] == "true"
+    out(mr)
 fail("unhandled " + method + " " + rest[0])
 '''
 
@@ -384,6 +397,36 @@ class IssueClaimTest(unittest.TestCase):
                     self.assertIn("#", result.stdout)
                 else:
                     self.assertEqual(result.returncode, 1, result.stdout)
+
+    def open_mr(self, put_failures: int) -> None:
+        state = self.load()
+        state["mrs"] = {"2804": {"iid": 2804, "state": "opened", "source_branch": "issue/308",
+                                 "force_remove_source_branch": True}}
+        state["put_failures"] = put_failures
+        self.save(state)
+
+    def keep_branch(self) -> subprocess.CompletedProcess[str]:
+        return self.run_lib("ISSUE_KEEP_BRANCH_RETRY_DELAY=0 issue_keep_mr_branch vauchi/private issue/308",
+                            "codex-a")
+
+    def test_keep_branch_retries_a_500_right_after_creation(self) -> None:
+        self.open_mr(put_failures=1)
+
+        result = self.keep_branch()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(self.load()["mrs"]["2804"]["force_remove_source_branch"])
+        self.assertIn("!2804 keeps issue/308 after merge", result.stdout)
+
+    def test_keep_branch_fails_loudly_when_every_attempt_errors(self) -> None:
+        self.open_mr(put_failures=99)
+
+        result = self.keep_branch()
+
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertTrue(self.load()["mrs"]["2804"]["force_remove_source_branch"])
+        self.assertIn("!2804", result.stderr)
+        self.assertIn("remove_source_branch=false", result.stderr)
 
 
 if __name__ == "__main__":
