@@ -2826,6 +2826,11 @@ lint-markdown *ARGS:
       echo "SKIP: custom rule not found at $RULE"
       exit 0
     fi
+    RULE_ARGS=(-r "$RULE")
+    # gate-push.sh also loads VDC01; without it this recipe passed files the
+    # push gate then refused (vauchi/private#417).
+    ABS_RULE="scripts/ci-templates/markdownlint-rule-no-abs-paths.js"
+    [ -f "$ABS_RULE" ] && RULE_ARGS+=(-r "$ABS_RULE")
     WS_ROOT="$(pwd)"
     ARGS="{{ ARGS }}"
     FIX=""
@@ -2874,15 +2879,15 @@ lint-markdown *ARGS:
         while [ "$pass" -lt 5 ]; do
           pass=$((pass + 1))
           # shellcheck disable=SC2086
-          if markdownlint $CONFIG -r "$RULE" $FIX "$p" >/dev/null 2>&1; then
+          if markdownlint $CONFIG "${RULE_ARGS[@]}" $FIX "$p" >/dev/null 2>&1; then
             break
           fi
         done
         # shellcheck disable=SC2086
-        markdownlint $CONFIG -r "$RULE" "$p" || rc=1
+        markdownlint $CONFIG "${RULE_ARGS[@]}" "$p" || rc=1
       else
         # shellcheck disable=SC2086
-        markdownlint $CONFIG -r "$RULE" $FIX "$p" || rc=1
+        markdownlint $CONFIG "${RULE_ARGS[@]}" $FIX "$p" || rc=1
       fi
     done
     if [ "$rc" -eq 0 ]; then
