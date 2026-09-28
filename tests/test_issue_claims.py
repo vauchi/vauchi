@@ -196,6 +196,20 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("takeover: session:"))
 
+    # vauchi/private#415: session-end read the legacy work board and reported
+    # "No active claims" while this session still held issues.
+    def test_session_claims_lists_only_this_sessions_live_claims(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        self.run_lib("issue_claim 9", "codex-b", check=True)
+
+        mine = self.run_lib("issue_session_claims", "codex-a")
+
+        self.assertEqual(mine.returncode, 0, mine.stderr)
+        self.assertEqual(mine.stdout.split(), ["7"])
+
+        self.run_lib("issue_release 7", "codex-a", check=True)
+        self.assertEqual(self.run_lib("issue_session_claims", "codex-a").stdout.split(), [])
+
     def test_release_deletes_an_empty_claim_branch_and_notes_it(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
 
