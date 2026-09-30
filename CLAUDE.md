@@ -117,7 +117,8 @@ the narrow form was inconclusive.
 All significant work follows the Problem to Solution Flow. Use `/problem-workflow`.
 See: `_private/docs/reference/2026-01-23-problem-to-solution-flow.md`
 
-Lifecycle: `backlog → intake → investigating → planning → implementing → testing → done`
+Lifecycle: `backlog → intake → investigating → planning → planned → implementing → testing → done`
+(`planned` = `plan.md` says `**Plan status**: ready`, queued; WIP is planning + implementing only — #449)
 
 Every problem record must have: **status**, **priority**, **owner**,
 **goals**. Critical/high problems require **containment** before
