@@ -331,6 +331,31 @@ class IssueClaimTest(unittest.TestCase):
         self.assertFalse(any("#12" in line or "#13" in line for line in lines))
         self.assertTrue(any("1 backlog" in line and "1 deferred" in line for line in lines))
 
+    def test_queue_offers_verification_first_then_the_work_closest_to_done(self) -> None:
+        # #449: testing is verified by whoever can, before anything new, and
+        # within a priority planned work comes before planning or intake.
+        self.add_issues((14, "critical", "refreshing"), (17, "high", "planned"),
+                        (18, "medium", "testing"), (19, "high", "planning"),
+                        (15, "high", "implementing"))
+
+        lines = self.run_lib("issue_queue", "kimi-b", check=True).stdout.splitlines()
+
+        def section(title: str) -> list[str]:
+            start = next(i for i, line in enumerate(lines) if title in line)
+            rows = []
+            for line in lines[start + 1:]:
+                if "#" not in line:
+                    break
+                rows.append(line.split()[0])
+            return rows
+
+        titles = [line.strip() for line in lines if "#" not in line and line.strip()]
+        self.assertLess(titles.index(next(t for t in titles if t.startswith("verify first"))),
+                        titles.index("ready for agents"))
+        self.assertEqual(section("verify first"), ["#18"])
+        self.assertEqual(section("ready for agents"), ["#14", "#17", "#19", "#7", "#9"])
+        self.assertEqual(section("in flight"), ["#15"])
+
     def test_queue_reads_every_page_of_open_issues(self) -> None:
         self.add_issues(*((number, "low", "intake") for number in range(100, 205)))
 
