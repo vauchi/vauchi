@@ -127,7 +127,7 @@ rig_describe() {
 _rig_last_handover() {
     local state
     state=$(_rig_state "$1")
-    [[ -f "$state" ]] && echo "  $1 last hand-over: $(cat "$state")"
+    [[ -f "$state" ]] && echo "  $1 last hand-over: $(head -n 1 "$state")"
     return 0
 }
 
@@ -215,6 +215,7 @@ rig_claim() {
     echo "✓ Held by this session: ${taken// /, } ($(slot_harness) session:$(slot_session_id), pid $pid)"
     for device in $taken; do
         _rig_last_handover "$device"
+        _rig_report_claimed "$device"
     done
 }
 
@@ -243,9 +244,13 @@ rig_release() {
     fi
     note=$(printf '%s' "$*" | tr '\n' ' ')
     [[ -n "$note" ]] || echo "  No state note: the next holder will not know the phones' state (build, identity, permissions, reinstalled?)"
+    local reading
     for device in $mine; do
         printf 'released by %s session:%s at %s — %s\n' "$(slot_harness)" "$(slot_session_id)" \
             "$(date '+%Y-%m-%d %H:%M')" "${note:-no note}" > "$(_rig_state "$device")"
+        # Read while still held: the next claim compares against this.
+        reading=$(rig_readback "$device")
+        [[ -n "$reading" ]] && printf 'readback: %s\n' "$reading" >> "$(_rig_state "$device")"
         rm -f "$(_rig_lock "$device")"
     done
     _rig_log "release: $(slot_session_id) released ${mine// /, } — ${note:-no note}"
@@ -272,4 +277,124 @@ rig_install_wrappers() {
         *":$bin:"*) ;;
         *) echo "  Put it first on PATH (e.g. in ~/.zshrc): export PATH=\"$bin:\$PATH\"" ;;
     esac
+}
+
+# ── Phone state on hand-over ──────────────────────────────────────────────
+# Most runs lost on 2026-09-30 came from state changes nobody announced (a
+# reinstall reset the camera permission and the identity). Release records
+# what each phone reports; claim reads it again and names what changed. Only
+# phones this session is releasing or has just claimed are read, read-only.
+# iOS permissions are not readable through go-ios; the note must carry them.
+
+_rig_table() {
+    printf '%s' "${VAUCHI_RIG_DEVICE_TABLE:-${RIG_SLOT_ROOT:-$(pwd -P)}/_private/docs/testing/device-automation/rig-devices}"
+}
+
+# Prints "<platform> <first id>" for a phone, or nothing.
+_rig_device_info() {
+    local table
+    table=$(_rig_table)
+    [[ -f "$table" ]] || return 0
+    awk -v d="$1" '$1 == d { print $2, $3; exit }' "$table"
+}
+
+_rig_timeout() {
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 15 "$@"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        gtimeout 15 "$@"
+    else
+        "$@"
+    fi
+}
+
+_rig_grant() {
+    local state
+    state=$(printf '%s\n' "$2" | sed -n "s/.*$1: granted=\([a-z]*\).*/\1/p" | head -n 1)
+    case "$state" in
+        true) echo granted ;;
+        false) echo denied ;;
+        *) echo unknown ;;
+    esac
+}
+
+# rig_readback <phone>: "app <version>, camera ..., notifications ..." (iOS:
+# "app <version>"), "app not installed", "not readable", or nothing when
+# reading is off or the phone is not in the device table.
+rig_readback() {
+    local info platform id out version
+    [[ "${VAUCHI_RIG_READBACK:-1}" == 0 ]] && return 0
+    info=$(_rig_device_info "$1")
+    [[ -n "$info" ]] || return 0
+    platform=${info%% *}
+    id=${info#* }
+    case "$platform" in
+        android)
+            if ! out=$(_rig_timeout adb -s "$id" shell dumpsys package app.vauchi 2>/dev/null); then
+                echo "not readable"
+                return 0
+            fi
+            version=$(printf '%s\n' "$out" | sed -n 's/.*versionName=\([^ ]*\).*/\1/p' | head -n 1)
+            if [[ -z "$version" ]]; then
+                echo "app not installed"
+                return 0
+            fi
+            echo "app $version, camera $(_rig_grant android.permission.CAMERA "$out"), notifications $(_rig_grant android.permission.POST_NOTIFICATIONS "$out")"
+            ;;
+        ios)
+            if ! out=$(_rig_timeout ios apps --udid="$id" 2>/dev/null); then
+                echo "not readable"
+                return 0
+            fi
+            version=$(printf '%s' "$out" | python3 -c '
+import json, sys
+try:
+    apps = json.load(sys.stdin)
+except ValueError:
+    apps = []
+for app in apps if isinstance(apps, list) else []:
+    if app.get("CFBundleIdentifier") == "app.vauchi.ios":
+        print(app.get("CFBundleShortVersionString", "?"))
+' 2>/dev/null)
+            if [[ -z "$version" ]]; then
+                echo "app not installed"
+            else
+                echo "app $version"
+            fi
+            ;;
+    esac
+}
+
+# "key old -> new; ..." for the fields that differ between two readbacks.
+_rig_readback_diff() {
+    awk -v a="$1" -v b="$2" 'BEGIN {
+        n = split(a, x, ", ")
+        for (i = 1; i <= n; i++) { k = x[i]; sub(/ .*/, "", k); v = x[i]; sub(/^[^ ]+ /, "", v); old[k] = v }
+        m = split(b, y, ", "); out = ""
+        for (i = 1; i <= m; i++) {
+            k = y[i]; sub(/ .*/, "", k); v = y[i]; sub(/^[^ ]+ /, "", v)
+            if ((k in old) && old[k] != v) out = out (out == "" ? "" : "; ") k " " old[k] " -> " v
+        }
+        print out
+    }'
+}
+
+# Report a phone this session just claimed: what it says now, and what
+# changed since the last hand-over's reading.
+_rig_report_claimed() {
+    local device="$1" now before="" changed state
+    now=$(rig_readback "$device")
+    [[ -n "$now" ]] || return 0
+    echo "  $device now: $now"
+    state=$(_rig_state "$device")
+    if [[ -f "$state" ]]; then
+        before=$(sed -n 's/^readback: //p' "$state")
+    fi
+    [[ -n "$before" && "$before" != "not readable" && "$now" != "not readable" ]] || return 0
+    changed=$(_rig_readback_diff "$before" "$now")
+    if [[ -n "$changed" ]]; then
+        echo "  $device changed since the hand-over: $changed"
+    else
+        echo "  $device unchanged since the hand-over"
+    fi
 }

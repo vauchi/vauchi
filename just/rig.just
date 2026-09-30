@@ -10,6 +10,7 @@
 test:
     python3 "{{ justfile_directory() }}/tests/test_rig_recipe.py" "{{ justfile_directory() }}"
     python3 "{{ justfile_directory() }}/tests/test_rig_wrappers.py" "{{ justfile_directory() }}"
+    python3 "{{ justfile_directory() }}/tests/test_rig_readback.py" "{{ justfile_directory() }}"
 
 # Show who holds the rig and the last hand-over note
 status:

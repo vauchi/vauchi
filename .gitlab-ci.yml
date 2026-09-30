@@ -116,6 +116,7 @@ test:release-gates:
           - tests/test_slot_recipe.py
           - tests/test_rig_recipe.py
           - tests/test_rig_wrappers.py
+          - tests/test_rig_readback.py
           - tests/test_issue_claims.py
           - tests/test_harness_recipe.py
 
