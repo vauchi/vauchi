@@ -251,3 +251,25 @@ rig_release() {
     _rig_log "release: $(slot_session_id) released ${mine// /, } — ${note:-no note}"
     echo "✓ Released: ${mine// /, }"
 }
+
+# rig_install_wrappers <workspace-root>: link the device-tool wrapper as each
+# tool it guards into $VAUCHI_RIG_HOME/bin (default ~/.vauchi/rig/bin), which
+# goes first on PATH (#439, stage 3). The wrapper is copied, not linked, so a
+# removed workspace slot does not break it; .workspace names the libraries
+# and device table it reads.
+rig_install_wrappers() {
+    local root="$1" bin tool
+    bin="${VAUCHI_RIG_HOME:-$HOME/.vauchi/rig}/bin"
+    mkdir -p "$bin"
+    cp "$root/just/rig-bin/rig-wrapper" "$bin/rig-wrapper"
+    chmod +x "$bin/rig-wrapper"
+    printf '%s\n' "$root" > "$bin/.workspace"
+    for tool in adb ios maestro; do
+        ln -sf rig-wrapper "$bin/$tool"
+    done
+    echo "✓ Wrappers for adb, ios and maestro in $bin (reading $root)"
+    case ":$PATH:" in
+        *":$bin:"*) ;;
+        *) echo "  Put it first on PATH (e.g. in ~/.zshrc): export PATH=\"$bin:\$PATH\"" ;;
+    esac
+}

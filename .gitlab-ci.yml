@@ -97,6 +97,7 @@ test:release-gates:
           - just/slot.just
           - just/rig.just
           - just/rig-lib.sh
+          - just/rig-bin/rig-wrapper
           - just/slot-lib.sh
           - just/issue-lib.sh
           - just/harness.just
@@ -114,6 +115,7 @@ test:release-gates:
           - tests/test_release_gates.py
           - tests/test_slot_recipe.py
           - tests/test_rig_recipe.py
+          - tests/test_rig_wrappers.py
           - tests/test_issue_claims.py
           - tests/test_harness_recipe.py
 

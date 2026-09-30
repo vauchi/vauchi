@@ -9,6 +9,7 @@
 [group('tests')]
 test:
     python3 "{{ justfile_directory() }}/tests/test_rig_recipe.py" "{{ justfile_directory() }}"
+    python3 "{{ justfile_directory() }}/tests/test_rig_wrappers.py" "{{ justfile_directory() }}"
 
 # Show who holds the rig and the last hand-over note
 status:
@@ -38,3 +39,11 @@ release *note:
     source "{{ justfile_directory() }}/just/rig-lib.sh"
     RIG_SLOT_ROOT="{{ justfile_directory() }}"
     rig_release "$@"
+
+# Install the device-tool wrappers (adb, ios, maestro) that honour the rig lock
+install-wrappers:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/rig-lib.sh"
+    rig_install_wrappers "{{ justfile_directory() }}"

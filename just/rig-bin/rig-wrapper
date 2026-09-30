@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Device-tool wrapper (#439, stage 3): installed by `just rig install-wrappers`
+# as adb, ios and maestro in a directory first on PATH. It refuses a call
+# aimed at a phone another live session holds (`just rig`), then runs the
+# real tool from further along PATH with the same arguments.
+#
+# The Claude hook sees commands an agent types; this sees the calls scripts
+# make themselves. Not wrapped: xcrun/devicectl and curl to WDA, which sit in
+# front of every Xcode build and web call on the machine.
+#
+# No `set -u`: this may run under macOS's bash 3.2, where an empty "$@" is
+# unbound.
+
+tool=$(basename "$0")
+here=$(cd "$(dirname "$0")" && pwd -P)
+
+real=""
+old_ifs=$IFS
+IFS=:
+for dir in $PATH; do
+    [ -n "$dir" ] || continue
+    resolved=$(cd "$dir" 2>/dev/null && pwd -P) || continue
+    [ "$resolved" = "$here" ] && continue
+    if [ -x "$dir/$tool" ] && [ ! -d "$dir/$tool" ]; then
+        real="$dir/$tool"
+        break
+    fi
+done
+IFS=$old_ifs
+if [ -z "$real" ]; then
+    echo "rig-wrapper: no real $tool found on PATH after $here" >&2
+    exit 127
+fi
+
+[ "${VAUCHI_RIG_OK:-}" = 1 ] && exec "$real" "$@"
+
+workspace=$(cat "$here/.workspace" 2>/dev/null)
+[ -f "$workspace/just/rig-lib.sh" ] && [ -f "$workspace/just/slot-lib.sh" ] || exec "$real" "$@"
+table="${VAUCHI_RIG_DEVICE_TABLE:-$workspace/_private/docs/testing/device-automation/rig-devices}"
+[ -f "$table" ] || exec "$real" "$@"
+
+# Read-only calls touch no phone.
+case "$tool ${1:-}" in
+    "adb devices" | "adb version" | "adb start-server" | "adb kill-server" | "adb help" | \
+        "ios list" | "ios version" | "ios --version" | "ios help" | "ios --help" | \
+        "maestro --version" | "maestro -v" | "maestro --help")
+        exec "$real" "$@"
+        ;;
+esac
+[ "$tool ${1:-} ${2:-}" = "adb -l devices" ] && exec "$real" "$@"
+
+android=0
+ios=0
+case "$tool" in
+    adb) android=1 ;;
+    ios | idevice*) ios=1 ;;
+    maestro)
+        platform=""
+        previous=""
+        for arg in "$@"; do
+            case "$arg" in --platform=*) platform=${arg#--platform=} ;; esac
+            [ "$previous" = --platform ] && platform=$arg
+            previous=$arg
+        done
+        case "$platform" in
+            ios) ios=1 ;;
+            android) android=1 ;;
+            *) android=1; ios=1 ;;
+        esac
+        ;;
+esac
+
+# Phones the arguments name by serial, UDID or alias; else by platform.
+named=""
+targets=""
+while read -r name platform handles; do
+    case "$name" in "" | \#*) continue ;; esac
+    for handle in $name $handles; do
+        for arg in "$@"; do
+            # Short names (s7) match whole arguments only; serials also
+            # inside one (--device=00008030-...).
+            case "$arg" in
+                "$handle" | *"=$handle") named="$named $name"; break 2 ;;
+            esac
+            if [ "${#handle}" -ge 8 ]; then
+                case "$arg" in *"$handle"*) named="$named $name"; break 2 ;; esac
+            fi
+        done
+    done
+    if { [ "$platform" = android ] && [ "$android" = 1 ]; } || { [ "$platform" = ios ] && [ "$ios" = 1 ]; }; then
+        targets="$targets $name"
+    fi
+done < "$table"
+[ -n "$named" ] && targets=$named
+
+# shellcheck source=/dev/null
+. "$workspace/just/slot-lib.sh"
+# shellcheck source=/dev/null
+. "$workspace/just/rig-lib.sh"
+held=""
+for phone in $targets; do
+    if [ "$(rig_lock_state "$phone")" = held ]; then
+        held="$held
+  $phone: held by $(rig_describe "$phone")"
+    fi
+done
+if [ -n "$held" ]; then
+    cat >&2 <<EOF
+[rig] Refusing '$tool': another live session holds a phone this call drives (#439):$held
+Ask that session first; it releases with: just rig release
+The owner at the phone can prefix VAUCHI_RIG_OK=1.
+EOF
+    exit 1
+fi
+exec "$real" "$@"

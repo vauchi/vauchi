@@ -1733,6 +1733,7 @@ help:
       just rig status                 Who holds each phone, last hand-over notes
       just rig claim [phones] [note]  Hold phones while this session runs
                                       (default: the exchange pair pixel,iphone)
+      just rig install-wrappers       adb/ios/maestro wrappers that honour it
       just rig release [phones] [note]  Release them, noting build, identity,
                                       permissions, and whether you reinstalled
 
