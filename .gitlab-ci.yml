@@ -114,7 +114,10 @@ test:release-gates:
 # DX regression gates — VIC01 (.idea config hygiene) + VSP01 (stale
 # ci-template pin). Checkers are fetched from vauchi/scripts at
 # $VAUCHI_SCRIPTS_REF, so that pin MUST point at a tag that contains them
-# (added to ci-templates main in ci-templates-v2026.07.9+).
+# (first shipped in the July 2026 template tags). Name no tag in a comment
+# here: the check-stale-ci-pin.sh at the pinned ref reads every tag-shaped
+# string in this file as a pin, so a named tag fails VSP01 once eight newer
+# tags exist (seen 2026-09-30 when ci-templates-v2026.09.30 was cut).
 # VHC01 harness-parity is deliberately NOT run here: .codex/.kimi-code/.junie
 # are symlinks into the _private repo, which this public checkout never clones,
 # so `find -L -type l` would see broken links and false-fail. VHC01 stays a
