@@ -1,26 +1,36 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The device rig lock (#439): one session holds the exchange rig's phones.
+"""The device rig lock (#439): one session at a time holds each phone.
 
 Two sessions wiped each other's phone state on 2026-09-30 because nothing
-said the rig was in use. The lock is machine-wide (every workspace slot
-shares the phones), a holder counts as alive while its process runs (a
-run can sit in one long Maestro command without a heartbeat), and a
-release hands the next holder a note about the phones' state.
+said a phone was in use. Each phone has its own lock, and a bare claim
+takes the exchange pair (pair tests always need both); a phone off the
+rig (the Samsung S7) can be held separately. Locks are machine-wide
+(every workspace slot shares the phones), a holder counts as alive while
+its process runs (a run can sit in one long Maestro command without a
+heartbeat), and a release hands the next holder a note about each
+phone's state.
 """
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(sys.argv.pop(1)).resolve()
+
+
+def session_id(name: str) -> str:
+    """The id slot-lib.sh derives from VAUCHI_SESSION_ID (as `just gitlab claim` does)."""
+    return hashlib.sha256(name.encode()).hexdigest()[:12]
 
 
 class RigRecipeTest(unittest.TestCase):
@@ -46,36 +56,58 @@ class RigRecipeTest(unittest.TestCase):
         self.holders.append(process)
         return process
 
-    def rig(self, *args: str, session: str, pid: int | None = None) -> subprocess.CompletedProcess[str]:
+    def rig(self, *args: str, session: str, pid: int | None = None,
+            workspace: Path | None = None) -> subprocess.CompletedProcess[str]:
+        workspace = workspace or self.workspace
         environment = {**os.environ, "VAUCHI_SESSION_ID": session, "VAUCHI_RIG_DIR": str(self.rig_dir)}
         environment.pop("CLAUDE_CODE_SESSION_ID", None)
         if pid is not None:
             environment["VAUCHI_RIG_HOLDER_PID"] = str(pid)
         return subprocess.run(
-            ["just", "--justfile", str(self.workspace / "justfile"), "rig", *args],
-            cwd=self.workspace, env=environment, capture_output=True, text=True,
+            ["just", "--justfile", str(workspace / "justfile"), "rig", *args],
+            cwd=workspace, env=environment, capture_output=True, text=True,
         )
 
-    def test_a_free_rig_is_claimed_and_shown_as_held(self) -> None:
+    def status_line(self, device: str) -> str:
+        output = self.rig("status", session="observer").stdout
+        for line in output.splitlines():
+            if line.split() and line.split()[0] == device:
+                return line
+        self.fail(f"no status line for {device} in:\n{output}")
+
+    def test_a_bare_claim_takes_the_exchange_pair(self) -> None:
         a = self.holder()
         claim = self.rig("claim", "Hover runs #9", session="session-a", pid=a.pid)
         self.assertEqual(claim.returncode, 0, claim.stdout + claim.stderr)
+        self.assertIn("pixel, iphone", claim.stdout)
 
-        status = self.rig("status", session="session-b")
-        self.assertEqual(status.returncode, 0, status.stderr)
-        self.assertIn("held by", status.stdout)
-        self.assertIn(f"pid {a.pid}", status.stdout)
-        self.assertIn("Hover runs #9", status.stdout)
+        for device in ("pixel", "iphone"):
+            line = self.status_line(device)
+            self.assertIn("held by", line)
+            self.assertIn(f"pid {a.pid}", line)
+            self.assertIn("slot vauchi,", line, "the workspace slot, not the module's directory")
+            self.assertIn("Hover runs #9", line)
+        self.assertIn("free", self.status_line("s7"))
 
-    def test_another_live_session_is_refused(self) -> None:
+    def test_a_phone_off_the_rig_is_held_separately(self) -> None:
         a, b = self.holder(), self.holder()
-        self.rig("claim", session="session-a", pid=a.pid)
+        self.rig("claim", "Hover runs", session="session-a", pid=a.pid)
+        s7 = self.rig("claim", "s7", "notification checks", session="session-b", pid=b.pid)
+        self.assertEqual(s7.returncode, 0, s7.stdout + s7.stderr)
+        self.assertIn(session_id("session-b"), self.status_line("s7"))
+        self.assertIn(session_id("session-a"), self.status_line("pixel"))
+
+    def test_a_claim_is_all_or_nothing(self) -> None:
+        a, b = self.holder(), self.holder()
+        self.rig("claim", "iphone", "WDA checks", session="session-a", pid=a.pid)
         refused = self.rig("claim", session="session-b", pid=b.pid)
         self.assertEqual(refused.returncode, 1)
         self.assertIn("HELD", refused.stdout)
+        self.assertIn("iphone", refused.stdout)
         self.assertIn(f"pid {a.pid}", refused.stdout)
+        self.assertIn("free", self.status_line("pixel"), "a refused pair claim must take neither phone")
 
-    def test_the_holder_is_released_only_when_its_process_is_gone(self) -> None:
+    def test_a_phone_is_released_only_when_its_holder_process_is_gone(self) -> None:
         a, b = self.holder(), self.holder()
         self.rig("claim", session="session-a", pid=a.pid)
         a.kill()
@@ -83,63 +115,65 @@ class RigRecipeTest(unittest.TestCase):
         taken = self.rig("claim", session="session-b", pid=b.pid)
         self.assertEqual(taken.returncode, 0, taken.stdout + taken.stderr)
         self.assertIn("stale", taken.stdout)
-        self.assertIn("held by", self.rig("status", session="session-c").stdout)
+        self.assertIn(session_id("session-b"), self.status_line("iphone"))
 
     def test_a_reused_pid_does_not_keep_a_dead_holder_alive(self) -> None:
         b = self.holder()
         self.rig_dir.mkdir()
-        # A lock whose pid is alive but whose recorded start time is not that
-        # process's: the pid was reused by an unrelated process.
-        (self.rig_dir / "rig.lock").write_text(
+        # A live pid whose start time is not the recorded one: the pid was
+        # reused by an unrelated process. `since` is now, so only the start
+        # time can make this lock stale.
+        (self.rig_dir / "iphone.lock").write_text(
             f"session=session-a\nharness=claude\nslot=vauchi\npid={b.pid}\n"
-            "started=Thu Jan  1 00:00:00 1970\nsince=0\nnote=\n"
+            f"started=Thu Jan  1 00:00:00 1970\nsince={int(time.time())}\nnote=\n"
         )
-        taken = self.rig("claim", session="session-b", pid=b.pid)
+        taken = self.rig("claim", "iphone", session="session-b", pid=b.pid)
         self.assertEqual(taken.returncode, 0, taken.stdout + taken.stderr)
         self.assertIn("stale", taken.stdout)
 
-    def test_release_hands_the_next_holder_a_state_note(self) -> None:
+    def test_release_hands_the_next_holder_a_state_note_per_phone(self) -> None:
         a, b = self.holder(), self.holder()
         self.rig("claim", session="session-a", pid=a.pid)
-        released = self.rig("release", "iPhone: build 0.69.0, identity Bob, camera granted",
+        released = self.rig("release", "reinstalled 0.69.0, identity Bob, camera granted",
                             session="session-a", pid=a.pid)
         self.assertEqual(released.returncode, 0, released.stdout + released.stderr)
-        self.assertIn("free", self.rig("status", session="session-b").stdout)
+        self.assertIn("free", self.status_line("pixel"))
+        self.assertIn("free", self.status_line("iphone"))
 
-        claim = self.rig("claim", session="session-b", pid=b.pid)
+        claim = self.rig("claim", "iphone", session="session-b", pid=b.pid)
         self.assertEqual(claim.returncode, 0)
-        self.assertIn("iPhone: build 0.69.0, identity Bob, camera granted", claim.stdout)
-        self.assertIn("session-a", claim.stdout)
+        self.assertIn("reinstalled 0.69.0, identity Bob, camera granted", claim.stdout)
+        self.assertIn(session_id("session-a"), claim.stdout)
 
-    def test_only_the_holder_can_release(self) -> None:
-        a = self.holder()
-        self.rig("claim", session="session-a", pid=a.pid)
-        other = self.rig("release", "not mine", session="session-b", pid=a.pid)
-        self.assertEqual(other.returncode, 1)
-        self.assertIn("held by", self.rig("status", session="session-c").stdout)
-
-    def test_force_takes_a_held_rig_and_logs_it(self) -> None:
+    def test_release_frees_only_this_sessions_phones(self) -> None:
         a, b = self.holder(), self.holder()
         self.rig("claim", session="session-a", pid=a.pid)
-        forced = self.rig("claim", "--force", "owner needs the phone", session="owner", pid=b.pid)
+        self.rig("claim", "s7", session="session-b", pid=b.pid)
+        other = self.rig("release", "pixel", "not mine", session="session-b", pid=b.pid)
+        self.assertEqual(other.returncode, 1)
+        self.assertIn(session_id("session-a"), self.status_line("pixel"))
+        mine = self.rig("release", session="session-b", pid=b.pid)
+        self.assertEqual(mine.returncode, 0, mine.stdout)
+        self.assertIn("free", self.status_line("s7"))
+        self.assertIn(session_id("session-a"), self.status_line("pixel"))
+
+    def test_force_takes_a_held_phone_and_logs_it(self) -> None:
+        a, b = self.holder(), self.holder()
+        self.rig("claim", session="session-a", pid=a.pid)
+        forced = self.rig("claim", "--force", "iphone", "owner needs the phone", session="owner", pid=b.pid)
         self.assertEqual(forced.returncode, 0, forced.stdout + forced.stderr)
         log = (self.rig_dir / "log").read_text()
         self.assertIn("force", log)
-        self.assertIn("session-a", log)
+        self.assertIn(session_id("session-a"), log)
         self.assertIn("owner needs the phone", log)
+        self.assertIn(session_id("session-a"), self.status_line("pixel"), "force takes only the named phone")
 
-    def test_the_lock_is_shared_by_every_workspace_slot(self) -> None:
+    def test_the_locks_are_shared_by_every_workspace_slot(self) -> None:
         a, b = self.holder(), self.holder()
         other_slot = self.tmp / "vauchi-1"
         shutil.copytree(self.workspace, other_slot)
         self.rig("claim", session="session-a", pid=a.pid)
-        environment = {**os.environ, "VAUCHI_SESSION_ID": "session-b",
-                       "VAUCHI_RIG_DIR": str(self.rig_dir), "VAUCHI_RIG_HOLDER_PID": str(b.pid)}
-        environment.pop("CLAUDE_CODE_SESSION_ID", None)
-        refused = subprocess.run(
-            ["just", "--justfile", str(other_slot / "justfile"), "rig", "claim"],
-            cwd=other_slot, env=environment, capture_output=True, text=True,
-        )
+        refused = self.rig("claim", session="session-b", pid=b.pid, workspace=other_slot)
         self.assertEqual(refused.returncode, 1, refused.stdout)
 
 
