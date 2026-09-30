@@ -205,13 +205,18 @@ gates:workspace-ratchets:
 
 # Core-consumer drift (scheduled only)
 #
-# bump-core-consumers.sh has existed since 2026-08-09 with no caller —
-# not a job, not a schedule, not a recipe. Its own header says a caller
-# "decides what to do with a bump that fails to build", and none existed,
-# so nothing moved the pins: cli and e2e sat three minor versions behind
-# core for a month. verify:downstream-rust did not catch it because those
-# two resolve their own tag pin rather than the triggering commit
-# (problems/2026-09-07-downstream-verify-tests-the-pin).
+# Every consumer's native Core pin, read from its main through core's
+# ci/consumer-pins.json and vauchi/scripts' core-pins.py (ADR-026
+# amendment 2026-09-30, #434). Red when a pin lags the newest core
+# release, cannot be read, or a consumer's CI hard-codes a Core ref.
+# Release, not newest tag: core cuts -dev tags several times a week, and
+# an alarm that is red by default goes unread (gates:workspace-ratchets
+# above). Core's release pipeline opens the bump MRs (bump:consumer-pins
+# and the trigger jobs), so a red run names MRs waiting to merge.
+#
+# Replaces the Rust-only dry run of bump-core-consumers.sh, which saw
+# neither the Swift, Maven and C ABI pins nor the CI jobs that checked
+# against Core v0.59.0.
 #
 # NOT allow_failure. gates:workspace-ratchets is the cautionary case in
 # this same file: added advisory, failed all 29 of its runs, and the
@@ -219,10 +224,9 @@ gates:workspace-ratchets:
 # (backlog/2026-08-21-workspace-ratchets-never-passed). A drift report
 # nobody sees is worth less than no report.
 #
-# CC-27 evidence: observed failing before it was correct — on 2026-09-07
-# the bot reported `e2e FAIL could not resolve` against core's fresh
-# v0.64.0-dev.1 tag, because the version pin was derived from the tag
-# name; it passed once that was fixed (scripts !554).
+# CC-27 evidence: core-pins check was observed red on 2026-09-30 (six
+# consumers on v0.68.0, relay floating, five CI jobs on CORE_REF v0.59.0)
+# and green on the same fixtures once pins were current (core-pins.test.py).
 gates:core-consumer-drift:
   stage: lint
   tags: [linux, self-hosted]
@@ -230,49 +234,29 @@ gates:core-consumer-drift:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
   before_script:
-    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl build-essential
+    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates python3
     - |
-      for repo in scripts core cli e2e tui linux-gtk relay web-demo; do
-        git clone --branch main \
-          "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/${repo}.git" \
-          "${CI_PROJECT_DIR}/${repo}"
+      git clone --depth 1 --branch main https://gitlab.com/vauchi/scripts.git "${CI_PROJECT_DIR}/scripts"
+      git clone --branch main https://gitlab.com/vauchi/core.git "${CI_PROJECT_DIR}/core"
+      # The newest release is read from core's tags.
+      git -C "${CI_PROJECT_DIR}/core" fetch --tags --force
+      for repo in $(python3 "${CI_PROJECT_DIR}/scripts/scripts/core-pins.py" consumers \
+          --table "${CI_PROJECT_DIR}/core/ci/consumer-pins.json" | cut -d' ' -f1); do
+        git clone --depth 1 --filter=blob:none --branch main \
+          "https://gitlab.com/vauchi/${repo}.git" "${CI_PROJECT_DIR}/${repo}"
       done
-    # The bot resolves the newest tag by creation date, so core needs its
-    # tags, which --depth=1 --branch main would not fetch.
-    - git -C "${CI_PROJECT_DIR}/core" fetch --tags --force
   script:
-    # --dry-run only: it reads manifests and locks and never invokes cargo,
-    # so this alarm cannot fail for toolchain reasons on a runner whose
-    # Rust availability is not guaranteed here. Proving a bump still builds
-    # needs `--build` and a toolchain; that belongs in a follow-up once the
-    # alarm has established what normal looks like.
-    - echo "=== Consumer drift against the newest core RELEASE tag ==="
-    - sh scripts/scripts/bump-core-consumers.sh --dry-run --stable-only | tee drift.txt
     - |
-      # --stable-only, because core cuts -dev tags several times a week
-      # (32 in the 30 days to 2026-09-07; dev.1 and dev.2 landed hours
-      # apart). "Behind the newest tag" is therefore true on almost any
-      # day and would make this red by default — the same way
-      # gates:workspace-ratchets above went unread. "Behind the newest
-      # release" is the condition that stays false until it matters.
-      #
-      # Only tag-pinned consumers alarm. Their drift is discrete and
-      # actionable: a pin is either the newest tag or it is not, and only
-      # an edit moves it. Those lines carry an arrow ("v0.61.0 ->
-      # v0.64.0"); a branch = "main" consumer instead reports "refresh
-      # lock ... toward main", which is true on almost any day because
-      # cargo will not walk a git dep without an explicit update. Alarming
-      # on those would make this job permanently red, which is precisely
-      # how gates:workspace-ratchets above stopped being read.
-      if grep -q ' -> ' drift.txt; then
+      rc=0
+      python3 "${CI_PROJECT_DIR}/scripts/scripts/core-pins.py" check \
+        --root "${CI_PROJECT_DIR}" --strict > drift.txt 2>&1 || rc=$?
+      cat drift.txt
+      if [ "$rc" -ne 0 ]; then
         echo ""
-        echo "Tag-pinned consumers are behind the newest core release:"
-        grep ' -> ' drift.txt
-        echo ""
-        echo "Bump with: sh scripts/scripts/bump-core-consumers.sh --repo <name> --build"
-        exit 1
+        echo "A consumer's Core pin needs attention. A lagging pin usually has an"
+        echo "open 'chore: pin Core to vX.Y.Z' MR from core's release pipeline."
       fi
-      echo "Every tag-pinned consumer is on the newest core release."
+      exit "$rc"
   artifacts:
     when: always
     paths:
