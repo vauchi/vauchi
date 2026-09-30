@@ -177,5 +177,20 @@ class RigRecipeTest(unittest.TestCase):
         self.assertEqual(refused.returncode, 1, refused.stdout)
 
 
+    def test_check_lets_a_script_ask_before_driving_phones(self) -> None:
+        a, b = self.holder(), self.holder()
+        self.rig("claim", "Hover runs", session="session-a", pid=a.pid)
+        held = self.rig("check", "pixel", "iphone", session="session-b", pid=b.pid)
+        self.assertEqual(held.returncode, 1, held.stdout + held.stderr)
+        self.assertIn("pixel", held.stderr)
+        self.assertIn(session_id("session-a"), held.stderr)
+        self.assertEqual(self.rig("check", "pixel", session="session-a", pid=a.pid).returncode, 0,
+                         "the holder's own scripts pass")
+        free = self.rig("check", "s7", session="session-b", pid=b.pid)
+        self.assertEqual(free.returncode, 0, "a free phone passes")
+        self.assertIn("just rig claim", free.stderr, "with a reminder to claim it")
+        self.assertIn("held by", self.status_line("pixel"), "check claims nothing")
+        self.assertIn("free", self.status_line("s7"))
+
 if __name__ == "__main__":
     unittest.main()
