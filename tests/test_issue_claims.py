@@ -356,6 +356,17 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(section("ready for agents"), ["#14", "#17", "#19", "#7", "#9"])
         self.assertEqual(section("in flight"), ["#15"])
 
+    def test_queue_shows_what_a_testing_item_needs_to_be_verified(self) -> None:
+        self.add_issues((18, "medium", "testing"), (20, "low", "testing"))
+        state = self.load()
+        state["issues"]["18"]["labels"].append("verify::rig")
+        self.save(state)
+
+        lines = self.run_lib("issue_queue", "kimi-b", check=True).stdout.splitlines()
+
+        self.assertIn("[verify:rig]", next(line for line in lines if "#18" in line))
+        self.assertNotIn("[verify:", next(line for line in lines if "#20" in line))
+
     def test_queue_reads_every_page_of_open_issues(self) -> None:
         self.add_issues(*((number, "low", "intake") for number in range(100, 205)))
 
