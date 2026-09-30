@@ -290,9 +290,19 @@ check-versions:
         ERRORS=$((ERRORS + 1))
     fi
 
+    # Every consumer's Core pin against the latest release, read from
+    # origin (ADR-026 amendment 2026-09-30, #434). A lagging pin, an
+    # unreadable one, or a CI job that hard-codes a Core ref fails here.
+    echo "Core pins"
+    echo "---------"
+    if ! python3 scripts/scripts/core-pins.py check --root . --fetch --strict; then
+        echo "  STALE: a consumer's Core pin lags the latest release or disagrees with its CI"
+        ERRORS=$((ERRORS + 1))
+    fi
+
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
-        echo "  $ERRORS stale version reference(s) found."
+        echo "  $ERRORS stale version reference(s) or Core pin problem(s) found."
         exit 1
     else
         echo "  RESULT: PASS"

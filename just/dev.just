@@ -49,11 +49,6 @@ e2e-checklist *args:
 # CORE FRESHNESS
 # ═══════════════════════════════════════════════════════════════════
 
-# Regression check for the Android binding-version parser used by core-freshness.
-[group('tests')]
-test-core-freshness:
-    python3 "{{justfile_directory()}}/tests/test_core_freshness_recipe.py" "{{justfile_directory()}}/just/dev.just"
-
 # Check if mobile bindings and Rust consumers are up to date with core
 [group('dev')]
 [script]
@@ -63,31 +58,12 @@ core-freshness:
 
     ROOT="{{justfile_directory()}}"
 
-    # Every number below is read out of a local checkout. Without a fetch
-    # they describe whatever was last pulled, not what is released — and
-    # `git status` will not betray that, because it compares against a
-    # remote-tracking ref that is itself stale. On 2026-08-06 that made
-    # this recipe report "Android: v0.59.4" for a pin CI had already
-    # bumped to 0.60.1 and merged, and a redundant MR was opened on the
-    # strength of it. Fetch first; if the network is unavailable, say so
-    # loudly rather than printing confident stale numbers.
-    STALE_REPOS=""
-    for _r in core android vauchi-platform-swift; do
-        [ -d "$ROOT/$_r/.git" ] || continue
-        git -C "$ROOT/$_r" fetch --quiet --tags origin 2>/dev/null \
-            || STALE_REPOS="$STALE_REPOS $_r"
-    done
-    for _r in core android vauchi-platform-swift; do
-        [ -d "$ROOT/$_r/.git" ] || continue
-        _behind=$(git -C "$ROOT/$_r" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
-        [ "${_behind:-0}" -gt 0 ] && STALE_REPOS="$STALE_REPOS $_r(-$_behind)"
-    done
-    if [ -n "$STALE_REPOS" ]; then
-        printf "%b\n" "${YELLOW}WARNING: readings below may be stale —${STALE_REPOS}${NC}"
-        printf "%b\n" "${YELLOW}  a checkout behind its remote reports the version it last saw.${NC}"
-        printf "%b\n" "${YELLOW}  Run 'just git sync' before trusting these numbers.${NC}"
-        echo ""
-    fi
+    # Core's own HEAD and tag come from the local checkout, so fetch it.
+    # Consumer pins are read from origin/main by core-pins.py --fetch:
+    # local checkouts report what was last pulled, not what is released
+    # (on 2026-09-30 they showed iOS and Android a release behind origin).
+    git -C "$ROOT/core" fetch --quiet --tags origin 2>/dev/null \
+        || printf "%b\n" "${YELLOW}WARNING: could not fetch core; its HEAD and tag may be stale${NC}"
 
     # Core HEAD
     CORE_HEAD=$(git -C "$ROOT/core" rev-parse HEAD)
@@ -134,37 +110,11 @@ core-freshness:
     done
     echo ""
 
-    # Platform bindings
-    echo "── Platform Bindings ──"
-
-    # iOS — check Package.swift version
-    IOS_PKG="$ROOT/vauchi-platform-swift/Package.swift"
-    if [ -f "$IOS_PKG" ]; then
-        IOS_VER=$(sed -n 's/^let version = "\(.*\)"/\1/p' "$IOS_PKG")
-        if [ "$LATEST_TAG" != "none" ] && [ "v$IOS_VER" = "$LATEST_TAG" ]; then
-            _dev_status "iOS:" "$GREEN" "v$IOS_VER (matches latest tag)"
-        else
-            _dev_status "iOS:" "$YELLOW" "v$IOS_VER (latest core tag: $LATEST_TAG)"
-        fi
-    fi
-
-    # Android — check build.gradle.kts dependency version
-    ANDROID_GRADLE="$ROOT/android/app/build.gradle.kts"
-    if [ -f "$ANDROID_GRADLE" ]; then
-        ANDROID_VER=$(sed -n 's/.*app\.vauchi:vauchi-platform:\([0-9][0-9.]*\)".*/\1/p' "$ANDROID_GRADLE")
-        # build.gradle.kts pins the coordinate twice (implementation and
-        # screenshotTestImplementation), so the sed above emits two lines and
-        # the label rendered as "v0.60.1\n0.60.1". Trim to the first.
-        # Done here rather than by piping to `head -1`, because
-        # tests/test_core_freshness_recipe.py extracts this assignment with a
-        # regex that pins the exact `sed -n '…' "$ANDROID_GRADLE"` shape.
-        ANDROID_VER=${ANDROID_VER%%$'\n'*}
-        if [ "$LATEST_TAG" != "none" ] && [ "v$ANDROID_VER" = "$LATEST_TAG" ]; then
-            _dev_status "Android:" "$GREEN" "v$ANDROID_VER (matches latest tag)"
-        else
-            _dev_status "Android:" "$YELLOW" "v$ANDROID_VER (latest core tag: $LATEST_TAG)"
-        fi
-    fi
+    # Every consumer's native pin, as listed in core's ci/consumer-pins.json
+    # (ADR-026 amendment). `just check-versions` runs the same check strictly.
+    echo "── Core pins (read from origin/main) ──"
+    python3 "$ROOT/scripts/scripts/core-pins.py" check --root "$ROOT" --fetch \
+        || printf "%b\n" "${YELLOW}  core-pins could not read the table (is core fetched?)${NC}"
 
     # Local bindings status
     echo ""
@@ -188,41 +138,7 @@ core-freshness:
         echo "Core has unreleased changes. When ready:"
         echo "  1. Bump version in core/Cargo.toml"
         echo "  2. Merge to main (auto-tags)"
-        echo "  3. Stable tag triggers binding build+publish+app bump MRs"
+        echo "  3. The release tag publishes the bindings and opens a pin-bump MR in every consumer"
         echo ""
         echo "For local dev: just bindings-local"
-    fi
-
-# ═══════════════════════════════════════════════════════════════════
-# BRANCH REF MAINTENANCE
-# ═══════════════════════════════════════════════════════════════════
-
-# Fix non-main git dependency branch refs across all Rust consumer repos
-[group('dev')]
-[script]
-fix-branch-refs:
-    set -euo pipefail
-    source scripts/scripts/output-helpers.sh
-    ROOT="{{justfile_directory()}}"
-    FIXED=0
-    for repo in cli tui e2e linux-gtk relay; do
-        TOML="$ROOT/$repo/Cargo.toml"
-        [ -f "$TOML" ] || continue
-        BAD=$(taplo get -f "$TOML" -o json 2>/dev/null \
-            | jq -r '.. | .branch? // empty' | grep -v '^main$' || true)
-        if [ -n "$BAD" ]; then
-            echo "${YELLOW}$repo${NC}: fixing non-main branch refs"
-            echo "$BAD" | sed 's/^/  /'
-            sed -i.bak 's/branch = "[^"]*"/branch = "main"/g' "$TOML" && rm -f "$TOML.bak"
-            (cd "$ROOT/$repo" && cargo update 2>&1 | tail -1)
-            echo "  ${GREEN}→ restored to main${NC}"
-            FIXED=$((FIXED + 1))
-        fi
-    done
-    if [ "$FIXED" -eq 0 ]; then
-        echo "${GREEN}All repos already point to main${NC}"
-    else
-        echo ""
-        echo "Fixed $FIXED repo(s). Review and commit:"
-        echo "  git diff */Cargo.toml */Cargo.lock"
     fi
