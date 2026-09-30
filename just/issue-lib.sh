@@ -189,7 +189,7 @@ issue_comment_respond() {
 # Open issues by priority, marking the claimed ones: one issue listing and
 # one branch listing, never a per-issue call (ADR-073 consequence).
 # Group-board columns in lifecycle order (ADR-073 §Decision 13).
-ISSUE_BOARD_COLUMNS="backlog deferred intake refreshing investigating select-solution planning implementing review testing blocked"
+ISSUE_BOARD_COLUMNS="backlog deferred intake refreshing investigating select-solution planning planned implementing review testing blocked"
 
 # Every open issue as {iid, title, priority, status, rank, blocked}, sorted by
 # priority. Paginated: the backlog alone is over 100 issues.
@@ -213,11 +213,16 @@ issue_queue() {
         def section($title; $items): if ($items | length) > 0 then "  \($title)", ($items[] | row) else empty end;
         map(.iid as $number | .claimed = ($claimed | contains(" \($number) "))) as $all
         | ["backlog", "deferred"] as $shelf
-        | ["intake", "refreshing", "investigating", "planning"] as $agents
+        # Closest to done first within a priority (#449): finish before starting.
+        | ["planned", "planning", "investigating", "refreshing", "intake"] as $agents
+        | ["testing"] as $verify
         | ["select-solution", "review"] as $maintainer
-        | section("ready for agents"; [$all[] | select(.status as $s | $agents | index($s))]),
+        | section("verify first (testing: close it if you can check it)";
+                  [$all[] | select(.status as $s | $verify | index($s))]),
+          section("ready for agents"; [$all[] | select(.status as $s | $agents | index($s))]
+                  | sort_by(.rank, (.status as $s | $agents | index($s)), .iid)),
           section("waiting on maintainer"; [$all[] | select(.status as $s | $maintainer | index($s))]),
-          section("in flight"; [$all[] | select(.status as $s | ($shelf + $agents + $maintainer) | index($s) | not)]),
+          section("in flight"; [$all[] | select(.status as $s | ($shelf + $agents + $verify + $maintainer) | index($s) | not)]),
           "  (\([$all[] | select(.status == "backlog")] | length) backlog, \([$all[] | select(.status == "deferred")] | length) deferred — just gitlab board)"'
 }
 
