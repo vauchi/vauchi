@@ -199,6 +199,7 @@ _issue_open_issues() {
         add // [] | map({iid, title,
             priority: (.labels | with_prefix("priority::") // "-"),
             status: (.labels | with_prefix("status::") // "intake"),
+            verify: (.labels | with_prefix("verify::")),
             blocked: (.labels | index("blocked") != null)})
         | map(.rank = ({"critical": 0, "high": 1, "medium": 2, "low": 3}[.priority] // 4))
         | sort_by(.rank, .iid)'
@@ -209,7 +210,7 @@ issue_queue() {
     claimed=$(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
         | jq -r '[.[].name | sub("^issue/"; "")] | join(" ")')
     _issue_open_issues | jq -r --arg claimed " $claimed " '
-        def row: "  #\(.iid)\t\(.priority)\t\(if .claimed then "[claimed] " else "" end)\(if .blocked then "[blocked] " else "" end)\(.status)\t\(.title)";
+        def row: "  #\(.iid)\t\(.priority)\t\(if .claimed then "[claimed] " else "" end)\(if .blocked then "[blocked] " else "" end)\(if .verify then "[verify:\(.verify)] " else "" end)\(.status)\t\(.title)";
         def section($title; $items): if ($items | length) > 0 then "  \($title)", ($items[] | row) else empty end;
         map(.iid as $number | .claimed = ($claimed | contains(" \($number) "))) as $all
         | ["backlog", "deferred"] as $shelf
