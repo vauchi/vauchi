@@ -60,7 +60,9 @@ test:release-gates:
   tags: [docker]
   needs: []
   before_script:
-    - apk add --no-cache bash git jq just python3
+    # procps: rig-lib.sh reads a holder's start time with ps -o lstart,
+    # which BusyBox ps lacks.
+    - apk add --no-cache bash git jq just python3 procps
   script:
     - JUST_UNSTABLE=1 just test-codex-layout
     - JUST_UNSTABLE=1 just test-claude-layout
@@ -71,6 +73,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
     - JUST_UNSTABLE=1 just slot test
+    - JUST_UNSTABLE=1 just rig test
     - python3 tests/test_issue_claims.py .
     - JUST_UNSTABLE=1 just harness test
     - python3 -m unittest tests/test_backup_recipe_authority.py
@@ -92,6 +95,8 @@ test:release-gates:
           - just/check-prerequisites.sh
           - just/lint-docs.sh
           - just/slot.just
+          - just/rig.just
+          - just/rig-lib.sh
           - just/slot-lib.sh
           - just/issue-lib.sh
           - just/harness.just
@@ -108,6 +113,7 @@ test:release-gates:
           - tests/test_lint_recipe_reports_failure.py
           - tests/test_release_gates.py
           - tests/test_slot_recipe.py
+          - tests/test_rig_recipe.py
           - tests/test_issue_claims.py
           - tests/test_harness_recipe.py
 

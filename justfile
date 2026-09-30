@@ -66,6 +66,9 @@ mod gitlab 'just/gitlab.just'
 [doc('Workspace slots — one session per full workspace clone')]
 mod slot 'just/slot.just'
 
+[doc('Device rig — one session at a time holds the exchange phones')]
+mod rig 'just/rig.just'
+
 [doc('Launch Codex/Kimi with their own claim session id')]
 mod harness 'just/harness.just'
 
@@ -1725,6 +1728,13 @@ help:
       just slot acquire       Hold this slot (session-init does this)
       just slot release       Release this slot (session-end does this)
       (include root to nest the other repos in it, as in the workspace)
+
+    Device rig (phones shared by every slot; one holder per phone):
+      just rig status                 Who holds each phone, last hand-over notes
+      just rig claim [phones] [note]  Hold phones while this session runs
+                                      (default: the exchange pair pixel,iphone)
+      just rig release [phones] [note]  Release them, noting build, identity,
+                                      permissions, and whether you reinstalled
 
     Agent harnesses:
       just harness codex [args]  Start Codex with its own claim session id
