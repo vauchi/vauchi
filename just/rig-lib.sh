@@ -398,3 +398,26 @@ _rig_report_claimed() {
         echo "  $device unchanged since the hand-over"
     fi
 }
+
+# rig_check [phones] — for scripts that drive phones and cannot source this
+# library (POSIX sh harnesses, tools called by absolute path): exits 1 when
+# another live session holds one of the phones, naming it; a free phone
+# passes with a reminder to claim it. Claims nothing. Defaults to the pair.
+rig_check() {
+    local devices phone held="" free=""
+    devices=$(_rig_parse_devices "$(printf '%s' "$*" | tr ' ' ',')")
+    [[ -n "$devices" ]] || devices=$RIG_PAIR
+    for phone in $devices; do
+        case "$(rig_lock_state "$phone")" in
+            held) held="$held"$'\n'"  $phone: held by $(rig_describe "$phone")" ;;
+            free | stale) free="$free $phone" ;;
+        esac
+    done
+    if [[ -n "$held" ]]; then
+        echo "[rig] Another live session holds a phone this needs (#439):$held" >&2
+        echo "  Ask that session first; it releases with: just rig release" >&2
+        return 1
+    fi
+    [[ -z "${free// /}" ]] || echo "[rig] Not claimed:$free — run: just rig claim ${free# } \"<what you run>\"" >&2
+    return 0
+}

@@ -48,3 +48,13 @@ install-wrappers:
     source "{{ justfile_directory() }}/just/slot-lib.sh"
     source "{{ justfile_directory() }}/just/rig-lib.sh"
     rig_install_wrappers "{{ justfile_directory() }}"
+
+# Exit 1 if another live session holds one of these phones (for scripts that drive them)
+[positional-arguments]
+check *phones:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source "{{ justfile_directory() }}/just/slot-lib.sh"
+    source "{{ justfile_directory() }}/just/rig-lib.sh"
+    RIG_SLOT_ROOT="{{ justfile_directory() }}"
+    rig_check "$@"

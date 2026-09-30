@@ -1734,6 +1734,7 @@ help:
       just rig claim [phones] [note]  Hold phones while this session runs
                                       (default: the exchange pair pixel,iphone)
       just rig install-wrappers       adb/ios/maestro wrappers that honour it
+      just rig check [phones]         Exit 1 if another session holds them (scripts)
       just rig release [phones] [note]  Release them, noting build, identity,
                                       permissions, and whether you reinstalled
 
