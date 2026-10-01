@@ -115,6 +115,16 @@ class LedgerRecipeTests(unittest.TestCase):
         run_ledger(self.workspace, VALID + ["a note"])
         self.assertRegex(self._entries()[0].split()[1], r"^\d{4}-\d{2}-\d{2}$")
 
+    def test_accepts_the_infra_and_handback_areas(self) -> None:
+        """`other` had grown to 65% of entries (private#466), hiding the two
+        clusters inside it: CI-host and deploy state, and actions only the
+        maintainer may take."""
+        for area in ("infra", "handback"):
+            with self.subTest(area=area):
+                result = run_ledger(self.workspace, [area] + VALID[1:] + ["note"])
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(f"| {area} |", self._entries()[-1])
+
 
 if __name__ == "__main__":
     unittest.main()
