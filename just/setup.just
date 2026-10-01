@@ -864,8 +864,8 @@ session-end:
         echo "── intervention ledger: $N7 entries in last 7 days ──"
         echo "  Maintainer interruptions beyond normal feature work this"
         echo "  session? Append one line each, no quotes needed:"
-        echo "    just ledger <fanout|vet|gate|other> <lt5m|5-30m|gt30m>"
-        echo "         <authoring|retry|review|wait>"
+        echo "    just ledger <fanout|vet|gate|infra|handback|other>"
+        echo "         <lt5m|5-30m|gt30m> <authoring|retry|review|wait>"
         echo "         <prevented-defect|mechanical|false-positive>"
         echo "         <unverified-claim|stale-state|consequence|style> [note...]"
     fi
@@ -924,8 +924,8 @@ session-end:
 ledger area bucket kind outcome defect_class *note:
     set -euo pipefail
     LEDGER="_private/docs/intervention-ledger.md"
-    case "{{ area }}" in fanout|vet|gate|other) ;; *)
-        echo "area must be: fanout|vet|gate|other"; exit 1 ;; esac
+    case "{{ area }}" in fanout|vet|gate|infra|handback|other) ;; *)
+        echo "area must be: fanout|vet|gate|infra|handback|other"; exit 1 ;; esac
     case "{{ bucket }}" in lt5m|5-30m|gt30m) ;; *)
         echo "bucket must be: lt5m|5-30m|gt30m"; exit 1 ;; esac
     case "{{ kind }}" in authoring|retry|review|wait) ;; *)
