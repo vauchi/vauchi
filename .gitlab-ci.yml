@@ -77,6 +77,7 @@ test:release-gates:
     - python3 tests/test_issue_claims.py .
     - JUST_UNSTABLE=1 just harness test
     - python3 -m unittest tests/test_backup_recipe_authority.py
+    - JUST_UNSTABLE=1 python3 -m unittest tests/test_ledger_recipe.py
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -119,6 +120,7 @@ test:release-gates:
           - tests/test_rig_readback.py
           - tests/test_issue_claims.py
           - tests/test_harness_recipe.py
+          - tests/test_ledger_recipe.py
 
 # DX regression gates — VIC01 (.idea config hygiene) + VSP01 (stale
 # ci-template pin). Checkers are fetched from vauchi/scripts at
