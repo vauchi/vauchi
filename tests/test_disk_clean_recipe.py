@@ -79,9 +79,7 @@ class StaleIncrementalTests(unittest.TestCase):
     def test_a_dry_run_lists_stale_sessions_and_deletes_nothing(self) -> None:
         result = run_disk_clean(self.workspace, self.home, "--stale-incremental")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("vauchi_core-aaa", result.stdout)
-        self.assertIn("vauchi_core-bbb", result.stdout)
-        self.assertNotIn("vauchi_core-ccc", result.stdout)
+        self.assertIn("2 incremental session directories", result.stdout)
         self.assertIn("Dry-run", result.stdout)
         self.assertTrue(self.stale.is_dir())
         self.assertTrue(self.stale_triple.is_dir())

@@ -753,7 +753,8 @@ session-end:
     elif [[ "$USE_PCT" -ge 90 ]] 2>/dev/null; then
         AVAIL=$(df -h . 2>/dev/null | awk 'NR==2 {print $4}')
         echo "  WARN: workspace filesystem ${USE_PCT}% full (${AVAIL} free)"
-        echo "  → \`just disk\` to survey, \`just disk-clean\` to reclaim"
+        echo "  → \`just disk\` to survey; \`just disk-clean --stale-incremental\`"
+        echo "    reclaims stale Rust build caches in this slot (dry-run first)"
     else
         echo "  ${USE_PCT}% used (OK)"
     fi

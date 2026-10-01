@@ -398,7 +398,13 @@ disk:
 # tier=3 also nukes Rust target/ dirs and resets sccache. Reclaim
 # ~25 GB but next `cargo build` is a full rebuild (~30 min for core).
 #
+# --stale-incremental (alone, no tier) removes only rustc incremental
+# sessions untouched for two days: the largest and cheapest reclaim in a
+# busy slot (38 GB of 65 on 2026-10-01), with dependencies and sccache kept.
+#
 # Always dry-run unless --apply passed. Examples:
+#   just disk-clean --stale-incremental          # dry-run
+#   just disk-clean --stale-incremental --apply
 #   just disk-clean              # tier 1, dry-run
 #   just disk-clean --apply      # tier 1, actually delete
 #   just disk-clean --tier=2 --apply
@@ -410,27 +416,53 @@ disk:
 disk-clean *args:
     set -euo pipefail
     TIER=1
+    TIER_GIVEN=0
+    STALE_INCREMENTAL=0
     APPLY=0
     for arg in {{ args }}; do
         case "$arg" in
-            --tier=1) TIER=1 ;;
-            --tier=2) TIER=2 ;;
-            --tier=3) TIER=3 ;;
+            --tier=1) TIER=1; TIER_GIVEN=1 ;;
+            --tier=2) TIER=2; TIER_GIVEN=1 ;;
+            --tier=3) TIER=3; TIER_GIVEN=1 ;;
+            --stale-incremental) STALE_INCREMENTAL=1 ;;
             --apply) APPLY=1 ;;
             *) echo "Unknown arg: $arg"; exit 2 ;;
         esac
     done
+    if [[ "$STALE_INCREMENTAL" -eq 1 && "$TIER_GIVEN" -eq 1 ]]; then
+        echo "--stale-incremental runs alone; it does not combine with --tier"
+        exit 2
+    fi
 
     PATHS=()
 
+    # rustc keeps one incremental session directory per crate and build
+    # configuration and cargo never evicts them: 173 GB across three slots
+    # on 2026-10-01 (vauchi/private#322). A session untouched for two days
+    # costs one recompile of that crate if it is ever wanted again;
+    # compiled dependencies and sccache stay.
+    LABEL="tier $TIER"
+    if [[ "$STALE_INCREMENTAL" -eq 1 ]]; then
+        TIER=0
+        LABEL="stale incremental"
+        for inc in */target/*/incremental */target/*/*/incremental; do
+            [[ -d "$inc" ]] || continue
+            while IFS= read -r session; do
+                PATHS+=("$session")
+            done < <(find "$inc" -mindepth 1 -maxdepth 1 -type d -mtime +1)
+        done
+    fi
+
     # Tier 1: safe regeneratable caches
-    [[ -d ~/Library/Caches/org.swift.swiftpm/artifacts ]] && PATHS+=(~/Library/Caches/org.swift.swiftpm/artifacts)
-    [[ -d ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex)
-    [[ -d ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex)
-    [[ -d ~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex)
-    for wda in ~/Library/Developer/Xcode/DerivedData/WebDriverAgent-*; do
-        [[ -d "$wda" ]] && PATHS+=("$wda")
-    done
+    if [[ "$TIER" -ge 1 ]]; then
+        [[ -d ~/Library/Caches/org.swift.swiftpm/artifacts ]] && PATHS+=(~/Library/Caches/org.swift.swiftpm/artifacts)
+        [[ -d ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex)
+        [[ -d ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex)
+        [[ -d ~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex ]] && PATHS+=(~/Library/Developer/Xcode/DerivedData/SymbolCache.noindex)
+        for wda in ~/Library/Developer/Xcode/DerivedData/WebDriverAgent-*; do
+            [[ -d "$wda" ]] && PATHS+=("$wda")
+        done
+    fi
 
     # Tier 2: full Xcode DerivedData + per-project SPM caches
     if [[ "$TIER" -ge 2 ]]; then
@@ -448,18 +480,23 @@ disk-clean *args:
         [[ -d ~/Library/Caches/Mozilla.sccache ]] && PATHS+=(~/Library/Caches/Mozilla.sccache)
     fi
 
-    echo "── disk-clean tier $TIER ($([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)) ──"
+    echo "── disk-clean $LABEL ($([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)) ──"
     echo ""
     if [[ "${#PATHS[@]}" -eq 0 ]]; then
-        echo "Nothing to clean at tier $TIER"
+        echo "Nothing to clean ($LABEL)"
         exit 0
     fi
     TOTAL_K=0
     for p in "${PATHS[@]}"; do
         SIZE=$(du -sk "$p" 2>/dev/null | awk '{print $1}')
         TOTAL_K=$((TOTAL_K + SIZE))
+        # One line per session would be hundreds of lines in a busy slot.
+        [[ "$STALE_INCREMENTAL" -eq 1 ]] && continue
         printf "  %8s  %s\n" "$(du -sh "$p" 2>/dev/null | awk '{print $1}')" "$p"
     done
+    if [[ "$STALE_INCREMENTAL" -eq 1 ]]; then
+        echo "  ${#PATHS[@]} incremental session directories untouched for two days"
+    fi
     TOTAL_GB=$(awk "BEGIN { printf \"%.1f\", $TOTAL_K / 1024 / 1024 }")
     echo ""
     echo "Total reclaimable: ${TOTAL_GB} GB"
@@ -470,12 +507,14 @@ disk-clean *args:
         exit 0
     fi
 
-    echo ""
-    echo "Brew cleanup (always safe)…"
-    brew cleanup --prune=all -s 2>&1 | tail -3 || true
+    if [[ "$TIER" -ge 1 ]]; then
+        echo ""
+        echo "Brew cleanup (always safe)…"
+        brew cleanup --prune=all -s 2>&1 | tail -3 || true
+    fi
     echo ""
     for p in "${PATHS[@]}"; do
-        echo "rm -rf $p"
+        [[ "$STALE_INCREMENTAL" -eq 1 ]] || echo "rm -rf $p"
         rm -rf "$p"
     done
     echo ""
