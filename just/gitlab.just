@@ -1084,8 +1084,10 @@ resource-group-reset repo key:
     echo ""
 
     # List upcoming (stuck) jobs
+    # printf, not echo: sh's echo turns the JSON's escaped \n into raw
+    # newlines inside strings, which jq rejects (#483).
     JOBS=$(glab api "projects/${encoded}/resource_groups/{{key}}/upcoming_jobs" 2>/dev/null || echo "[]")
-    COUNT=$(echo "$JOBS" | jq 'length')
+    COUNT=$(printf '%s\n' "$JOBS" | jq 'length')
     echo "Queued/stuck jobs: $COUNT"
 
     if [[ "$COUNT" == "0" ]]; then
@@ -1093,11 +1095,11 @@ resource-group-reset repo key:
         exit 0
     fi
 
-    echo "$JOBS" | jq -r '.[] | "  \(.id): \(.name) [\(.status)]"'
+    printf '%s\n' "$JOBS" | jq -r '.[] | "  \(.id): \(.name) [\(.status)]"'
     echo ""
 
     # Cancel each stuck job to release the lock
-    echo "$JOBS" | jq -r '.[].id' | while read -r job_id; do
+    printf '%s\n' "$JOBS" | jq -r '.[].id' | while read -r job_id; do
         printf "  Cancelling job %s..." "$job_id"
         if glab api --method POST "projects/${encoded}/jobs/${job_id}/cancel" >/dev/null 2>&1; then
             echo " done"
