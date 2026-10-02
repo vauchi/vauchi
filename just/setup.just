@@ -257,6 +257,12 @@ session-init:
     _check_binding_drift "macOS" "$MACOS_PIN"
     _check_binding_drift "Android" "$ANDROID_PIN"
 
+    # Base images are pinned by digest; a pin only picks up base-OS
+    # security patches when someone bumps it (vauchi/private#478).
+    echo ""
+    echo "BASE IMAGE PINS:"
+    scripts/scripts/check-image-pins.sh . || WARN=1
+
     echo ""
     echo "OPEN MRs:"
     if [[ -f "$SI_TMP/mrs.txt" && -s "$SI_TMP/mrs.txt" ]]; then

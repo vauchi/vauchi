@@ -29,6 +29,11 @@ test-deploy-check:
 test-deploy-latest:
     python3 "{{justfile_directory()}}/tests/test_deploy_latest_recipe.py" "{{justfile_directory()}}/justfile"
 
+# Compare each digest-pinned base image with the tag it tracks.
+[group('deploy')]
+check-image-pins:
+    scripts/scripts/check-image-pins.sh .
+
 # Check deployed versions against public and GitLab evidence.
 [group('deploy')]
 deploy-check *ARGS:
