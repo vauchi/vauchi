@@ -575,6 +575,15 @@ release-gates:
 
     PLAN = "_private/docs/planning/master-plan.plan.md"
     DEPLOY_CONFIG = Path("_private/infra/config/deploy.combined.yml")
+    # The relay and ohttp-relay app deploys land through these destination
+    # configs (`kamal deploy -c deploy.<svc>.yml -d production`), not through
+    # deploy.combined.yml, which only boots kamal-proxy and its accessories.
+    RELAY_PRODUCTION_CONFIG = Path(
+        "_private/infra/config/deploy.relay.production.yml"
+    )
+    OHTTP_PRODUCTION_CONFIG = Path(
+        "_private/infra/config/deploy.ohttp-relay.production.yml"
+    )
     ADR_065 = Path(
         "_private/docs/decisions/"
         "adr-065-first-release-protocol-version-contract.md"
@@ -690,6 +699,35 @@ release-gates:
         )
         return stage if stage in RELEASE_STAGES else "release"
 
+    def production_host_source(config):
+        text = config.read_text()
+        variable = first_match(r'ENV\.fetch\(\s*"([A-Za-z0-9_]+)"', text)
+        if variable:
+            return f"env {variable}"
+        host = first_match(r"(?m)^\s+hosts:\s*\n\s+-\s*\"?([A-Za-z0-9_.-]+)", text)
+        return f"host {host}" if host else ""
+
+    def production_host_failures():
+        failures = []
+        sources = {}
+        for name, config in (
+            ("relay", RELAY_PRODUCTION_CONFIG),
+            ("OHTTP relay", OHTTP_PRODUCTION_CONFIG),
+        ):
+            if not config.is_file():
+                failures.append(f"{config.name} is missing")
+                continue
+            sources[name] = production_host_source(config)
+            if not sources[name]:
+                failures.append(f"{config.name} declares no production host")
+        relay, ohttp = sources.get("relay"), sources.get("OHTTP relay")
+        if relay and ohttp and relay == ohttp:
+            failures.append(
+                "relay and OHTTP relay production deploys share host source "
+                f"'{relay}'"
+            )
+        return failures
+
     def release_config_report(stage="release"):
         if not DEPLOY_CONFIG.is_file():
             return [f"{DEPLOY_CONFIG} is missing"], []
@@ -733,6 +771,7 @@ release-gates:
                 "OHTTP relay operator identity label app.vauchi.operator "
                 "is not declared"
             )
+        failures.extend(production_host_failures())
         deferrals = []
         if (
             relay_operator
