@@ -37,6 +37,25 @@ accessories:
       app.vauchi.operator: same-operator
 """
 
+def production_config(host_variable: str) -> str:
+    return f"""<%
+  deploy_host = ENV.fetch("{host_variable}")
+%>
+servers:
+  web:
+    hosts:
+      - <%= deploy_host %>
+"""
+
+
+# Where the relay and OHTTP app deploys actually land: their production
+# destination configs, each taking its host from a CI variable.
+DISTINCT_PRODUCTION_HOSTS = {
+    "deploy.relay.production.yml": production_config("RELAY_DEPLOY_HOST"),
+    "deploy.ohttp-relay.production.yml": production_config("OHTTP_DEPLOY_HOST"),
+}
+
+
 CHECKED_SHIP_CRITERIA = """
 **Ship criteria**
 
@@ -90,6 +109,7 @@ class ReleaseGatesTest(unittest.TestCase):
         self,
         plan: str,
         deploy_config: str | None = None,
+        production_configs: dict[str, str] | None = None,
         adr_065: str | None = None,
         ignored_test_count: int | None = None,
         core_tags: list[str] | None = None,
@@ -319,6 +339,11 @@ class ReleaseGatesTest(unittest.TestCase):
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
                 deploy_path.write_text(deploy_config)
+                configs = dict(DISTINCT_PRODUCTION_HOSTS)
+                configs.update(production_configs or {})
+                for name, text in configs.items():
+                    if text is not None:
+                        (deploy_path.parent / name).write_text(text)
             return subprocess.run(
                 [
                     "just",
@@ -424,6 +449,49 @@ accessories:
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-7 release config failure", result.stdout)
         self.assertIn("application relay and OHTTP relay share host", result.stdout)
+
+    def test_completed_rg7_fails_when_both_hops_deploy_to_one_host_variable(
+        self,
+    ) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+            production_configs={
+                "deploy.relay.production.yml": production_config("DEPLOY_HOST"),
+                "deploy.ohttp-relay.production.yml": production_config(
+                    "DEPLOY_HOST"
+                ),
+            },
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn(
+            "relay and OHTTP relay production deploys share host source "
+            "'env DEPLOY_HOST'",
+            result.stdout,
+        )
+
+    def test_completed_rg7_fails_without_the_ohttp_production_config(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+            production_configs={"deploy.ohttp-relay.production.yml": None},
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-7 release config failure", result.stdout)
+        self.assertIn("deploy.ohttp-relay.production.yml is missing", result.stdout)
 
     def test_completed_rg7_requires_distinct_operator_labels(self) -> None:
         result = self.run_release_gates(
