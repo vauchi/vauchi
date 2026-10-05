@@ -61,6 +61,7 @@ runners-health:
         "55937932:allyson-docker:allyson"
         "52767355:nell-shell:nell"
         "54440366:shelly-ann-arm64:shelly-ann"
+        "55934642:pam-shell:pam"
     )
     STALE_THRESHOLD=300  # 5 minutes in seconds
 
