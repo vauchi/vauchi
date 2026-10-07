@@ -234,6 +234,11 @@ deploy-latest service:
         monitoring)  REPO="private" ;;
         *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay|monitoring)"; exit 1 ;;
     esac
+    # The registry image the service's Kamal config runs. The CDN is the
+    # website repo's `cdn` image (deploy.cdn.yml); pinning the website's own
+    # digest for it failed the host check after a good deploy (#549).
+    IMAGE="$REPO"
+    [[ "$SERVICE" == cdn ]] && IMAGE="website/cdn"
 
     # Monitoring is config synced from _private (infra/monitoring/), not an
     # image: there is no build or registry tag to pin, and its button is the
@@ -288,15 +293,15 @@ deploy-latest service:
         exit 1
     fi
 
-    RID=$(glab api "projects/vauchi%2F${REPO}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${REPO}" '.[] | select(.path==$p) | .id' | head -1 || true)
+    RID=$(glab api "projects/vauchi%2F${REPO}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${IMAGE}" '.[] | select(.path==$p) | .id' | head -1 || true)
     if [[ -z "$RID" ]]; then
-        echo "ERROR: no registry repository found for vauchi/$REPO." >&2
+        echo "ERROR: no registry repository found for vauchi/$IMAGE." >&2
         exit 1
     fi
 
     SHA_DIGEST=$(glab api "projects/vauchi%2F${REPO}/registry/repositories/${RID}/tags/${SHA}" 2>/dev/null | jq -r '.digest // empty' || true)
     if [[ -z "$SHA_DIGEST" ]]; then
-        echo "ERROR: no registry image for ${REPO}:${SHA}." >&2
+        echo "ERROR: no registry image for ${IMAGE}:${SHA}." >&2
         echo "       Wait for the image build, then rerun." >&2
         exit 1
     fi
@@ -307,7 +312,7 @@ deploy-latest service:
         echo "registry note:  :latest differs; this link remains pinned to :${SHA:0:8}"
     fi
 
-    DEPLOY_IMAGE="registry.gitlab.com/vauchi/${REPO}:${SHA}"
+    DEPLOY_IMAGE="registry.gitlab.com/vauchi/${IMAGE}:${SHA}"
     echo "minting SHA-pinned _private main pipeline..."
     PIPE_REQUEST=$(jq -n \
         --arg service "$SERVICE" \
