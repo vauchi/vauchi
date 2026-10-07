@@ -57,6 +57,7 @@ deploy-check *ARGS:
     _DS_C2=28  # status column (fits "STALE (99 commits behind)")
     _DS_STALE=0
     _DS_UNKNOWN=0
+    _DS_FAILED=0
 
     _ds_unknown() {
         local name="$1" reason="$2"
@@ -146,6 +147,7 @@ deploy-check *ARGS:
     check_service_gitlab() {
         local name="$1" repo="$2" envpath="$3"
         local sha deployment dep_at job_id trace dep_image dep_tag running
+        local attempt attempt_status attempt_at attempt_job
         git -C "{{justfile_directory()}}/$repo" fetch origin main --quiet 2>/dev/null || true
         sha=$(git -C "{{justfile_directory()}}/$repo" rev-parse origin/main 2>/dev/null || echo "")
         deployment=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&status=success&order_by=created_at&sort=desc&per_page=1" 2>/dev/null || true)
@@ -160,8 +162,20 @@ deploy-check *ARGS:
         [[ -n "$dep_image" ]] && dep_tag="${dep_image##*:}"
         running=$(sed -n 's/.*production running image: [^@]*@\(sha256:[0-9a-f]\{12\}\).*/\1/p' <<<"$trace" | head -1)
 
-        local status_text status_color
-        if [[ -z "$sha" || -z "$dep_tag" ]]; then
+        # The success query alone cannot tell "never deployed" from "the
+        # newer deploy failed": both leave the last success unchanged.
+        attempt=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&order_by=created_at&sort=desc&per_page=1" 2>/dev/null || true)
+        attempt_status=$(jq -r 'if type == "array" then .[0].status // empty else empty end' <<<"$attempt" 2>/dev/null || true)
+        attempt_at=$(jq -r 'if type == "array" then .[0].created_at // empty else empty end' <<<"$attempt" 2>/dev/null || true)
+        attempt_job=$(jq -r 'if type == "array" then .[0].deployable.id // empty else empty end' <<<"$attempt" 2>/dev/null || true)
+
+        local status_text status_color failed_note=""
+        if [[ ( "$attempt_status" == failed || "$attempt_status" == canceled ) && "$attempt_at" > "$dep_at" ]]; then
+            status_text="DEPLOY FAILED"
+            status_color="$RED"
+            failed_note=" failed-job=${attempt_job} ($attempt_status ${attempt_at:0:16})"
+            _DS_FAILED=$(( _DS_FAILED + 1 ))
+        elif [[ -z "$sha" || -z "$dep_tag" ]]; then
             # Never green-wash on missing evidence: without the main sha
             # and the deployed tag the comparison cannot prove currency.
             status_text="UNKNOWN"
@@ -180,7 +194,7 @@ deploy-check *ARGS:
         local _p2=$(( _DS_C2 - ${#status_text} )); [[ $_p2 -lt 1 ]] && _p2=1
         printf "  %s%*s ${status_color}%s${NC}%*s deployed=%-10s main=%-10s  %s\n" \
             "$name" "$_p" "" "$status_text" "$_p2" "" "${dep_tag:0:8}" "${sha:0:8}" \
-            "at=${dep_at:0:16}${running:+ running=$running}"
+            "at=${dep_at:0:16}${running:+ running=$running}${failed_note}"
     }
 
     _ds_hdr() {
@@ -208,6 +222,10 @@ deploy-check *ARGS:
         # stale docs deploy sat unnoticed for 10 weeks before this alarm
         # (backlog 2026-07-10-docs-deploy-drift-alarm).
         printf "${RED}DRIFT: %d service(s) behind origin/main${NC} — run: just deploy-latest <service>\n" "$_DS_STALE"
+        _DS_RESULT=1
+    fi
+    if [[ "$_DS_FAILED" -gt 0 ]]; then
+        printf "${RED}DEPLOY FAILED: %d service(s) — the newest production deploy failed after the last success${NC}; read failed-job above\n" "$_DS_FAILED"
         _DS_RESULT=1
     fi
     if [[ "$_DS_UNKNOWN" -gt 0 ]]; then
