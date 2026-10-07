@@ -15,6 +15,7 @@ from pathlib import Path
 DEPLOY_JUST = Path(sys.argv.pop(1)).resolve()
 CURRENT_SHA = "a1234567890bcdefa1234567890bcdefa1234567"
 OLDER_SHA = "0ld0000000000000000000000000000000000000"
+LAST_SUCCESS = '[{"created_at":"2026-08-04T06:00:00Z","status":"success","deployable":{"id":777}}]'
 
 
 class DeployCheckRecipeTests(unittest.TestCase):
@@ -28,6 +29,7 @@ class DeployCheckRecipeTests(unittest.TestCase):
         malformed_url: str = "",
         deployed_sha: str = CURRENT_SHA,
         deploy_trace: str | None = None,
+        newest_attempt: str = LAST_SUCCESS,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -93,11 +95,11 @@ class DeployCheckRecipeTests(unittest.TestCase):
                     '      {"id":12,"path":"vauchi/ohttp-relay"}',
                     "    ]'",
                     "    ;;",
+                    '  *"deployments?environment="*"status=success"*)',
+                    f"    printf '%s\\n' '{LAST_SUCCESS}'",
+                    "    ;;",
                     '  *"deployments?environment="*)',
-                    "    printf '%s\\n' '[{",
-                    '      "created_at":"2026-08-04T06:00:00Z",',
-                    '      "deployable":{"id":777}',
-                    "    }]'",
+                    '    printf "%s\\n" "$DEPLOY_CHECK_TEST_ATTEMPT"',
                     "    ;;",
                     '  *"pipelines?sha="*)',
                     "    printf '[{\"id\":99,\"sha\":\"%s\"}]\\n' \\",
@@ -153,6 +155,7 @@ class DeployCheckRecipeTests(unittest.TestCase):
             )
             environment["DEPLOY_CHECK_TEST_SHA"] = CURRENT_SHA
             environment["DEPLOY_CHECK_TEST_MALFORMED_URL"] = malformed_url
+            environment["DEPLOY_CHECK_TEST_ATTEMPT"] = newest_attempt
             environment["DEPLOY_CHECK_TEST_TRACE"] = (
                 "production deploy image is pinned: "
                 f"registry.gitlab.com/vauchi/relay:{deployed_sha}"
@@ -210,6 +213,34 @@ class DeployCheckRecipeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertRegex(result.stdout, r"relay\s+UNKNOWN")
         self.assertRegex(result.stdout, r"ohttp\s+UNKNOWN")
+
+    def test_failed_deploy_after_the_last_success_is_reported(self) -> None:
+        result = self.run_recipe(
+            newest_attempt='[{"created_at":"2026-08-05T06:00:00Z",'
+            '"status":"failed","deployable":{"id":888}}]'
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"relay\s+DEPLOY FAILED")
+        self.assertIn("failed-job=888", result.stdout)
+        self.assertIn("deployed=a1234567", result.stdout)
+        self.assertIn("DEPLOY FAILED: 2 service(s)", result.stdout)
+
+    def test_canceled_deploy_after_the_last_success_is_reported(self) -> None:
+        result = self.run_recipe(
+            newest_attempt='[{"created_at":"2026-08-05T06:00:00Z",'
+            '"status":"canceled","deployable":{"id":889}}]'
+        )
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"ohttp\s+DEPLOY FAILED")
+        self.assertIn("failed-job=889", result.stdout)
+
+    def test_stale_service_with_no_newer_attempt_stays_stale(self) -> None:
+        result = self.run_recipe(deployed_sha=OLDER_SHA)
+
+        self.assertRegex(result.stdout, r"relay\s+STALE")
+        self.assertNotIn("DEPLOY FAILED", result.stdout)
 
 
 if __name__ == "__main__":
