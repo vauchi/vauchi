@@ -289,6 +289,11 @@ gates:core-consumer-drift:
 # (74, measured 2026-09-27); _private cannot be cloned here, and its share
 # is held by the script's default budget in `just housekeeping`. Lower it
 # as entries are removed; never raise it to make the job pass.
+# 2026-10-07: raised 59 -> 67 by owner decision, not to pass the job (#543).
+# Most of the rise is deliberate: #476's advisory
+# check:pictogram-copies-current in seven shells reports assets drift
+# without turning an MR red. Core's consumer pin-bump job and iOS
+# screenshots:store (#489) also arrived since 2026-09-28.
 gates:allow-failure-budget:
   stage: lint
   tags: [linux, self-hosted]
@@ -304,7 +309,7 @@ gates:allow-failure-budget:
           "${CI_PROJECT_DIR}/${repo}"
       done
   script:
-    - bash scripts/scripts/check-allow-failure-budget.sh --budget 59 .
+    - bash scripts/scripts/check-allow-failure-budget.sh --budget 67 .
 
 # Weekly prerelease cleanup (scheduled only)
 # Fetches cleanup script from vauchi/scripts at runtime.
