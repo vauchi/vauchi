@@ -71,10 +71,10 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         '    printf "%s\\n" "$DEPLOY_LATEST_TEST_PIPELINES_JSON"',
                         '    exit "$DEPLOY_LATEST_TEST_PIPELINES_EXIT"',
                         "    ;;",
-                        '  *"registry/repositories/12/tags/latest"*)',
+                        '  *"registry/repositories/1"[23]"/tags/latest"*)',
                         '    printf \'{"digest":"sha256:mutable-latest"}\\n\'',
                         "    ;;",
-                        '  *"registry/repositories/12/tags/"*)',
+                        '  *"registry/repositories/1"[23]"/tags/"*)',
                         '    if [ -n "$DEPLOY_LATEST_TEST_SHA_DIGEST" ]; then',
                         '      printf \'{"digest":"%s"}\\n\' '
                         '"$DEPLOY_LATEST_TEST_SHA_DIGEST"',
@@ -86,6 +86,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         "    printf '%s\\n' '[",
                         '      {"id":12,"path":"vauchi/docs"},',
                         '      {"id":12,"path":"vauchi/website"},',
+                        '      {"id":13,"path":"vauchi/website/cdn"},',
                         '      {"id":12,"path":"vauchi/relay"},',
                         '      {"id":12,"path":"vauchi/ohttp-relay"}',
                         "    ]'",
@@ -136,11 +137,11 @@ class DeployLatestRecipeTests(unittest.TestCase):
             environment["DEPLOY_LATEST_TEST_PIPELINES_EXIT"] = str(
                 pipelines_exit_code
             )
-            repository = self.repository_for(service)
+            image = self.image_for(service)
             expected_variables = (
                 '[{"key":"DEPLOY_SERVICE","value":"'
                 f'{service}"}},{{"key":"DEPLOY_IMAGE","value":"'
-                f'registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"}},'
+                f'registry.gitlab.com/vauchi/{image}:{CURRENT_SHA}"}},'
                 '{"key":"DEPLOY_IMAGE_DIGEST","value":"'
                 f'{CURRENT_DIGEST}"}}]'
             )
@@ -171,6 +172,13 @@ class DeployLatestRecipeTests(unittest.TestCase):
             "monitoring": "private",
         }[service]
 
+    @classmethod
+    def image_for(cls, service: str) -> str:
+        """The registry image the service's Kamal config runs: the CDN is
+        the website repo's `cdn` image (deploy.cdn.yml), not the website's
+        own (job 17001585581 pinned the website digest for it)."""
+        return {"cdn": "website/cdn"}.get(service, cls.repository_for(service))
+
     def test_mints_sha_pinned_pipeline_for_every_service(self) -> None:
         service_repositories = {
             service: self.repository_for(service)
@@ -181,7 +189,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
             with self.subTest(service=service):
                 result, glab_log = self.run_recipe(service=service)
                 deploy_image = (
-                    f"registry.gitlab.com/vauchi/{repository}:{CURRENT_SHA}"
+                    f"registry.gitlab.com/vauchi/{self.image_for(service)}:{CURRENT_SHA}"
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
