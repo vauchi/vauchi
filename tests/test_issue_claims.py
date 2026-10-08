@@ -69,7 +69,10 @@ if parts[2] == "issues" and parts[4] == "notes":
         state.setdefault("discussions", {}).setdefault(parts[3], []).append(
             {"id": "thread-%d" % note["id"], "notes": [note]})
         out(note)
-    out(list(reversed(state["notes"].setdefault(parts[3], []))))
+    notes = list(reversed(state["notes"].setdefault(parts[3], [])))
+    if "--paginate" not in args:
+        notes = notes[:int(query.partition("per_page=")[2].split("&")[0] or 20)]
+    out(notes)
 if parts[2] == "repository" and parts[3] == "branches":
     if method == "POST":
         name = fields["branch"]
@@ -218,6 +221,21 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertNotIn("issue/7", self.load()["branches"])
         self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("release: session:"))
+
+    def test_release_finds_the_claim_under_many_system_notes(self) -> None:
+        # #30 (2026-10-08): label and MR-link system notes pushed the claim
+        # note past the newest 50, and its own session was refused.
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        state = self.load()
+        state["notes"]["7"].extend(
+            {"id": 5000 + n, "body": "added ~claim::active label", "system": True,
+             "created_at": "2026-10-08T12:00:00.000Z"} for n in range(60))
+        self.save(state)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("issue/7", self.load()["branches"])
 
     def test_release_refuses_a_branch_holding_unmerged_work(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
