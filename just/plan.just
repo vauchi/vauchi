@@ -574,7 +574,7 @@ release-gates:
     from pathlib import Path
 
     PLAN = "_private/docs/planning/master-plan.plan.md"
-    DEPLOY_CONFIG = Path("_private/infra/config/deploy.combined.yml")
+    CONFIG_DIR = Path("_private/infra/config")
     # The relay and ohttp-relay app deploys land through these destination
     # configs (`kamal deploy -c deploy.<svc>.yml -d production`), not through
     # deploy.combined.yml, which only boots kamal-proxy and its accessories.
@@ -679,13 +679,6 @@ release-gates:
         match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
         return match.group(1).strip().strip('"\'') if match else ""
 
-    def extract_ohttp_block(text):
-        match = re.search(
-            r"(?ms)^  ohttp-relay:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)",
-            text,
-        )
-        return match.group("body") if match else ""
-
     RELEASE_STAGES = ("alpha", "beta", "release")
 
     def release_stage(plan_text):
@@ -728,39 +721,28 @@ release-gates:
             )
         return failures
 
+    def service_operator(service):
+        # The operator label lives in the service's own Kamal config, or its
+        # production destination override (#30: the OHTTP relay deploys from
+        # deploy.ohttp-relay.yml to its own host, not from the combined file).
+        for config in (
+            CONFIG_DIR / f"deploy.{service}.production.yml",
+            CONFIG_DIR / f"deploy.{service}.yml",
+        ):
+            if config.is_file():
+                operator = first_match(
+                    r"(?m)^\s+app\.vauchi\.operator:\s*\"?([^\"\n#]+)\"?\s*$",
+                    config.read_text(),
+                )
+                if operator:
+                    return operator
+        return ""
+
     def release_config_report(stage="release"):
-        if not DEPLOY_CONFIG.is_file():
-            return [f"{DEPLOY_CONFIG} is missing"], []
-
-        deploy_text = DEPLOY_CONFIG.read_text()
-        relay_block = first_match(
-            r"(?ms)^servers:\n(?P<body>.*?)(?=^proxy:|^# Relay proxy|^env:|\Z)",
-            deploy_text,
-        )
-        ohttp_block = extract_ohttp_block(deploy_text)
-
-        relay_host = first_match(r"(?m)^\s+-\s*([A-Za-z0-9_.-]+)\s*$", relay_block)
-        ohttp_host = first_match(
-            r"(?m)^\s+host:\s*\"?([A-Za-z0-9_.-]+)\"?\s*$", ohttp_block
-        )
-        relay_operator = first_match(
-            r"(?m)^\s+app\.vauchi\.operator:\s*\"?([^\"\n#]+)\"?\s*$",
-            relay_block,
-        )
-        ohttp_operator = first_match(
-            r"(?m)^\s+app\.vauchi\.operator:\s*\"?([^\"\n#]+)\"?\s*$",
-            ohttp_block,
-        )
-
-        failures = []
-        if not relay_host:
-            failures.append("application relay host is not declared")
-        if not ohttp_host:
-            failures.append("OHTTP relay host is not declared")
-        if relay_host and ohttp_host and relay_host == ohttp_host:
-            failures.append(
-                f"application relay and OHTTP relay share host '{relay_host}'"
-            )
+        failures = production_host_failures()
+        deferrals = []
+        relay_operator = service_operator("relay")
+        ohttp_operator = service_operator("ohttp-relay")
         if not relay_operator:
             failures.append(
                 "application relay operator identity label "
@@ -771,13 +753,7 @@ release-gates:
                 "OHTTP relay operator identity label app.vauchi.operator "
                 "is not declared"
             )
-        failures.extend(production_host_failures())
-        deferrals = []
-        if (
-            relay_operator
-            and ohttp_operator
-            and relay_operator == ohttp_operator
-        ):
+        if relay_operator and ohttp_operator and relay_operator == ohttp_operator:
             if stage == "release":
                 failures.append(
                     f"operator identities are not distinct ('{relay_operator}')"
