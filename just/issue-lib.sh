@@ -29,8 +29,9 @@ _issue_age_hours() {
 
 # Latest claim or takeover note on #N, as JSON; empty when none.
 _issue_holder_note() {
-    glab api "projects/$ISSUE_REPO/issues/$1/notes?sort=desc&order_by=created_at&per_page=50" 2>/dev/null \
-        | jq -c '[.[] | select(.body | test("^(claim|takeover): "))][0] // empty'
+    # Every page: label and MR-link system notes bury the claim on a busy issue.
+    glab api "projects/$ISSUE_REPO/issues/$1/notes?sort=desc&order_by=created_at&per_page=100" --paginate 2>/dev/null \
+        | jq -sc '[.[][] | select(.body | test("^(claim|takeover): "))][0] // empty'
 }
 
 _issue_log_refusal() {
