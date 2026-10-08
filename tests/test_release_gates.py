@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,25 @@ servers:
     hosts:
       - <%= deploy_host %>
 """
+
+
+def service_config(operator: str | None) -> str:
+    labels = f"\nlabels:\n  app.vauchi.operator: {operator}\n" if operator else "\n"
+    return f"service: fixture{labels}"
+
+
+def service_configs_from(combined: str) -> dict[str, str]:
+    """Each service's own Kamal config, carrying the operator label the
+    combined fixture names for it (relay first, OHTTP relay second): the
+    verifier reads operators there, so fixtures written in the combined
+    shape keep their meaning."""
+    operators = re.findall(r"app\.vauchi\.operator:\s*(\S+)", combined)
+    return {
+        "deploy.relay.yml": service_config(operators[0] if operators else None),
+        "deploy.ohttp-relay.yml": service_config(
+            operators[1] if len(operators) > 1 else None
+        ),
+    }
 
 
 # Where the relay and OHTTP app deploys actually land: their production
@@ -340,6 +360,7 @@ class ReleaseGatesTest(unittest.TestCase):
                 deploy_path.parent.mkdir(parents=True)
                 deploy_path.write_text(deploy_config)
                 configs = dict(DISTINCT_PRODUCTION_HOSTS)
+                configs.update(service_configs_from(deploy_config))
                 configs.update(production_configs or {})
                 for name, text in configs.items():
                     if text is not None:
@@ -423,7 +444,12 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertIn("ERROR: expected hard ship criteria", result.stderr)
         self.assertIn("E2E ignored tests", result.stderr)
 
-    def test_completed_rg7_requires_distinct_relay_hosts(self) -> None:
+    def test_completed_rg7_reads_operators_from_each_services_own_config(
+        self,
+    ) -> None:
+        # After #30 the OHTTP relay is no accessory of the combined config:
+        # it deploys from deploy.ohttp-relay.yml to its own host. Hosts and
+        # operators come from each service's configs, not the combined file.
         result = self.run_release_gates(
             plan_with_gates(
                 all_completed=True,
@@ -435,20 +461,36 @@ class ReleaseGatesTest(unittest.TestCase):
 servers:
   web:
     hosts:
-      - bold-hopper-vps
-    labels:
-      app.vauchi.operator: relay-operator
-accessories:
-  ohttp-relay:
-    host: bold-hopper-vps
-    labels:
-      app.vauchi.operator: gateway-operator
+      - relay-host
 """,
+            production_configs={
+                "deploy.relay.yml": service_config("relay-operator"),
+                "deploy.ohttp-relay.yml": service_config("gateway-operator"),
+            },
+        )
+
+        self.assertNotIn("RG-7 release config failure", result.stdout)
+
+    def test_completed_rg7_requires_an_operator_label_on_each_service(
+        self,
+    ) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+            production_configs={"deploy.ohttp-relay.yml": service_config(None)},
         )
 
         self.assertEqual(1, result.returncode)
-        self.assertIn("RG-7 release config failure", result.stdout)
-        self.assertIn("application relay and OHTTP relay share host", result.stdout)
+        self.assertIn(
+            "OHTTP relay operator identity label app.vauchi.operator "
+            "is not declared",
+            result.stdout,
+        )
 
     def test_completed_rg7_fails_when_both_hops_deploy_to_one_host_variable(
         self,
@@ -566,24 +608,21 @@ accessories:
                     "**Release stage**: alpha"
                 ),
             ),
-            deploy_config="""
-servers:
-  web:
-    hosts:
-      - bold-hopper-vps
-    labels:
-      app.vauchi.operator: same-operator
-accessories:
-  ohttp-relay:
-    host: bold-hopper-vps
-    labels:
-      app.vauchi.operator: same-operator
-""",
+            deploy_config=SAME_OPERATOR_DISTINCT_HOSTS,
+            production_configs={
+                "deploy.relay.production.yml": production_config("DEPLOY_HOST"),
+                "deploy.ohttp-relay.production.yml": production_config(
+                    "DEPLOY_HOST"
+                ),
+            },
         )
 
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-7 release config failure", result.stdout)
-        self.assertIn("application relay and OHTTP relay share host", result.stdout)
+        self.assertIn(
+            "relay and OHTTP relay production deploys share host source",
+            result.stdout,
+        )
 
     def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
         result = self.run_release_gates(
