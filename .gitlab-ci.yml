@@ -72,6 +72,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-lint-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
+    - JUST_UNSTABLE=1 just test-runners-health
     - JUST_UNSTABLE=1 just slot test
     - JUST_UNSTABLE=1 just rig test
     - python3 tests/test_issue_claims.py .
@@ -107,10 +108,12 @@ test:release-gates:
           - just/claude-layout-lib.sh
           - just/deploy.just
           - just/deploy-running.sh
+          - just/runners.just
           - tests/test_backup_recipe_authority.py
           - tests/test_check_prerequisites.py
           - tests/test_deploy_check_recipe.py
           - tests/test_deploy_latest_recipe.py
+          - tests/test_runners_health_recipe.py
           - tests/test_claude_layout.py
           - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py

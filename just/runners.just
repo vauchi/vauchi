@@ -43,6 +43,11 @@ runners-status:
 runners-logs:
     journalctl --user -u gitlab-runner -f
 
+# Test the runners-health recipe
+[group('tests')]
+test-runners-health:
+    python3 "{{justfile_directory()}}/tests/test_runners_health_recipe.py" "{{justfile_directory()}}/just/runners.just"
+
 # Check health of all self-hosted GitLab runners via API.
 # Reports contacted_at staleness — if > 5 minutes, the runner is dead.
 # Runner IDs are from _private/docs/reference/runner-runbook.md.
