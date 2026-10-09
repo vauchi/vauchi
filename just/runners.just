@@ -50,7 +50,7 @@ test-runners-health:
 
 # Check health of all self-hosted GitLab runners via API.
 # Reports contacted_at staleness — if > 5 minutes, the runner is dead.
-# Runner IDs are from _private/docs/reference/runner-runbook.md.
+# Runners are named here and resolved to IDs through the group's runner list.
 [group('runners')]
 [no-cd]
 [script]
@@ -58,16 +58,10 @@ runners-health:
     just gitlab _check-auth
     set -euo pipefail
 
-    # Runner registry: id:name:host — keep in sync with
-    # _private/docs/reference/runner-runbook.md (IDs change when a
-    # runner is re-registered, e.g. after a host reinstall)
-    RUNNERS=(
-        "55937316:allyson-shell:allyson"
-        "55937932:allyson-docker:allyson"
-        "52767355:nell-shell:nell"
-        "54440366:shelly-ann-arm64:shelly-ann"
-        "55934642:pam-shell:pam"
-    )
+    # Names, not IDs: an ID changes on every re-registration and drifted
+    # from this list twice (private#10 T5.4); a name does not. The host is
+    # the name without its role suffix.
+    RUNNERS=(allyson-shell allyson-docker nell-shell shelly-ann-arm64 pam-shell)
     STALE_THRESHOLD=300  # 5 minutes in seconds
 
     # Runner reads need a Maintainer-role token; the glab bot is Developer
@@ -86,14 +80,33 @@ runners-health:
     fi
     export GITLAB_TOKEN="$RUNNERS_HEALTH_READ_TOKEN"
 
+    if ! GROUP=$(glab api "groups/vauchi/runners?type=group_type&per_page=100" 2>/dev/null); then
+        echo "ERROR: cannot list the group's runners: $(printf '%s' "$GROUP" | jq -r '.message // "API unreachable"' 2>/dev/null || echo "API unreachable")"
+        exit 2
+    fi
+
     NOW=$(date +%s)
     ALL_HEALTHY=true
 
     printf "%-18s %-10s %-8s %s\n" "RUNNER" "HOST" "STATUS" "LAST CONTACT"
     printf "%-18s %-10s %-8s %s\n" "──────────────────" "──────────" "────────" "────────────────────"
 
-    for entry in "${RUNNERS[@]}"; do
-        IFS=: read -r rid rname rhost <<< "$entry"
+    for rname in "${RUNNERS[@]}"; do
+        rhost=${rname%-*}
+        MATCHES=$(printf '%s' "$GROUP" | jq -r --arg n "$rname" '.[] | select(.description == $n) | .id')
+        case $(printf '%s' "$MATCHES" | grep -c .) in
+            0)
+                printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "MISSING" "not registered in the vauchi group"
+                ALL_HEALTHY=false
+                continue
+                ;;
+            1) rid=$MATCHES ;;
+            *)
+                printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "DUPLICATE" "registered as $(printf '%s' "$MATCHES" | tr '\n' ' ')"
+                ALL_HEALTHY=false
+                continue
+                ;;
+        esac
         # glab prints the API error body on stdout before exiting
         # non-zero, so appending a fallback document would hand jq two
         # JSON values and turn a 403/404 into a bogus "DEAD (epoch 0)".
