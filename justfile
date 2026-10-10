@@ -2641,6 +2641,17 @@ check-annotations repo='core':
         [[ ${#missing[@]} -gt 30 ]] && echo "  ... and $((${#missing[@]} - 30)) more"
     fi
 
+# Every @implemented scenario needs a test annotated with its name
+# (vauchi/private#268). Reads the local checkouts, which may be on branches;
+# features' lint:implemented-scenarios checks every repo's main.
+# Usage: just check-implemented-scenarios [--strict]
+[group('tools')]
+[no-cd]
+check-implemented-scenarios *args:
+    python3 scripts/scripts/check-implemented-scenarios.py --features features \
+        --baseline features/implemented-untested.baseline {{ args }} \
+        core cli tui e2e relay ohttp-relay linux-gtk linux-qt windows web-demo ios macos android
+
 # Validate feature lifecycle tags (@implemented/@planned/@wip)
 # Every Scenario and Scenario Outline must have exactly one lifecycle tag
 [group('tools')]
