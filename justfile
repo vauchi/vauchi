@@ -1264,7 +1264,8 @@ mutants-diff *args:
     [ -d themes ]  && export VAUCHI_THEMES_DIR="$(cd themes && pwd)"
     [ -d locales ] && export VAUCHI_LOCALES_DIR="$(cd locales && pwd)"
     # jobs: min(8, ncpu) — cargo-mutants warns that >8 overloads the box.
-    JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    # MUTANTS_JOBS lowers it: each job copies the tree (~2.5 GB for core).
+    JOBS=${MUTANTS_JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}
     [ "$JOBS" -gt 8 ] && JOBS=8
     set -- {{ args }}
     repo_arg="${1:-all}"; [ "$#" -gt 0 ] && shift || true
