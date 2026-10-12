@@ -35,6 +35,8 @@ variables:
 # (CC-18). Root runs MR/schedule pipelines only, so no push-dedup rule is
 # needed. The deploy-stage cleanup job overrides interruptible: false.
 workflow:
+  # vci05-ok: root has no push pipelines on main (jobs run on MR and
+  # schedule only), so a merge never starts a pipeline that could cancel one.
   auto_cancel:
     on_new_commit: interruptible
 
