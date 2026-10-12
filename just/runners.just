@@ -138,9 +138,17 @@ runners-health:
         CLEAN=${CONTACTED%%.*}  # strip fractional seconds
         CLEAN=${CLEAN%%Z}       # strip Z suffix
         CLEAN=${CLEAN%%+*}      # strip timezone offset if present
+        # BSD date needs -j -f; GNU and BusyBox take "YYYY-MM-DD HH:MM:SS"
+        # but BusyBox rejects the ISO form, which once parsed every age as
+        # 0 epoch (alpine CI, 2026-10-12). Unparsable is an ERROR, not 0.
         CONTACT_EPOCH=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%S" "$CLEAN" +%s 2>/dev/null \
-            || date -ud "$CONTACTED" +%s 2>/dev/null \
-            || echo "0")
+            || date -u -d "${CLEAN/T/ }" +%s 2>/dev/null \
+            || true)
+        if [[ -z "$CONTACT_EPOCH" ]]; then
+            printf "%-18s %-10s %-8s %s\n" "$rname" "$rhost" "ERROR" "cannot parse contacted_at $CONTACTED"
+            ALL_HEALTHY=false
+            continue
+        fi
 
         AGE=$((NOW - CONTACT_EPOCH))
         AGE_MIN=$((AGE / 60))
