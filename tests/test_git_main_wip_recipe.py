@@ -17,7 +17,28 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-HELPERS = ("output-helpers.sh", "for-each-repo.sh")
+# Stand-ins for the vauchi/scripts helpers the recipe sources: that repo
+# is not part of the root checkout in CI. for_each_repo mirrors the real
+# enumeration (the root, then every top-level directory with a .git).
+OUTPUT_HELPERS = """GREEN=""; RED=""; YELLOW=""; DIM=""; NC=""
+timer_start() { :; }
+timer_elapsed() { echo 0s; }
+progress_ok() { echo "ok $3: $4"; }
+progress_fail() { echo "FAIL $3: $4"; }
+summary_mix() { :; }
+"""
+FOR_EACH_REPO = """for_each_repo() {
+    local include_root=true
+    if [[ "${1:-}" == "--no-root" ]]; then include_root=false; shift; fi
+    local callback="$1"
+    if $include_root && [[ -e ".git" ]]; then "$callback" "vauchi (root)" "."; fi
+    local dir
+    for dir in */; do
+        [[ -e "${dir}.git" ]] || continue
+        "$callback" "${dir%/}" "${dir%/}"
+    done
+}
+"""
 
 
 def git(repo: Path, *args: str) -> str:
@@ -49,8 +70,8 @@ class GitMainWipTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        for name in HELPERS:
-            (helpers / name).write_bytes((ROOT / "scripts" / "scripts" / name).read_bytes())
+        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS)
+        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO)
         # The copied recipes are tracked in the root's history, as in the
         # real workspace; only the screenshot below is new.
         (self.ws / ".gitignore").write_text("scripts/\ncore/\n")
