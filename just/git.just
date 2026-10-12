@@ -87,7 +87,12 @@ main mode='':
         cd "$dir" || return 1
         # Save if dirty
         if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
-            if [[ "$save_mode" == "wip" ]]; then
+            if [[ "$save_mode" == "wip" && "$(git branch --show-current)" == "main" ]]; then
+                # A WIP commit saves the branch being left; on main it would
+                # land on main itself (#664). The pull below autostashes
+                # tracked edits, and untracked files stay as they are.
+                save_info="left uncommitted on main → "
+            elif [[ "$save_mode" == "wip" ]]; then
                 local timestamp
                 timestamp=$(date +%Y%m%d-%H%M%S)
                 git add -A
