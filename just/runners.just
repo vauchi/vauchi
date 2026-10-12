@@ -49,7 +49,10 @@ test-runners-health:
     python3 "{{justfile_directory()}}/tests/test_runners_health_recipe.py" "{{justfile_directory()}}/just/runners.just"
 
 # Check health of all self-hosted GitLab runners via API.
-# Reports contacted_at staleness — if > 5 minutes, the runner is dead.
+# A runner is DEAD when GitLab reports it offline. contacted_at is shown
+# but not judged: GitLab.com does not refresh it for an idle runner's polls,
+# so it ages past minutes while the runner still takes a job within a
+# second (pam and shelly-ann, 2026-10-12, private#10).
 # Runners are named here and resolved to IDs through the group's runner list.
 [group('runners')]
 [no-cd]
@@ -62,7 +65,6 @@ runners-health:
     # from this list twice (private#10 T5.4); a name does not. The host is
     # the name without its role suffix.
     RUNNERS=(allyson-shell allyson-docker nell-shell shelly-ann-arm64 pam-shell)
-    STALE_THRESHOLD=300  # 5 minutes in seconds
 
     # Runner reads need a Maintainer-role token; the glab bot is Developer
     # and gets 403. Resolve a read-only token: env first, then the
@@ -118,6 +120,7 @@ runners-health:
         fi
 
         CONTACTED=$(echo "$DATA" | jq -r '.contacted_at // "unknown"')
+        GITLAB_STATUS=$(echo "$DATA" | jq -r '.status // "unknown"')
         ACTIVE=$(echo "$DATA" | jq -r '.active // false')
         PAUSED=$(echo "$DATA" | jq -r '.paused // false')
 
@@ -141,14 +144,14 @@ runners-health:
 
         if [[ "$PAUSED" == "true" ]]; then
             STATUS="PAUSED"
-        elif [[ "$AGE" -gt "$STALE_THRESHOLD" ]]; then
+        elif [[ "$GITLAB_STATUS" != "online" ]]; then
             STATUS="DEAD"
             ALL_HEALTHY=false
         else
             STATUS="OK"
         fi
 
-        printf "%-18s %-10s %-8s %s (%dm ago)\n" "$rname" "$rhost" "$STATUS" "$CONTACTED" "$AGE_MIN"
+        printf "%-18s %-10s %-8s %s (%dm ago, GitLab: %s)\n" "$rname" "$rhost" "$STATUS" "$CONTACTED" "$AGE_MIN" "$GITLAB_STATUS"
     done
 
     echo ""
