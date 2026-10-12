@@ -730,6 +730,19 @@ test-report id repo='':
     glab api "projects/${enc}/pipelines/{{id}}/test_report" \
       | python3 -c "import sys,json; r=json.load(sys.stdin); failed=[c for s in r.get('test_suites',[]) for c in s.get('test_cases',[]) if c.get('status') in ('failed','error')]; print(f\"{r.get('total_count',0)} tests, {len(failed)} failed\"); [print(f\"{c.get('classname','')}.{c.get('name','')}\n  {(c.get('system_output') or '').strip()}\") for c in failed]"
 
+# List the test classes each job of a pipeline reported (a class missing from
+# a job's list is the one that was running when its test process died)
+[no-cd]
+[script]
+test-report-classes id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    glab api "projects/${enc}/pipelines/{{id}}/test_report" \
+      | python3 -c "import sys,json; r=json.load(sys.stdin); [print(s.get('name',''), c) for s in r.get('test_suites',[]) for c in sorted({t.get('classname','') for t in s.get('test_cases',[])})]"
+
 # View job log output
 [no-cd]
 [script]
