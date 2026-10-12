@@ -25,7 +25,11 @@ timer_start() { :; }
 timer_elapsed() { echo 0s; }
 progress_ok() { echo "ok $3: $4"; }
 progress_fail() { echo "FAIL $3: $4"; }
+status_ok() { echo "ok $1: $2"; }
 summary_mix() { :; }
+"""
+# Merged-branch cleanup is out of scope here: nothing counts as merged.
+GIT_HELPERS = """list_merged_branches() { :; }
 """
 FOR_EACH_REPO = """for_each_repo() {
     local include_root=true
@@ -72,6 +76,7 @@ class GitMainWipTests(unittest.TestCase):
         helpers.mkdir(parents=True)
         (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS)
         (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO)
+        (helpers / "git-helpers.sh").write_text(GIT_HELPERS)
         # The copied recipes are tracked in the root's history, as in the
         # real workspace; only the screenshot below is new.
         (self.ws / ".gitignore").write_text("scripts/\ncore/\n")
