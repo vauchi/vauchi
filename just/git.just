@@ -13,6 +13,12 @@
 import 'git-wip.just'
 import 'git-audit.just'
 
+# A module does not inherit the root justfile's settings, and these recipes
+# need bash (arrays, `source`): under a dash or BusyBox `sh` they fail at
+# parse time (vauchi/private#664).
+set shell := ["bash", "-cu"]
+set script-interpreter := ["bash", "-eu"]
+
 # Save changes, checkout main, and pull latest in all repos
 # Usage: just git main          (interactive — prompts with wip/stash/abort)
 #        just git main yes      (non-interactive — auto-stash without prompting)
