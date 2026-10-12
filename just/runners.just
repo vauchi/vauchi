@@ -49,10 +49,11 @@ test-runners-health:
     python3 "{{justfile_directory()}}/tests/test_runners_health_recipe.py" "{{justfile_directory()}}/just/runners.just"
 
 # Check health of all self-hosted GitLab runners via API.
-# A runner is DEAD when GitLab reports it offline. contacted_at is shown
-# but not judged: GitLab.com does not refresh it for an idle runner's polls,
-# so it ages past minutes while the runner still takes a job within a
-# second (pam and shelly-ann, 2026-10-12, private#10).
+# A runner is DEAD when GitLab reports it offline. An old contacted_at on an
+# online runner is IDLE?, a warning: GitLab.com does not refresh it for an
+# idle runner's polls (pam took a job within a second while 10 min "stale",
+# 2026-10-12, private#10), yet a wedged runner looks the same (nell,
+# 2026-04-11). Only the health:probe:* liveness jobs can tell them apart.
 # Runners are named here and resolved to IDs through the group's runner list.
 [group('runners')]
 [no-cd]
@@ -65,6 +66,8 @@ runners-health:
     # from this list twice (private#10 T5.4); a name does not. The host is
     # the name without its role suffix.
     RUNNERS=(allyson-shell allyson-docker nell-shell shelly-ann-arm64 pam-shell)
+    IDLE_AFTER=300  # seconds
+    ANY_IDLE=false
 
     # Runner reads need a Maintainer-role token; the glab bot is Developer
     # and gets 403. Resolve a read-only token: env first, then the
@@ -147,6 +150,9 @@ runners-health:
         elif [[ "$GITLAB_STATUS" != "online" ]]; then
             STATUS="DEAD"
             ALL_HEALTHY=false
+        elif [[ "$AGE" -gt "$IDLE_AFTER" ]]; then
+            STATUS="IDLE?"
+            ANY_IDLE=true
         else
             STATUS="OK"
         fi
@@ -155,6 +161,10 @@ runners-health:
     done
 
     echo ""
+    if $ANY_IDLE; then
+        echo "IDLE?: online, but no recent contact — idle, or wedged. The runner-liveness"
+        echo "schedule's health:probe:<runner> jobs settle it; see runner-runbook.md."
+    fi
     if $ALL_HEALTHY; then
         echo "✓ All runners healthy"
     else
