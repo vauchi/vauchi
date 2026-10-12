@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -31,6 +32,11 @@ def group_listing(names: list[str]) -> str:
 # reports the runner online (pam and shelly-ann, 2026-10-12, private#10).
 ONLINE_AND_IDLE = (
     '{"contacted_at":"2026-10-09T17:00:00.000Z","status":"online","active":true,"paused":false}'
+)
+FRESH_AND_ONLINE = (
+    '{"contacted_at":"'
+    + datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    + '","status":"online","active":true,"paused":false}'
 )
 OFFLINE = '{"contacted_at":"2026-10-09T17:00:00.000Z","status":"offline","active":true,"paused":false}'
 
@@ -123,8 +129,16 @@ class RunnersHealthRecipeTests(unittest.TestCase):
         self.assertRegex(self.status_line(result.stdout, "shelly-ann-arm64"), r"^shelly-ann-arm64\s+shelly-ann\s")
         self.assertRegex(self.status_line(result.stdout, "allyson-docker"), r"^allyson-docker\s+allyson\s")
 
-    def test_an_idle_runner_gitlab_reports_online_is_healthy(self) -> None:
+    def test_an_idle_runner_gitlab_reports_online_is_a_warning_not_a_failure(self) -> None:
         result = self.run_recipe(FLEET, ONLINE_AND_IDLE)
+
+        for name in FLEET:
+            self.assertRegex(self.status_line(result.stdout, name), rf"^{name}\s+\S+\s+IDLE\?\s", result.stdout)
+        self.assertIn("health:probe", result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_a_runner_in_recent_contact_is_ok(self) -> None:
+        result = self.run_recipe(FLEET, FRESH_AND_ONLINE)
 
         for name in FLEET:
             self.assertRegex(self.status_line(result.stdout, name), rf"^{name}\s+\S+\s+OK\s", result.stdout)
