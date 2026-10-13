@@ -69,7 +69,7 @@ release-cleanup:
 # Usage: just test-build [ios|android|both] [--auto-merge] [--dry-run]
 [group('release')]
 [script]
-test-build target='both' *flags:
+test-build target='both' *flags='':
     set -euo pipefail
     auto_merge=false
     dry_run=false
