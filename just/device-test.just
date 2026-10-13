@@ -14,6 +14,7 @@ test-device-test-recipes:
     python3 "{{justfile_directory()}}/tests/test_device_test_recipe.py" \
         "{{justfile_directory()}}/just/device-test.just" \
         "{{justfile_directory()}}/just/device-test-lib.sh"
+    JUST_UNSTABLE=1 python3 -m unittest "{{justfile_directory()}}/tests/test_wda_start_recipe.py"
 
 # Build, package, and install both apps on physical devices
 [group('device-test')]
@@ -957,23 +958,43 @@ dt-wda-start:
     printf "%b\n" "${YELLOW}Starting WebDriverAgent on device $UDID...${NC}"
     echo "First run requires Touch ID / passcode on device ('Enable UI Automation')"
     echo ""
+    # The signing identities live in a build keychain that is locked
+    # outside a GUI login; codesign then fails and xcodebuild only reports
+    # "Failed to install the app on the device" (vauchi/private#667).
+    security unlock-keychain -p "build" "$HOME/Library/Keychains/build.keychain-db"
+    security set-keychain-settings -t 900 "$HOME/Library/Keychains/build.keychain-db"
+
     cd "$WDA_DIR"
-    # test-without-building fails on a fresh machine ("Failed to install
-    # the app on the device" / missing products) — build-for-testing
-    # first when no Runner app exists yet (2026-06-11 session).
-    if ! ls "$HOME/Library/Developer/Xcode/DerivedData"/WebDriverAgent-*/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app >/dev/null 2>&1; then
-        printf "%b\n" "${YELLOW}No WDA build products found — running build-for-testing first...${NC}"
+    # test-without-building installs the cached runner as is, so a missing
+    # or broken one (an interrupted run leaves it unsigned) must be rebuilt.
+    runner=$(ls -d "$HOME/Library/Developer/Xcode/DerivedData"/WebDriverAgent-*/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app 2>/dev/null | head -1 || true)
+    if [[ -z "$runner" ]] || ! codesign --verify "$runner" >/dev/null 2>&1; then
+        printf "%b\n" "${YELLOW}No valid WDA runner build — running build-for-testing first...${NC}"
         xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
             -destination "id=$UDID" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
             -allowProvisioningUpdates build-for-testing 2>&1 \
             | grep --line-buffered -E "BUILD|error:" || true
     fi
+    log=$(mktemp)
+    status=0
     xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
         -destination "id=$UDID" \
         DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Development" \
         -allowProvisioningUpdates test-without-building 2>&1 \
-        | grep --line-buffered -E "ServerURLHere|Test Suite|error:"
+        | tee "$log" \
+        | grep --line-buffered -E "ServerURLHere|Test Suite|error:" || status=$?
+    if grep -q "FAILED" "$log"; then
+        echo "WDA did not start. xcodebuild says:" >&2
+        grep -E "Failed to|Timed out|Testing failed|error \(|FAILED" "$log" | grep -v "No provider was found" >&2 || true
+        if grep -q "enabling automation mode" "$log"; then
+            echo "On the iPhone: Settings > Developer > Enable UI Automation, then approve the passcode prompt." >&2
+        fi
+        rm -f "$log"
+        exit 1
+    fi
+    rm -f "$log"
+    exit "$status"
 
 # Tap iOS screen at coordinates via WebDriverAgent
 [group('device-test')]
