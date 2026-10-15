@@ -560,8 +560,12 @@ plan-stale days='30':
 
 # Live v0.2.0 release readiness — generated from master plan (single source of truth)
 [group('tests')]
-test-release-gates: test-e2e-recipes
+test-release-gates: test-e2e-recipes test-certification-evidence
     python3 "{{justfile_directory()}}/tests/test_release_gates.py" "{{justfile_directory()}}/justfile"
+
+[group('tests')]
+test-certification-evidence:
+    python3 -m unittest discover -s tests -p test_certification_evidence.py
 
 # Report first-release gate status (RG-1..15, hard ship criteria); fails while any gate is open
 [group('tools')]
