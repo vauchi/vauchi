@@ -66,7 +66,7 @@ def sample_report():
         },
         "sources": {
             "e2e": REVISION, "cli": "0" * 40, "relay": "1" * 40,
-            "ohttp-relay": "2" * 40, "core": "3" * 40,
+            "ohttp-relay": "2" * 40,
         },
         "lanes": [
             {
@@ -95,7 +95,7 @@ def api_fixtures():
     jobs.append({"name": "test:smoke", "id": 99, "status": "success",
                  "allow_failure": False, "pipeline": pipeline})
     suites = [
-        {"name": lane["name"], "test_cases": lane["cases"],
+        {"name": lane["name"], "test_cases": lane["cases"], "suite_error": None,
          "total_count": len(lane["cases"]), "success_count": len(lane["cases"]),
          "failed_count": 0, "error_count": 0, "skipped_count": 0}
         for lane in report["lanes"]
@@ -106,7 +106,7 @@ def api_fixtures():
         prefix + "/jobs?per_page=100&page=1": jobs,
         prefix + "/test_report": {"test_suites": suites},
     }
-    for component in ("cli", "relay", "ohttp", "core"):
+    for component in ("cli", "relay", "ohttp"):
         source = "ohttp-relay" if component == "ohttp" else component
         replies[f"projects/vauchi%2Fe2e/jobs/99/artifacts/.smoke-bin/{component}.sha"] = (
             report["sources"][source] + "\n"

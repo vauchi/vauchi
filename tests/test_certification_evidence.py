@@ -45,7 +45,7 @@ class CertificationEvidenceTest(unittest.TestCase):
             "boolean schema": lambda r: r.update(schema_version=True),
             "unknown field": lambda r: r.update(release_ready=True),
             "missing source": lambda r: r["sources"].pop("cli"),
-            "malformed source": lambda r: r["sources"].update(core="main"),
+            "malformed source": lambda r: r["sources"].update(relay="main"),
             "unmerged pipeline": lambda r: r["pipeline"].update(ref="issue/6"),
             "failed pipeline": lambda r: r["pipeline"].update(status="failed"),
             "wrong project": lambda r: r["pipeline"].update(web_url="https://example.test/1"),
@@ -102,12 +102,14 @@ class CertificationEvidenceTest(unittest.TestCase):
         report = collect_report(PIPELINE_ID, REVISION, fetch=replies.__getitem__, now=NOW)
         self.assertEqual(sample_report(), report)
         self.assertNotIn("sensitive-observer-marker", json.dumps(report))
+        self.assertEqual({"e2e", "cli", "relay", "ohttp-relay"}, set(report["sources"]))
 
     def test_collect_rejects_partial_or_inconsistent_api_results(self):
         prefix = f"projects/vauchi%2Fe2e/pipelines/{PIPELINE_ID}"
         mutations = (
             lambda r: r[prefix + "/test_report"]["test_suites"].pop(),
             lambda r: r[prefix + "/test_report"]["test_suites"][0].update(total_count=0),
+            lambda r: r[prefix + "/test_report"]["test_suites"][0].update(suite_error="partial parse"),
             lambda r: r[prefix + "/jobs?per_page=100&page=1"][0].update(allow_failure=True),
             lambda r: r[prefix + "/jobs?per_page=100&page=1"][0].update(pipeline={"id": 999}),
         )
