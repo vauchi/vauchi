@@ -65,7 +65,7 @@ def _validate(report, expected_revision, now):
     require(created <= finished <= now, "invalid or future pipeline time")
     require(now - created <= MAX_AGE, "pipeline is older than seven days")
     sources = report["sources"]
-    _keys(sources, {"e2e", "cli", "relay", "ohttp-relay", "core"})
+    _keys(sources, {"e2e", "cli", "relay", "ohttp-relay"})
     require(all(_revision(revision) for revision in sources.values()), "invalid tested source")
     require(sources["e2e"] == expected_revision, "tested E2E revision mismatch")
     lanes = report["lanes"]

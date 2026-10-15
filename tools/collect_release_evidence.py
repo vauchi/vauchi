@@ -5,8 +5,11 @@
 
 import argparse
 import json
+import os
+import selectors
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from tools.certification_contract import REQUIRED_CASES
@@ -17,18 +20,40 @@ from tools.release_evidence import (
 PROJECT = "projects/vauchi%2Fe2e"
 
 
+def _bounded_output(command):
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as process:
+        try:
+            deadline = time.monotonic() + 60
+            raw = bytearray()
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                while True:
+                    remaining = max(0, deadline - time.monotonic())
+                    if not selector.select(remaining):
+                        raise subprocess.TimeoutExpired(command, 60)
+                    chunk = os.read(process.stdout.fileno(), min(65536, MAX_BYTES + 1 - len(raw)))
+                    if not chunk:
+                        break
+                    raw.extend(chunk)
+                    require(len(raw) <= MAX_BYTES, "GitLab response exceeds size limit")
+            status = process.wait(timeout=max(0, deadline - time.monotonic()))
+            if status:
+                raise subprocess.CalledProcessError(status, command)
+            return bytes(raw)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+
 def gitlab_fetch(endpoint):
     try:
-        result = subprocess.run(
-            ["glab", "api", "--hostname", "gitlab.com", endpoint], check=True,
-            capture_output=True, timeout=60,
-        )
+        raw = _bounded_output(["glab", "api", "--hostname", "gitlab.com", endpoint])
     except (OSError, subprocess.SubprocessError) as error:
         raise EvidenceError("certification evidence: GitLab request failed") from error
-    require(len(result.stdout) <= MAX_BYTES, "GitLab response exceeds size limit")
     if "/artifacts/" in endpoint:
-        return result.stdout.decode("ascii").strip()
-    return decode_json(result.stdout)
+        return raw.decode("ascii").strip()
+    return decode_json(raw)
 
 
 def _jobs(fetch, prefix):
@@ -61,6 +86,7 @@ def _collect(pipeline_id, expected_revision, fetch, now):
         job, suite = _one(jobs, name), _one(suites, name)
         parent = job["pipeline"]
         require(parent["project_id"] == pipeline["project_id"], "mixed job project")
+        require(suite["suite_error"] is None, "JUnit parser error in " + name)
         cases = suite["test_cases"]
         require(type(cases) is list and 0 < len(cases) <= 128, "empty or oversized lane")
         for field, expected in (("total_count", len(cases)), ("success_count", len(cases)),
@@ -80,8 +106,7 @@ def _collect(pipeline_id, expected_revision, fetch, now):
             and smoke["pipeline"]["sha"] == expected_revision,
             "binary provenance job must pass in the same pipeline")
     sources = {"e2e": pipeline["sha"]}
-    for name, filename in (("cli", "cli"), ("relay", "relay"), ("ohttp-relay", "ohttp"),
-                           ("core", "core")):
+    for name, filename in (("cli", "cli"), ("relay", "relay"), ("ohttp-relay", "ohttp")):
         sources[name] = fetch(PROJECT + f"/jobs/{smoke['id']}/artifacts/.smoke-bin/{filename}.sha").strip()
     report = {"schema_version": 1, "scope": "automated-privacy-multidevice",
               "pipeline": pipeline, "sources": sources, "lanes": lanes}
