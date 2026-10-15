@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import os
+import json
 import re
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from certification_fixture import REVISION, fresh_report
 
 JUSTFILE = Path(sys.argv.pop(1)).resolve()
 
@@ -150,6 +153,7 @@ class ReleaseGatesTest(unittest.TestCase):
         long_lived_contact_evidence: str | None = None,
         production_distribution_evidence: str | None = None,
         user_data_convergence_evidence: str | None = None,
+        certification_evidence: dict | None = None,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -157,6 +161,10 @@ class ReleaseGatesTest(unittest.TestCase):
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
             plan_path.write_text(plan)
+            if certification_evidence is not None:
+                report_path = workspace / "target/release-evidence/certification.json"
+                report_path.parent.mkdir(parents=True)
+                report_path.write_text(json.dumps(certification_evidence))
             if adr_065 is not None:
                 adr_path = (
                     workspace
@@ -189,6 +197,11 @@ class ReleaseGatesTest(unittest.TestCase):
                     "\n".join(
                         [
                             "#!/bin/sh",
+                            'if [ "$1" = "-C" ] && [ "$2" = "e2e" ] && '
+                            '[ "$3" = "rev-parse" ] && [ "$4" = "HEAD" ]; then',
+                            f'  printf "%s\\n" "{REVISION}"',
+                            "  exit 0",
+                            "fi",
                             'if [ "$1" = "-C" ] && [ "$3" = "tag" ] && '
                             '[ "$4" = "--list" ]; then',
                             '  if grep -Fx -- "$5" '
@@ -624,9 +637,10 @@ servers:
             result.stdout,
         )
 
-    def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
+    def _completed_gates_result(self, certification_evidence):
         result = self.run_release_gates(
-            plan_with_gates(
+            certification_evidence=certification_evidence,
+            plan=plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria=CHECKED_SHIP_CRITERIA,
@@ -887,8 +901,22 @@ ADR-020 deterministic convergence: passed
 """,
         )
 
+        return result
+
+    def test_completed_rg7_accepts_distinct_host_and_operator(self) -> None:
+        result = self._completed_gates_result(fresh_report())
         self.assertEqual(0, result.returncode)
         self.assertIn("All hard gates passed", result.stdout)
+
+    def test_completed_gates_reject_missing_or_stale_certification_report(self) -> None:
+        stale = fresh_report()
+        stale["pipeline"]["created_at"] = "2020-01-01T00:00:00Z"
+        for evidence in (None, stale):
+            with self.subTest(evidence="missing" if evidence is None else "stale"):
+                result = self._completed_gates_result(evidence)
+                self.assertEqual(1, result.returncode)
+                self.assertIn("certification evidence", result.stdout)
+                self.assertNotIn("All hard gates passed", result.stdout)
 
     def test_open_hard_ship_criteria_block_release(self) -> None:
         result = self.run_release_gates(

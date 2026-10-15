@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 NOW = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 REVISION = "47fc64adc9f74bc19a28aaf4b7226fa02a73a265"
@@ -112,3 +112,13 @@ def api_fixtures():
             report["sources"][source] + "\n"
         )
     return replies
+
+
+def fresh_report():
+    report = sample_report()
+    now = datetime.now(timezone.utc)
+    report["pipeline"]["created_at"] = (now - timedelta(minutes=10)).isoformat()
+    report["pipeline"]["finished_at"] = (now - timedelta(minutes=1)).isoformat()
+    for lane in report["lanes"]:
+        lane["finished_at"] = (now - timedelta(minutes=2)).isoformat()
+    return report
