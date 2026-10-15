@@ -101,8 +101,11 @@ def _collect(pipeline_id, expected_revision, fetch, now):
                       for case in cases],
         })
     smoke = _one(jobs, "test:smoke")
+    require(type(smoke["id"]) is int and smoke["id"] > 0,
+            "invalid binary artifact job identity")
     require(smoke["status"] == "success" and smoke["allow_failure"] is False
             and smoke["pipeline"]["id"] == pipeline_id
+            and smoke["pipeline"]["project_id"] == pipeline["project_id"]
             and smoke["pipeline"]["sha"] == expected_revision,
             "binary provenance job must pass in the same pipeline")
     sources = {"e2e": pipeline["sha"]}
