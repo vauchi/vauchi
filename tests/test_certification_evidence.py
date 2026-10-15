@@ -120,6 +120,18 @@ class CertificationEvidenceTest(unittest.TestCase):
                 with self.assertRaisesRegex(EvidenceError, "certification evidence"):
                     collect_report(PIPELINE_ID, REVISION, fetch=replies.__getitem__, now=NOW)
 
+    def test_unsafe_artifact_job_identity_is_rejected_before_network_use(self):
+        replies = api_fixtures()
+        endpoint = f"projects/vauchi%2Fe2e/pipelines/{PIPELINE_ID}/jobs?per_page=100&page=1"
+        replies[endpoint][-1]["id"] = "../repository/files/private"
+
+        def fetch(endpoint):
+            self.assertIn(endpoint, set(replies), "unsafe artifact identity used in a request")
+            return replies[endpoint]
+
+        with self.assertRaisesRegex(EvidenceError, "certification evidence"):
+            collect_report(PIPELINE_ID, REVISION, fetch=fetch, now=NOW)
+
     # @scenario: release_privacy_multidevice_certification :: Incomplete automated evidence blocks release
     def test_every_required_scenario_is_indispensable(self):
         for lane_index, lane in enumerate(sample_report()["lanes"]):
