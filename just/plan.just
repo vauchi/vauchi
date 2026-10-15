@@ -567,6 +567,11 @@ test-release-gates: test-e2e-recipes test-certification-evidence
 test-certification-evidence:
     python3 -m unittest discover -s tests -p test_certification_evidence.py
 
+# Collect the current automated certification lanes; native acceptance is separate.
+[group('tools')]
+certification-evidence pipeline output='target/release-evidence/certification.json':
+    python3 -m tools.collect_release_evidence {{quote(pipeline)}} "$(git -C e2e rev-parse HEAD)" {{quote(output)}}
+
 # Report first-release gate status (RG-1..15, hard ship criteria); fails while any gate is open
 [group('tools')]
 [script]
@@ -576,6 +581,9 @@ release-gates:
     import re, subprocess, sys
     from datetime import date
     from pathlib import Path
+
+    sys.path.insert(0, "{{justfile_directory()}}")
+    from tools.release_evidence import EvidenceError, read_report
 
     PLAN = "_private/docs/planning/master-plan.plan.md"
     CONFIG_DIR = Path("_private/infra/config")
@@ -1553,6 +1561,23 @@ release-gates:
             f"{len(done_hard)} RG gate(s) are checked complete"
         )
 
+    certification_failures = []
+    certification_summary = None
+    if any(done and gid in {"RG-2", "RG-3", "RG-4", "RG-5", "RG-6", "RG-7", "RG-8", "RG-10", "RG-15"}
+           for gid, _name, done, _detail in hard):
+        try:
+            e2e_revision = subprocess.run(
+                ["git", "-C", "e2e", "rev-parse", "HEAD"], check=True,
+                capture_output=True, text=True, timeout=10,
+            ).stdout.strip()
+            certification_summary = read_report(
+                "target/release-evidence/certification.json", e2e_revision,
+            )
+        except EvidenceError as error:
+            certification_failures.append(str(error))
+        except (OSError, subprocess.SubprocessError):
+            certification_failures.append("certification evidence: E2E revision unavailable")
+
     print(f"Production Release Readiness — {date.today()}")
     print(f"Source: master-plan.plan.md (single source of truth)\n")
 
@@ -1663,6 +1688,14 @@ release-gates:
         print("\n  >>> RG-15 long-lived contact evidence failure <<<")
         for failure in long_lived_contact_failures:
             print(f"      - {failure}")
+    if certification_failures:
+        print("\n  >>> automated certification evidence failure <<<")
+        for failure in certification_failures:
+            print(f"      - {failure}")
+        print("      Refresh with: just certification-evidence <E2E-main-pipeline-id>")
+    if certification_summary:
+        print(f"\n  Automated certification: {certification_summary['lanes']} blocking lanes, "
+              f"{certification_summary['cases']} passing cases (native acceptance separate)")
     if (
         not open_hard
         and (
@@ -1685,6 +1718,7 @@ release-gates:
             or accessibility_evidence_failures
             or usability_evidence_failures
             or long_lived_contact_failures
+            or certification_failures
         )
     ):
         print("\n  Release remains blocked by release-configuration evidence.")
@@ -1716,6 +1750,7 @@ release-gates:
         and not accessibility_evidence_failures
         and not usability_evidence_failures
         and not long_lived_contact_failures
+        and not certification_failures
         else 1
     )
     PYEOF

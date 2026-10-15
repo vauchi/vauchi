@@ -2803,7 +2803,8 @@ accessories:
 
     def test_checked_hard_ship_criteria_can_pass_with_completed_rg_gates(self) -> None:
         result = self.run_release_gates(
-            plan_with_gates(
+            certification_evidence=fresh_report(),
+            plan=plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
                 ship_criteria="""
