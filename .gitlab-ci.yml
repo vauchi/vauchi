@@ -72,6 +72,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-lint-docs
     - JUST_UNSTABLE=1 just test-check-prerequisites
     - JUST_UNSTABLE=1 just test-lint-recipe
+    - JUST_UNSTABLE=1 just test-test-name-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
     - JUST_UNSTABLE=1 just test-runners-health

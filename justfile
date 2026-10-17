@@ -2829,6 +2829,11 @@ test-check-prerequisites:
 test-lint-recipe:
     python3 "{{justfile_directory()}}/tests/test_lint_recipe_reports_failure.py" "{{justfile_directory()}}/justfile"
 
+# Regression check: failing tests fail `test-name`, and every target runs.
+[group('tests')]
+test-test-name-recipe:
+    python3 "{{justfile_directory()}}/tests/test_test_name_recipe.py" "{{justfile_directory()}}/justfile"
+
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
 lint-docs:
