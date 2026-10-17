@@ -689,28 +689,37 @@ test-name pattern repo='core':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     repos=$(resolve_repo "{{ repo }}" "test")
+    # Every repo runs even after one fails, and the recipe still exits
+    # non-zero; `|| true` here used to report failing tests as a pass (#590).
+    failed=""
     for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         tfeats=$(repo_test_features "$r")
         case "$tc" in
             rust)
-                echo "── $r: cargo test {{ pattern }} $tfeats ──"
-                (cd "$dir" && cargo test $tfeats "{{ pattern }}" 2>&1) || true
+                # --no-fail-fast: a failing test binary must not hide the
+                # matching tests in the others (#590).
+                echo "── $r: cargo test --no-fail-fast {{ pattern }} $tfeats ──"
+                (cd "$dir" && cargo test --no-fail-fast $tfeats "{{ pattern }}" 2>&1) || failed="$failed $r"
                 ;;
             npm)
                 echo "── $r: npx vitest -t '{{ pattern }}' ──"
-                (cd "$dir" && npx vitest run -t "{{ pattern }}" 2>&1) || true
+                (cd "$dir" && npx vitest run -t "{{ pattern }}" 2>&1) || failed="$failed $r"
                 ;;
             gradle)
                 echo "── $r: ./gradlew testDebugUnitTest --tests *{{ pattern }}* ──"
-                (cd "$dir" && ./gradlew testDebugUnitTest --tests "*{{ pattern }}*" 2>&1) || true
+                (cd "$dir" && ./gradlew testDebugUnitTest --tests "*{{ pattern }}*" 2>&1) || failed="$failed $r"
                 ;;
             *)
                 echo "── $r: test-name not supported for $tc ──"
                 ;;
         esac
     done
+    for r in $failed; do
+        echo "test-name: $r failed" >&2
+    done
+    [[ -z "$failed" ]]
 
 # Build release binaries
 [group('extended')]
