@@ -23,6 +23,15 @@ from pathlib import Path
 
 ROOT = Path(sys.argv.pop(1)).resolve().parent if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
 
+# The four resolver functions the recipe uses. Root CI does not clone the
+# scripts repo, so the real resolve-repo.sh is not there to copy.
+RESOLVE_REPO_STUB = """
+resolve_repo() { echo "$1"; }
+repo_dir() { echo "$PWD/$1"; }
+repo_toolchain() { echo rust; }
+repo_test_features() { echo "--features stub/testing"; }
+"""
+
 CARGO_STUB = """#!/bin/sh
 echo "$*" >> "$CARGO_CALLS"
 echo "test result: stub"
@@ -38,9 +47,9 @@ class TestNameRecipeTest(unittest.TestCase):
         self.ws.mkdir()
         shutil.copy(ROOT / "justfile", self.ws / "justfile")
         shutil.copytree(ROOT / "just", self.ws / "just")
-        shutil.copytree(ROOT / "scripts" / "scripts", self.ws / "scripts" / "scripts")
-        # resolve-repo.sh finds the workspace root by this marker.
-        (self.ws / "CLAUDE.md").touch()
+        resolver = self.ws / "scripts" / "scripts"
+        resolver.mkdir(parents=True)
+        (resolver / "resolve-repo.sh").write_text(RESOLVE_REPO_STUB)
         (self.ws / "core").mkdir()
         (self.ws / "core" / "Cargo.toml").write_text("[workspace]\n")
         self.bin = base / "bin"
