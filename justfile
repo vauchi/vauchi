@@ -2843,6 +2843,11 @@ test-lint-recipe:
 test-test-name-recipe:
     python3 "{{justfile_directory()}}/tests/test_test_name_recipe.py" "{{justfile_directory()}}/justfile"
 
+# Regression check: lint-ci-needs fails on a VCI06 finding and names the project.
+[group('tests')]
+test-lint-ci-needs-recipe:
+    python3 "{{justfile_directory()}}/tests/test_lint_ci_needs_recipe.py" "{{justfile_directory()}}/justfile"
+
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
 lint-docs:
