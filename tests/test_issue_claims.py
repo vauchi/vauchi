@@ -83,6 +83,9 @@ if parts[2] == "repository" and parts[3] == "branches":
             "commit": {"committed_date": time.strftime("%Y-%m-%dT%H:%M:%S+02:00", time.gmtime(time.time() + 7200))}}
         out(state["branches"][name])
     if method == "DELETE":
+        # Lets a test land a push elsewhere while release is under way (#444).
+        if os.environ.get("FAKE_GLAB_ON_BRANCH_DELETE"):
+            os.system(os.environ["FAKE_GLAB_ON_BRANCH_DELETE"])
         state["branches"].pop(parts[4].replace("%2F", "/"), None); out({})
     if len(parts) == 5:
         branch = state["branches"].get(parts[4].replace("%2F", "/"))
@@ -143,9 +146,10 @@ class IssueClaimTest(unittest.TestCase):
     def load(self) -> dict:
         return json.loads(self.state.read_text())
 
-    def run_lib(self, command: str, session: str, check: bool = False) -> subprocess.CompletedProcess[str]:
+    def run_lib(self, command: str, session: str, check: bool = False,
+                extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         environment = {**os.environ, "PATH": self.path, "FAKE_GLAB_STATE": str(self.state),
-                       "VAUCHI_SESSION_ID": session}
+                       "VAUCHI_SESSION_ID": session, **(extra_env or {})}
         environment.pop("CLAUDE_CODE_SESSION_ID", None)
         return subprocess.run(
             ["bash", "-c", f'source just/slot-lib.sh; source just/issue-lib.sh; {command}'],
@@ -294,6 +298,31 @@ class IssueClaimTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("issue/7", self.remote_branches(remote))
+
+    # #444: release decided "merged" during its sibling scan and deleted the
+    # branch later; a push in between was deleted with it, closing its MR.
+    def test_release_keeps_a_sibling_branch_that_gained_a_commit_during_release(self) -> None:
+        remote = self.sibling_with_issue_branch(7, unmerged=False)
+        pusher = self.directory / "pusher"
+        subprocess.run(["git", "clone", "--quiet", "--branch", "issue/7", str(remote), str(pusher)],
+                       check=True, capture_output=True)
+        git = ["git", "-C", str(pusher), "-c", "user.name=t", "-c", "user.email=t@e"]
+        (pusher / "late.txt").write_text("late\n")
+        subprocess.run([*git, "add", "late.txt"], check=True)
+        subprocess.run([*git, "commit", "--quiet", "-m", "late work"], check=True)
+        late = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True,
+                              text=True).stdout.strip()
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib(
+            "issue_release 7", "codex-a",
+            extra_env={"FAKE_GLAB_ON_BRANCH_DELETE": f"git -C {pusher} push --quiet origin issue/7"})
+
+        self.assertIn("issue/7", self.remote_branches(remote), result.stdout + result.stderr)
+        tip = subprocess.run(["git", "-C", str(remote), "rev-parse", "issue/7"], check=True,
+                             capture_output=True, text=True).stdout.strip()
+        self.assertEqual(tip, late)
+        self.assertIn("issue/7 in core moved during release — kept", result.stdout)
 
     def test_release_refuses_while_a_sibling_issue_branch_holds_work(self) -> None:
         remote = self.sibling_with_issue_branch(7, unmerged=True)
