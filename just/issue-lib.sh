@@ -111,14 +111,20 @@ issue_release() {
     fi
     glab api -X DELETE "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null
     glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" -f "body=release: $tag" >/dev/null
-    for repository in $(printf '%s\n' "$siblings" | sed -n 's/^merged //p'); do
-        git -C "$repository" push -q origin --delete "issue/$number" \
-            && echo "  removed merged issue/$number in $(basename "$repository")"
+    # Delete only the commit the scan judged merged: a push since then makes
+    # the lease fail and the branch, and its open MR, survive (#444).
+    printf '%s\n' "$siblings" | sed -n 's/^merged //p' | while read -r repository scanned; do
+        if git -C "$repository" push -q origin \
+            --force-with-lease="refs/heads/issue/$number:$scanned" --delete "issue/$number" 2>/dev/null; then
+            echo "  removed merged issue/$number in $(basename "$repository")"
+        else
+            echo "  issue/$number in $(basename "$repository") moved during release — kept"
+        fi
     done
     echo "✓ Released #$number"
 }
 
-# "merged <dir>" / "unmerged <dir>" for every other repo of the slot whose
+# "merged <dir> <sha>" / "unmerged <dir>" for every other repo of the slot whose
 # remote still has issue/<N>; the vauchi/private lock is handled via the API.
 _issue_sibling_branches() {
     local number="$1" repository
@@ -129,7 +135,7 @@ _issue_sibling_branches() {
             "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
             "+refs/heads/main:refs/remotes/origin/main" || continue
         if ! git -C "$repository" cherry origin/main "origin/issue/$number" | grep -q '^+'; then
-            echo "merged $repository"
+            echo "merged $repository $(git -C "$repository" rev-parse "origin/issue/$number")"
         else
             echo "unmerged $repository"
         fi
