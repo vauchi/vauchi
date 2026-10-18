@@ -2848,6 +2848,34 @@ test-test-name-recipe:
 test-lint-ci-needs-recipe:
     python3 "{{justfile_directory()}}/tests/test_lint_ci_needs_recipe.py" "{{justfile_directory()}}/justfile"
 
+# VCI06: a hard needs: on a job a merge-request diff can skip rejects the
+# whole pipeline. Sweeps each project's resolved main config (CI lint API).
+# Usage: just lint-ci-needs [project...]   (default: every vauchi project)
+[group('tools')]
+[script]
+lint-ci-needs *projects:
+    set -euo pipefail
+    checker="${VCI06_CHECKER:-{{justfile_directory()}}/scripts/scripts/check-ci-needs-rules.py}"
+    if python3 -c 'import yaml' 2>/dev/null; then run=(python3); else run=(uv run -q --with pyyaml python3); fi
+    projects="{{ projects }}"
+    [ -n "$projects" ] || projects=$(glab api "groups/vauchi/projects?per_page=100&archived=false" | jq -r '.[].path')
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    failed=0
+    for p in $projects; do
+        if ! glab api "projects/vauchi%2F$p/ci/lint?content_ref=main&dry_run=false" > "$tmp/$p.json" 2>/dev/null; then
+            echo "  $p: no resolved CI config (lint API refused)"
+            continue
+        fi
+        jq -r '.merged_yaml // ""' "$tmp/$p.json" > "$tmp/$p.yml"
+        if [ ! -s "$tmp/$p.yml" ]; then
+            echo "  $p: no CI config"
+            continue
+        fi
+        "${run[@]}" "$checker" "$tmp/$p.yml" | sed "s#$tmp/$p.yml#$p#" || failed=1
+    done
+    [ "$failed" -eq 0 ]
+
 # Lint documentation: naming convention, broken links, license text
 [group('tools')]
 lint-docs:
