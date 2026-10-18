@@ -2856,7 +2856,12 @@ test-lint-ci-needs-recipe:
 lint-ci-needs *projects:
     set -euo pipefail
     checker="${VCI06_CHECKER:-{{justfile_directory()}}/scripts/scripts/check-ci-needs-rules.py}"
-    if python3 -c 'import yaml' 2>/dev/null; then run=(python3); else run=(uv run -q --with pyyaml python3); fi
+    # uv only when PyYAML is missing and uv exists; otherwise the checker
+    # itself names a missing yaml module.
+    run=(python3)
+    if ! python3 -c 'import yaml' 2>/dev/null && command -v uv >/dev/null 2>&1; then
+        run=(uv run -q --with pyyaml python3)
+    fi
     projects="{{ projects }}"
     [ -n "$projects" ] || projects=$(glab api "groups/vauchi/projects?per_page=100&archived=false" | jq -r '.[].path')
     tmp=$(mktemp -d)
