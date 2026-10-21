@@ -808,6 +808,39 @@ issue-list repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue list -R "$p"
 
+# List the group's open vulnerabilities (detected or confirmed), one per
+# line: id, severity, project, scanner, state, whether the latest scan of
+# the default branch still finds it, detected at, title, location.
+# Read-only.
+[no-cd]
+[script]
+vulnerabilities group='vauchi':
+    just gitlab _check-auth
+    set -euo pipefail
+    glab api graphql --paginate -f query='
+      query($endCursor: String) {
+        group(fullPath: "{{ group }}") {
+          vulnerabilities(state: [DETECTED, CONFIRMED], first: 100, after: $endCursor) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id severity state reportType title detectedAt resolvedOnDefaultBranch
+              project { fullPath }
+              location {
+                ... on VulnerabilityLocationDependencyScanning { file dependency { version package { name } } }
+                ... on VulnerabilityLocationContainerScanning { image dependency { version package { name } } }
+                ... on VulnerabilityLocationSast { file startLine }
+                ... on VulnerabilityLocationSecretDetection { file startLine }
+              }
+            }
+          }
+        }
+      }' | jq -r '.data.group.vulnerabilities.nodes[]
+        | [(.id | sub(".*/"; "")), .severity, .project.fullPath, .reportType, .state, (if .resolvedOnDefaultBranch then "gone-from-main" else "on-main" end), .detectedAt, .title,
+           ((.location.file // .location.image // "")
+            + (if .location.dependency then " " + .location.dependency.package.name + "@" + .location.dependency.version else "" end)
+            + (if .location.startLine then ":" + (.location.startLine | tostring) else "" end))]
+        | @tsv'
+
 # View issue details
 [no-cd]
 [script]
