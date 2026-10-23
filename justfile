@@ -57,6 +57,8 @@ exec-in-repo repo +cmd:
 
 # ─── Modules ──────────────────────────────────────────────────────
 
+import 'just/architecture.just'
+
 [doc('Multi-repo git operations')]
 mod git 'just/git.just'
 
