@@ -165,7 +165,9 @@ See [Supporters](https://vauchi.app/docs/about/supporters) for sponsorship tiers
 
 ## License
 
-[GPL-3.0-or-later](LICENSE)
+The core library (`core`), `relay` and `ohttp-relay` are licensed under
+[AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html); the apps
+and tooling under [GPL-3.0-or-later](LICENSE).
 
 ## Links
 
