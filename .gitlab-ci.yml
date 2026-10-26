@@ -139,9 +139,7 @@ test:release-gates:
           - tests/test_blog_publish.py
           - tests/test_ledger_recipe.py
           - tests/test_disk_clean_recipe.py
-          - tests/test_git_main_wip_recipe.py
-          - tests/test_git_branch_health_recipe.py
-          - tests/test_gitlab_pipeline_status_recipe.py
+          - tests/test_git*_recipe.py
           - tests/test_test_build_version.py
           - tests/test_test_build_recipe.py
           - just/release.just
