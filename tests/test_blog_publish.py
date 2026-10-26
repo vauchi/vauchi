@@ -60,10 +60,12 @@ class BlogPublishTests(unittest.TestCase):
         )
 
     def test_publishing_drops_spdx_comments_before_the_front_matter(self):
+        # REUSE-IgnoreStart
         self.write_draft(
             "<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->\n"
             "<!-- SPDX-License-Identifier: GPL-3.0-or-later -->\n\n" + DRAFT
         )
+        # REUSE-IgnoreEnd
         result = self.publish()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.content / "a-card-for-your-people.md").read_text().startswith("+++\n"))
