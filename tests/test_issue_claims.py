@@ -64,6 +64,8 @@ if parts[2] == "issues" and parts[4] == "discussions":
         note = new_note(parts[3], fields["body"]); thread["notes"].append(note); out(note)
     out(discussions)
 if parts[2] == "issues" and parts[4] == "notes":
+    if parts[3] not in state["issues"]:
+        fail("404 Not found")
     if method == "POST":
         note = new_note(parts[3], fields["body"])
         state.setdefault("discussions", {}).setdefault(parts[3], []).append(
@@ -216,6 +218,24 @@ class IssueClaimTest(unittest.TestCase):
 
         self.run_lib("issue_release 7", "codex-a", check=True)
         self.assertEqual(self.run_lib("issue_session_claims", "codex-a").stdout.split(), [])
+
+    # vauchi/private#830: an issue/<N>-<slug> work branch is no claim, yet its
+    # "<N>-<slug>" was looked up as an issue and jq failed on GitLab's 404.
+    def test_a_branch_named_issue_n_with_a_slug_is_not_a_claim(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        state = self.load()
+        state["branches"]["issue/9-notification-identity"] = dict(
+            state["branches"]["issue/7"], name="issue/9-notification-identity")
+        self.save(state)
+
+        for command, expected in (("issue_session_claims", "7"), ("issue_claims", "#7")):
+            with self.subTest(command=command):
+                result = self.run_lib(command, "codex-a")
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertEqual(result.stdout.split()[0], expected)
+                self.assertNotIn("notification-identity", result.stdout)
 
     def test_release_deletes_an_empty_claim_branch_and_notes_it(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
