@@ -38,6 +38,7 @@ drafts:
     site=$(mktemp -d)
     trap 'rm -rf "$site"' EXIT
     cp "$root/_private/future-blog-posts/admin/index.html" "$root/_private/future-blog-posts/admin/config.yml" "$site/"
+    cp "$root/website/blog/static/admin/locale.js" "$site/"
     ln -s "$cache/sveltia-cms.js" "$site/sveltia-cms.js"
     ln -s "$cache/chunks" "$site/chunks"
     echo "Drafts CMS: http://127.0.0.1:{{ drafts_port }}/  (saves open merge requests in vauchi/private)"
