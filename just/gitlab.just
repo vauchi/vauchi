@@ -690,8 +690,9 @@ pipeline-status repo='':
         echo "no pipeline for ${branch} in ${p}" >&2
         exit 1
     fi
-    read -r id source status url <<< "$pipeline"
-    echo "pipeline ${id} (${source}): ${status} ${url}"
+    set -- $pipeline
+    id=$1
+    echo "pipeline ${id} (${2}): ${3} ${4}"
     glab api "projects/${enc}/pipelines/${id}/jobs?per_page=100" \
         | jq -r '.[] | "  \(.status)\t\(.name)"'
 
