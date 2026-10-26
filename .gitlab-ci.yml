@@ -114,8 +114,7 @@ test:release-gates:
           - just/slot-lib.sh
           - just/issue-lib.sh
           - just/harness.just
-          - just/blog.just
-          - just/blog-publish.sh
+          - just/blog*
           - just/claude-layout-lib.sh
           - just/deploy.just
           - just/deploy-running.sh
