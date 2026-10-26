@@ -24,7 +24,8 @@ resolve_gitlab_project() { echo "vauchi/$1"; }
 gitlab_repo_dir() { echo "$1"; }
 """
 # GitLab as seen for three branches: issue/7 has a merged and an open MR,
-# issue/8 has only a branch pipeline, issue/9 has nothing.
+# issue/8 has only a branch pipeline, issue/9 has nothing. As on gitlab.com,
+# only the single-MR endpoint carries head_pipeline, not the MR list.
 FAKE_GLAB = r"""#!/bin/sh
 case "$1 $2" in
   "auth status") exit 0 ;;
@@ -33,8 +34,9 @@ case "$1 $2" in
     exit 1 ;;
 esac
 case "$2" in
-  *merge_requests*source_branch=issue%2F7*)
-    echo '[{"iid":12,"head_pipeline":{"id":901,"status":"running","web_url":"https://gl/p/901"}}]' ;;
+  *merge_requests*source_branch=issue%2F7*) echo '[{"iid":12}]' ;;
+  *merge_requests/12)
+    echo '{"iid":12,"head_pipeline":{"id":901,"status":"running","web_url":"https://gl/p/901"}}' ;;
   *merge_requests*) echo '[]' ;;
   *pipelines/901/jobs*)
     echo '[{"name":"test","status":"success"},{"name":"lint","status":"running"}]' ;;

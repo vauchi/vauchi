@@ -658,18 +658,42 @@ ci-classify repo job_id:
     glab api "projects/${enc}/jobs/{{job_id}}/trace" \
         | scripts/scripts/classify-ci-failure.sh --failure-reason "$failure_reason"
 
-# Show pipeline status for current branch
+# Show pipeline status for current branch: the open MR's head pipeline,
+# else the branch's latest. Not `glab ci status --branch`: MR pipelines run
+# on refs/merge-requests/<iid>/merge, and on an issue/<N> branch reused
+# across several MRs glab refuses to pick one (private#408).
 [no-cd]
 [script]
 pipeline-status repo='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
     dir=$(gitlab_repo_dir "{{repo}}")
-    branch=$(cd "$dir" && git branch --show-current)
-    glab ci status --branch "$branch" -R "$p"
+    branch=$(git -C "$dir" branch --show-current)
+    branch_enc=$(printf '%s' "$branch" | jq -sRr @uri)
+    pipeline=""
+    # The MR list omits head_pipeline; only the single-MR endpoint has it.
+    mr=$(glab api "projects/${enc}/merge_requests?source_branch=${branch_enc}&state=opened" \
+        | jq -r 'first.iid // empty')
+    if [[ -n "$mr" ]]; then
+        pipeline=$(glab api "projects/${enc}/merge_requests/${mr}" \
+            | jq -r '.head_pipeline // empty
+                     | "\(.id) !'"$mr"' \(.status) \(.web_url)"')
+    fi
+    if [[ -z "$pipeline" ]]; then
+        pipeline=$(glab api "projects/${enc}/pipelines?ref=${branch_enc}&per_page=1" \
+            | jq -r 'first // empty | "\(.id) branch \(.status) \(.web_url)"')
+    fi
+    if [[ -z "$pipeline" ]]; then
+        echo "no pipeline for ${branch} in ${p}" >&2
+        exit 1
+    fi
+    read -r id source status url <<< "$pipeline"
+    echo "pipeline ${id} (${source}): ${status} ${url}"
+    glab api "projects/${enc}/pipelines/${id}/jobs?per_page=100" \
+        | jq -r '.[] | "  \(.status)\t\(.name)"'
 
 # List recent pipelines
 [no-cd]
