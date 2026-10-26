@@ -212,10 +212,17 @@ _issue_open_issues() {
         | sort_by(.rank, .iid)'
 }
 
+# Issue numbers of the live claims. Only issue/<N> is a claim: an
+# issue/<N>-<slug> work branch is not, and looking its name up as an issue
+# fails (#830).
+_issue_claim_numbers() {
+    glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
+        | jq -r '.[].name | select(test("^issue/[0-9]+$")) | sub("^issue/"; "")'
+}
+
 issue_queue() {
     local claimed
-    claimed=$(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
-        | jq -r '[.[].name | sub("^issue/"; "")] | join(" ")')
+    claimed=$(_issue_claim_numbers | tr '\n' ' ')
     _issue_open_issues | jq -r --arg claimed " $claimed " '
         def row: "  #\(.iid)\t\(.priority)\t\(if .claimed then "[claimed] " else "" end)\(if .blocked then "[blocked] " else "" end)\(if .verify then "[verify:\(.verify)] " else "" end)\(.status)\t\(.title)";
         def section($title; $items): if ($items | length) > 0 then "  \($title)", ($items[] | row) else empty end;
@@ -253,8 +260,7 @@ issue_board() {
 # bounded by the handful of live claims.
 issue_claims() {
     local number body branch_date
-    for number in $(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
-        | jq -r '.[].name | sub("^issue/"; "")'); do
+    for number in $(_issue_claim_numbers); do
         body=$(_issue_holder_note "$number" | jq -r '.body // ""')
         branch_date=$(glab api "projects/$ISSUE_REPO/repository/branches/issue%2F$number" \
             | jq -r '.commit.committed_date')
@@ -268,8 +274,7 @@ issue_claims() {
 issue_session_claims() {
     local number me
     me=$(slot_session_id)
-    for number in $(glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
-        | jq -r '.[].name | sub("^issue/"; "")'); do
+    for number in $(_issue_claim_numbers); do
         [[ "$(slot_claim_owner "$(_issue_holder_note "$number" | jq -r '.body // ""')")" == "$me"* ]] \
             && echo "$number"
     done
