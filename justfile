@@ -74,6 +74,9 @@ mod rig 'just/rig.just'
 [doc('Launch Codex/Kimi with their own claim session id')]
 mod harness 'just/harness.just'
 
+[doc('Blog drafts CMS and publishing')]
+mod blog 'just/blog.just'
+
 import 'just/apps.just'
 import 'just/setup.just'
 import 'just/mobile.just'

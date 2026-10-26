@@ -81,6 +81,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just rig test
     - python3 tests/test_issue_claims.py .
     - JUST_UNSTABLE=1 just harness test
+    - JUST_UNSTABLE=1 just blog test
     - python3 -m unittest tests/test_backup_recipe_authority.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_ledger_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_disk_clean_recipe.py
@@ -113,6 +114,8 @@ test:release-gates:
           - just/slot-lib.sh
           - just/issue-lib.sh
           - just/harness.just
+          - just/blog.just
+          - just/blog-publish.sh
           - just/claude-layout-lib.sh
           - just/deploy.just
           - just/deploy-running.sh
@@ -133,6 +136,7 @@ test:release-gates:
           - tests/test_rig_readback.py
           - tests/test_issue_claims.py
           - tests/test_harness_recipe.py
+          - tests/test_blog_publish.py
           - tests/test_ledger_recipe.py
           - tests/test_disk_clean_recipe.py
           - tests/test_git_main_wip_recipe.py
