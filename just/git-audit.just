@@ -237,6 +237,22 @@ branch-health mode='audit':
     _bh_row "REPO" "BRANCH" "AGE" "STATUS" "ACTION"
     printf "${DIM}%s${NC}\n" "$(printf '%*s' $(( _BH_C1 + _BH_C2 + 24 )) '' | tr ' ' '-')"
 
+    # A squash or rebased merge leaves the branch's own commits out of
+    # main, so only GitLab's merged MR shows the work landed (private#826).
+    _bh_merged_mr_covers() {
+        local d="$1" br="$2" project tip sha
+        command -v glab >/dev/null || return 1
+        project=$(git -C "$d" remote get-url origin 2>/dev/null \
+            | sed -E -e 's#^[a-z+]+://[^/]+/##' -e 's#^[^@/]*@[^:]+:##' -e 's#\.git$##' -e 's#/#%2F#g')
+        tip=$(git -C "$d" rev-parse "$br")
+        for sha in $(glab api "projects/$project/merge_requests?state=merged&per_page=20&source_branch=$(jq -rn --arg b "$br" '$b|@uri')" 2>/dev/null \
+                | jq -r '.[] | .sha, .merge_commit_sha, .squash_commit_sha | select(. != null)' 2>/dev/null); do
+            [[ "$sha" == "$tip" ]] && return 0
+            git -C "$d" merge-base --is-ancestor "$tip" "$sha" 2>/dev/null && return 0
+        done
+        return 1
+    }
+
     _bh_check_repo() {
         local label="$1" d="$2"
         [[ "$label" == "vauchi (root)" ]] && label="root"
@@ -292,9 +308,13 @@ branch-health mode='audit':
                     action="DELETE"
                     merged=$((merged + 1))
                 fi
+            elif $is_gone && _bh_merged_mr_covers "$d" "$br"; then
+                status="merged-mr"
+                action="DELETE"
+                merged=$((merged + 1))
             elif $is_gone; then
                 status="gone"
-                action="RECOVER"
+                action="ASK"
                 gone=$((gone + 1))
             elif [[ "$last_epoch" -gt 0 && "$last_epoch" -lt "$cutoff_14d" ]]; then
                 status="stale"
@@ -314,14 +334,14 @@ branch-health mode='audit':
 
             _sc=""
             case "$status" in
-                merged|in-main) _sc="$GREEN" ;;
+                merged|in-main|merged-mr) _sc="$GREEN" ;;
                 stale) _sc="$YELLOW" ;;
                 gone) _sc="$RED" ;;
             esac
             _ac=""
             case "$action" in
                 DELETE|DELETED) _ac="$RED" ;;
-                REVIEW|RECOVER) _ac="$YELLOW" ;;
+                REVIEW|ASK) _ac="$YELLOW" ;;
             esac
             _p1=$(( _BH_C1 - ${#label} )); [[ $_p1 -lt 1 ]] && _p1=1
             _p2=$(( _BH_C2 - ${#br} )); [[ $_p2 -lt 1 ]] && _p2=1
@@ -338,7 +358,8 @@ branch-health mode='audit':
         echo "Run 'just git branch-health cleanup' to delete merged branches"
     fi
     if [[ "$gone" -gt 0 ]]; then
-        echo "Gone branches have unmerged commits — re-push with 'git -C <repo> push -u origin <branch>'"
+        echo "Gone branches: their remote was deleted on purpose (branch housekeeping). Never push one back;"
+        echo "ask the maintainer if it holds work you need, otherwise delete it locally."
     fi
 
 # Inspect a specific branch across ALL repos
