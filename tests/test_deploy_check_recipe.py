@@ -36,6 +36,7 @@ class DeployCheckRecipeTests(unittest.TestCase):
         newest_attempt: str = LAST_SUCCESS,
         config_changes_since_deploy: int = 0,
         undeployed_environment: str = "",
+        glab_authenticated: bool = True,
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -88,7 +89,14 @@ class DeployCheckRecipeTests(unittest.TestCase):
                 fake_bin / "glab",
                 [
                     "#!/bin/sh",
+                    'if [ "$DEPLOY_CHECK_TEST_GLAB_AUTH" != 1 ]; then',
+                    "  printf '{\"message\":\"401 Unauthorized\"}\\n'",
+                    "  exit 1",
+                    "fi",
                     'case "$*" in',
+                    '  "api user")',
+                    "    printf '{\"username\":\"maintainer\"}\\n'",
+                    "    ;;",
                     '  *"jobs/777/trace"*)',
                     '    printf "%s\\n" "$DEPLOY_CHECK_TEST_TRACE"',
                     "    ;;",
@@ -169,6 +177,9 @@ class DeployCheckRecipeTests(unittest.TestCase):
                 f"{fake_bin}{os.pathsep}{environment.get('PATH', '')}"
             )
             environment["DEPLOY_CHECK_TEST_SHA"] = CURRENT_SHA
+            environment["DEPLOY_CHECK_TEST_GLAB_AUTH"] = (
+                "1" if glab_authenticated else "0"
+            )
             environment["DEPLOY_CHECK_TEST_MALFORMED_URL"] = malformed_url
             environment["DEPLOY_CHECK_TEST_ATTEMPT"] = newest_attempt
             environment["DEPLOY_CHECK_TEST_CONFIG_CHANGES"] = str(
@@ -191,6 +202,18 @@ class DeployCheckRecipeTests(unittest.TestCase):
                 text=True,
                 check=False,
             )
+
+    def test_unauthenticated_glab_stops_before_reporting_any_service(
+        self,
+    ) -> None:
+        # An expired glab login made every GitLab-backed line read UNKNOWN
+        # and the recipe died with a bare exit 1 (2026-10-27).
+        result = self.run_recipe(glab_authenticated=False)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("glab auth login", result.stderr)
+        self.assertNotRegex(result.stdout, r"relay\s+")
+        self.assertNotIn("UNKNOWN", result.stdout)
 
     def test_redirected_build_info_reports_every_service(self) -> None:
         result = self.run_recipe()
