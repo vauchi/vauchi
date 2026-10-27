@@ -866,16 +866,16 @@ vulnerabilities group='vauchi':
             + (if .location.startLine then ":" + (.location.startLine | tostring) else "" end))]
         | @tsv'
 
-# View issue details
+# View issue details; extra flags go to glab (e.g. --comments)
 [no-cd]
 [script]
-issue-view id repo='':
+issue-view id repo='' *flags:
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab issue view "{{id}}" -R "$p"
+    glab issue view "{{id}}" -R "$p" {{flags}}
 
 # Create an issue
 # Usage: just gitlab issue-create "<title>" [repo] [glab issue create flags...]
