@@ -249,8 +249,8 @@ deploy-latest service:
         relay)       REPO="relay" ;;
         cdn)         REPO="website" ;;
         ohttp-relay) REPO="ohttp-relay" ;;
-        monitoring)  REPO="private" ;;
-        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay|monitoring)"; exit 1 ;;
+        monitoring|vrt|mail|vaultwarden|infisical) REPO="private" ;;
+        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay|monitoring|vrt|mail|vaultwarden|infisical)"; exit 1 ;;
     esac
     # The registry image the service's Kamal config runs. The CDN is the
     # website repo's `cdn` image (deploy.cdn.yml); pinning the website's own
@@ -258,36 +258,36 @@ deploy-latest service:
     IMAGE="$REPO"
     [[ "$SERVICE" == cdn ]] && IMAGE="website/cdn"
 
-    # Monitoring is config synced from _private (infra/monitoring/), not an
-    # image: there is no build or registry tag to pin, and its button is the
-    # deploy:monitoring job of a _private main pipeline.
-    if [[ "$SERVICE" == monitoring ]]; then
-        echo "minting _private main pipeline for deploy:monitoring..."
-        PIPE_REQUEST=$(jq -n '{ref: "main", variables: [{key: "DEPLOY_SERVICE", value: "monitoring"}]}')
+    # These are config synced from _private (infra/<service>/), not images:
+    # there is no build or registry tag to pin, and the button is the
+    # deploy:<service> job of a _private main pipeline.
+    if [[ "$REPO" == private ]]; then
+        echo "minting _private main pipeline for deploy:${SERVICE}..."
+        PIPE_REQUEST=$(jq -n --arg service "$SERVICE" '{ref: "main", variables: [{key: "DEPLOY_SERVICE", value: $service}]}')
         PIPE=$(glab api -X POST "projects/vauchi%2Fprivate/pipeline" \
             -H "Content-Type: application/json" \
             --input - <<< "$PIPE_REQUEST" | jq -er '.id')
         CREATED_SERVICE=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/variables" \
             | jq -r '.[] | select(.key=="DEPLOY_SERVICE") | .value')
-        if [[ "$CREATED_SERVICE" != monitoring ]]; then
-            echo "ERROR: pipeline did not retain DEPLOY_SERVICE=monitoring." >&2
+        if [[ "$CREATED_SERVICE" != "$SERVICE" ]]; then
+            echo "ERROR: pipeline did not retain DEPLOY_SERVICE=${SERVICE}." >&2
             echo "       Inspect: https://gitlab.com/vauchi/private/-/pipelines/${PIPE}" >&2
             exit 1
         fi
         JOB_URL=""
         for _ in 1 2 3 4 5 6; do
             JOB_URL=$(glab api "projects/vauchi%2Fprivate/pipelines/${PIPE}/jobs?per_page=100" 2>/dev/null \
-                | jq -r '.[] | select(.name=="deploy:monitoring") | .web_url' | head -1)
+                | jq -r --arg n "deploy:${SERVICE}" '.[] | select(.name==$n) | .web_url' | head -1)
             [[ -n "$JOB_URL" ]] && break
             sleep 5
         done
         if [[ -z "$JOB_URL" ]]; then
-            echo "Pipeline created but deploy:monitoring not visible yet:"
+            echo "Pipeline created but deploy:${SERVICE} not visible yet:"
             echo "  https://gitlab.com/vauchi/private/-/pipelines/${PIPE}"
             exit 1
         fi
         echo ""
-        echo "Press play here — this button syncs _private main's infra/monitoring/:"
+        echo "Press play here — this button syncs _private main's infra/${SERVICE}/:"
         echo "  $JOB_URL"
         exit 0
     fi
