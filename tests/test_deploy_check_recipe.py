@@ -15,7 +15,11 @@ from pathlib import Path
 DEPLOY_JUST = Path(sys.argv.pop(1)).resolve()
 CURRENT_SHA = "a1234567890bcdefa1234567890bcdefa1234567"
 OLDER_SHA = "0ld0000000000000000000000000000000000000"
-LAST_SUCCESS = '[{"created_at":"2026-08-04T06:00:00Z","status":"success","deployable":{"id":777}}]'
+LAST_SUCCESS = (
+    '[{"created_at":"2026-08-04T06:00:00Z","status":"success",'
+    f'"sha":"{CURRENT_SHA}","deployable":{{"id":777}}}}]'
+)
+CONFIG_SERVICES = ("monitoring", "vrt", "mail", "vaultwarden", "infisical")
 
 
 class DeployCheckRecipeTests(unittest.TestCase):
@@ -30,6 +34,8 @@ class DeployCheckRecipeTests(unittest.TestCase):
         deployed_sha: str = CURRENT_SHA,
         deploy_trace: str | None = None,
         newest_attempt: str = LAST_SUCCESS,
+        config_changes_since_deploy: int = 0,
+        undeployed_environment: str = "",
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -65,6 +71,12 @@ class DeployCheckRecipeTests(unittest.TestCase):
                     "  exit 0",
                     "fi",
                     'if [ "$1" = "-C" ] && [ "$3" = "rev-list" ]; then',
+                    '  case "$*" in',
+                    '    *" -- infra/"*)',
+                    '      printf "%s\\n" "$DEPLOY_CHECK_TEST_CONFIG_CHANGES"',
+                    "      exit 0",
+                    "      ;;",
+                    "  esac",
                     "  printf '0\\n'",
                     "  exit 0",
                     "fi",
@@ -94,6 +106,9 @@ class DeployCheckRecipeTests(unittest.TestCase):
                     '      {"id":12,"path":"vauchi/relay"},',
                     '      {"id":12,"path":"vauchi/ohttp-relay"}',
                     "    ]'",
+                    "    ;;",
+                    '  *"deployments?environment=$DEPLOY_CHECK_TEST_UNDEPLOYED_ENV&"*)',
+                    "    printf '[]\\n'",
                     "    ;;",
                     '  *"deployments?environment="*"status=success"*)',
                     f"    printf '%s\\n' '{LAST_SUCCESS}'",
@@ -156,6 +171,12 @@ class DeployCheckRecipeTests(unittest.TestCase):
             environment["DEPLOY_CHECK_TEST_SHA"] = CURRENT_SHA
             environment["DEPLOY_CHECK_TEST_MALFORMED_URL"] = malformed_url
             environment["DEPLOY_CHECK_TEST_ATTEMPT"] = newest_attempt
+            environment["DEPLOY_CHECK_TEST_CONFIG_CHANGES"] = str(
+                config_changes_since_deploy
+            )
+            environment["DEPLOY_CHECK_TEST_UNDEPLOYED_ENV"] = (
+                undeployed_environment or "no-such-environment"
+            )
             environment["DEPLOY_CHECK_TEST_TRACE"] = (
                 "production deploy image is pinned: "
                 f"registry.gitlab.com/vauchi/relay:{deployed_sha}"
@@ -224,7 +245,8 @@ class DeployCheckRecipeTests(unittest.TestCase):
         self.assertRegex(result.stdout, r"relay\s+DEPLOY FAILED")
         self.assertIn("failed-job=888", result.stdout)
         self.assertIn("deployed=a1234567", result.stdout)
-        self.assertIn("DEPLOY FAILED: 2 service(s)", result.stdout)
+        self.assertRegex(result.stdout, r"vrt\s+DEPLOY FAILED")
+        self.assertIn(f"DEPLOY FAILED: {2 + len(CONFIG_SERVICES)} service(s)", result.stdout)
 
     def test_canceled_deploy_after_the_last_success_is_reported(self) -> None:
         result = self.run_recipe(
@@ -241,6 +263,29 @@ class DeployCheckRecipeTests(unittest.TestCase):
 
         self.assertRegex(result.stdout, r"relay\s+STALE")
         self.assertNotIn("DEPLOY FAILED", result.stdout)
+
+    def test_config_services_with_no_infra_change_since_deploy_are_current(self) -> None:
+        result = self.run_recipe()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for service in CONFIG_SERVICES:
+            self.assertRegex(result.stdout, rf"{service}\s+UP TO DATE")
+
+    def test_config_service_with_infra_changes_since_deploy_is_stale(self) -> None:
+        result = self.run_recipe(config_changes_since_deploy=3)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"vrt\s+STALE \(3 behind\)")
+        self.assertRegex(result.stdout, r"relay\s+UP TO DATE")
+        self.assertIn("deployed=a1234567", result.stdout)
+
+    def test_config_service_without_a_successful_deploy_is_unknown(self) -> None:
+        result = self.run_recipe(undeployed_environment="vrt-prod")
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"vrt\s+UNKNOWN")
+        self.assertRegex(result.stdout, r"monitoring\s+UP TO DATE")
+        self.assertIn("EVIDENCE: 1 service(s) could not be verified", result.stdout)
 
 
 if __name__ == "__main__":
