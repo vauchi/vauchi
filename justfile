@@ -103,6 +103,11 @@ check *args:
     set -euo pipefail
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
+    source scripts/scripts/resolve-repo.sh
+    if [[ -n "${_QR_REPO:-}" && "$_QR_REPO" != all ]] && [[ "$(repo_toolchain "$_QR_REPO")" == cmake ]]; then
+        just cmake-check {{args}}
+        exit $?
+    fi
     if quiet_enabled; then
         _QR_TOTAL_START=$SECONDS
         export _QR_SHARED_DIR
@@ -114,10 +119,17 @@ check *args:
         # serializes them via its lock — the speedup comes from fmt-check
         # overlapping with compilation and from cross-repo parallelism.
         just fmt-check ${_QR_REPO:-} --quiet &
+        fmt_pid=$!
         just lint ${_QR_REPO:-} --quiet &
+        lint_pid=$!
         just test ${_QR_REPO:-} --quiet &
-        wait
-        qr_print_shared_summary "check" || exit 1
+        test_pid=$!
+        failed=0
+        for child in "$fmt_pid" "$lint_pid" "$test_pid"; do
+            wait "$child" || failed=1
+        done
+        qr_print_shared_summary "check" || failed=1
+        [[ "$failed" = 0 ]] || exit 1
     else
         just fmt-check ${_QR_REPO:-}
         just lint ${_QR_REPO:-}
@@ -132,7 +144,8 @@ check *args:
     # Write TDD stamps for repos that passed all checks
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/stamp.sh
-    for r in $(resolve_repo "${_QR_REPO:-}" "test"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "test")
+    for r in $repos; do
         stamp_write "$r" 2>/dev/null || true
     done
 
@@ -144,7 +157,8 @@ build *args:
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
-    for r in $(resolve_repo "${_QR_REPO:-}" "build"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "build")
+    for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ build: $r ($tc) ═══"; fi
@@ -159,7 +173,8 @@ build *args:
                     (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -configuration Debug -skipPackageUpdates build -quiet 2>&1)
                     ;;
                 mdbook)  (cd "$dir" && mdbook build 2>&1) ;;
-                *)       echo "  (no build step for $tc)"; return 0 ;;
+                cmake)   bash scripts/scripts/cmake-check.sh "$dir" build ;;
+                *)       echo "No build runner for $tc" >&2; return 1 ;;
             esac
         }
         run_step "$r" _do_step
@@ -174,7 +189,8 @@ test *args:
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
-    for r in $(resolve_repo "${_QR_REPO:-}" "test"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "test")
+    for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ test: $r ($tc) ═══"; fi
@@ -228,7 +244,8 @@ test *args:
                     (cd "$dir" && xcodebuild -scheme Vauchi -destination "$xc_dest" -skipPackageUpdates test -quiet 2>&1)
                     ;;
                 mdbook)  (cd "$dir" && mdbook build 2>&1) ;;
-                *)       echo "  (no test step for $tc)"; return 0 ;;
+                cmake)   bash scripts/scripts/cmake-check.sh "$dir" test ;;
+                *)       echo "No test runner for $tc" >&2; return 1 ;;
             esac
         }
         run_step "$r" _do_step
@@ -368,7 +385,8 @@ fmt *args:
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
-    for r in $(resolve_repo "${_QR_REPO:-}" "fmt"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "fmt")
+    for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ fmt: $r ($tc) ═══"; fi
@@ -392,7 +410,8 @@ fmt-check *args:
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
-    for r in $(resolve_repo "${_QR_REPO:-}" "fmt"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "fmt")
+    for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ fmt-check: $r ($tc) ═══"; fi
@@ -401,7 +420,7 @@ fmt-check *args:
                 rust)    (cd "$dir" && cargo fmt --all -- --check 2>&1) ;;
                 npm)     (cd "$dir" && npx prettier --check src/ 2>&1) ;;
                 xcode)   (cd "$dir" && swiftformat --lint . 2>&1) ;;
-                *)       echo "  (no fmt-check step for $tc)"; return 0 ;;
+                *)       echo "No format-check runner for $tc" >&2; return 1 ;;
             esac
         }
         run_step "$r" _do_step
@@ -416,7 +435,8 @@ lint *args:
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/quiet-runner.sh
     _qr_parse_args {{args}}
-    for r in $(resolve_repo "${_QR_REPO:-}" "lint"); do
+    repos=$(resolve_repo "${_QR_REPO:-}" "lint")
+    for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
         if ! quiet_enabled; then echo "═══ lint: $r ($tc) ═══"; fi
@@ -524,7 +544,7 @@ lint *args:
                 shell)   (cd "$dir" && shellcheck scripts/*.sh 2>&1 \
                             && bash scripts/check-seeded-violation-tests.sh 2>&1) ;;
                 html)    (cd "$dir" && htmlhint public/**/*.html 2>&1) ;;
-                *)       echo "  (no lint step for $tc)"; return 0 ;;
+                *)       echo "No lint runner for $tc" >&2; return 1 ;;
             esac
         }
         run_step "$r" _do_step
@@ -2837,6 +2857,24 @@ test-lint-docs:
 [group('tests')]
 test-check-prerequisites:
     python3 "{{justfile_directory()}}/tests/test_check_prerequisites.py" "{{justfile_directory()}}/just/check-prerequisites.sh"
+
+# Regression check: a failing linter must fail the recipe, not just print.
+[group('tests')]
+test-check-recipe:
+    python3 "{{justfile_directory()}}/tests/test_check_recipe_fail_closed.py"
+
+# Configure, build and run registered native tests with sccache.
+[group('daily')]
+[script]
+cmake-check *args:
+    set -euo pipefail
+    source scripts/scripts/quiet-runner.sh
+    source scripts/scripts/resolve-repo.sh
+    _qr_parse_args {{args}}
+    repo=${_QR_REPO:-linux-qt}
+    [[ "$(repo_toolchain "$repo")" == cmake ]] || { echo "Not a CMake repository: $repo" >&2; exit 1; }
+    run_step "$repo" bash scripts/scripts/cmake-check.sh "$(repo_dir "$repo")"
+    print_summary "CMake/CTest" || exit 1
 
 # Regression check: a failing linter must fail the recipe, not just print.
 [group('tests')]
