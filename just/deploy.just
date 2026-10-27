@@ -48,6 +48,14 @@ deploy-check *ARGS:
         exit 2
     fi
 
+    # Every GitLab-backed line below swallows glab's errors, so an expired
+    # login used to print UNKNOWN rows and then die mid-table (private#840).
+    if ! glab api user >/dev/null 2>&1; then
+        echo "ERROR: glab cannot reach the GitLab API (login missing or expired)." >&2
+        echo "       Check with: glab auth status — then: glab auth login" >&2
+        exit 1
+    fi
+
     source scripts/scripts/output-helpers.sh
     echo "Checking deployed service versions..."
     echo "Ledger + approvals: https://gitlab.com/vauchi/private/-/environments"
@@ -211,7 +219,6 @@ deploy-check *ARGS:
         local repo_dir="{{justfile_directory()}}/_private"
         local deployment dep_sha dep_at main_sha behind=""
         local attempt_status="" attempt_at="" attempt_job=""
-        git -C "$repo_dir" fetch origin main --quiet 2>/dev/null || true
         main_sha=$(git -C "$repo_dir" rev-parse origin/main 2>/dev/null || echo "")
         deployment=$(glab api "projects/vauchi%2Fprivate/deployments?environment=${envpath}&status=success&order_by=created_at&sort=desc&per_page=1" 2>/dev/null || true)
         dep_sha=$(jq -r 'if type == "array" then .[0].sha // empty else empty end' <<<"$deployment" 2>/dev/null || true)
@@ -267,6 +274,9 @@ deploy-check *ARGS:
     # commit — compare against website/origin/main. Reports UNKNOWN until the
     # cdn image starts baking build-info.json (vauchi/website!109).
     check_service "cdn"     "https://cdn.vauchi.app/build-info.json"  "website"
+    # One fetch for all five: each fetch is a network round trip, and with
+    # an SSH agent that confirms every use it is a prompt per service.
+    git -C "{{justfile_directory()}}/_private" fetch origin main --quiet 2>/dev/null || true
     for _ds_svc in monitoring vrt mail vaultwarden infisical; do
         check_service_config "$_ds_svc" "${_ds_svc}-prod"
     done
