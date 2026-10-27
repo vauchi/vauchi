@@ -104,7 +104,15 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         '      {"name":"kamal:deploy:ohttp-relay-production",'
                         '"web_url":"https://gitlab.example/jobs/ohttp"},',
                         '      {"name":"deploy:monitoring",'
-                        '"web_url":"https://gitlab.example/jobs/monitoring"}',
+                        '"web_url":"https://gitlab.example/jobs/monitoring"},',
+                        '      {"name":"deploy:vrt",'
+                        '"web_url":"https://gitlab.example/jobs/vrt"},',
+                        '      {"name":"deploy:mail",'
+                        '"web_url":"https://gitlab.example/jobs/mail"},',
+                        '      {"name":"deploy:vaultwarden",'
+                        '"web_url":"https://gitlab.example/jobs/vaultwarden"},',
+                        '      {"name":"deploy:infisical",'
+                        '"web_url":"https://gitlab.example/jobs/infisical"}',
                         "    ]'",
                         "    ;;",
                         '  *"projects/vauchi%2Fprivate/pipelines/9001/variables"*)',
@@ -170,6 +178,10 @@ class DeployLatestRecipeTests(unittest.TestCase):
             "relay": "relay",
             "ohttp-relay": "ohttp-relay",
             "monitoring": "private",
+            "vrt": "private",
+            "mail": "private",
+            "vaultwarden": "private",
+            "infisical": "private",
         }[service]
 
     @classmethod
@@ -222,20 +234,26 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 )
                 self.assertNotIn(f"deploys {repository}:latest", result.stdout)
 
-    def test_monitoring_mints_an_image_free_private_pipeline(self) -> None:
-        # Monitoring is config synced from _private, not an image: there is
-        # nothing to look up in a registry, and deploy:monitoring is the button.
-        result, glab_log = self.run_recipe(
-            service="monitoring",
-            created_variables_json='[{"key":"DEPLOY_SERVICE","value":"monitoring"}]',
-        )
+    def test_config_services_mint_an_image_free_private_pipeline(self) -> None:
+        # These are config synced from _private infra/<service>/, not images:
+        # there is nothing to look up in a registry, and deploy:<service> is
+        # the button.
+        for service in ("monitoring", "vrt", "mail", "vaultwarden", "infisical"):
+            with self.subTest(service=service):
+                result, glab_log = self.run_recipe(
+                    service=service,
+                    created_variables_json=(
+                        f'[{{"key":"DEPLOY_SERVICE","value":"{service}"}}]'
+                    ),
+                )
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("https://gitlab.example/jobs/monitoring", result.stdout)
-        self.assertIn('"key": "DEPLOY_SERVICE"', glab_log)
-        self.assertIn('"value": "monitoring"', glab_log)
-        self.assertNotIn("DEPLOY_IMAGE", glab_log)
-        self.assertNotIn("registry/repositories", glab_log)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(f"https://gitlab.example/jobs/{service}", result.stdout)
+                self.assertIn(f"infra/{service}/", result.stdout)
+                self.assertIn('"key": "DEPLOY_SERVICE"', glab_log)
+                self.assertIn(f'"value": "{service}"', glab_log)
+                self.assertNotIn("DEPLOY_IMAGE", glab_log)
+                self.assertNotIn("registry/repositories", glab_log)
 
     def test_missing_successful_build_fails_before_pipeline_creation(self) -> None:
         result, glab_log = self.run_recipe(pipelines_json="[]")
