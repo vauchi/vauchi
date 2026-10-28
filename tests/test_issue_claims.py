@@ -96,6 +96,8 @@ if parts[2] == "repository" and parts[3] == "branches":
     out([b for n, b in state["branches"].items() if n.startswith(prefix)])
 if parts[2] == "repository" and parts[3] == "compare":
     to = query.partition("to=")[2].split("&")[0].replace("%2F", "/")
+    if to not in state["branches"]:
+        fail("404 Ref Not Found")
     out({"commits": [{}] * state["branches"][to]["ahead"]})
 if parts[2] == "merge_requests" and len(parts) == 3:
     source = query.partition("source_branch=")[2].split("&")[0].replace("%2F", "/")
@@ -154,7 +156,7 @@ class IssueClaimTest(unittest.TestCase):
                        "VAUCHI_SESSION_ID": session, **(extra_env or {})}
         environment.pop("CLAUDE_CODE_SESSION_ID", None)
         return subprocess.run(
-            ["bash", "-c", f'source just/slot-lib.sh; source just/issue-lib.sh; {command}'],
+            ["bash", "-c", f'set -euo pipefail; source just/slot-lib.sh; source just/issue-lib.sh; {command}'],
             cwd=self.slot, env=environment, check=check, capture_output=True, text=True,
         )
 
@@ -354,6 +356,86 @@ class IssueClaimTest(unittest.TestCase):
         self.assertIn("core", result.stdout)
         self.assertIn("issue/7", self.remote_branches(remote))
         self.assertIn("issue/7", self.load()["branches"])
+
+    # #614, #645, #646, #867: the compare call answered 404 for a branch
+    # deleted by hand, and release stopped before posting its note.
+    def test_release_notes_the_release_when_the_claim_branch_is_already_gone(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        state = self.load()
+        del state["branches"]["issue/7"]
+        self.save(state)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("release: session:"))
+        self.assertIn("issue/7 is already gone", result.stdout)
+
+    def private_with_issue_branch(self, number: int, commits: list[str]) -> Path:
+        """`_private` as a clone whose issue/<N> writes each of `commits` to work.txt in turn."""
+        remote = self.directory / "private.git"
+        subprocess.run(["git", "init", "--quiet", "--bare", "--initial-branch=main", str(remote)], check=True)
+        private = self.slot / "_private"
+        git = ["git", "-C", str(private), "-c", "user.name=t", "-c", "user.email=t@e"]
+        subprocess.run(["git", "-C", str(private), "init", "--quiet", "--initial-branch=main"], check=True)
+        subprocess.run([*git, "remote", "add", "origin", str(remote)], check=True)
+        subprocess.run([*git, "commit", "--quiet", "--allow-empty", "-m", "base"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
+        subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
+        for content in commits:
+            (private / "work.txt").write_text(content)
+            subprocess.run([*git, "add", "work.txt"], check=True)
+            subprocess.run([*git, "commit", "--quiet", "-m", f"work: {content.strip()}"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", f"issue/{number}"], check=True)
+        subprocess.run([*git, "switch", "--quiet", "main"], check=True)
+        return private
+
+    def land_on_main(self, private: Path, content: str) -> None:
+        git = ["git", "-C", str(private), "-c", "user.name=t", "-c", "user.email=t@e"]
+        (private / "work.txt").write_text(content)
+        subprocess.run([*git, "add", "work.txt"], check=True)
+        subprocess.run([*git, "commit", "--quiet", "-m", "one commit in place of the branch"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
+
+    # #614, #867: main holds the branch's work as one commit (a squash, or a
+    # replacement MR), so no patch ID matches and git cherry reports it unmerged.
+    def test_release_treats_work_on_main_under_other_commits_as_merged(self) -> None:
+        private = self.private_with_issue_branch(7, ["a\n", "a\nb\n"])
+        self.land_on_main(private, "a\nb\n")
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.load()["branches"])
+
+    def test_release_refuses_a_branch_whose_work_main_holds_only_in_part(self) -> None:
+        private = self.private_with_issue_branch(7, ["a\n", "a\nb\n"])
+        self.land_on_main(private, "a\n")
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("not on main", result.stdout)
+        self.assertIn("issue/7", self.load()["branches"])
+
+    def test_release_treats_a_squash_merged_sibling_branch_as_merged(self) -> None:
+        remote = self.sibling_with_issue_branch(7, unmerged=True)
+        core = self.slot / "core"
+        git = ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e"]
+        subprocess.run([*git, "switch", "--quiet", "main"], check=True)
+        (core / "work.txt").write_text("work\n")
+        (core / "notes.txt").write_text("from main\n")
+        subprocess.run([*git, "add", "work.txt", "notes.txt"], check=True)
+        subprocess.run([*git, "commit", "--quiet", "-m", "squashed with other work"], check=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.remote_branches(remote))
 
     def test_queue_lists_open_issues_by_priority_with_their_holder(self) -> None:
         self.run_lib("issue_claim 9", "codex-a", check=True)
