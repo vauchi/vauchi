@@ -62,7 +62,7 @@ class CheckImplementedScenariosRecipeTests(unittest.TestCase):
         result = self.run_check()
 
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("navigation :: Open my business card", result.stdout)
+        self.assertIn("naming no scenario:\n  navigation :: open my business card", result.stdout)
 
     def test_an_annotation_naming_a_scenario_passes(self) -> None:
         self.annotate("navigation :: Open my card")

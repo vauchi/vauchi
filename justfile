@@ -2683,7 +2683,8 @@ check-annotations repo='core':
 [no-cd]
 check-implemented-scenarios *args:
     python3 scripts/scripts/check-implemented-scenarios.py --features features \
-        --baseline features/implemented-untested.baseline {{ args }} \
+        --baseline features/implemented-untested.baseline \
+        --dangling-baseline features/dangling-annotations.baseline {{ args }} \
         core cli tui e2e relay ohttp-relay linux-gtk linux-qt windows web-demo ios macos android
 
 # Validate feature lifecycle tags (@implemented/@planned/@wip)
