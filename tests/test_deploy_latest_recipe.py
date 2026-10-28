@@ -26,6 +26,8 @@ class DeployLatestRecipeTests(unittest.TestCase):
         sha_digest: str = CURRENT_DIGEST,
         created_variables_json: str | None = None,
         pipelines_exit_code: int = 0,
+        sha_pipelines_json: str = '[{"id":101,"status":"success"}]',
+        sha_pipelines_exit_code: int = 0,
     ) -> tuple[subprocess.CompletedProcess[str], str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_path = Path(temporary_directory)
@@ -67,9 +69,13 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         "    ;;",
                         "esac",
                         'case "$*" in',
-                        '  *"pipelines?sha="*)',
+                        '  *"pipelines?sha="*"status=success"*)',
                         '    printf "%s\\n" "$DEPLOY_LATEST_TEST_PIPELINES_JSON"',
                         '    exit "$DEPLOY_LATEST_TEST_PIPELINES_EXIT"',
+                        "    ;;",
+                        '  *"pipelines?sha="*)',
+                        '    printf "%s\\n" "$DEPLOY_LATEST_TEST_SHA_PIPELINES_JSON"',
+                        '    exit "$DEPLOY_LATEST_TEST_SHA_PIPELINES_EXIT"',
                         "    ;;",
                         '  *"registry/repositories/1"[23]"/tags/latest"*)',
                         '    printf \'{"digest":"sha256:mutable-latest"}\\n\'',
@@ -144,6 +150,12 @@ class DeployLatestRecipeTests(unittest.TestCase):
             environment["DEPLOY_LATEST_TEST_GLAB_LOG"] = str(glab_log)
             environment["DEPLOY_LATEST_TEST_PIPELINES_EXIT"] = str(
                 pipelines_exit_code
+            )
+            environment["DEPLOY_LATEST_TEST_SHA_PIPELINES_JSON"] = (
+                sha_pipelines_json
+            )
+            environment["DEPLOY_LATEST_TEST_SHA_PIPELINES_EXIT"] = str(
+                sha_pipelines_exit_code
             )
             image = self.image_for(service)
             expected_variables = (
@@ -273,6 +285,61 @@ class DeployLatestRecipeTests(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("glab auth login", result.stderr)
         self.assertNotIn("successful build pipelines: 1", result.stdout)
+        self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_unfinished_rebuild_of_the_sha_fails_before_pipeline_creation(
+        self,
+    ) -> None:
+        # A rebuild still running re-pushes :<sha> when it ends, and the
+        # minted job then refuses the digest it was pinned to (private#753:
+        # jobs 17519196132 and 17521855790). Each unfinished state counts.
+        for status in (
+            "created",
+            "waiting_for_resource",
+            "preparing",
+            "pending",
+            "running",
+            "scheduled",
+        ):
+            with self.subTest(status=status):
+                result, glab_log = self.run_recipe(
+                    service="relay",
+                    sha_pipelines_json=(
+                        '[{"id":101,"status":"success"},'
+                        f'{{"id":2996732198,"status":"{status}",'
+                        '"web_url":"https://gitlab.example/pipelines/2996732198"}]'
+                    ),
+                )
+
+                self.assertEqual(1, result.returncode)
+                self.assertIn("still building", result.stderr)
+                self.assertIn(
+                    "https://gitlab.example/pipelines/2996732198", result.stderr
+                )
+                self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_finished_rebuilds_of_the_sha_do_not_block_the_deploy(self) -> None:
+        result, glab_log = self.run_recipe(
+            service="relay",
+            sha_pipelines_json=(
+                '[{"id":101,"status":"success"},{"id":102,"status":"failed"},'
+                '{"id":103,"status":"canceled"},{"id":104,"status":"skipped"},'
+                '{"id":105,"status":"manual"}]'
+            ),
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("projects/vauchi%2Fprivate/pipeline", glab_log)
+
+    def test_unlistable_sha_pipelines_fail_before_pipeline_creation(self) -> None:
+        result, glab_log = self.run_recipe(
+            service="relay",
+            sha_pipelines_json='{"message":"401 Unauthorized"}',
+            sha_pipelines_exit_code=1,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("could not list", result.stderr)
         self.assertNotIn("projects/vauchi%2Fprivate/pipeline", glab_log)
 
     def test_missing_sha_tag_fails_before_pipeline_creation(self) -> None:
