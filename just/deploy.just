@@ -270,6 +270,7 @@ deploy-check *ARGS:
     check_service_gitlab "ohttp" "ohttp-relay" "ohttp-relay-prod"
     check_service "website" "https://vauchi.app/build-info.json"  "website"
     check_service "docs"    "https://docs.vauchi.app/build-info.json" "docs"
+    check_service "spec"    "https://vauchi.app/spec/build-info.json" "spec"
     # cdn is built from the website repo, so its build-info sha is a website
     # commit — compare against website/origin/main. Reports UNKNOWN until the
     # cdn image starts baking build-info.json (vauchi/website!109).
@@ -311,12 +312,13 @@ deploy-latest service:
     SERVICE="{{service}}"
     case "$SERVICE" in
         docs)        REPO="docs" ;;
+        spec)        REPO="spec" ;;
         landing)     REPO="website" ;;
         relay)       REPO="relay" ;;
         cdn)         REPO="website" ;;
         ohttp-relay) REPO="ohttp-relay" ;;
         monitoring|vrt|mail|vaultwarden|infisical) REPO="private" ;;
-        *) echo "Unknown service: $SERVICE (docs|landing|relay|cdn|ohttp-relay|monitoring|vrt|mail|vaultwarden|infisical)"; exit 1 ;;
+        *) echo "Unknown service: $SERVICE (docs|spec|landing|relay|cdn|ohttp-relay|monitoring|vrt|mail|vaultwarden|infisical)"; exit 1 ;;
     esac
     # The registry image the service's Kamal config runs. The CDN is the
     # website repo's `cdn` image (deploy.cdn.yml); pinning the website's own
