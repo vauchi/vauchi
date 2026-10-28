@@ -18,15 +18,16 @@ plan-validate target='':
     CHECKED=0
 
     validate_file() {
-        local file="$1"
+        local file="$1" result status
         CHECKED=$((CHECKED + 1))
-        result=$(python3 << PYEOF
+        status=0
+        result=$(python3 - "$WORKSPACE_ROOT" "$file" 2>&1 << 'PYEOF'
     import sys
-    sys.path.insert(0, '$WORKSPACE_ROOT/markdown-plan/python/src')
+    sys.path.insert(0, sys.argv[1] + '/markdown-plan/python/src')
     from mdplan.parse import parse_tree
     from mdplan.count import count_all_tasks, count_remaining_tasks
 
-    with open('$file') as f:
+    with open(sys.argv[2]) as f:
         text = f.read()
 
     try:
@@ -49,9 +50,11 @@ plan-validate target='':
 
     print(f'OK: {done}/{total} tasks done ({remaining} remaining)')
     PYEOF
-        ) 2>&1 || true
+        ) || status=$?
         echo "  $file: $result"
-        if [[ "$result" == PARSE* ]] || [[ "$result" == UNRESOLVED* ]]; then
+        # Any failure counts, not only the two the script reports itself: a
+        # parser that cannot be imported is a plan nobody checked (#686).
+        if [[ $status -ne 0 ]]; then
             ERRORS=$((ERRORS + 1))
         fi
     }
