@@ -869,7 +869,7 @@ vulnerabilities group='vauchi':
 # View issue details; extra flags go to glab (e.g. --comments)
 [no-cd]
 [script]
-issue-view id repo='' *flags:
+issue-view id repo='' *flags='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
