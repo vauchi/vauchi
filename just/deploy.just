@@ -377,6 +377,25 @@ deploy-latest service:
         exit 1
     fi
 
+    # Any pipeline still building this SHA re-pushes :<sha> when it ends,
+    # and the job minted now would then refuse its pinned digest (private#753).
+    if ! SHA_PIPELINES=$(glab api "projects/vauchi%2F${REPO}/pipelines?sha=${SHA}&ref=main&per_page=100" 2>/dev/null); then
+        echo "ERROR: glab could not list $REPO pipelines for ${SHA:0:8} (${SHA_PIPELINES:-no response})." >&2
+        exit 1
+    fi
+    UNFINISHED=$(jq -r 'if type == "array" then .[] else error("not a list") end
+        | select(.status | IN("created", "waiting_for_resource", "preparing", "pending", "running", "scheduled"))
+        | "  \(.status): \(.web_url)"' <<<"$SHA_PIPELINES") || {
+        echo "ERROR: glab could not list $REPO pipelines for ${SHA:0:8} (${SHA_PIPELINES})." >&2
+        exit 1
+    }
+    if [[ -n "$UNFINISHED" ]]; then
+        echo "ERROR: ${SHA:0:8} is still building; it will re-push :${SHA:0:8} and the deploy would be refused:" >&2
+        echo "$UNFINISHED" >&2
+        echo "       Wait for it to finish, then rerun." >&2
+        exit 1
+    fi
+
     RID=$(glab api "projects/vauchi%2F${REPO}/registry/repositories" 2>/dev/null | jq -r --arg p "vauchi/${IMAGE}" '.[] | select(.path==$p) | .id' | head -1 || true)
     if [[ -z "$RID" ]]; then
         echo "ERROR: no registry repository found for vauchi/$IMAGE." >&2
