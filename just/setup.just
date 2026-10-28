@@ -23,6 +23,9 @@ check-prerequisites:
 [group('setup')]
 setup: check-prerequisites clone-repos && install-hooks install-mdplan setup-path-overrides
     mkdir -p tmp cache
+    # themes/generated/ is gitignored; without it core bundles an empty
+    # theme catalogue (private#879).
+    python3 themes/scripts/generate.py >/dev/null
     @echo "Workspace ready! Run: just check"
 
 # Sync shared infrastructure and hooks before a work session
@@ -173,6 +176,33 @@ session-init:
             | sed 's/^/  /'
     else
         echo "  (path-overrides.sh missing — scripts/ out of date?)"
+    fi
+
+    # ── Content checkouts ──
+    # Core bundles en.json and themes.json from these at build time and
+    # falls back silently when they are missing, so an absent or stale copy
+    # shows up only as content assertions failing deep in the test suite.
+    # themes/generated/ is gitignored and was never regenerated after setup:
+    # one workspace built against a month-old themes.json (private#879).
+    echo ""
+    echo "── content checkouts ──"
+    for content_repo in locales themes; do
+        if [[ ! -d "$content_repo/.git" ]]; then
+            echo "  WARNING: $content_repo/ missing → git clone git@gitlab.com:vauchi/$content_repo.git"
+            WARN=1
+            continue
+        fi
+        behind=$(git -C "$content_repo" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
+        if [[ "$behind" -gt 0 ]]; then
+            echo "  WARNING: $content_repo is $behind commit(s) behind origin/main → git -C $content_repo pull --ff-only"
+            WARN=1
+        fi
+    done
+    if [[ -f themes/scripts/generate.py ]] && python3 themes/scripts/generate.py >/dev/null 2>&1; then
+        echo "  themes/generated/ regenerated"
+    else
+        echo "  WARNING: themes/generated/themes.json not generated → python3 themes/scripts/generate.py"
+        WARN=1
     fi
 
     # ── Deployed-service drift ──
