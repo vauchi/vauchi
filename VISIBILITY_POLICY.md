@@ -11,14 +11,17 @@ This document defines what content is public vs private in the Vauchi project.
 
 ## Never Commit Secrets
 
-**Passwords, tokens, API keys, and credentials must NEVER be committed to git** - not even in `_private/`. Use:
+**Passwords, tokens, API keys, and credentials must NEVER be committed to git**
+
+- not even in `_private/`. Use:
 
 - Environment variables
 - `.env` files (gitignored)
 - Secret management tools (e.g., `pass`, 1Password CLI)
 - CI/CD secret variables
 
-If you accidentally commit a secret, consider it compromised and rotate it immediately.
+If you accidentally commit a secret, consider it compromised and rotate it
+immediately.
 
 ## Public Content (Main Repo)
 
@@ -69,6 +72,7 @@ Content should be in `_private/` if it contains:
 ### Pre-commit Hook
 
 The `scripts/hooks/check-sensitive.sh` hook scans for:
+
 - Public IP addresses
 - Token patterns (`glpat-*`, `ghp_*`, `sk-*`)
 - Private key headers
@@ -76,11 +80,13 @@ The `scripts/hooks/check-sensitive.sh` hook scans for:
 
 ### CI Validation
 
-The `.gitlab-ci.yml` includes a job that validates no sensitive patterns exist in public directories.
+The `.gitlab-ci.yml` includes a job that validates no sensitive patterns exist in public
+directories.
 
 ### If Flagged
 
 If the hook flags your commit:
+
 1. Review the flagged content
 2. If truly sensitive → move to `_private/`
 3. If false positive → add to `.sensitive-ignore`
@@ -101,5 +107,6 @@ If the hook flags your commit:
 ## Questions?
 
 When in doubt, ask: "Would I be comfortable if this appeared on Hacker News?"
+
 - Yes → public
 - No → `_private/`
