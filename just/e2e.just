@@ -29,7 +29,7 @@ e2e-build:
 # Run E2E test(s) - use 'all' to run everything
 [group('e2e')]
 [script]
-e2e-run name: build e2e-build
+e2e-run name: e2e-build
     if [[ "{{name}}" == "all" ]]; then
         cd e2e && cargo test -- --include-ignored --nocapture
     else
