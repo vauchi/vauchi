@@ -23,7 +23,7 @@ export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo"
+public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs spec locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo"
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
