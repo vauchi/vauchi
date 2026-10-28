@@ -72,6 +72,21 @@ class LedgerRecipeTests(unittest.TestCase):
         self.assertEqual(fields[5], "`unverified-claim`")
         self.assertEqual(fields[6], "gate hid clippy")
 
+    def test_a_note_is_recorded_as_typed_and_never_run(self) -> None:
+        """private#679: the note was pasted into the script source, so a
+        backticked word ran as a command and a quote ended the string."""
+        note = ["`touch", "ran-backticks`", "$(touch", "ran-subshell)", 'say "hi"']
+
+        result = run_ledger(self.workspace, VALID + note)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        fields = [f.strip() for f in self._entries()[0].lstrip("- ").split("|")]
+        self.assertEqual(fields[6], " ".join(note))
+        self.assertFalse((self.workspace / "ran-backticks`").exists())
+        self.assertFalse((self.workspace / "ran-subshell)").exists())
+        self.assertEqual(sorted(p.name for p in self.workspace.iterdir()),
+                         ["_private", "just", "justfile"])
+
     def test_rejects_an_unknown_defect_class(self) -> None:
         result = run_ledger(self.workspace, VALID[:4] + ["misc", "note"])
         self.assertNotEqual(result.returncode, 0)
