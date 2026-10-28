@@ -958,22 +958,28 @@ session-end:
 #   just ledger vet 5-30m retry mechanical exemption resync flapped
 [group('setup')]
 [script]
+[positional-arguments]
 ledger area bucket kind outcome defect_class *note:
     set -euo pipefail
+    # Arguments arrive as "$@", never pasted into this source: a note with
+    # backticks or a quote ran as shell or ended the string (#679).
+    AREA="$1" BUCKET="$2" KIND="$3" OUTCOME="$4" DEFECT_CLASS="$5"
+    shift 5
+    NOTE="$*"
     LEDGER="_private/docs/intervention-ledger.md"
-    case "{{ area }}" in fanout|vet|gate|infra|handback|other) ;; *)
+    case "$AREA" in fanout|vet|gate|infra|handback|other) ;; *)
         echo "area must be: fanout|vet|gate|infra|handback|other"; exit 1 ;; esac
-    case "{{ bucket }}" in lt5m|5-30m|gt30m) ;; *)
+    case "$BUCKET" in lt5m|5-30m|gt30m) ;; *)
         echo "bucket must be: lt5m|5-30m|gt30m"; exit 1 ;; esac
-    case "{{ kind }}" in authoring|retry|review|wait) ;; *)
+    case "$KIND" in authoring|retry|review|wait) ;; *)
         echo "kind must be: authoring|retry|review|wait"; exit 1 ;; esac
-    case "{{ outcome }}" in prevented-defect|mechanical|false-positive) ;; *)
+    case "$OUTCOME" in prevented-defect|mechanical|false-positive) ;; *)
         echo "outcome must be: prevented-defect|mechanical|false-positive"
         exit 1 ;; esac
     # Recorded at capture time on purpose. The first four-week window was
     # classified afterwards by reading truncated free-text notes, and that
     # guess carried the direction-0 conclusion with nobody checking it.
-    case "{{ defect_class }}" in \
+    case "$DEFECT_CLASS" in \
         unverified-claim|stale-state|consequence|style) ;; *)
         echo "defect-class must be: unverified-claim|stale-state|consequence|style"
         exit 1 ;; esac
@@ -981,9 +987,8 @@ ledger area bucket kind outcome defect_class *note:
         echo "missing $LEDGER — merge the _private ledger MR first"
         exit 1
     fi
-    LINE="- $(date +%F) | {{ area }} | {{ bucket }} | {{ kind }}"
-    LINE="$LINE | {{ outcome }} | \`{{ defect_class }}\`"
-    NOTE="{{ note }}"
+    LINE="- $(date +%F) | $AREA | $BUCKET | $KIND"
+    LINE="$LINE | $OUTCOME | \`$DEFECT_CLASS\`"
     if [[ -n "$NOTE" ]]; then
         LINE="$LINE | $NOTE"
     fi
@@ -992,7 +997,7 @@ ledger area bucket kind outcome defect_class *note:
     # The custom rule caps a line at 80 but exempts backtick spans entirely,
     # which is why defect-class is emitted as code: it costs the note budget
     # nothing. Measure the line the way the rule does, with the span removed.
-    MEASURED="${LINE/\`{{ defect_class }}\`/}"
+    MEASURED="${LINE/\`$DEFECT_CLASS\`/}"
     if [[ "${#MEASURED}" -gt 80 ]]; then
         echo "entry is ${#MEASURED} chars excluding backticks (>80) — shorten the note"
         exit 1
