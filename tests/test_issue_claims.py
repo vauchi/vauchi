@@ -409,6 +409,30 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("issue/7", self.load()["branches"])
 
+    # #713: after a rebase merge the claim branch merged main to stay alive
+    # without a force push. That moved the merge base past main's copies of
+    # its commits, so git cherry never compared against them.
+    def test_release_treats_a_branch_that_merged_main_after_its_rebase_merge_as_merged(self) -> None:
+        private = self.private_with_issue_branch(7, ["a\n", "a\nb\n"])
+        git = ["git", "-C", str(private), "-c", "user.name=t", "-c", "user.email=t@e"]
+        (private / "other.txt").write_text("other work\n")
+        subprocess.run([*git, "add", "other.txt"], check=True)
+        subprocess.run([*git, "commit", "--quiet", "-m", "other work on main"], check=True)
+        subprocess.run([*git, "cherry-pick", "main..issue/7"], check=True, capture_output=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
+        subprocess.run([*git, "switch", "--quiet", "issue/7"], check=True)
+        subprocess.run([*git, "merge", "--quiet", "--no-edit", "main"], check=True, capture_output=True)
+        subprocess.run([*git, "push", "--quiet", "origin", "issue/7"], check=True)
+        cherry = subprocess.run([*git, "cherry", "origin/main", "origin/issue/7"], check=True,
+                                capture_output=True, text=True).stdout
+        self.assertEqual(cherry.count("+"), 2, "the arrangement must reproduce #713")
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.load()["branches"])
+
     def test_release_refuses_a_branch_whose_work_main_holds_only_in_part(self) -> None:
         private = self.private_with_issue_branch(7, ["a\n", "a\nb\n"])
         self.land_on_main(private, "a\n")
