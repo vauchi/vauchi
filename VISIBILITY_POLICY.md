@@ -44,6 +44,17 @@ If you accidentally commit a secret, consider it compromised and rotate it immed
 | `docs/decisions/` | ADR decision records | Architecture decisions |
 | `docs/problems/` | Problem records | Internal problem tracking |
 
+## Referring to Private Material from Public Text
+
+A public document may name a private issue by its tracker number
+(`vauchi/private#N`): it is an opaque reference the maintainers can
+follow and reveals nothing but that work is tracked. It may **not**
+name a private problem record, design or plan by its dated slug or
+path (`2026-10-24-some-record`, `docs/problems/...`): that is a dead
+reference for every outside reader. The VDC02 CI check
+(`check:no-private-refs`) fails a public repo on both `_private/` paths
+and backticked dated slugs.
+
 ## What Makes Something Private?
 
 Content should be in `_private/` if it contains:
