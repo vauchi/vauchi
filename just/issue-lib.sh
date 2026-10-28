@@ -80,7 +80,7 @@ issue_claim() {
 }
 
 issue_release() {
-    local number="$1" tag body holder ahead siblings repository
+    local number="$1" tag body holder ahead siblings repository gone=""
     tag=$(slot_claim_tag .)
     body=$(_issue_holder_note "$number" | jq -r '.body // ""')
     holder=$(printf '%s' "$body" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
@@ -94,6 +94,12 @@ issue_release() {
         "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
         "+refs/heads/main:refs/remotes/origin/main" 2>/dev/null; then
         ahead=$(git -C _private cherry origin/main "origin/issue/$number" | grep -c '^+' || true)
+        if [ "$ahead" -gt 0 ] && _issue_branch_adds_nothing _private "origin/issue/$number"; then
+            ahead=0
+        fi
+    elif ! glab api "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null 2>&1; then
+        gone=1
+        ahead=0
     else
         ahead=$(glab api "projects/$ISSUE_REPO/repository/compare?from=main&to=issue%2F$number" \
             | jq '.commits | length')
@@ -109,7 +115,11 @@ issue_release() {
         done
         return 1
     fi
-    glab api -X DELETE "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null
+    if [ -n "$gone" ]; then
+        echo "  issue/$number is already gone — noting the release"
+    else
+        glab api -X DELETE "projects/$ISSUE_REPO/repository/branches/issue%2F$number" >/dev/null
+    fi
     glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" -f "body=release: $tag" >/dev/null
     # Delete only the commit the scan judged merged: a push since then makes
     # the lease fail and the branch, and its open MR, survive (#444).
@@ -124,6 +134,15 @@ issue_release() {
     echo "✓ Released #$number"
 }
 
+# Main holds the branch's work when merging it in would change nothing, even
+# under other commits that git cherry cannot match: a squash, or a replacement
+# MR for a branch GitLab could not rebase (#614, #867).
+_issue_branch_adds_nothing() {
+    local repository="$1" branch="$2" merged
+    merged=$(git -C "$repository" merge-tree --write-tree origin/main "$branch" 2>/dev/null) || return 1
+    [ "$merged" = "$(git -C "$repository" rev-parse 'origin/main^{tree}')" ]
+}
+
 # "merged <dir> <sha>" / "unmerged <dir>" for every other repo of the slot whose
 # remote still has issue/<N>; the vauchi/private lock is handled via the API.
 _issue_sibling_branches() {
@@ -134,7 +153,8 @@ _issue_sibling_branches() {
         git -C "$repository" fetch -q origin \
             "+refs/heads/issue/$number:refs/remotes/origin/issue/$number" \
             "+refs/heads/main:refs/remotes/origin/main" || continue
-        if ! git -C "$repository" cherry origin/main "origin/issue/$number" | grep -q '^+'; then
+        if ! git -C "$repository" cherry origin/main "origin/issue/$number" | grep -q '^+' \
+            || _issue_branch_adds_nothing "$repository" "origin/issue/$number"; then
             echo "merged $repository $(git -C "$repository" rev-parse "origin/issue/$number")"
         else
             echo "unmerged $repository"
