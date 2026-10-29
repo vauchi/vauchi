@@ -101,6 +101,14 @@ class TestNameRecipeTest(unittest.TestCase):
         self.assertIn("--no-fail-fast", calls)
         self.assertIn("some_pattern", calls)
 
+    def test_library_scope_selects_the_library_target(self) -> None:
+        result = self.run_recipe(0, "vauchi-core", "lib")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.calls.read_text()
+        self.assertIn("-p vauchi-core", calls)
+        self.assertIn("--lib", calls)
+        self.assertNotIn("--test lib", calls)
+
     def test_scoped_failure_still_fails_the_recipe(self) -> None:
         result = self.run_recipe(101, "vauchi-core", "it")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)

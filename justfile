@@ -727,7 +727,11 @@ test-name pattern repo='core' package='' target='':
                 # matching tests in the others (#590).
                 scope=()
                 [[ -z "{{ package }}" ]] || scope+=(-p "{{ package }}")
-                [[ -z "{{ target }}" ]] || scope+=(--test "{{ target }}")
+                case "{{ target }}" in
+                    '') ;;
+                    lib) scope+=(--lib) ;;
+                    *) scope+=(--test "{{ target }}") ;;
+                esac
                 echo "── $r: cargo test --no-fail-fast ${scope[*]} {{ pattern }} $tfeats ──"
                 (cd "$dir" && cargo test --no-fail-fast "${scope[@]}" $tfeats "{{ pattern }}" 2>&1) || failed="$failed $r"
                 ;;
