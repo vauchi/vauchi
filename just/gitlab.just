@@ -1272,9 +1272,11 @@ _session_id := `printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(ho
 # Claim a work item (atomic). Fails if already claimed by another session.
 # Idempotent: re-claiming your own item succeeds silently.
 # Usage: just gitlab claim "problem-triage"
+#        just gitlab claim 764 "<reason>"  (maintainer-authorized takeover of an active claim)
 [no-cd]
+[positional-arguments]
 [script]
-claim slug:
+claim slug reason='':
     just gitlab _check-auth
     set -euo pipefail
     SLUG="{{ slug }}"
@@ -1285,7 +1287,8 @@ claim slug:
         *)
             source "{{ justfile_directory() }}/just/slot-lib.sh"
             source "{{ justfile_directory() }}/just/issue-lib.sh"
-            ISSUE_CLAIM_LOG="{{ _claim_log }}" issue_claim "${SLUG#\#}"
+            # The reason arrives as "$2", never pasted into this source (#679).
+            ISSUE_CLAIM_LOG="{{ _claim_log }}" issue_claim "${SLUG#\#}" "${2:-}"
             exit $?
             ;;
     esac

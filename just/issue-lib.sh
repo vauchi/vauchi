@@ -39,8 +39,12 @@ _issue_log_refusal() {
     printf -- '- %s | #%s | %s | %sh\n' "$(date -u +%Y-%m-%d)" "$1" "$2" "$3" >> "$ISSUE_CLAIM_LOG"
 }
 
+# A non-blank reason is the maintainer's authorization to take over a claim
+# that is not yet stale, e.g. when the holder's session ended without
+# releasing it. It is recorded in the takeover note and the collision log.
 issue_claim() {
-    local number="$1" tag state note body holder branch_date age note_age
+    local number="$1" reason="${2:-}" tag state note body holder branch_date age note_age
+    reason=$(printf '%s' "$reason" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
     tag=$(slot_claim_tag .)
     state=$(glab api "projects/$ISSUE_REPO/issues/$number" 2>/dev/null | jq -r '.state // empty' || true)
     if [ "$state" != opened ]; then
@@ -74,7 +78,15 @@ issue_claim() {
         echo "✓ Took over stale #$number (idle ${age}h) — fetch issue/$number into this slot"
         return 0
     fi
+    if [ -n "$reason" ]; then
+        glab api -X POST "projects/$ISSUE_REPO/issues/$number/notes" \
+            -f "body=takeover: $tag (previous: $(slot_claim_owner "$body"), idle ${age}h, authorized by the maintainer: $reason)" >/dev/null
+        _issue_log_refusal "$number" authorized-takeover "$age"
+        echo "✓ Took over #$number (idle ${age}h) on the maintainer's authorization — fetch issue/$number into this slot"
+        return 0
+    fi
     echo "BLOCKED: #$number is held by $(slot_claim_owner "$body") (active ${age}h ago)"
+    echo "  The maintainer can authorize a takeover: just gitlab claim $number \"<reason>\""
     _issue_log_refusal "$number" held-by-other "$age"
     return 1
 }
