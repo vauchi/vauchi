@@ -207,6 +207,27 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("takeover: session:"))
 
+    def test_an_active_claim_is_taken_over_when_the_maintainer_authorizes_it(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_claim 7 'holder slot is free'", "kimi-b")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        note = self.load()["notes"]["7"][-1]["body"]
+        self.assertRegex(note, r"^takeover: session:[0-9a-f]{12} slot:")
+        self.assertIn("idle 0h, authorized by the maintainer: holder slot is free)", note)
+        self.assertIn("#7 | authorized-takeover",
+                      (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text())
+
+    def test_a_blank_reason_does_not_authorize_a_takeover(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_claim 7 '  '", "kimi-b")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("BLOCKED", result.stdout)
+        self.assertFalse(self.load()["notes"]["7"][-1]["body"].startswith("takeover:"))
+
     # vauchi/private#415: session-end read the legacy work board and reported
     # "No active claims" while this session still held issues.
     def test_session_claims_lists_only_this_sessions_live_claims(self) -> None:
