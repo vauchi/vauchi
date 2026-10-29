@@ -710,7 +710,7 @@ test-file name repo='core':
 [group('extended')]
 [no-cd]
 [script]
-test-name pattern repo='core':
+test-name pattern repo='core' package='' target='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     repos=$(resolve_repo "{{ repo }}" "test")
@@ -725,8 +725,11 @@ test-name pattern repo='core':
             rust)
                 # --no-fail-fast: a failing test binary must not hide the
                 # matching tests in the others (#590).
-                echo "── $r: cargo test --no-fail-fast {{ pattern }} $tfeats ──"
-                (cd "$dir" && cargo test --no-fail-fast $tfeats "{{ pattern }}" 2>&1) || failed="$failed $r"
+                scope=()
+                [[ -z "{{ package }}" ]] || scope+=(-p "{{ package }}")
+                [[ -z "{{ target }}" ]] || scope+=(--test "{{ target }}")
+                echo "── $r: cargo test --no-fail-fast ${scope[*]} {{ pattern }} $tfeats ──"
+                (cd "$dir" && cargo test --no-fail-fast "${scope[@]}" $tfeats "{{ pattern }}" 2>&1) || failed="$failed $r"
                 ;;
             npm)
                 echo "── $r: npx vitest -t '{{ pattern }}' ──"

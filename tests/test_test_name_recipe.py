@@ -62,14 +62,14 @@ class TestNameRecipeTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_recipe(self, cargo_exit: int) -> subprocess.CompletedProcess[str]:
+    def run_recipe(self, cargo_exit: int, *scope: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env["PATH"] = f"{self.bin}:{env['PATH']}"
         env["CARGO_CALLS"] = str(self.calls)
         env["CARGO_EXIT"] = str(cargo_exit)
         env["JUST_UNSTABLE"] = "1"
         return subprocess.run(
-            ["just", "--justfile", str(self.ws / "justfile"), "test-name", "some_pattern", "core"],
+            ["just", "--justfile", str(self.ws / "justfile"), "test-name", "some_pattern", "core", *scope],
             cwd=self.ws,
             env=env,
             capture_output=True,
@@ -90,6 +90,21 @@ class TestNameRecipeTest(unittest.TestCase):
         calls = self.calls.read_text()
         self.assertIn("--no-fail-fast", calls)
         self.assertIn("some_pattern", calls)
+
+
+    def test_rust_scope_selects_one_package_and_test_target(self) -> None:
+        result = self.run_recipe(0, "vauchi-core", "it")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.calls.read_text()
+        self.assertIn("-p vauchi-core", calls)
+        self.assertIn("--test it", calls)
+        self.assertIn("--no-fail-fast", calls)
+        self.assertIn("some_pattern", calls)
+
+    def test_scoped_failure_still_fails_the_recipe(self) -> None:
+        result = self.run_recipe(101, "vauchi-core", "it")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("test-name: core failed", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
