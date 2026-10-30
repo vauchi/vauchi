@@ -130,5 +130,13 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertEqual(self.requests(), [])
 
 
+    def test_view_can_read_comments_without_publishing(self) -> None:
+        result = subprocess.run(["just", "gitlab", "mr-view", "18", "core", "true"],
+                                cwd=self.ws, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.requests(), [["mr", "view", "18", "-R", "vauchi/core", "--comments"]])
+        self.assertFalse(self.hook_log.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

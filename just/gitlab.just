@@ -87,13 +87,17 @@ mr-list repo='':
 # View merge request details
 [no-cd]
 [script]
-mr-view id repo='':
+mr-view id repo='' comments='false':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
-    glab mr view "{{id}}" -R "$p"
+    view_args=()
+    if [[ {{ quote(comments) }} == true ]]; then
+        view_args+=(--comments)
+    fi
+    glab mr view "{{id}}" -R "$p" "${view_args[@]}"
 
 # Re-sync an existing MR's title + description to the current commits.
 # Usage: just gitlab mr-update [repo] [title]
