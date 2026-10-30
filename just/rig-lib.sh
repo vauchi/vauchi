@@ -111,6 +111,12 @@ rig_lock_state() {
     fi
 }
 
+# BSD date takes an epoch with -r; GNU and BusyBox read -r as a file, so
+# they fall through to -d @epoch.
+_rig_format_epoch() {
+    date -r "$1" '+%Y-%m-%d %H:%M' 2>/dev/null || date -d "@$1" '+%Y-%m-%d %H:%M' # portable-shell-ok: BSD first, GNU fallback
+}
+
 rig_describe() {
     local lock since note
     lock=$(_rig_lock "$1")
@@ -119,7 +125,7 @@ rig_describe() {
     printf '%s session:%s (slot %s, pid %s, since %s)' \
         "$(_rig_field harness "$lock")" "$(_rig_field session "$lock")" \
         "$(_rig_field slot "$lock")" "$(_rig_field pid "$lock")" \
-        "$(date -r "${since:-0}" '+%Y-%m-%d %H:%M' 2>/dev/null || date -d "@${since:-0}" '+%Y-%m-%d %H:%M')"
+        "$(_rig_format_epoch "${since:-0}")"
     [[ -n "$note" ]] && printf ' — %s' "$note"
     return 0
 }
