@@ -1411,8 +1411,8 @@ claims:
         exit 0
     fi
     source "{{ justfile_directory() }}/just/slot-lib.sh"
-    printf "%-25s %-24s %s\n" "ITEM" "SESSION @SLOT" "AGE"
-    printf "%-25s %-24s %s\n" "─────────────────────────" "────────────────────────" "───"
+    printf "%-25s %-32s %s\n" "ITEM" "SESSION @SLOT" "AGE"
+    printf "%-25s %-32s %s\n" "─────────────────────────" "────────────────────────────────" "───"
     printf '%s\n' "$CLAIMS" | jq -c '.[]' | while IFS= read -r b; do
         NAME=$(printf '%s\n' "$b" | jq -r '.name' | sed "s|^${PREFIX}||")
         MSG=$(printf '%s\n' "$b" | jq -r '.msg // ""')
@@ -1425,5 +1425,5 @@ claims:
         [[ "$AGE_H" -ge "$EXPIRY_H" ]] && STALE=" (STALE)"
         MARKER=""
         [[ "${OWNER:-}" == "$SESSION" ]] && MARKER=" (you)"
-        printf "%-25s %-24s %s\n" "$NAME" "$(slot_claim_owner "$MSG")${MARKER}" "${AGE_H}h${STALE}"
+        printf "%-25s %-32s %s\n" "$NAME" "$(slot_claim_owner "$MSG")${MARKER}" "${AGE_H}h${STALE}"
     done

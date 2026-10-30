@@ -199,7 +199,7 @@ rig_claim() {
         esac
         tmp=$(mktemp "$RIG_DIR/.$device.lock.XXXXXX")
         printf 'session=%s\nharness=%s\nslot=%s\npid=%s\nstarted=%s\nsince=%s\nnote=%s\n' \
-            "$(slot_session_id)" "$(slot_harness)" "$(slot_name "${RIG_SLOT_ROOT:-$(pwd -P)}")" \
+            "$(slot_session_id)" "$(slot_harness)" "$(slot_name "${RIG_SLOT_ROOT:-$(pwd -P)}" "$(slot_harness)")" \
             "$pid" "$started" "$(date +%s)" "$note" > "$tmp"
         if [[ "$state" == free ]]; then
             # ln refuses an existing target, so two sessions racing for a

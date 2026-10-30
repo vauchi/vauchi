@@ -15,12 +15,12 @@ from pathlib import Path
 WORKSPACE_ROOT = Path(sys.argv.pop(1)).resolve()
 
 
-HOST = subprocess.run(["hostname", "-s"], check=True, capture_output=True, text=True).stdout.strip()
-
-
 class SlotRecipeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.parent = Path(tempfile.mkdtemp())
+        self.host = subprocess.run(
+            ["hostname", "-s"], check=True, capture_output=True, text=True
+        ).stdout.strip()
         self.addCleanup(shutil.rmtree, self.parent)
         for name in ("vauchi", "vauchi-1", "vauchi-2"):
             self.make_slot(name)
@@ -67,8 +67,9 @@ class SlotRecipeTest(unittest.TestCase):
         rows = {}
         for line in output.splitlines():
             fields = line.split(None, 1)
-            if fields and fields[0].startswith("vauchi"):
-                rows[fields[0]] = fields[1] if len(fields) > 1 else ""
+            name = fields[0].split("/") if fields else []
+            if len(name) >= 2 and name[0] == self.host and name[1].startswith("vauchi"):
+                rows[name[1]] = fields[1] if len(fields) > 1 else ""
         return rows
 
     def test_status_lists_only_numbered_sibling_slots(self) -> None:
@@ -81,7 +82,17 @@ class SlotRecipeTest(unittest.TestCase):
         self.just("vauchi-1", "acquire", session="codex-a")
 
         self.assertTrue(self.status_rows("codex-a")["vauchi-1"].startswith("held by you (codex,"))
-        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith(f"held by {HOST}/vauchi-1/codex "))
+        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by codex"))
+
+    def test_slot_names_read_host_folder_and_the_holding_agent(self) -> None:
+        self.just("vauchi-1", "acquire", session="codex-a")
+
+        rows = self.just("vauchi", "status", session="kimi-b").stdout.splitlines()[1:]
+        names = [row.split(None, 1)[0] for row in rows]
+
+        self.assertEqual(
+            names, [f"{self.host}/vauchi", f"{self.host}/vauchi-1/codex", f"{self.host}/vauchi-2"]
+        )
 
     def test_a_second_session_is_refused_and_pointed_at_a_free_slot(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
@@ -91,8 +102,8 @@ class SlotRecipeTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("HELD", result.stdout)
-        self.assertIn("free: vauchi-2", result.stdout)
-        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith(f"held by {HOST}/vauchi-1/codex "))
+        self.assertIn(f"free: {self.host}/vauchi-2", result.stdout)
+        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by codex"))
 
     def test_a_stale_lock_is_taken_over(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
@@ -171,9 +182,12 @@ class SlotRecipeTest(unittest.TestCase):
             ["bash", "-c", script], env=environment, check=True, capture_output=True, text=True
         ).stdout.splitlines()
 
+        host = subprocess.run(
+            ["hostname", "-s"], check=True, capture_output=True, text=True
+        ).stdout.strip()
         # Slots are per machine and several harnesses share them; claims are
         # shared, so the stamp names the host, the slot and the agent.
-        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{HOST}/vauchi-1/codex$")
+        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{host}/vauchi-1/codex$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
     def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
@@ -235,7 +249,7 @@ class SlotRecipeTest(unittest.TestCase):
             check=True, capture_output=True, text=True,
         ).stdout
 
-        self.assertIn(f"Slot {HOST}/vauchi-2/codex held", output)
+        self.assertIn(f"Slot {self.host}/vauchi-2/codex held", output)
 
     def test_session_id_needs_no_shasum(self) -> None:
         # alpine:3.21 (CI) ships sha256sum but no shasum.

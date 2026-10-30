@@ -41,10 +41,13 @@ slot_harness() {
     esac
 }
 
-# Slots are per machine but claims and the rig are shared, so a slot is named
-# by its host too, and by the agent holding it.
+# "<host>/<folder>[/<agent>]": slots are per machine, so the host comes first;
+# the agent segment names the harness holding the slot, so a free slot has none.
 slot_name() {
-    printf '%s/%s/%s\n' "$(hostname -s)" "$(basename "$(cd "$1" && pwd -P)")" "${2:-$(slot_harness)}"
+    local root agent
+    root=$(cd "$1" && pwd -P)
+    agent=${2:-}
+    printf '%s/%s%s\n' "$(hostname -s)" "$(basename "$root")" "${agent:+/$agent}"
 }
 
 slot_siblings() {
@@ -84,7 +87,7 @@ slot_free_names() {
     local slot names=()
     while IFS= read -r slot; do
         case "$(slot_lock_state "$slot")" in
-            free* | stale*) names+=("$(basename "$slot")") ;;
+            free* | stale*) names+=("$(slot_name "$slot")") ;;
         esac
     done <<EOF
 $(slot_siblings "$1")
@@ -106,7 +109,7 @@ slot_acquire() {
     fi
     printf 'session=%s harness=%s seen=%s\n' "$(slot_session_id)" "$(slot_harness)" "$(date +%s)" \
         > "$root/$SLOT_LOCK_FILE"
-    echo "✓ Slot $(slot_name "$root") held by this session (session:$(slot_session_id))"
+    echo "✓ Slot $(slot_name "$root" "$(slot_harness)") held by this session (session:$(slot_session_id))"
 }
 
 # Heartbeat: re-stamps seen= on a lock this session holds, so a live session
@@ -127,9 +130,9 @@ slot_release() {
     read -r -a state <<< "$(slot_lock_state "$root")"
     if [[ "${state[0]}" == mine ]]; then
         rm -f "$root/$SLOT_LOCK_FILE"
-        echo "✓ Released slot $(slot_name "$root")"
+        echo "✓ Released slot $(slot_name "$root" "$(slot_harness)")"
     else
-        echo "  Slot $(basename "$root") is not held by this session — left as is"
+        echo "  Slot $(slot_name "$root") is not held by this session — left as is"
     fi
 }
 
@@ -142,15 +145,15 @@ slot_repositories() {
 }
 
 slot_status() {
-    local slot state lock off dirty repository branch
-    printf '%-12s %s\n' "SLOT" "LOCK / REPOS"
+    local slot state lock agent off dirty repository branch
+    printf '%-28s %s\n' "SLOT" "LOCK / REPOS"
     while IFS= read -r slot; do
         read -r -a state <<< "$(slot_lock_state "$slot")"
         case "${state[0]}" in
-            free) lock="free" ;;
-            mine) lock="held by you (${state[1]}, ${state[2]}h)" ;;
-            held) lock="held by $(slot_name "$slot" "${state[2]}") session:${state[1]} (${state[3]}h)" ;;
-            stale) lock="free (stale lock: $(slot_name "$slot" "${state[2]}") session:${state[1]}, ${state[3]}h)" ;;
+            free) lock="free"; agent="" ;;
+            mine) lock="held by you (${state[1]}, ${state[2]}h)"; agent=${state[1]} ;;
+            held) lock="held by ${state[2]} session:${state[1]} (${state[3]}h)"; agent=${state[2]} ;;
+            stale) lock="free (stale lock: ${state[2]} session:${state[1]}, ${state[3]}h)"; agent="" ;;
         esac
         off=0
         dirty=0
@@ -161,15 +164,16 @@ slot_status() {
         done <<EOF
 $(slot_repositories "$slot")
 EOF
-        printf '%-12s %s — %d off main, %d dirty\n' "$(basename "$slot")" "$lock" "$off" "$dirty"
+        printf '%-28s %s — %d off main, %d dirty\n' "$(slot_name "$slot" "$agent")" "$lock" "$off" "$dirty"
     done <<EOF
 $(slot_siblings "$1")
 EOF
 }
 
-# Claim stamp shared by `just gitlab claim` and the claim listings.
+# Claim stamp shared by `just gitlab claim` and the claim listings. Slots are
+# per machine but claims are shared, so the slot is qualified by its host.
 slot_claim_tag() {
-    printf 'session:%s slot:%s\n' "$(slot_session_id)" "$(slot_name "$1")"
+    printf 'session:%s slot:%s\n' "$(slot_session_id)" "$(slot_name "$1" "$(slot_harness)")"
 }
 
 # "<session> @<slot>" from a claim commit message; slot omitted on old claims.
