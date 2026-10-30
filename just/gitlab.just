@@ -5,6 +5,9 @@
 # GitLab operations: MRs, pipelines, issues
 # Usage: just gitlab <recipe>
 
+set shell := ["bash", "-cu"]
+set script-interpreter := ["bash", "-eu"]
+
 # Metrics repo groups (non-overlapping — each repo in exactly one group)
 metrics_coverage_repos := "core cli tui relay ohttp-relay"
 metrics_binary_drift_repos := "linux-gtk"
@@ -140,7 +143,7 @@ mr-update repo='' title='':
     mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
         | grep -v '^Co-Authored-By:' \
         | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
-        | cat -s)
+        | awk 'length($0) > 0 { blank=0; print; next } blank == 0 { print; blank=1 }')
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
@@ -223,7 +226,7 @@ mr-create repo='' title='' description_file='':
     mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
         | grep -v '^Co-Authored-By:' \
         | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
-        | cat -s)
+        | awk 'length($0) > 0 { blank=0; print; next } blank == 0 { print; blank=1 }')
     # Append single co-author credit if any commit had one
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)

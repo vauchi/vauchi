@@ -99,6 +99,8 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertEqual(len(requests), 1)
         self.assertEqual(requests[0][:2], ["mr", "create"])
         self.assertIn("--draft", requests[0])
+        self.assertEqual(requests[0][requests[0].index("--description") + 1],
+                         "- fix: recipe contract")
 
     def test_a_rejected_push_does_not_create_an_mr_or_retry_forcefully(self) -> None:
         self.refuse.touch()
