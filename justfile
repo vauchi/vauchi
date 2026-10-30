@@ -717,6 +717,12 @@ test-name pattern repo='core' package='' target='':
     # Every repo runs even after one fails, and the recipe still exits
     # non-zero; `|| true` here used to report failing tests as a pass (#590).
     failed=""
+    # cargo exits 0 when the filter matches nothing, so a misspelled or
+    # renamed test passed as green (#996); count what actually ran.
+    cargo_ran=""
+    ran=0
+    log=$(mktemp)
+    trap 'rm -f "$log"' EXIT
     for r in $repos; do
         dir=$(repo_dir "$r")
         tc=$(repo_toolchain "$r")
@@ -733,7 +739,9 @@ test-name pattern repo='core' package='' target='':
                     *) scope+=(--test "{{ target }}") ;;
                 esac
                 echo "── $r: cargo test --no-fail-fast ${scope[*]} {{ pattern }} $tfeats ──"
-                (cd "$dir" && cargo test --no-fail-fast "${scope[@]}" $tfeats "{{ pattern }}" 2>&1) || failed="$failed $r"
+                (cd "$dir" && cargo test --no-fail-fast "${scope[@]}" $tfeats "{{ pattern }}" 2>&1) | tee "$log" || failed="$failed $r"
+                cargo_ran=1
+                ran=$((ran + $(sed -nE 's/^running ([0-9]+) tests?$/\1/p' "$log" | awk '{ n += $1 } END { print n + 0 }')))
                 ;;
             npm)
                 echo "── $r: npx vitest -t '{{ pattern }}' ──"
@@ -751,6 +759,10 @@ test-name pattern repo='core' package='' target='':
     for r in $failed; do
         echo "test-name: $r failed" >&2
     done
+    if [[ -n "$cargo_ran" && "$ran" -eq 0 ]]; then
+        echo "test-name: no test matched '{{ pattern }}'" >&2
+        exit 1
+    fi
     [[ -z "$failed" ]]
 
 # Build release binaries
