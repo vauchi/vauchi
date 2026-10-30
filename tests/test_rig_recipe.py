@@ -85,7 +85,7 @@ class RigRecipeTest(unittest.TestCase):
             line = self.status_line(device)
             self.assertIn("held by", line)
             self.assertIn(f"pid {a.pid}", line)
-            self.assertIn("slot vauchi,", line, "the workspace slot, not the module's directory")
+            self.assertRegex(line, r"slot [^ /]+/vauchi/other,", "the workspace slot, not the module's directory")
             self.assertIn("Hover runs #9", line)
         self.assertIn("free", self.status_line("s7"))
 

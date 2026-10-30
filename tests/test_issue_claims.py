@@ -167,7 +167,7 @@ class IssueClaimTest(unittest.TestCase):
         state = self.load()
         self.assertIn("issue/7", state["branches"])
         self.assertRegex(state["notes"]["7"][0]["body"],
-                         r"^claim: session:[0-9a-f]{12} slot:[^ ]+/vauchi-1$")
+                         r"^claim: session:[0-9a-f]{12} slot:[^ ]+/vauchi-1/codex$")
 
     def test_a_second_session_is_blocked_and_the_refusal_logged(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
@@ -588,7 +588,7 @@ class IssueClaimTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         note = self.load()["notes"]["7"][-1]
-        self.assertRegex(note["body"], r"^Merged in !12\.\n\n— session:[0-9a-f]{12} slot:[^ ]+/vauchi-1$")
+        self.assertRegex(note["body"], r"^Merged in !12\.\n\n— session:[0-9a-f]{12} slot:[^ ]+/vauchi-1/codex$")
         self.assertIn(f"note {note['id']}", result.stdout)
 
     def test_comment_refuses_an_empty_body(self) -> None:

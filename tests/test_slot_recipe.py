@@ -15,6 +15,9 @@ from pathlib import Path
 WORKSPACE_ROOT = Path(sys.argv.pop(1)).resolve()
 
 
+HOST = subprocess.run(["hostname", "-s"], check=True, capture_output=True, text=True).stdout.strip()
+
+
 class SlotRecipeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.parent = Path(tempfile.mkdtemp())
@@ -78,7 +81,7 @@ class SlotRecipeTest(unittest.TestCase):
         self.just("vauchi-1", "acquire", session="codex-a")
 
         self.assertTrue(self.status_rows("codex-a")["vauchi-1"].startswith("held by you (codex,"))
-        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by codex"))
+        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith(f"held by {HOST}/vauchi-1/codex "))
 
     def test_a_second_session_is_refused_and_pointed_at_a_free_slot(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
@@ -89,7 +92,7 @@ class SlotRecipeTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("HELD", result.stdout)
         self.assertIn("free: vauchi-2", result.stdout)
-        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith("held by codex"))
+        self.assertTrue(self.status_rows("kimi-b")["vauchi-1"].startswith(f"held by {HOST}/vauchi-1/codex "))
 
     def test_a_stale_lock_is_taken_over(self) -> None:
         self.just("vauchi-1", "acquire", session="codex-a")
@@ -168,11 +171,8 @@ class SlotRecipeTest(unittest.TestCase):
             ["bash", "-c", script], env=environment, check=True, capture_output=True, text=True
         ).stdout.splitlines()
 
-        host = subprocess.run(
-            ["hostname", "-s"], check=True, capture_output=True, text=True
-        ).stdout.strip()
         # Slots are per machine; claims are shared, so the stamp names the host.
-        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{host}/vauchi-1$")
+        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{HOST}/vauchi-1/codex$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
     def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
@@ -234,7 +234,7 @@ class SlotRecipeTest(unittest.TestCase):
             check=True, capture_output=True, text=True,
         ).stdout
 
-        self.assertIn("Slot vauchi-2 held", output)
+        self.assertIn(f"Slot {HOST}/vauchi-2/codex held", output)
 
     def test_session_id_needs_no_shasum(self) -> None:
         # alpine:3.21 (CI) ships sha256sum but no shasum.
