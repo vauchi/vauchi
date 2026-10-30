@@ -126,8 +126,7 @@ test:release-gates:
           - just/runners.just
           - tests/test_backup_recipe_authority.py
           - tests/test_check_prerequisites.py
-          - tests/test_deploy_check_recipe.py
-          - tests/test_deploy_latest_recipe.py
+          - tests/test_deploy_*_recipe.py
           - tests/test_runners_health_recipe.py
           - tests/test_claude_layout.py
           - tests/test_codex_layout.py
