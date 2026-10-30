@@ -164,7 +164,8 @@ EOF
 # Claim stamp shared by `just gitlab claim` and the claim listings. Slots are
 # per machine but claims are shared, so the slot is qualified by its host.
 slot_claim_tag() {
-    printf 'session:%s slot:%s/%s\n' "$(slot_session_id)" "$(hostname -s)" "$(basename "$(cd "$1" && pwd -P)")"
+    printf 'session:%s slot:%s/%s/%s\n' "$(slot_session_id)" "$(hostname -s)" \
+        "$(basename "$(cd "$1" && pwd -P)")" "$(slot_harness)"
 }
 
 # "<session> @<slot>" from a claim commit message; slot omitted on old claims.
