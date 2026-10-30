@@ -169,7 +169,7 @@ mr-update repo='' title='':
     just gitlab _autolink "{{repo}}"
 
 # Create merge request from current branch
-# Usage: just gitlab mr-create [repo] [title]
+# Usage: just gitlab mr-create [repo] [title] [description_file]
 #   just gitlab mr-create core                    # auto-fill from commits
 #   just gitlab mr-create core "feat: my feature" # custom title
 #
@@ -180,7 +180,7 @@ mr-update repo='' title='':
 # to skip the auto-link pass.
 [no-cd]
 [script]
-mr-create repo='' title='':
+mr-create repo='' title='' description_file='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -191,6 +191,11 @@ mr-create repo='' title='':
     branch=$(git -C "$dir" branch --show-current)
     if [[ "$branch" == "main" ]]; then
         echo "ERROR: cannot create MR from main branch"
+        exit 1
+    fi
+    mr_description_file={{ quote(description_file) }}
+    if [[ -n "$mr_description_file" && ! -s "$mr_description_file" ]]; then
+        echo "ERROR: missing or empty description file: $mr_description_file" >&2
         exit 1
     fi
     # A rejected hook must stop publication; only the caller can classify a
@@ -223,6 +228,9 @@ mr-create repo='' title='':
     if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
         coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
         mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
+    fi
+    if [[ -n "$mr_description_file" ]]; then
+        mr_body=$("$workspace_root/scripts/scripts/escape-mr-mentions.py" < "$mr_description_file")
     fi
     # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
     # on merge, before issue-status-sync can derive its status (#70).

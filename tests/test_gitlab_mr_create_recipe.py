@@ -109,5 +109,24 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertEqual(self.requests(), [])
 
 
+    def test_a_description_file_preserves_newlines_quotes_and_literal_shell_text(self) -> None:
+        body = "## Summary\nKeep Bob's \"quoted\" value and $(touch should-not-exist).\n\n## Test Plan\n- [x] Observed RED then GREEN."
+        description = self.ws / "reviewer's description.md"
+        description.write_text(body)
+        result = self.create(str(description))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = self.requests()[0]
+        self.assertEqual(request[request.index("--description") + 1], body)
+        self.assertEqual(self.hook_log.read_text().splitlines(), ["unset"])
+        self.assertFalse((self.ws / "should-not-exist").exists())
+
+    def test_a_missing_description_file_stops_before_publication(self) -> None:
+        result = self.create(str(self.ws / "missing.md"))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing or empty description file", result.stdout + result.stderr)
+        self.assertFalse(self.hook_log.exists())
+        self.assertEqual(self.requests(), [])
+
+
 if __name__ == "__main__":
     unittest.main()
