@@ -171,8 +171,9 @@ class SlotRecipeTest(unittest.TestCase):
         host = subprocess.run(
             ["hostname", "-s"], check=True, capture_output=True, text=True
         ).stdout.strip()
-        # Slots are per machine; claims are shared, so the stamp names the host.
-        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{host}/vauchi-1$")
+        # Slots are per machine and several harnesses share them; claims are
+        # shared, so the stamp names the host, the slot and the agent.
+        self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{host}/vauchi-1/codex$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
     def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
