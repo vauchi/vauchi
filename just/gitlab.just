@@ -193,18 +193,9 @@ mr-create repo='' title='':
         echo "ERROR: cannot create MR from main branch"
         exit 1
     fi
-    # Push the branch ourselves (skip tests — CI runs them), then let glab
-    # create the MR against the already-pushed ref. The pre-push hook
-    # (scripts/hooks/pre-push) rebases a branch that is behind origin/main and
-    # *blocks the first push*, requiring a second --force-with-lease push of
-    # the rebased ref — so a plain `git push` (or glab's `--push`) loses the
-    # race against a moving main. Retry with --force-with-lease (safe: it only
-    # pushes if the remote is where we last saw it — the same --force-with-lease
-    # guard mr-create-all uses to resend a rebased branch).
-    export SKIP_TESTS=1
-    if ! git -C "$dir" push -u origin "$branch"; then
-        git -C "$dir" push --force-with-lease -u origin "$branch"
-    fi
+    # A rejected hook must stop publication; only the caller can classify a
+    # rebase rejection and decide whether a lease-protected retry is valid.
+    git -C "$dir" push -u origin "$branch"
     # Build title and description explicitly to sanitize @ mentions.
     # --fill passes commit body verbatim, which may contain @tags that
     # ping people on GitLab (e.g., Co-Authored-By: ... <noreply@anthropic.com>).

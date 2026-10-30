@@ -2889,6 +2889,11 @@ cmake-check *args:
 test-lint-recipe:
     python3 "{{justfile_directory()}}/tests/test_lint_recipe_reports_failure.py" "{{justfile_directory()}}/justfile"
 
+# Verify MR publication preserves normal push hooks.
+[group('tests')]
+test-mr-create-recipe:
+    python3 tests/test_gitlab_mr_create_recipe.py
+
 # Regression check: failing tests fail `test-name`, and every target runs.
 [group('tests')]
 test-test-name-recipe:

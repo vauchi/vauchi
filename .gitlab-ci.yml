@@ -75,6 +75,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-check-prerequisites
     - JUST_UNSTABLE=1 just test-lint-recipe
     - JUST_UNSTABLE=1 just test-test-name-recipe
+    - JUST_UNSTABLE=1 just test-mr-create-recipe
     - JUST_UNSTABLE=1 just test-lint-ci-needs-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
@@ -132,6 +133,7 @@ test:release-gates:
           - tests/test_codex_layout.py
           - tests/test_lint_docs_recipe.py
           - tests/test_lint_recipe_reports_failure.py
+          - tests/test_gitlab_mr_create_recipe.py
           - tests/test_release_gates.py
           - tests/test_slot_recipe.py
           - tests/test_rig_recipe.py
