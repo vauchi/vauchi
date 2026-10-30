@@ -1,12 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""`just test-name` must report failing tests, and run every test target.
+"""`just test-name` must report failing tests, run every test target, and
+fail when no test matched the pattern.
 
 Each toolchain arm ended in `|| true`, so a failing build or test exited 0
 (vauchi/private#590). Cargo also stopped at the first failing test binary:
 on 2026-10-16 a red cucumber target hid the matching tests in core's `it`
-target, and the recipe still exited 0.
+target, and the recipe still exited 0. A pattern that matched no test also
+exited 0 (vauchi/private#996): the ship checklist's `test-name` checks then
+ticked green for a test that never ran.
 
 The test runs the real recipe in a sandbox with a stub `cargo` on PATH.
 """
@@ -34,9 +37,13 @@ repo_test_features() { echo "--features stub/testing"; }
 
 CARGO_STUB = """#!/bin/sh
 echo "$*" >> "$CARGO_CALLS"
-echo "test result: stub"
+printf '%b\\n' "$CARGO_OUTPUT"
 exit "$CARGO_EXIT"
 """
+
+
+MATCHED_ONE = "running 0 tests\\nrunning 1 test\\ntest some_pattern ... ok\\nrunning 0 tests"
+MATCHED_NONE = "running 0 tests\\nrunning 0 tests\\nrunning 0 tests"
 
 
 class TestNameRecipeTest(unittest.TestCase):
@@ -62,11 +69,14 @@ class TestNameRecipeTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_recipe(self, cargo_exit: int, *scope: str) -> subprocess.CompletedProcess[str]:
+    def run_recipe(
+        self, cargo_exit: int, *scope: str, output: str = MATCHED_ONE
+    ) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env["PATH"] = f"{self.bin}:{env['PATH']}"
         env["CARGO_CALLS"] = str(self.calls)
         env["CARGO_EXIT"] = str(cargo_exit)
+        env["CARGO_OUTPUT"] = output
         env["JUST_UNSTABLE"] = "1"
         return subprocess.run(
             ["just", "--justfile", str(self.ws / "justfile"), "test-name", "some_pattern", "core", *scope],
@@ -91,7 +101,6 @@ class TestNameRecipeTest(unittest.TestCase):
         self.assertIn("--no-fail-fast", calls)
         self.assertIn("some_pattern", calls)
 
-
     def test_rust_scope_selects_one_package_and_test_target(self) -> None:
         result = self.run_recipe(0, "vauchi-core", "it")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -113,6 +122,11 @@ class TestNameRecipeTest(unittest.TestCase):
         result = self.run_recipe(101, "vauchi-core", "it")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("test-name: core failed", result.stdout + result.stderr)
+
+    def test_a_pattern_that_matches_no_test_fails_the_recipe(self) -> None:
+        result = self.run_recipe(0, output=MATCHED_NONE)
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("no test matched 'some_pattern'", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
