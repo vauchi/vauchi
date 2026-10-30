@@ -41,6 +41,12 @@ slot_harness() {
     esac
 }
 
+# Slots are per machine but claims and the rig are shared, so a slot is named
+# by its host too, and by the agent holding it.
+slot_name() {
+    printf '%s/%s/%s\n' "$(hostname -s)" "$(basename "$(cd "$1" && pwd -P)")" "${2:-$(slot_harness)}"
+}
+
 slot_siblings() {
     local root parent family candidate
     root=$(cd "$1" && pwd -P)
@@ -91,7 +97,7 @@ slot_acquire() {
     root=$(cd "$1" && pwd -P)
     read -r -a state <<< "$(slot_lock_state "$root")"
     if [[ "${state[0]}" == held ]]; then
-        echo "HELD: slot $(basename "$root") is used by ${state[2]} session:${state[1]} (seen ${state[3]}h ago)"
+        echo "HELD: slot $(slot_name "$root" "${state[2]}") is used by session:${state[1]} (seen ${state[3]}h ago)"
         echo "  Start this session in another slot — free: $(slot_free_names "$root")"
         return 1
     fi
@@ -100,7 +106,7 @@ slot_acquire() {
     fi
     printf 'session=%s harness=%s seen=%s\n' "$(slot_session_id)" "$(slot_harness)" "$(date +%s)" \
         > "$root/$SLOT_LOCK_FILE"
-    echo "✓ Slot $(basename "$root") held by this session ($(slot_harness) session:$(slot_session_id))"
+    echo "✓ Slot $(slot_name "$root") held by this session (session:$(slot_session_id))"
 }
 
 # Heartbeat: re-stamps seen= on a lock this session holds, so a live session
@@ -121,7 +127,7 @@ slot_release() {
     read -r -a state <<< "$(slot_lock_state "$root")"
     if [[ "${state[0]}" == mine ]]; then
         rm -f "$root/$SLOT_LOCK_FILE"
-        echo "✓ Released slot $(basename "$root")"
+        echo "✓ Released slot $(slot_name "$root")"
     else
         echo "  Slot $(basename "$root") is not held by this session — left as is"
     fi
@@ -143,8 +149,8 @@ slot_status() {
         case "${state[0]}" in
             free) lock="free" ;;
             mine) lock="held by you (${state[1]}, ${state[2]}h)" ;;
-            held) lock="held by ${state[2]} session:${state[1]} (${state[3]}h)" ;;
-            stale) lock="free (stale lock: ${state[2]} session:${state[1]}, ${state[3]}h)" ;;
+            held) lock="held by $(slot_name "$slot" "${state[2]}") session:${state[1]} (${state[3]}h)" ;;
+            stale) lock="free (stale lock: $(slot_name "$slot" "${state[2]}") session:${state[1]}, ${state[3]}h)" ;;
         esac
         off=0
         dirty=0
@@ -161,10 +167,9 @@ $(slot_siblings "$1")
 EOF
 }
 
-# Claim stamp shared by `just gitlab claim` and the claim listings. Slots are
-# per machine but claims are shared, so the slot is qualified by its host.
+# Claim stamp shared by `just gitlab claim` and the claim listings.
 slot_claim_tag() {
-    printf 'session:%s slot:%s/%s\n' "$(slot_session_id)" "$(hostname -s)" "$(basename "$(cd "$1" && pwd -P)")"
+    printf 'session:%s slot:%s\n' "$(slot_session_id)" "$(slot_name "$1")"
 }
 
 # "<session> @<slot>" from a claim commit message; slot omitted on old claims.
