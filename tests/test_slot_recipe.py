@@ -171,7 +171,8 @@ class SlotRecipeTest(unittest.TestCase):
             ["bash", "-c", script], env=environment, check=True, capture_output=True, text=True
         ).stdout.splitlines()
 
-        # Slots are per machine; claims are shared, so the stamp names the host.
+        # Slots are per machine and several harnesses share them; claims are
+        # shared, so the stamp names the host, the slot and the agent.
         self.assertRegex(lines[0], rf"^session:[0-9a-f]{{12}} slot:{HOST}/vauchi-1/codex$")
         self.assertEqual(lines[1], lines[0].removeprefix("session:").replace(" slot:", " @"))
 
