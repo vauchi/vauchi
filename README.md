@@ -72,6 +72,10 @@ numbers, or any content.
 | [linux-qt/](linux-qt/) | Native Linux app (Qt variant) |
 | [android/](android/) | Android app (Kotlin/Compose) |
 | [ios/](ios/) | iOS app (SwiftUI) |
+| [linux-hw/](linux-hw/) | Hardware shell for Linux (BlueZ, PC/SC, PipeWire, mDNS) |
+| [apple-hw/](apple-hw/) | Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation) |
+| [android-hw/](android-hw/) | Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX) |
+| [windows-hw/](windows-hw/) | Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture) |
 | [web-demo/](web-demo/) | WASM-based web demo |
 | [e2e/](e2e/) | End-to-end tests |
 | [website/](website/) | Project website |

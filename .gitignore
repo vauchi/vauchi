@@ -28,6 +28,10 @@
 /assets/
 /gitlab-profile/
 /ohttp-relay/
+/linux-hw/
+/apple-hw/
+/android-hw/
+/windows-hw/
 
 # ===========================================
 # Private content (not mirrored to GitHub)
