@@ -518,9 +518,13 @@ _dt-build-android:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    printf "%b\n" "${YELLOW}Building Android APK (assembleDebug -PlocalBindings)...${NC}"
+    # DT_GRADLE_ARGS adds Gradle properties, e.g. -PrequireUserAuth so the
+    # debug build binds Keystore keys to authentication as release builds
+    # do (vauchi/private#580, #1021). Word splitting is intended.
+    printf "%b\n" "${YELLOW}Building Android APK (assembleDebug -PlocalBindings ${DT_GRADLE_ARGS:-})...${NC}"
     cd android
-    ./gradlew assembleDebug -PlocalBindings 2>&1 | tail -10
+    # shellcheck disable=SC2086
+    ./gradlew assembleDebug -PlocalBindings ${DT_GRADLE_ARGS:-} 2>&1 | tail -10
     printf "%b\n" "${GREEN}  Android build complete${NC}"
     ls -lh app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || true
 
