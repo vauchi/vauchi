@@ -22,8 +22,9 @@ export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env
 # GitLab base URL
 gitlab_base := "git@gitlab.com:vauchi"
 
-# Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs spec locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo linux-hw apple-hw android-hw windows-hw contract"
+# Public repositories (mirrored to GitHub): the registry in repos.toml is
+# the one list; `repo-registry.py public` reads it (private#1013).
+public_repos := `python3 scripts/scripts/lib/repo-registry.py public`
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"

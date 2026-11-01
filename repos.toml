@@ -1,0 +1,355 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The workspace repository registry: one entry per repository, read by the
+# justfile (public_repos), scripts/scripts/resolve-repo.sh (which repos each
+# just recipe accepts), features' lint:implemented-scenarios (the
+# repositories whose tests carry scenario annotations) and
+# `repo-registry.py check`, which keeps the root .gitignore and README and
+# the group README in step with it. Adding a repository is one entry here.
+#
+# Fields: path (directory under the workspace root), ecosystem (rust, xcode,
+# gradle, cmake, dotnet, npm, mdbook, python, gherkin, shell, html, swift,
+# none), public / private / clone_url, ops (just recipes that accept it:
+# build, test, fmt, lint, fix, coverage, bench), scenario_root (features'
+# lint clones it), profile (a row in the group README), description.
+
+
+[[repo]]
+name = "gitlab-profile"
+path = "gitlab-profile"
+ecosystem = "none"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = false
+description = "The vauchi group README on GitLab"
+
+[[repo]]
+name = "scripts"
+path = "scripts"
+ecosystem = "shell"
+public = true
+mobile = false
+ops = ["lint"]
+scenario_root = false
+profile = true
+description = "Shared CI templates, hooks and workspace scripts"
+
+[[repo]]
+name = "assets"
+path = "assets"
+ecosystem = "none"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Logos, icons and brand assets"
+
+[[repo]]
+name = "core"
+path = "core"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage", "bench"]
+scenario_root = true
+profile = true
+description = "Core library (`vauchi-core`) + platform bindings (`vauchi-platform`) + C ABI (`vauchi-cabi`)"
+
+[[repo]]
+name = "relay"
+path = "relay"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage", "bench"]
+scenario_root = true
+profile = true
+description = "WebSocket relay server for message routing"
+
+[[repo]]
+name = "ohttp-relay"
+path = "ohttp-relay"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "OHTTP forwarding proxy for metadata privacy"
+
+[[repo]]
+name = "cli"
+path = "cli"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "Command-line interface"
+
+[[repo]]
+name = "tui"
+path = "tui"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "Terminal user interface"
+
+[[repo]]
+name = "e2e"
+path = "e2e"
+ecosystem = "none"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = false
+description = "End-to-end integration tests"
+
+[[repo]]
+name = "features"
+path = "features"
+ecosystem = "gherkin"
+public = true
+mobile = false
+ops = ["lint"]
+scenario_root = false
+profile = true
+description = "Gherkin feature files, the executable specification"
+
+[[repo]]
+name = "android"
+path = "android"
+ecosystem = "gradle"
+public = true
+mobile = true
+ops = ["build", "test", "lint", "coverage"]
+scenario_root = true
+profile = true
+description = "Android app (Kotlin/Compose)"
+
+[[repo]]
+name = "ios"
+path = "ios"
+ecosystem = "xcode"
+public = true
+mobile = true
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "iOS app (SwiftUI)"
+
+[[repo]]
+name = "docs"
+path = "docs"
+ecosystem = "mdbook"
+public = true
+mobile = false
+ops = ["build", "test", "lint"]
+scenario_root = false
+profile = true
+description = "Public documentation site (mdBook)"
+
+[[repo]]
+name = "spec"
+path = "spec"
+ecosystem = "mdbook"
+public = true
+mobile = false
+ops = ["build", "lint"]
+scenario_root = false
+profile = false
+description = "Protocol specification and falsifiable claims (mdBook)"
+
+[[repo]]
+name = "locales"
+path = "locales"
+ecosystem = "python"
+public = true
+mobile = false
+ops = ["lint"]
+scenario_root = false
+profile = true
+description = "Translations, one catalogue per language"
+
+[[repo]]
+name = "themes"
+path = "themes"
+ecosystem = "python"
+public = true
+mobile = false
+ops = ["lint"]
+scenario_root = false
+profile = true
+description = "Design tokens and themes"
+
+[[repo]]
+name = "website"
+path = "website"
+ecosystem = "html"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Project website"
+
+[[repo]]
+name = "vauchi-platform-swift"
+path = "vauchi-platform-swift"
+ecosystem = "swift"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Swift package of the platform bindings (XCFramework)"
+
+[[repo]]
+name = "macos"
+path = "macos"
+ecosystem = "xcode"
+public = true
+mobile = false
+ops = ["build", "test", "lint"]
+scenario_root = true
+profile = true
+description = "Native macOS app (SwiftUI)"
+
+[[repo]]
+name = "windows"
+path = "windows"
+ecosystem = "dotnet"
+public = true
+mobile = false
+ops = ["build", "test"]
+scenario_root = true
+profile = true
+description = "Native Windows app (WinUI 3 / C#)"
+
+[[repo]]
+name = "linux-gtk"
+path = "linux-gtk"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "Native Linux app (GTK4 + libadwaita)"
+
+[[repo]]
+name = "linux-qt"
+path = "linux-qt"
+ecosystem = "cmake"
+public = true
+mobile = false
+ops = ["build", "test"]
+scenario_root = true
+profile = true
+description = "Native Linux app (Qt variant)"
+
+[[repo]]
+name = "web-demo"
+path = "web-demo"
+ecosystem = "npm"
+public = true
+mobile = false
+ops = ["build", "test"]
+scenario_root = true
+profile = true
+description = "WASM-based web demo"
+
+[[repo]]
+name = "linux-hw"
+path = "linux-hw"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "Hardware shell for Linux (BlueZ, PC/SC, PipeWire, mDNS)"
+
+[[repo]]
+name = "apple-hw"
+path = "apple-hw"
+ecosystem = "none"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation)"
+
+[[repo]]
+name = "android-hw"
+path = "android-hw"
+ecosystem = "none"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX)"
+
+[[repo]]
+name = "windows-hw"
+path = "windows-hw"
+ecosystem = "none"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture)"
+
+[[repo]]
+name = "contract"
+path = "contract"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = true
+profile = true
+description = "The shell contract: Command/Event schema, fixtures, generated types (ADR-078)"
+
+[[repo]]
+name = "private"
+path = "_private"
+ecosystem = "none"
+private = true
+ops = []
+scenario_root = false
+profile = false
+description = "Private workspace: planning, decisions, problem records, agent config"
+
+[[repo]]
+name = "drift-detector"
+path = "drift-detector"
+ecosystem = "none"
+clone_url = "git@gitlab.com:megloff1/drift-detector.git"
+ops = []
+scenario_root = false
+profile = false
+description = "Tooling"
+
+[[repo]]
+name = "markdown-plan"
+path = "markdown-plan"
+ecosystem = "none"
+clone_url = "git@gitlab.com:megloff1/markdown-plan.git"
+ops = []
+scenario_root = false
+profile = false
+description = "Tooling"

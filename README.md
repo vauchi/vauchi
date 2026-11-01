@@ -80,6 +80,16 @@ numbers, or any content.
 | [web-demo/](web-demo/) | WASM-based web demo |
 | [e2e/](e2e/) | End-to-end tests |
 | [website/](website/) | Project website |
+| [gitlab-profile/](gitlab-profile/) | The vauchi group README on GitLab |
+| [scripts/](scripts/) | Shared CI templates, hooks and workspace scripts |
+| [assets/](assets/) | Logos, icons and brand assets |
+| [ohttp-relay/](ohttp-relay/) | OHTTP forwarding proxy for metadata privacy |
+| [features/](features/) | Gherkin feature files, the executable specification |
+| [docs/](docs/) | Public documentation site (mdBook) |
+| [spec/](spec/) | Protocol specification and falsifiable claims (mdBook) |
+| [locales/](locales/) | Translations, one catalogue per language |
+| [themes/](themes/) | Design tokens and themes |
+| [vauchi-platform-swift/](vauchi-platform-swift/) | Swift package of the platform bindings (XCFramework) |
 
 ## Quick Start
 
