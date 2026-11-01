@@ -270,6 +270,17 @@ profile = true
 description = "WASM-based web demo"
 
 [[repo]]
+name = "linux-app"
+path = "linux-app"
+ecosystem = "rust"
+public = true
+mobile = false
+ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
+scenario_root = false
+profile = true
+description = "Linux app: assembles Core, linux-hw and the GTK, Qt, CLI and TUI display shells (ADR-078)"
+
+[[repo]]
 name = "linux-hw"
 path = "linux-hw"
 ecosystem = "rust"

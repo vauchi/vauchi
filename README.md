@@ -73,6 +73,7 @@ numbers, or any content.
 | [android/](android/) | Android app (Kotlin/Compose) |
 | [ios/](ios/) | iOS app (SwiftUI) |
 | [linux-hw/](linux-hw/) | Hardware shell for Linux (BlueZ, PC/SC, PipeWire, mDNS) |
+| [linux-app/](linux-app/) | Linux app: assembles Core, linux-hw and the GTK, Qt, CLI and TUI display shells (ADR-078) |
 | [apple-hw/](apple-hw/) | Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation) |
 | [android-hw/](android-hw/) | Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX) |
 | [windows-hw/](windows-hw/) | Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture) |
