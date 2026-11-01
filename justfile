@@ -23,7 +23,7 @@ export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub)
-public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs spec locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo linux-hw apple-hw android-hw windows-hw"
+public_repos := "gitlab-profile scripts assets core relay ohttp-relay cli tui e2e features android ios docs spec locales themes website vauchi-platform-swift macos windows linux-gtk linux-qt web-demo linux-hw apple-hw android-hw windows-hw contract"
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"
@@ -1737,7 +1737,7 @@ help:
       Valid repos: core cli relay tui e2e android ios docs
                    locales themes features website scripts
                    macos windows linux-gtk linux-qt web-demo
-                   linux-hw apple-hw android-hw windows-hw
+                   linux-hw apple-hw android-hw windows-hw contract
 
     GitLab:
       just gitlab mr-list [repo]            List open MRs

@@ -76,6 +76,7 @@ numbers, or any content.
 | [apple-hw/](apple-hw/) | Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation) |
 | [android-hw/](android-hw/) | Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX) |
 | [windows-hw/](windows-hw/) | Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture) |
+| [contract/](contract/) | The shell contract: Command/Event schema, fixtures, generated types (ADR-078) |
 | [web-demo/](web-demo/) | WASM-based web demo |
 | [e2e/](e2e/) | End-to-end tests |
 | [website/](website/) | Project website |
