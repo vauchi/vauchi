@@ -23,8 +23,10 @@ export PATH := if os() == "windows" { "C:/Program Files/Git/usr/bin" + ";" + env
 gitlab_base := "git@gitlab.com:vauchi"
 
 # Public repositories (mirrored to GitHub): the registry in repos.toml is
-# the one list; `repo-registry.py public` reads it (private#1013).
-public_repos := `python3 scripts/scripts/lib/repo-registry.py public`
+# the one list; `repo-registry.py public` reads it (private#1013). The
+# recipe tests copy this file into a workspace without scripts/, where the
+# query fails; an empty list there is harmless and a failed backtick is not.
+public_repos := `python3 scripts/scripts/lib/repo-registry.py public 2>/dev/null || true`
 
 # Private repository (consolidated, cloned as _private)
 private_repo := "private"

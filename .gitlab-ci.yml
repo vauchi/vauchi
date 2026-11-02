@@ -27,7 +27,7 @@ include:
     file: '/ci-templates/reuse.yml'
 
 variables:
-  VAUCHI_SCRIPTS_REF: "ci-templates-v2026.10.08"
+  VAUCHI_SCRIPTS_REF: "3d85079afd9e7f15a08d7d17ded11e48f400a261"
 
 # Superseded pipelines auto-cancel so stale runs don't hog shared runners
 # (the dominant queue-time cause). Jobs are interruptible by default and
@@ -66,7 +66,8 @@ test:release-gates:
     # which BusyBox ps lacks.
     - apk add --no-cache bash git jq just python3 procps
   script:
-    - git clone --depth 1 --branch "$VAUCHI_SCRIPTS_REF" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/scripts.git" scripts
+    # A SHA pin, like Core's (private#994): --branch cannot fetch one.
+    - git -C . init -q scripts && git -C scripts remote add origin "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/scripts.git" && git -C scripts fetch -q --depth 1 origin "$VAUCHI_SCRIPTS_REF" && git -C scripts checkout -q --detach FETCH_HEAD
     - JUST_UNSTABLE=1 just test-check-recipe
     - JUST_UNSTABLE=1 just test-codex-layout
     - JUST_UNSTABLE=1 just test-claude-layout
