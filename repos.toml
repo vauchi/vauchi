@@ -364,3 +364,13 @@ ops = []
 scenario_root = false
 profile = false
 description = "Tooling"
+
+[[repo]]
+name = "rqrr"
+path = "utils/rqrr"
+ecosystem = "none"
+clone_url = "git@gitlab.com:vauchi/utils/rqrr.git"
+ops = []
+scenario_root = false
+profile = false
+description = "Fork of WanzenBug/rqrr, the QR decoder Core uses"

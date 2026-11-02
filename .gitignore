@@ -121,6 +121,7 @@ service-account*.json
 
 
 /utils/markdown-plan/
+/utils/rqrr/
 /kanban-todo/
 
 # Device testing screenshots
