@@ -43,10 +43,10 @@ class PlanValidateRecipeTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def with_parser(self) -> None:
-        source = ROOT / "markdown-plan/python/src"
+        source = ROOT / "utils/markdown-plan/python/src"
         if not source.is_dir():
-            self.skipTest("markdown-plan is not cloned in this workspace")
-        shutil.copytree(source, self.workspace / "markdown-plan/python/src")
+            self.skipTest("utils/markdown-plan is not cloned in this workspace")
+        shutil.copytree(source, self.workspace / "utils/markdown-plan/python/src")
 
     def test_a_plan_the_parser_cannot_be_loaded_for_counts_as_an_error(self) -> None:
         result = run_validate(self.workspace, "plans")

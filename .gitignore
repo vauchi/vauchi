@@ -114,13 +114,13 @@ service-account*.json
 # vauchi.code-workspace is tracked (team IDE config)
 
 # Drift detector (local MCP server)
-/drift-detector/
+/utils/drift-detector/
 .drift.db
 .drift.db-shm
 .drift.db-wal
 
 
-/markdown-plan/
+/utils/markdown-plan/
 /kanban-todo/
 
 # Device testing screenshots

@@ -23,7 +23,7 @@ plan-validate target='':
         status=0
         result=$(python3 - "$WORKSPACE_ROOT" "$file" 2>&1 << 'PYEOF'
     import sys
-    sys.path.insert(0, sys.argv[1] + '/markdown-plan/python/src')
+    sys.path.insert(0, sys.argv[1] + '/utils/markdown-plan/python/src')
     from mdplan.parse import parse_tree
     from mdplan.count import count_all_tasks, count_remaining_tasks
 
@@ -118,7 +118,7 @@ plan-list dir='_private/docs':
         relpath="${file#$WORKSPACE_ROOT/}"
         stats=$(python3 << PYEOF
     import sys
-    sys.path.insert(0, '$WORKSPACE_ROOT/markdown-plan/python/src')
+    sys.path.insert(0, '$WORKSPACE_ROOT/utils/markdown-plan/python/src')
     from mdplan.count import count_all_tasks, count_remaining_tasks
     with open('$file') as f:
         text = f.read()
@@ -1841,7 +1841,7 @@ risk *FLAGS:
 plan-sync *FLAGS:
     set -euo pipefail
     SINCE="${PLAN_SYNC_SINCE:-$(git log --all --format=%H --grep='chore: sync plans' -1 2>/dev/null || git rev-list --max-parents=0 HEAD)}"
-    cd drift-detector && node dist/index.js sync --since "$SINCE" {{FLAGS}}
+    cd utils/drift-detector && node dist/index.js sync --since "$SINCE" {{FLAGS}}
 
 # Apply plan sync changes to working tree (no commit)
 plan-sync-apply:

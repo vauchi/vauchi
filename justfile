@@ -32,7 +32,7 @@ public_repos := `python3 scripts/scripts/lib/repo-registry.py public 2>/dev/null
 private_repo := "private"
 
 # Tooling repositories (url,dir format, outside vauchi group)
-tooling_repos := "git@gitlab.com:megloff1/drift-detector.git,drift-detector git@gitlab.com:megloff1/markdown-plan.git,markdown-plan"
+tooling_repos := "git@gitlab.com:vauchi/utils/drift-detector.git,utils/drift-detector git@gitlab.com:vauchi/utils/markdown-plan.git,utils/markdown-plan"
 
 # Device names (single source of truth for all recipes)
 ios_simulator := "iPhone 17 Pro"
@@ -2832,7 +2832,7 @@ consumers pattern:
         core/vauchi-app core/vauchi-cabi core/vauchi-platform
         cli tui e2e relay
         linux-gtk linux-qt windows macos ios android
-        web-demo drift-detector
+        web-demo utils/drift-detector
     )
     for dir in "${CONSUMER_DIRS[@]}"; do
         [[ ! -d "$dir" ]] && continue
@@ -3132,7 +3132,7 @@ design-check *args:
 [script]
 drift *args:
     set -euo pipefail
-    cd drift-detector
+    cd utils/drift-detector
     # Self-heal: ensure dependencies and native modules match current Node ABI.
     # Without this, a Node upgrade silently breaks `just drift` (audit finding F3,
     # 2026-04-17): better-sqlite3's prebuilt .node file is ABI-versioned.
@@ -3172,7 +3172,7 @@ drift *args:
 [script]
 drift-ci *args:
     set -euo pipefail
-    cd drift-detector
+    cd utils/drift-detector
     # Self-heal: see comment in `drift` recipe above.
     if [[ ! -d node_modules ]]; then
         echo "Installing drift-detector dependencies..."

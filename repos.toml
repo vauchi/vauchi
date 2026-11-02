@@ -347,9 +347,9 @@ description = "Private workspace: planning, decisions, problem records, agent co
 
 [[repo]]
 name = "drift-detector"
-path = "drift-detector"
+path = "utils/drift-detector"
 ecosystem = "none"
-clone_url = "git@gitlab.com:megloff1/drift-detector.git"
+clone_url = "git@gitlab.com:vauchi/utils/drift-detector.git"
 ops = []
 scenario_root = false
 profile = false
@@ -357,9 +357,9 @@ description = "Tooling"
 
 [[repo]]
 name = "markdown-plan"
-path = "markdown-plan"
+path = "utils/markdown-plan"
 ecosystem = "none"
-clone_url = "git@gitlab.com:megloff1/markdown-plan.git"
+clone_url = "git@gitlab.com:vauchi/utils/markdown-plan.git"
 ops = []
 scenario_root = false
 profile = false
