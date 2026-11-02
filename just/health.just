@@ -513,13 +513,24 @@ disk-clean *args:
         brew cleanup --prune=all -s 2>&1 | tail -3 || true
     fi
     echo ""
+    # An editor's `cargo check` rebuilds into a target tree while it is being
+    # deleted; stopping there left every later path in place (vauchi/private#1037).
+    NOT_REMOVED=()
     for p in "${PATHS[@]}"; do
         [[ "$STALE_INCREMENTAL" -eq 1 ]] || echo "rm -rf $p"
-        rm -rf "$p"
+        rm -rf "$p" || NOT_REMOVED+=("$p")
     done
     echo ""
     echo "── after ──"
     df -h /System/Volumes/Data 2>/dev/null | tail -1 || df -h / | tail -1
+    if [[ "${#NOT_REMOVED[@]}" -gt 0 ]]; then
+        echo ""
+        for p in "${NOT_REMOVED[@]}"; do
+            echo "Not removed: $p"
+        done
+        echo "Something may be writing into them (an editor's cargo check?); stop it and re-run."
+        exit 1
+    fi
 
 [group('health')]
 [script]
