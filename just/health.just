@@ -507,7 +507,7 @@ disk-clean *args:
         exit 0
     fi
 
-    if [[ "$TIER" -ge 1 ]]; then
+    if [[ "$TIER" -ge 1 ]] && command -v brew >/dev/null 2>&1; then
         echo ""
         echo "Brew cleanup (always safe)…"
         brew cleanup --prune=all -s 2>&1 | tail -3 || true
