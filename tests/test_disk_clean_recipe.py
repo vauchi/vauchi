@@ -13,6 +13,7 @@ without also deleting whole `target/` trees and the shared sccache
 
 from pathlib import Path
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -106,6 +107,54 @@ class StaleIncrementalTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Nothing to clean", result.stdout)
         self.assertTrue(self.stale.is_dir())
+
+
+class BrewOnlyWhereItExistsTests(unittest.TestCase):
+    """A tier run on a host without Homebrew (Linux) skips the brew step
+    silently instead of printing `brew: command not found`."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        base = Path(self._tmp.name)
+        self.workspace = base / "ws"
+        self.home = base / "home"
+        self.workspace.mkdir()
+        self.home.mkdir()
+        for entry in ("justfile", "just"):
+            source = ROOT / entry
+            target = self.workspace / entry
+            if source.is_dir():
+                subprocess.run(["cp", "-R", str(source), str(target)], check=True)
+            else:
+                target.write_bytes(source.read_bytes())
+        # One tier-1 path, so the run reaches the cleanup steps.
+        cache = self.home / "Library/Caches/org.swift.swiftpm/artifacts"
+        cache.mkdir(parents=True)
+        (cache / "blob").write_text("x")
+        # A PATH with the tools the recipe needs and no brew in it.
+        self.bin = base / "bin"
+        self.bin.mkdir()
+        for tool in ("bash", "sh", "env", "du", "df", "rm", "find", "sort", "awk",
+                     "sed", "grep", "tail", "head", "cut", "date", "stat", "printf",
+                     "dirname", "basename", "mkdir", "cat", "wc", "tr", "xargs",
+                     "uname", "mktemp", "chmod", "ls", "test", "realpath", "readlink"):
+            found = shutil.which(tool)
+            if found:
+                (self.bin / tool).symlink_to(found)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_a_tier_run_without_brew_never_mentions_it(self) -> None:
+        env = dict(os.environ, HOME=str(self.home), JUST_UNSTABLE="1",
+                   PATH=f"{self.bin}:{Path(shutil.which('just')).parent}")
+        result = subprocess.run(
+            ["just", "disk-clean", "--tier=1", "--apply"],
+            cwd=self.workspace, env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("brew", (result.stdout + result.stderr).lower())
+        self.assertFalse((self.home / "Library/Caches/org.swift.swiftpm/artifacts").exists())
 
 
 if __name__ == "__main__":
