@@ -28,7 +28,7 @@ repos = [
   { name = "windows", path = "windows/" },
   { name = "web-demo", path = "web-demo/" },
   { name = "vauchi-platform-swift", path = "vauchi-platform-swift/" },
-  { name = "drift-detector", path = "drift-detector/" },
+  { name = "drift-detector", path = "utils/drift-detector/" },
 ]
 
 # ─── Indexing ─────────────────────────────────────────────
