@@ -3164,7 +3164,7 @@ drift *args:
         FIRST=false
         EXTRA_ARGS="$EXTRA_ARGS $arg"
     done
-    node dist/index.js --root .. audit --fail-on="$FAIL_ON" $EXTRA_ARGS
+    node dist/index.js --root "{{ justfile_directory() }}" audit --fail-on="$FAIL_ON" $EXTRA_ARGS
 
 # Run drift audit with JSON output (for CI pipelines)
 # Usage: just drift-ci [--severity=high] [--category=missing_test] [--limit=100]
@@ -3198,7 +3198,7 @@ drift-ci *args:
         FIRST=false
         EXTRA_ARGS="$EXTRA_ARGS $arg"
     done
-    node dist/index.js --root .. audit --ci --fail-on="$FAIL_ON" $EXTRA_ARGS
+    node dist/index.js --root "{{ justfile_directory() }}" audit --ci --fail-on="$FAIL_ON" $EXTRA_ARGS
 
 # ═══════════════════════════════════════════════════════════════════
 # AI/LLM TOOLS

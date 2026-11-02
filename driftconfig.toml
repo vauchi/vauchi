@@ -38,6 +38,7 @@ ignore = [
   "**/_private/infra/**",
   "**/_private/strategy/**",
   "**/drift-detector/**",
+  "**/utils/rqrr/**",
   "**/builds/**",
   "**/vauchi-platform-swift/VauchiPlatform*/**",
 ]
