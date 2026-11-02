@@ -524,15 +524,35 @@ macos-vm action *args:
             echo "ERROR: pipeline $pipeline has no $name job" >&2
             exit 1
         fi
+        # A manual job on protected main can only be played by someone who
+        # may merge there, which this token may not (403 on 2026-11-02): then
+        # a person plays it and this waits for that.
+        local manual_polls=0
         case "$status" in
-            manual) glab api -X POST "$API/jobs/$job/play" > /dev/null ;;
+            manual)
+                if ! glab api -X POST "$API/jobs/$job/play" > /dev/null; then
+                    echo "Cannot start $name with this token (protected main). Press Play here:" >&2
+                    echo "  https://gitlab.com/vauchi/macos/-/jobs/$job" >&2
+                fi ;;
             running|pending|created|waiting_for_resource|preparing) ;;
-            *) job=$(glab api -X POST "$API/jobs/$job/retry" | python3 -c 'import json,sys;print(json.load(sys.stdin)["id"])') ;;
+            *)
+                if ! job=$(glab api -X POST "$API/jobs/$job/retry" | python3 -c 'import json,sys;print(json.load(sys.stdin)["id"])'); then
+                    echo "ERROR: cannot retry $name (job $job): https://gitlab.com/vauchi/macos/-/jobs/$job" >&2
+                    exit 1
+                fi ;;
         esac
         echo "$name: job $job (pipeline $pipeline)" >&2
         for _ in $(seq 1 140); do
             status=$(glab api "$API/jobs/$job" | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
-            case "$status" in success|failed|canceled) break ;; esac
+            case "$status" in
+                success|failed|canceled) break ;;
+                manual)
+                    manual_polls=$((manual_polls + 1))
+                    if [[ "$manual_polls" -ge 40 ]]; then
+                        echo "ERROR: $name was not started within 10 minutes" >&2
+                        exit 1
+                    fi ;;
+            esac
             sleep 15
         done
         # The job's own output: stdout lines, minus colour codes and the
