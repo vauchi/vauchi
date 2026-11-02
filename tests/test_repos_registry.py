@@ -6,6 +6,7 @@ repository it lists, and `public_repos` in the justfile must be what the
 registry says. A drift is named by file and repository."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import unittest
@@ -28,7 +29,9 @@ class ReposRegistryTest(unittest.TestCase):
             [sys.executable, str(HELPER), "public"], cwd=ROOT, capture_output=True, text=True, check=True
         ).stdout.split()
         evaluated = subprocess.run(
-            ["just", "--evaluate", "public_repos"], cwd=ROOT, capture_output=True, text=True, check=True
+            ["just", "--evaluate", "public_repos"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+            env={**os.environ, "JUST_UNSTABLE": "1"},
         ).stdout.split()
         self.assertEqual(evaluated, registry)
 
