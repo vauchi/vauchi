@@ -26,12 +26,12 @@ dt-build-macos:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${YELLOW}═══ Build macOS App ═══${NC}"
+    printf '%b\n' "${YELLOW}═══ Build macOS App ═══${NC}"
 
     cd macos
     command -v xcodegen &>/dev/null && xcodegen generate 2>/dev/null
 
-    echo -e "${YELLOW}Resolving SPM dependencies...${NC}"
+    printf '%b\n' "${YELLOW}Resolving SPM dependencies...${NC}"
     # SPM resolve/build never advances branch pins — it honors Package.resolved
     # and workspace-state.json as lock files. Delete both so SPM re-resolves to
     # the latest branch tip. The bare repo cache stays warm so this is fast.
@@ -43,13 +43,13 @@ dt-build-macos:
     xcodebuild -workspace Vauchi.xcworkspace -scheme Vauchi \
         -resolvePackageDependencies 2>&1 | tail -3
 
-    echo -e "${YELLOW}Building macOS app (Debug)...${NC}"
+    printf '%b\n' "${YELLOW}Building macOS app (Debug)...${NC}"
     xcodebuild -workspace Vauchi.xcworkspace -scheme Vauchi \
         -configuration Debug -destination "platform=macOS" \
         CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
         build 2>&1 | tail -5
 
-    echo -e "${GREEN}macOS app built successfully${NC}"
+    printf '%b\n' "${GREEN}macOS app built successfully${NC}"
 
 # Launch the macOS app (build first if not already built)
 [group('device-test-macos')]
@@ -63,14 +63,14 @@ dt-launch-macos:
         | sort -t/ -k8 -r | head -1)
 
     if [[ -z "$APP_PATH" ]]; then
-        echo -e "${RED}ERROR: Vauchi.app not found in DerivedData.${NC}"
+        printf '%b\n' "${RED}ERROR: Vauchi.app not found in DerivedData.${NC}"
         echo "Run: just dt-build-macos"
         exit 1
     fi
 
     echo "Launching: $APP_PATH"
     open "$APP_PATH"
-    echo -e "${GREEN}macOS app launched${NC}"
+    printf '%b\n' "${GREEN}macOS app launched${NC}"
 
 # Kill and relaunch the macOS app
 [group('device-test-macos')]
@@ -104,7 +104,7 @@ dt-screenshot-macos file="screenshot-macos.png":
     ' 2>/dev/null || true)
 
     if [[ -z "$WINDOW_ID" ]]; then
-        echo -e "${YELLOW}Could not get window ID via System Events, falling back to screencapture...${NC}"
+        printf '%b\n' "${YELLOW}Could not get window ID via System Events, falling back to screencapture...${NC}"
         # Fallback: capture by app name using CGWindowListCopyWindowInfo
         WINDOW_ID=$(osascript -e '
             tell application "System Events"
@@ -123,7 +123,7 @@ dt-screenshot-macos file="screenshot-macos.png":
         screencapture -l "$WINDOW_ID" "{{file}}"
     fi
 
-    echo -e "${GREEN}Screenshot saved to {{file}}${NC}"
+    printf '%b\n' "${GREEN}Screenshot saved to {{file}}${NC}"
 
 # Capture a named screenshot into the testing screenshots directory
 [group('device-test-macos')]
@@ -387,7 +387,7 @@ dt-logs-macos:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${YELLOW}Streaming Vauchi macOS logs... Press Ctrl+C to stop.${NC}"
+    printf '%b\n' "${YELLOW}Streaming Vauchi macOS logs... Press Ctrl+C to stop.${NC}"
     log stream --predicate 'subsystem == "app.vauchi.macos" OR process == "Vauchi"' \
         --level info 2>/dev/null || \
     log stream --predicate 'process == "Vauchi"' --level info
@@ -408,14 +408,14 @@ dt-verify-build-macos:
     set -euo pipefail
     source "$(pwd)/just/device-test-lib.sh"
 
-    echo -e "${BLUE}=== macOS Build Verification ===${NC}"
+    printf '%b\n' "${BLUE}=== macOS Build Verification ===${NC}"
 
     APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Vauchi.app" \
         -path "*/Debug/*" -not -path "*iphoneos*" 2>/dev/null \
         | sort -t/ -k8 -r | head -1)
 
     if [[ -z "$APP_PATH" ]]; then
-        echo -e "${RED}No macOS Vauchi.app found in DerivedData${NC}"
+        printf '%b\n' "${RED}No macOS Vauchi.app found in DerivedData${NC}"
         exit 1
     fi
 
@@ -426,22 +426,22 @@ dt-verify-build-macos:
     BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
     BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
 
-    echo -e "  Version:   ${GREEN}$VERSION ($BUILD)${NC}"
-    echo -e "  Bundle ID: $BUNDLE_ID"
+    printf '%b\n' "  Version:   ${GREEN}$VERSION ($BUILD)${NC}"
+    printf '%b\n' "  Bundle ID: $BUNDLE_ID"
 
     # Check binary architecture
     BINARY="$APP_PATH/Contents/MacOS/Vauchi"
     if [[ -f "$BINARY" ]]; then
         ARCH=$(file "$BINARY" | grep -oE "arm64|x86_64" | tr '\n' '+' | sed 's/+$//')
-        echo -e "  Arch:      $ARCH"
+        printf '%b\n' "  Arch:      $ARCH"
     fi
 
     # Check if running
     if pgrep -f "Vauchi.app/Contents/MacOS/Vauchi" > /dev/null 2>&1; then
         PID=$(pgrep -f "Vauchi.app/Contents/MacOS/Vauchi" | head -1)
-        echo -e "  Status:    ${GREEN}Running (PID $PID)${NC}"
+        printf '%b\n' "  Status:    ${GREEN}Running (PID $PID)${NC}"
     else
-        echo -e "  Status:    ${YELLOW}Not running${NC}"
+        printf '%b\n' "  Status:    ${YELLOW}Not running${NC}"
     fi
 
 # ─── Workflow Automation ──────────────────────────────────────────
@@ -458,7 +458,7 @@ dt-macos-workflow name:
     SCRIPT_FILE="$SCRIPT_DIR/{{name}}.sh"
 
     if [[ ! -f "$SCRIPT_FILE" ]]; then
-        echo -e "${RED}Workflow script not found: $SCRIPT_FILE${NC}"
+        printf '%b\n' "${RED}Workflow script not found: $SCRIPT_FILE${NC}"
         echo ""
         echo "Available workflows:"
         ls "$SCRIPT_DIR"/*.sh 2>/dev/null | sed 's|.*/||; s|\.sh$||' | sed 's/^/  /' || echo "  (none — create one in $SCRIPT_DIR/)"
@@ -475,13 +475,13 @@ dt-macos-workflow name:
         exit 1
     fi
 
-    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║     macOS Workflow: {{name}}                     ${NC}"
-    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
+    printf '%b\n' "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    printf '%b\n' "${YELLOW}║     macOS Workflow: {{name}}                     ${NC}"
+    printf '%b\n' "${YELLOW}╚════════════════════════════════════════════════╝${NC}"
     echo ""
 
     bash "$SCRIPT_FILE"
 
     echo ""
-    echo -e "${GREEN}Workflow '{{name}}' completed.${NC}"
+    printf '%b\n' "${GREEN}Workflow '{{name}}' completed.${NC}"
     echo "Screenshots: {{macos_screenshots_dir}}/"
