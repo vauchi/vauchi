@@ -159,5 +159,65 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
         self.assertFalse((self.home / "Library/Caches/org.swift.swiftpm/artifacts").exists())
 
 
+class TierApplyTests(unittest.TestCase):
+    """On 2026-11-02 an editor's `cargo check` rebuilt into `e2e/target`
+    while tier 3 deleted it; `rm` failed and the remaining target trees and
+    sccache were never reached (vauchi/private#1037)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        base = Path(self._tmp.name)
+        self.workspace = base / "ws"
+        self.home = base / "home"
+        self.workspace.mkdir()
+        self.home.mkdir()
+        for entry in ("justfile", "just"):
+            source = ROOT / entry
+            target = self.workspace / entry
+            if source.is_dir():
+                subprocess.run(["cp", "-R", str(source), str(target)], check=True)
+            else:
+                target.write_bytes(source.read_bytes())
+        bin_dir = base / "bin"
+        bin_dir.mkdir()
+        brew = bin_dir / "brew"
+        brew.write_text("#!/bin/sh\nexit 0\n")
+        brew.chmod(0o755)
+        self.path = f"{bin_dir}:{os.environ['PATH']}"
+
+        self.first = self.workspace / "a/target"
+        self.busy = self.workspace / "b/target"
+        self.last = self.workspace / "c/target"
+        for target in (self.first, self.busy, self.last):
+            (target / "debug").mkdir(parents=True)
+            (target / "debug/artifact").write_text("x")
+        self.sccache = self.home / "Library/Caches/Mozilla.sccache"
+        self.sccache.mkdir(parents=True)
+        # A directory rm cannot empty stands in for one being rebuilt.
+        (self.busy / "debug").chmod(0o555)
+
+    def tearDown(self) -> None:
+        if (self.busy / "debug").exists():
+            (self.busy / "debug").chmod(0o755)
+        self._tmp.cleanup()
+
+    def test_a_path_that_cannot_be_removed_does_not_stop_the_rest(self) -> None:
+        env = dict(os.environ, HOME=str(self.home), JUST_UNSTABLE="1", PATH=self.path)
+        result = subprocess.run(
+            ["just", "disk-clean", "--tier=3", "--apply"],
+            cwd=self.workspace,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertNotEqual(result.returncode, 0, "a partial clean must not report success")
+        self.assertFalse(self.first.exists())
+        self.assertFalse(self.last.exists(), "paths after the failure must still be removed")
+        self.assertFalse(self.sccache.exists())
+        self.assertTrue(self.busy.exists())
+        self.assertIn("Not removed: b/target", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
