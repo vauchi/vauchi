@@ -14,6 +14,11 @@ test-codex-layout:
 test-claude-layout:
     python3 "{{justfile_directory()}}/tests/test_claude_layout.py" "{{justfile_directory()}}"
 
+# Verify the utils/ layout check flags root clones, old remotes and missing clones.
+[group('tests')]
+test-tooling-layout:
+    python3 "{{justfile_directory()}}/tests/test_tooling_layout.py" "{{justfile_directory()}}"
+
 # Check that required tools are installed before setup
 [group('setup')]
 check-prerequisites:
@@ -202,6 +207,17 @@ session-init:
         echo "  themes/generated/ regenerated"
     else
         echo "  WARNING: themes/generated/themes.json not generated → python3 themes/scripts/generate.py"
+        WARN=1
+    fi
+
+    # ── Tools and forks under utils/ (private#1034) ──
+    # A slot set up before the move keeps root clones with personal remotes.
+    echo ""
+    echo "── utils ──"
+    source just/tooling-layout-lib.sh
+    if check_tooling_layout {{tooling_repos}}; then
+        echo "  OK: tools under utils/ track vauchi/utils"
+    else
         WARN=1
     fi
 

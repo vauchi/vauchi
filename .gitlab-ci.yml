@@ -71,6 +71,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-check-recipe
     - JUST_UNSTABLE=1 just test-codex-layout
     - JUST_UNSTABLE=1 just test-claude-layout
+    - JUST_UNSTABLE=1 just test-tooling-layout
     - JUST_UNSTABLE=1 just test-release-gates
     - JUST_UNSTABLE=1 just test-lint-docs
     - JUST_UNSTABLE=1 just test-check-prerequisites
