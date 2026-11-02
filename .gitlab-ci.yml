@@ -27,7 +27,7 @@ include:
     file: '/ci-templates/reuse.yml'
 
 variables:
-  VAUCHI_SCRIPTS_REF: "3d85079afd9e7f15a08d7d17ded11e48f400a261"
+  VAUCHI_SCRIPTS_REF: "fa7f720d567eaf0d13436112acff205efdcd69d4"
 
 # Superseded pipelines auto-cancel so stale runs don't hog shared runners
 # (the dominant queue-time cause). Jobs are interruptible by default and
