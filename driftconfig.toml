@@ -28,7 +28,6 @@ repos = [
   { name = "windows", path = "windows/" },
   { name = "web-demo", path = "web-demo/" },
   { name = "vauchi-platform-swift", path = "vauchi-platform-swift/" },
-  { name = "drift-detector", path = "utils/drift-detector/" },
 ]
 
 # ─── Indexing ─────────────────────────────────────────────
@@ -37,8 +36,9 @@ repos = [
 ignore = [
   "**/_private/infra/**",
   "**/_private/strategy/**",
-  "**/drift-detector/**",
-  "**/utils/rqrr/**",
+  # Tools and forks (vauchi/utils), not Vauchi code. Patterns match
+  # relative to each listed repo's root, so these must not be repos here.
+  "utils/**",
   "**/builds/**",
   "**/vauchi-platform-swift/VauchiPlatform*/**",
 ]
