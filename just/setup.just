@@ -377,7 +377,7 @@ session-init:
     # breakage when a feature branch is merged upstream but downstream
     # Cargo.toml still tracks the deleted branch name).
     _STALE_REFS=""
-    for dir in */; do
+    for dir in */ utils/*/; do
         [[ -e "${dir}.git" ]] || continue
         local_branch=$(git -C "${dir%/}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         [[ "$local_branch" == "main" ]] || continue

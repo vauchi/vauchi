@@ -78,7 +78,7 @@ main mode='':
 
     # Count repos for progress
     repo_total=1
-    for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
+    for dir in */ utils/*/; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
     repo_n=0
     fail_file=$(mktemp)
     trap 'rm -f "$fail_file"' EXIT
@@ -160,7 +160,7 @@ main mode='':
     repo_n=$((repo_n + 1))
     switch_to_main "vauchi (root)" "." "$repo_n"
     # Sub-repos
-    for dir in */; do
+    for dir in */ utils/*/; do
         if [[ -d "${dir}.git" ]]; then
             repo_n=$((repo_n + 1))
             (switch_to_main "${dir%/}" "$dir" "$repo_n")
@@ -658,7 +658,7 @@ sync:
 
     # Count repos for progress
     repo_total=1
-    for dir in */; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
+    for dir in */ utils/*/; do [[ -d "${dir}.git" ]] && repo_total=$((repo_total + 1)); done
     repo_n=0
     ok_count=0
     fail_count=0
@@ -749,7 +749,7 @@ sync:
     }
     repo_n=$((repo_n + 1))
     sync_repo "vauchi (root)" "." "$repo_n"
-    for dir in */; do
+    for dir in */ utils/*/; do
         if [[ -d "${dir}.git" ]]; then
             repo_n=$((repo_n + 1))
             sync_repo "${dir%/}" "$dir" "$repo_n"
