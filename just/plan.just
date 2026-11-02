@@ -1840,8 +1840,12 @@ risk *FLAGS:
 [script]
 plan-sync *FLAGS:
     set -euo pipefail
-    SINCE="${PLAN_SYNC_SINCE:-$(git log --all --format=%H --grep='chore: sync plans' -1 2>/dev/null || git rev-list --max-parents=0 HEAD)}"
-    cd utils/drift-detector && node dist/index.js sync --since "$SINCE" {{FLAGS}}
+    # Since the last plan sync; with none yet, the last 50 commits, as the
+    # CI template does: the first commit replays the whole history and
+    # never finished.
+    LAST_SYNC=$(git log --all --format=%H --grep='chore: sync plans' -1 2>/dev/null || true)
+    SINCE="${PLAN_SYNC_SINCE:-${LAST_SYNC:-$(git rev-list --max-count=50 HEAD | tail -1)}}"
+    cd utils/drift-detector && node dist/index.js --root "{{ justfile_directory() }}" sync --since "$SINCE" {{FLAGS}}
 
 # Apply plan sync changes to working tree (no commit)
 plan-sync-apply:
