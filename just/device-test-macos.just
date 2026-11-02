@@ -485,3 +485,113 @@ dt-macos-workflow name:
     echo ""
     printf '%b\n' "${GREEN}Workflow '{{name}}' completed.${NC}"
     echo "Screenshots: {{macos_screenshots_dir}}/"
+
+# ─── GUI VM on nell (private#309) ─────────────────────────────────
+
+# The VM belongs to the runner's account, which `agents` cannot drive, so
+# start and stop play macos' manual vm:gui-start / vm:gui-stop jobs on the
+# newest main pipeline (MACOS_VM_PIPELINE=<id> picks another); start also
+# installs this account's SSH key. shell and screenshot SSH in as `admin`.
+# Drive the macOS GUI VM: start | stop | ip | shell [cmd...] | screenshot [file]
+[group('device-test-macos')]
+[script]
+macos-vm action *args:
+    set -euo pipefail
+    IP_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/vauchi/macos-vm-ip"
+    API="projects/vauchi%2Fmacos"
+    SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10)
+
+    vm_ip() {
+        if [[ ! -s "$IP_FILE" ]]; then
+            echo "ERROR: no GUI VM IP recorded; run: just macos-vm start" >&2
+            exit 1
+        fi
+        cat "$IP_FILE"
+    }
+
+    # Plays (or retries, once played) a vm:* job and prints its log.
+    run_job() {
+        local name="$1" pipeline job status
+        pipeline="${MACOS_VM_PIPELINE:-$(glab api "$API/pipelines?ref=main&per_page=1" \
+            | python3 -c 'import json,sys;p=json.load(sys.stdin);print(p[0]["id"] if p else "")')}"
+        if [[ -z "$pipeline" ]]; then
+            echo "ERROR: no main pipeline in vauchi/macos" >&2
+            exit 1
+        fi
+        read -r job status < <(glab api "$API/pipelines/$pipeline/jobs?per_page=100" \
+            | python3 -c 'import json,sys;j=[x for x in json.load(sys.stdin) if x["name"]==sys.argv[1]];print(j[0]["id"],j[0]["status"]) if j else print("- -")' "$name")
+        if [[ "$job" == "-" ]]; then
+            echo "ERROR: pipeline $pipeline has no $name job" >&2
+            exit 1
+        fi
+        case "$status" in
+            manual) glab api -X POST "$API/jobs/$job/play" > /dev/null ;;
+            running|pending|created|waiting_for_resource|preparing) ;;
+            *) job=$(glab api -X POST "$API/jobs/$job/retry" | python3 -c 'import json,sys;print(json.load(sys.stdin)["id"])') ;;
+        esac
+        echo "$name: job $job (pipeline $pipeline)" >&2
+        for _ in $(seq 1 140); do
+            status=$(glab api "$API/jobs/$job" | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+            case "$status" in success|failed|canceled) break ;; esac
+            sleep 15
+        done
+        # The job's own output: stdout lines, minus colour codes and the
+        # runner's echo of each command.
+        glab api "$API/jobs/$job/trace" | python3 -c '
+    import re, sys
+    for line in sys.stdin:
+        m = re.match(r"\S+Z 01O (.*)", line.rstrip("\n"))
+        text = re.sub(r"\x1b\[[0-9;]*m", "", m.group(1)) if m else ""
+        if text and not text.startswith("$ "):
+            print(text)'
+        if [[ "$status" != success ]]; then
+            echo "ERROR: $name ended $status: https://gitlab.com/vauchi/macos/-/jobs/$job" >&2
+            exit 1
+        fi
+    }
+
+    case "{{action}}" in
+        start)
+            log=$(run_job vm:gui-start)
+            echo "$log"
+            ip=$(printf '%s\n' "$log" | sed -n 's/.*GUI VM IP: \([0-9.]*\).*/\1/p' | tail -1)
+            if [[ -z "$ip" ]]; then
+                echo "ERROR: vm:gui-start printed no IP" >&2
+                exit 1
+            fi
+            mkdir -p "$(dirname "$IP_FILE")"
+            printf '%s\n' "$ip" > "$IP_FILE"
+            echo "GUI VM at $ip — just macos-vm shell"
+            ;;
+        stop)
+            run_job vm:gui-stop
+            rm -f "$IP_FILE"
+            ;;
+        ip)
+            vm_ip
+            ;;
+        shell)
+            ip=$(vm_ip)
+            # quote(): the guest's shell, not this one, expands ~ and $.
+            if [[ -n {{quote(args)}} ]]; then
+                ssh "${SSH_OPTS[@]}" "admin@$ip" {{quote(args)}}
+            else
+                ssh -t -o ConnectTimeout=10 "admin@$ip"
+            fi
+            ;;
+        screenshot)
+            ip=$(vm_ip)
+            file="{{ if args == "" { "screenshot-macos-vm.png" } else { args } }}"
+            ssh "${SSH_OPTS[@]}" "admin@$ip" 'screencapture -x /tmp/vauchi-vm-shot.png'
+            scp -q "${SSH_OPTS[@]}" "admin@$ip:/tmp/vauchi-vm-shot.png" "$file"
+            if [[ ! -s "$file" ]]; then
+                echo "ERROR: the guest's screencapture wrote nothing" >&2
+                exit 1
+            fi
+            echo "Screenshot saved to $file"
+            ;;
+        *)
+            echo "usage: just macos-vm start | stop | ip | shell [cmd...] | screenshot [file]" >&2
+            exit 1
+            ;;
+    esac
