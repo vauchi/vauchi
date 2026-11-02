@@ -183,6 +183,15 @@ class TierApplyTests(unittest.TestCase):
         brew = bin_dir / "brew"
         brew.write_text("#!/bin/sh\nexit 0\n")
         brew.chmod(0o755)
+        # An rm that refuses b/target stands in for a tree being rebuilt; a
+        # read-only directory would not stop root, which CI runs as.
+        rm = bin_dir / "rm"
+        rm.write_text(
+            "#!/bin/sh\n"
+            'for a in "$@"; do [ "$a" = b/target ] && { echo "rm: $a: Directory not empty" >&2; exit 1; }; done\n'
+            f'exec {shutil.which("rm")} "$@"\n'
+        )
+        rm.chmod(0o755)
         self.path = f"{bin_dir}:{os.environ['PATH']}"
 
         self.first = self.workspace / "a/target"
@@ -193,12 +202,8 @@ class TierApplyTests(unittest.TestCase):
             (target / "debug/artifact").write_text("x")
         self.sccache = self.home / "Library/Caches/Mozilla.sccache"
         self.sccache.mkdir(parents=True)
-        # A directory rm cannot empty stands in for one being rebuilt.
-        (self.busy / "debug").chmod(0o555)
 
     def tearDown(self) -> None:
-        if (self.busy / "debug").exists():
-            (self.busy / "debug").chmod(0o755)
         self._tmp.cleanup()
 
     def test_a_path_that_cannot_be_removed_does_not_stop_the_rest(self) -> None:
