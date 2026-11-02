@@ -134,7 +134,9 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
         # A PATH with the tools the recipe needs and no brew in it.
         self.bin = base / "bin"
         self.bin.mkdir()
-        for tool in ("bash", "sh", "env", "du", "df", "rm", "find", "sort", "awk",
+        # `just` is linked, not its directory added: under Homebrew that
+        # directory also holds brew (vauchi/private#1038).
+        for tool in ("just", "bash", "sh", "env", "du", "df", "rm", "find", "sort", "awk",
                      "sed", "grep", "tail", "head", "cut", "date", "stat", "printf",
                      "dirname", "basename", "mkdir", "cat", "wc", "tr", "xargs",
                      "uname", "mktemp", "chmod", "ls", "test", "realpath", "readlink"):
@@ -147,7 +149,7 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
 
     def test_a_tier_run_without_brew_never_mentions_it(self) -> None:
         env = dict(os.environ, HOME=str(self.home), JUST_UNSTABLE="1",
-                   PATH=f"{self.bin}:{Path(shutil.which('just')).parent}")
+                   PATH=str(self.bin))
         result = subprocess.run(
             ["just", "disk-clean", "--tier=1", "--apply"],
             cwd=self.workspace, env=env, capture_output=True, text=True,
