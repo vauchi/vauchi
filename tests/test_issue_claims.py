@@ -318,6 +318,18 @@ class IssueClaimTest(unittest.TestCase):
         self.assertNotIn("issue/7", self.load()["branches"])
         self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("release: session:"))
 
+    # Stamps before the harness suffix name the slot as <host>/<folder> only;
+    # #815, #875, #882 and #921 carried "slot:AC/vauchi".
+    def test_release_frees_a_closed_issue_whose_claim_predates_the_harness_suffix(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        legacy = self.load()["notes"]["7"][-1]["body"].rsplit("/", 1)[0]
+        self.claimed_then_closed(slot=legacy.split(" slot:", 1)[1])
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("issue/7", self.load()["branches"])
+
     def test_release_leaves_a_closed_issue_claimed_from_another_slot(self) -> None:
         self.claimed_then_closed(slot="nell/vauchi-2/codex")
 
