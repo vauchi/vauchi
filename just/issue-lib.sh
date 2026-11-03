@@ -34,6 +34,14 @@ _issue_holder_note() {
         | jq -sc '[.[][] | select(.body | test("^(claim|takeover): "))][0] // empty'
 }
 
+_issue_state() {
+    glab api "projects/$ISSUE_REPO/issues/$1" 2>/dev/null | jq -r '.state // empty' || true
+}
+
+_issue_claim_slot() {
+    printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._/-]+' | cut -d: -f2 || true
+}
+
 _issue_log_refusal() {
     [ -f "$ISSUE_CLAIM_LOG" ] || return 0
     printf -- '- %s | #%s | %s | %sh\n' "$(date -u +%Y-%m-%d)" "$1" "$2" "$3" >> "$ISSUE_CLAIM_LOG"
@@ -97,8 +105,16 @@ issue_release() {
     body=$(_issue_holder_note "$number" | jq -r '.body // ""')
     holder=$(printf '%s' "$body" | grep -oE 'session:[a-f0-9]+' | cut -d: -f2 || true)
     if [ "$holder" != "$(slot_session_id)" ]; then
-        echo "  #$number is not held by this session ($(slot_claim_owner "$body")) — left as is"
-        return 1
+        # An issue that closed before its session released the claim can be
+        # released by a later session in the same slot: takeover refuses a
+        # closed issue, so nothing else ever could. Other slots' claims stay.
+        if [ "$(_issue_state "$number")" = closed ] \
+            && [ "$(_issue_claim_slot "$body")" = "$(_issue_claim_slot "$tag")" ]; then
+            echo "  #$number is closed and was claimed by an earlier session in this slot ($(slot_claim_owner "$body"))"
+        else
+            echo "  #$number is not held by this session ($(slot_claim_owner "$body")) — left as is"
+            return 1
+        fi
     fi
     # Merged-ness is patch equivalence (git cherry, VGT03), not ancestry:
     # GitLab rebases a branch that is behind main when it merges it.
