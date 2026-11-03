@@ -571,6 +571,19 @@ test-certification-evidence:
     python3 -m unittest discover -s tests -p test_certification_evidence.py
     python3 -m unittest discover -s tests -p test_release_provenance.py
 
+[group('tests')]
+test-contract-compatibility:
+    sh contract/ci/tests/check-schema-breaking.test.sh
+    python3 contract/ci/tests/schema-restrictions.test.py
+
+[group('tests')]
+test-catalog-evidence:
+    python3 contract/ci/tests/catalog-evidence.test.py
+
+[group('tools')]
+catalog-evidence repo output:
+    python3 contract/ci/fetch-screen-catalog.py {{quote(output)}} --repo {{quote(repo)}}
+
 # Exercise the real private-repository checklist parser and CLI (also run by private CI).
 [group('tests')]
 test-ship-checklist:
