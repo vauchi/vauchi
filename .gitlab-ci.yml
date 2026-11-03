@@ -128,6 +128,7 @@ test:release-gates:
           - just/deploy-running.sh
           - just/runners.just
           - tests/*.py
+          - tests/test_backup_recipe_authority.py
           - tools/*.py
           - just/release.just
           - just/test_build_version.py
