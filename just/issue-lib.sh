@@ -38,8 +38,10 @@ _issue_state() {
     glab api "projects/$ISSUE_REPO/issues/$1" 2>/dev/null | jq -r '.state // empty' || true
 }
 
-_issue_claim_slot() {
-    printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._/-]+' | cut -d: -f2 || true
+# <host>/<folder> of a claim stamp: the slot itself. Newer stamps add the
+# harness (<host>/<folder>/<agent>); older ones stop at the folder.
+_issue_claim_workspace() {
+    printf '%s' "$1" | grep -oE 'slot:[A-Za-z0-9._/-]+' | cut -d: -f2 | cut -d/ -f1-2 || true
 }
 
 _issue_log_refusal() {
@@ -109,7 +111,7 @@ issue_release() {
         # released by a later session in the same slot: takeover refuses a
         # closed issue, so nothing else ever could. Other slots' claims stay.
         if [ "$(_issue_state "$number")" = closed ] \
-            && [ "$(_issue_claim_slot "$body")" = "$(_issue_claim_slot "$tag")" ]; then
+            && [ "$(_issue_claim_workspace "$body")" = "$(_issue_claim_workspace "$tag")" ]; then
             echo "  #$number is closed and was claimed by an earlier session in this slot ($(slot_claim_owner "$body"))"
         else
             echo "  #$number is not held by this session ($(slot_claim_owner "$body")) — left as is"
