@@ -469,9 +469,7 @@ _dt-build-ios:
     IOS_DEVICE_ID=$(dt_detect_ios_device)
     printf "%b\n" "${YELLOW}Building iOS app for device $IOS_DEVICE_ID...${NC}"
 
-    security unlock-keychain -p "build" "$HOME/Library/Keychains/build.keychain-db"
-    security set-keychain-settings -t 300 \
-        "$HOME/Library/Keychains/build.keychain-db"
+    dt_unlock_build_keychain 300
 
     dt_set_xcode_auth_args
     dt_provision_ios_local_spm "$WORKSPACE_ROOT"
@@ -965,8 +963,7 @@ dt-wda-start:
     # The signing identities live in a build keychain that is locked
     # outside a GUI login; codesign then fails and xcodebuild only reports
     # "Failed to install the app on the device" (vauchi/private#667).
-    security unlock-keychain -p "build" "$HOME/Library/Keychains/build.keychain-db"
-    security set-keychain-settings -t 900 "$HOME/Library/Keychains/build.keychain-db"
+    dt_unlock_build_keychain 900
 
     cd "$WDA_DIR"
     # test-without-building installs the cached runner as is, so a missing

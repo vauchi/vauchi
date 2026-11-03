@@ -16,6 +16,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# The build keychain's password lives outside the repo (vauchi/private#1043);
+# the recipes once carried it inline. $1 is the auto-lock timeout in seconds.
+dt_unlock_build_keychain() {
+    local timeout="$1"
+    local keychain="$HOME/Library/Keychains/build.keychain-db"
+    local pass_file="${VAUCHI_BUILD_KEYCHAIN_PASS_FILE:-$HOME/.config/vauchi/build-keychain.pass}"
+    if [[ ! -r "$pass_file" ]]; then
+        printf '%b\n' "${RED}No build keychain password file at $pass_file${NC}" >&2
+        echo "Create it (mode 600) holding build.keychain-db's password (vauchi/private#1043)." >&2
+        return 1
+    fi
+    security unlock-keychain -p "$(<"$pass_file")" "$keychain"
+    security set-keychain-settings -t "$timeout" "$keychain"
+}
+
 dt_set_xcode_auth_args() {
     DT_XCODE_AUTH_ARGS=()
     if [[ -n "${VAUCHI_ASC_KEY_PATH:-}" \
