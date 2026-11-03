@@ -507,7 +507,9 @@ disk-clean *args:
         exit 0
     fi
 
-    if [[ "$TIER" -ge 1 ]] && command -v brew >/dev/null 2>&1; then
+    # brew cleanup needs to write the prefix; on nell it belongs to another
+    # account and fails on its lock files (vauchi/private#1050).
+    if [[ "$TIER" -ge 1 ]] && command -v brew >/dev/null 2>&1 && [[ -w "$(brew --prefix)" ]]; then
         echo ""
         echo "Brew cleanup (always safe)…"
         brew cleanup --prune=all -s 2>&1 | tail -3 || true
