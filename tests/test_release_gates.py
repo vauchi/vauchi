@@ -154,6 +154,7 @@ class ReleaseGatesTest(unittest.TestCase):
         production_distribution_evidence: str | None = None,
         user_data_convergence_evidence: str | None = None,
         certification_evidence: dict | None = None,
+        checklist_counts: tuple[int, int, int, int] | None = (0, 1, 0, 1),
     ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory)
@@ -161,6 +162,19 @@ class ReleaseGatesTest(unittest.TestCase):
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
             plan_path.write_text(plan)
+            if checklist_counts is not None:
+                sc_open, sc_done, d_open, d_done = checklist_counts
+                counter = workspace / "_private/scripts/ship-checklist.py"
+                counter.parent.mkdir(parents=True)
+                # The counter belongs to the private repo, absent from root CI.
+                counter.write_text(
+                    "import sys\n"
+                    "if sys.argv[1:] != ['--count']:\n"
+                    "    sys.exit('release-gates must only count the checklist')\n"
+                    f"print('SC open {sc_open}, closed {sc_done}; "
+                    f"decisions open {d_open}, recorded {d_done}')\n"
+                    f"sys.exit({int(bool(sc_open or d_open))})\n"
+                )
             if certification_evidence is not None:
                 report_path = workspace / "target/release-evidence/certification.json"
                 report_path.parent.mkdir(parents=True)
@@ -637,9 +651,12 @@ servers:
             result.stdout,
         )
 
-    def _completed_gates_result(self, certification_evidence):
+    def _completed_gates_result(
+        self, certification_evidence, *, checklist_counts=(0, 1, 0, 1)
+    ):
         result = self.run_release_gates(
             certification_evidence=certification_evidence,
+            checklist_counts=checklist_counts,
             plan=plan_with_gates(
                 all_completed=True,
                 status_line="All hard gates passed.",
@@ -907,6 +924,37 @@ ADR-020 deterministic convergence: passed
         result = self._completed_gates_result(fresh_report())
         self.assertEqual(0, result.returncode)
         self.assertIn("All hard gates passed", result.stdout)
+
+    def test_open_checklist_items_block_otherwise_completed_release(self) -> None:
+        for counts, summary in (
+            ((1, 0, 0, 1), "SC open 1, closed 0; decisions open 0, recorded 1"),
+            ((0, 1, 1, 0), "SC open 0, closed 1; decisions open 1, recorded 0"),
+        ):
+            with self.subTest(counts=counts):
+                result = self._completed_gates_result(
+                    fresh_report(), checklist_counts=counts
+                )
+                self.assertEqual(1, result.returncode)
+                self.assertIn(summary, result.stdout)
+                self.assertIn("ship checklist blocks release", result.stdout)
+                self.assertNotIn("All hard gates passed", result.stdout)
+
+    def test_completed_checklist_is_counted_without_running_its_checks(self) -> None:
+        result = self._completed_gates_result(fresh_report())
+
+        self.assertEqual(0, result.returncode)
+        self.assertIn("SC open 0, closed 1; decisions open 0, recorded 1", result.stdout)
+        self.assertIn("All hard gates passed", result.stdout)
+
+    def test_missing_checklist_counter_blocks_otherwise_completed_release(self) -> None:
+        result = self._completed_gates_result(
+            fresh_report(), checklist_counts=None
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("ship checklist blocks release", result.stdout)
+        self.assertIn("ship-checklist.py", result.stdout)
+        self.assertNotIn("All hard gates passed", result.stdout)
 
     def test_completed_gates_reject_missing_or_stale_certification_report(self) -> None:
         stale = fresh_report()
