@@ -137,6 +137,13 @@ test:release-gates:
           - tests/test_lint_recipe_reports_failure.py
           - tests/test_gitlab_mr_create_recipe.py
           - tests/test_release_gates.py
+          - tests/test_release_provenance.py
+          - tests/test_certification_evidence.py
+          - tests/certification_fixture.py
+          - tools/release_provenance.py
+          - tools/release_evidence.py
+          - tools/collect_release_evidence.py
+          - tools/certification_contract.py
           - tests/test_slot_recipe.py
           - tests/test_rig_recipe.py
           - tests/test_rig_wrappers.py

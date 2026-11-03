@@ -569,6 +569,7 @@ test-release-gates: test-e2e-recipes test-certification-evidence
 [group('tests')]
 test-certification-evidence:
     python3 -m unittest discover -s tests -p test_certification_evidence.py
+    python3 -m unittest discover -s tests -p test_release_provenance.py
 
 # Exercise the real private-repository checklist parser and CLI (also run by private CI).
 [group('tests')]
@@ -580,6 +581,11 @@ test-ship-checklist:
 [group('tools')]
 certification-evidence pipeline output='target/release-evidence/certification.json':
     python3 -m tools.collect_release_evidence {{quote(pipeline)}} "$(git -C e2e rev-parse HEAD)" {{quote(output)}}
+
+# Pin release inputs, then verify them again immediately before tagging.
+[group('tools')]
+release-provenance repo tag mode='record':
+    python3 -m tools.release_provenance {{quote(repo)}} {{quote(tag)}} target/release-evidence/release-inputs.json --mode {{quote(mode)}}
 
 # Report RG gates, hard ship criteria and SC/D checklist; fails while any is open
 [group('tools')]

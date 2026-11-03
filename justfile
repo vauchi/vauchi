@@ -947,8 +947,9 @@ release-prod repo="core":
         echo "  Update Cargo.toml to a clean version (e.g., 0.2.3) before PROD release"
         exit 1
     fi
-    just release-gates
     TAG="v${VERSION}"
+    just release-provenance "$REPO" "$TAG"
+    just release-gates
     echo "Creating PROD tag for $REPO: $TAG"
     echo "  This will trigger the FULL release pipeline:"
     echo "    - Build + test + coverage + mutation"
@@ -974,7 +975,8 @@ release-prod repo="core":
         echo "ERROR: Must be on main branch (currently on $BRANCH)"
         exit 1
     fi
-    git -C "$REPO" tag -a "$TAG" -m "Release $TAG"
+    just release-provenance "$REPO" "$TAG" verify
+    git -C "$REPO" tag -a "$TAG" -F "$PWD/target/release-evidence/release-inputs.json"
     git -C "$REPO" push origin "$TAG"
     echo "Created and pushed $TAG"
 

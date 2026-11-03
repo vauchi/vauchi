@@ -23,6 +23,14 @@ class CertificationEvidenceTest(unittest.TestCase):
         self.assertEqual({"lanes": 7, "cases": 26},
                          validate_report(sample_report(), REVISION, now=NOW))
 
+    def test_obsolete_panic_shred_fanout_does_not_satisfy_current_contract(self):
+        report = sample_report()
+        lane = next(lane for lane in report["lanes"] if lane["name"] == "test:release-rg8")
+        case = next(case for case in lane["cases"] if "panic_shred_with_contacts" in case["name"])
+        case["name"] = "action_family_oracles::panic_shred_with_contacts_fanout_over_outer_hop_only"
+        with self.assertRaisesRegex(EvidenceError, "missing required scenario in test:release-rg8"):
+            validate_report(report, REVISION, now=NOW)
+
     def test_invalid_reports_fail_closed(self):
         mutations = {
             "missing lane": lambda r: r["lanes"].pop(),

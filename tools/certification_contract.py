@@ -32,7 +32,7 @@ REQUIRED_CASES = {
         "ohttp_fail_closed_matrix::hostile_bootstrap_responses_fail_closed",
         "ohttp_fail_closed_matrix::origin_boundary_probes_fail_closed",
         "action_family_oracles::hard_shred_after_grace_fanout_over_outer_hop_only",
-        "action_family_oracles::panic_shred_with_contacts_fanout_over_outer_hop_only",
+        "action_family_oracles::panic_shred_with_contacts_sends_nothing_and_the_contact_keeps_me",
         "action_family_oracles::panic_shred_completes_local_erasure_without_network",
         "action_family_oracles::device_link_chain_makes_zero_requests_to_either_hop",
     },
