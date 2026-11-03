@@ -570,6 +570,12 @@ test-release-gates: test-e2e-recipes test-certification-evidence
 test-certification-evidence:
     python3 -m unittest discover -s tests -p test_certification_evidence.py
 
+# Exercise the real private-repository checklist parser and CLI (also run by private CI).
+[group('tests')]
+test-ship-checklist:
+    python3 "{{justfile_directory()}}/_private/scripts/tests/ship-checklist.test.py"
+    python3 "{{justfile_directory()}}/_private/scripts/tests/ship-checklist-cli.test.py"
+
 # Collect the current automated certification lanes; native acceptance is separate.
 [group('tools')]
 certification-evidence pipeline output='target/release-evidence/certification.json':
