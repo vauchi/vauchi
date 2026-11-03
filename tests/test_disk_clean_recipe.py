@@ -158,6 +158,25 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
         self.assertNotIn("brew", (result.stdout + result.stderr).lower())
         self.assertFalse((self.home / "Library/Caches/org.swift.swiftpm/artifacts").exists())
 
+    def test_a_brew_this_user_cannot_write_is_left_alone(self) -> None:
+        # nell's /opt/homebrew belongs to another account, so every cleanup
+        # failed on brew's lock file (vauchi/private#1050).
+        brew = self.bin / "brew"
+        brew.write_text(
+            "#!/bin/sh\n"
+            f'[ "$1" = --prefix ] && {{ echo "{self.home}/not-a-prefix"; exit 0; }}\n'
+            "echo 'brew cleanup ran'\n"
+        )
+        brew.chmod(0o755)
+        env = dict(os.environ, HOME=str(self.home), JUST_UNSTABLE="1",
+                   PATH=str(self.bin))
+        result = subprocess.run(
+            ["just", "disk-clean", "--tier=1", "--apply"],
+            cwd=self.workspace, env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("brew", (result.stdout + result.stderr).lower())
+
 
 class TierApplyTests(unittest.TestCase):
     """On 2026-11-02 an editor's `cargo check` rebuilt into `e2e/target`
