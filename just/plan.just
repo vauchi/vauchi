@@ -575,7 +575,7 @@ test-certification-evidence:
 certification-evidence pipeline output='target/release-evidence/certification.json':
     python3 -m tools.collect_release_evidence {{quote(pipeline)}} "$(git -C e2e rev-parse HEAD)" {{quote(output)}}
 
-# Report first-release gate status (RG-1..15, hard ship criteria); fails while any gate is open
+# Report RG gates, hard ship criteria and SC/D checklist; fails while any is open
 [group('tools')]
 [script]
 release-gates:
@@ -1581,8 +1581,19 @@ release-gates:
         except (OSError, subprocess.SubprocessError):
             certification_failures.append("certification evidence: E2E revision unavailable")
 
+    try:
+        checklist_count = subprocess.run(
+            [sys.executable, "-I", "_private/scripts/ship-checklist.py", "--count"],
+            check=False, capture_output=True, text=True, timeout=30,
+        )
+        checklist_passed = checklist_count.returncode == 0
+        checklist_summary = (checklist_count.stdout + checklist_count.stderr).strip()
+    except (OSError, subprocess.SubprocessError) as error:
+        checklist_passed = False
+        checklist_summary = f"Cannot count the ship checklist: {error}"
+
     print(f"Production Release Readiness — {date.today()}")
-    print(f"Source: master-plan.plan.md (single source of truth)\n")
+    print("Sources: master-plan.plan.md and first-release ship checklist\n")
 
     print(f"HARD GATES ({len(done_hard)}/{len(hard)} done):")
     for gid, name, done, detail in hard:
@@ -1595,6 +1606,12 @@ release-gates:
         for criterion, required_state, done in ship_criteria:
             icon = "DONE" if done else "TODO"
             print(f"  [{icon}]  {criterion} — {required_state}")
+
+    print("\nSHIP CHECKLIST:")
+    for line in checklist_summary.splitlines():
+        print(f"  {line}")
+    if not checklist_passed:
+        print("\n  >>> ship checklist blocks release (open items or count failure) <<<")
 
     if open_hard:
         print(f"\n  >>> {len(open_hard)} HARD GATE(s) block release <<<")
@@ -1702,7 +1719,8 @@ release-gates:
     if (
         not open_hard
         and (
-            config_failures
+            not checklist_passed
+            or config_failures
             or frontend_journey_failures
             or local_two_user_failures
             or ohttp_relay_two_user_failures
@@ -1724,7 +1742,7 @@ release-gates:
             or certification_failures
         )
     ):
-        print("\n  Release remains blocked by release-configuration evidence.")
+        print("\n  Release remains blocked by release evidence or the ship checklist.")
     elif open_hard:
         pass
     else:
@@ -1734,6 +1752,7 @@ release-gates:
         0
         if not open_hard
         and not open_ship
+        and checklist_passed
         and not config_failures
         and not frontend_journey_failures
         and not local_two_user_failures
