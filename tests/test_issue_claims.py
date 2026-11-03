@@ -296,6 +296,71 @@ class IssueClaimTest(unittest.TestCase):
         self.assertIn("2 commit(s)", result.stdout)
         self.assertIn("issue/7", self.load()["branches"])
 
+    # A claim outlives the session that made it when the issue closes before
+    # that session releases it; the next session in the same slot cannot
+    # release it, and takeover refuses a closed issue, so it stayed forever.
+    def claimed_then_closed(self, slot: str | None = None) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+        state = self.load()
+        state["issues"]["7"]["state"] = "closed"
+        if slot is not None:
+            note = state["notes"]["7"][-1]
+            note["body"] = note["body"].rsplit(" slot:", 1)[0] + " slot:" + slot
+        self.save(state)
+
+    def test_release_frees_a_closed_issue_claimed_by_an_earlier_session_of_this_slot(self) -> None:
+        self.claimed_then_closed()
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("earlier session in this slot", result.stdout)
+        self.assertNotIn("issue/7", self.load()["branches"])
+        self.assertTrue(self.load()["notes"]["7"][-1]["body"].startswith("release: session:"))
+
+    def test_release_leaves_a_closed_issue_claimed_from_another_slot(self) -> None:
+        self.claimed_then_closed(slot="nell/vauchi-2/codex")
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("not held by this session", result.stdout)
+        self.assertIn("issue/7", self.load()["branches"])
+
+    def test_release_leaves_a_closed_issue_whose_claim_names_no_slot(self) -> None:
+        self.claimed_then_closed()
+        state = self.load()
+        note = state["notes"]["7"][-1]
+        note["body"] = note["body"].rsplit(" slot:", 1)[0]
+        self.save(state)
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("not held by this session", result.stdout)
+        self.assertIn("issue/7", self.load()["branches"])
+
+    def test_release_leaves_an_open_issue_claimed_by_an_earlier_session_of_this_slot(self) -> None:
+        self.run_lib("issue_claim 7", "codex-a", check=True)
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("not held by this session", result.stdout)
+        self.assertIn("issue/7", self.load()["branches"])
+
+    def test_release_of_a_closed_issue_from_this_slot_still_refuses_unmerged_work(self) -> None:
+        self.claimed_then_closed()
+        state = self.load()
+        state["branches"]["issue/7"]["ahead"] = 2
+        self.save(state)
+
+        result = self.run_lib("issue_release 7", "codex-b")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("2 commit(s)", result.stdout)
+        self.assertIn("issue/7", self.load()["branches"])
+
     def sibling_with_issue_branch(self, number: int, unmerged: bool) -> Path:
         remote = self.directory / "core.git"
         subprocess.run(["git", "init", "--quiet", "--bare", "--initial-branch=main", str(remote)], check=True)
