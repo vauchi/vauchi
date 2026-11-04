@@ -276,7 +276,7 @@ ecosystem = "rust"
 public = true
 mobile = false
 ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
-scenario_root = false
+scenario_root = true
 profile = true
 description = "Linux app: assembles Core, linux-hw and the GTK, Qt, CLI and TUI display shells (ADR-078)"
 
