@@ -23,11 +23,11 @@
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
-    ref: ci-templates-v2026.10.08
+    ref: 9adf5b8e9cd596075e3e5a34dc25971674c13628
     file: '/ci-templates/reuse.yml'
 
 variables:
-  VAUCHI_SCRIPTS_REF: "fa7f720d567eaf0d13436112acff205efdcd69d4"
+  VAUCHI_SCRIPTS_REF: "9adf5b8e9cd596075e3e5a34dc25971674c13628"
 
 # Superseded pipelines auto-cancel so stale runs don't hog shared runners
 # (the dominant queue-time cause). Jobs are interruptible by default and
@@ -89,7 +89,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just blog test
     - python3 -m unittest tests/test_backup_recipe_authority.py
     - python3 -m unittest tests/test_repos_registry.py
-    - python3 -m unittest tests/test_create_repo_recipe.py
+    - JUST_UNSTABLE=1 python3 -m unittest tests/test_create_repo_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_ledger_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_plan_validate_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_disk_clean_recipe.py
