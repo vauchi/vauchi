@@ -75,6 +75,7 @@ numbers, or any content.
 | [linux-hw/](linux-hw/) | Hardware shell for Linux (BlueZ, PC/SC, PipeWire, mDNS) |
 | [linux-app/](linux-app/) | Linux app: assembles Core, linux-hw and the GTK, Qt, CLI and TUI display shells (ADR-078) |
 | [apple-hw/](apple-hw/) | Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation) |
+| [apple-display/](apple-display/) | Shared SwiftUI rendering library with iOS and macOS adapters |
 | [android-hw/](android-hw/) | Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX) |
 | [windows-hw/](windows-hw/) | Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture) |
 | [contract/](contract/) | The shell contract: Command/Event schema, fixtures, generated types (ADR-078) |
@@ -121,6 +122,18 @@ just e2e      # End-to-end tests
 ```bash
 just help     # Show all available commands
 ```
+
+Create a GitLab repository from a Maintainer account:
+
+```bash
+just create-repo apple-display --description "Shared SwiftUI rendering library"
+```
+
+The recipe applies and verifies merge settings and main protection.
+An existing repository is checked without changing its configuration.
+It stops on missing permissions or mismatched settings and keeps any
+partially created project for inspection. Workspace registration and
+package bootstrap remain separate reviewed changes.
 
 ## Security
 

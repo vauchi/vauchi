@@ -303,6 +303,17 @@ profile = true
 description = "Hardware shell for iOS and macOS (CoreBluetooth, Core NFC, AVFoundation)"
 
 [[repo]]
+name = "apple-display"
+path = "apple-display"
+ecosystem = "swift"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "Shared SwiftUI rendering library with iOS and macOS adapters"
+
+[[repo]]
 name = "android-hw"
 path = "android-hw"
 ecosystem = "none"

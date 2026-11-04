@@ -1368,6 +1368,14 @@ check-path-overrides:
     set -euo pipefail
     bash scripts/scripts/path-overrides.sh check
 
+# Create a Vauchi project, or verify an existing one without changing it
+# Usage: just create-repo apple-display --description "Shared SwiftUI display"
+[group('setup')]
+[script]
+[positional-arguments]
+create-repo name *args:
+    python3 scripts/scripts/create-repo.py "$@"
+
 # Clone all repositories
 [private]
 [script]
