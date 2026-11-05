@@ -1146,7 +1146,7 @@ audit repo='':
     for r in $repos; do
         dir=$(repo_dir "$r")
         echo "═══ audit: $r ═══"
-        if ! (cd "$dir" && cargo audit 2>&1); then
+        if ! (cd "$dir" && cargo audit --deny warnings 2>&1); then
             echo "ERROR: cargo audit failed for $r" >&2
             failed=1
         fi
@@ -2911,6 +2911,11 @@ test-lint-recipe:
 [group('tests')]
 test-mr-create-recipe:
     python3 tests/test_gitlab_mr_create_recipe.py
+
+# Keep local dependency audit as strict as CI.
+[group('tests')]
+test-audit-recipe:
+    python3 -m unittest tests/test_audit_recipe.py
 
 # Regression check: failing tests fail `test-name`, and every target runs.
 [group('tests')]

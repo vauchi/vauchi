@@ -78,6 +78,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-lint-recipe
     - JUST_UNSTABLE=1 just test-test-name-recipe
     - JUST_UNSTABLE=1 just test-mr-create-recipe
+    - JUST_UNSTABLE=1 just test-audit-recipe
     - JUST_UNSTABLE=1 just test-lint-ci-needs-recipe
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
