@@ -14,13 +14,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CARGO = """#!/usr/bin/env python3
-import os, sys
+import argparse, os, sys
 if sys.argv[1] == "audit":
     if os.environ.get("AUDIT_WARNING") == "1":
         print("Warning: unmaintained", flush=True)
-        sys.exit(1 if sys.argv[2:] == ["--deny", "warnings"] else 0)
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument("--deny", action="append", default=[])
+        policy, _ = parser.parse_known_args(sys.argv[2:])
+        sys.exit(1 if "warnings" in policy.deny else 0)
     sys.exit(0)
-if sys.argv[1:] == ["deny", "check"]:
+if sys.argv[1:3] == ["deny", "check"]:
     sys.exit(int(os.environ.get("DENY_EXIT", "0")))
 sys.exit(2)
 """
