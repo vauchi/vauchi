@@ -270,7 +270,7 @@ gates:core-consumer-drift:
       # The newest release is read from core's tags.
       git -C "${CI_PROJECT_DIR}/core" fetch --tags --force
       for repo in $(python3 "${CI_PROJECT_DIR}/scripts/scripts/core-pins.py" consumers \
-          --table "${CI_PROJECT_DIR}/core/ci/consumer-pins.json" | cut -d' ' -f1); do
+          --table "${CI_PROJECT_DIR}/core/ci/consumer-pins.json" | cut -d' ' -f1 | sort -u); do
         git clone --depth 1 --filter=blob:none --branch main \
           "https://gitlab.com/vauchi/${repo}.git" "${CI_PROJECT_DIR}/${repo}"
       done
