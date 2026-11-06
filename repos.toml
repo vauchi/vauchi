@@ -385,3 +385,13 @@ ops = []
 scenario_root = false
 profile = false
 description = "Fork of WanzenBug/rqrr, the QR decoder Core uses"
+
+[[repo]]
+name = "spake2"
+path = "utils/spake2"
+ecosystem = "none"
+clone_url = "git@gitlab.com:vauchi/utils/spake2.git"
+ops = []
+scenario_root = false
+profile = false
+description = "Fork of RustCrypto spake2 0.4.0 with zeroize, the PAKE Core's link exchange uses"

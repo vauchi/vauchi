@@ -32,7 +32,7 @@ public_repos := `python3 scripts/scripts/lib/repo-registry.py public 2>/dev/null
 private_repo := "private"
 
 # Tooling repositories (url,dir format, outside vauchi group)
-tooling_repos := "git@gitlab.com:vauchi/utils/drift-detector.git,utils/drift-detector git@gitlab.com:vauchi/utils/markdown-plan.git,utils/markdown-plan git@gitlab.com:vauchi/utils/rqrr.git,utils/rqrr"
+tooling_repos := "git@gitlab.com:vauchi/utils/drift-detector.git,utils/drift-detector git@gitlab.com:vauchi/utils/markdown-plan.git,utils/markdown-plan git@gitlab.com:vauchi/utils/rqrr.git,utils/rqrr git@gitlab.com:vauchi/utils/spake2.git,utils/spake2"
 
 # Device names (single source of truth for all recipes)
 ios_simulator := "iPhone 17 Pro"

@@ -123,6 +123,7 @@ service-account*.json
 
 /utils/markdown-plan/
 /utils/rqrr/
+/utils/spake2/
 /kanban-todo/
 
 # Device testing screenshots
