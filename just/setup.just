@@ -420,27 +420,7 @@ session-init:
     if command -v cargo-sweep &>/dev/null; then
         echo ""
         echo "SWEEP (cargo artifacts):"
-        total_freed=0
-        for dir in $(repos_by_toolchain rust); do
-            [[ -d "$dir/target" ]] || continue
-            before=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
-            # Pass 1: time-based (2 days)
-            cargo sweep --time 2 "$dir" 2>/dev/null
-            after=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
-            # Pass 2: if still over 20 GB, sweep more aggressively (1 day)
-            if [[ $after -gt 20480 ]]; then
-                cargo sweep --time 1 "$dir" 2>/dev/null
-                after=$(du -sm "$dir/target" 2>/dev/null | cut -f1)
-            fi
-            freed=$((before - after))
-            total_freed=$((total_freed + freed))
-            [[ $freed -gt 100 ]] && echo "  $dir: freed ${freed} MB (${before} → ${after} MB)"
-        done
-        if [[ $total_freed -gt 100 ]]; then
-            echo "  Total freed: ${total_freed} MB"
-        else
-            echo "  (clean — <100 MB to sweep)"
-        fi
+        bash just/sweep-targets.sh $(repos_by_toolchain rust) || WARN=1
     fi
 
     # ── Active claims (atomic locks on work items) ──
