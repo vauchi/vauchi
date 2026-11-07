@@ -107,7 +107,7 @@ description = "Terminal user interface"
 [[repo]]
 name = "e2e"
 path = "e2e"
-ecosystem = "none"
+ecosystem = "rust"
 public = true
 mobile = false
 ops = ["build", "test", "fmt", "lint", "fix", "coverage"]
