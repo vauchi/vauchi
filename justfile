@@ -1304,6 +1304,14 @@ coverage *args:
         esac
     done
 
+# Advisory review candidates in tracked local source (Python 3 + Git).
+[group('tools')]
+[positional-arguments]
+quality-scan *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    exec python3 "{{ justfile_directory() }}/scripts/scripts/quality-scan.py" --workspace "{{ justfile_directory() }}" "$@"
+
 # Diff-scoped mutation testing — on-demand signal on changed code only.
 # Runs cargo-mutants against just the lines changed vs origin/main
 # (committed + uncommitted), per Rust repo. Deliberately NOT a push or
@@ -1842,6 +1850,7 @@ help:
       just consumers <pattern> Find downstream usage of core API
       just lint-file-size [repo]  Check file sizes against thresholds
       just churn [repo]       File churn + size correlation (risk)
+      just quality-scan [repos] [--json]  Advisory source-quality candidates
       just check-refs         Verify Cargo.toml branch refs → main
       just check-annotations [repo]  Check @scenario coverage
       just check-lifecycle    Validate feature lifecycle tags
