@@ -73,9 +73,10 @@ bindings-remote:
 [script]
 build-ios-device mode="debug":
     set -e
-    # Unlock the build keychain for code signing
-    security unlock-keychain -p "build" ~/Library/Keychains/build.keychain-db
-    security set-keychain-settings -t 300 ~/Library/Keychains/build.keychain-db
+    # The build keychain's password lives in a file, not in this recipe
+    # (vauchi/private#1043); the shared helper reads it.
+    source "$(pwd)/just/device-test-lib.sh"
+    dt_unlock_build_keychain 300
 
     # Detect build source: workspace (local bindings) or project (remote)
     if [ -d "ios/Vauchi.xcworkspace" ]; then
