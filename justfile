@@ -1320,7 +1320,7 @@ quality-scan *args:
 
 [group('tools')]
 quality-complexity-build:
-    cargo build --locked --manifest-path scripts/tools/architecture-check/Cargo.toml --bin vauchi-quality-complexity
+    cargo build --locked --manifest-path scripts/tools/architecture-check/Cargo.toml --target-dir "{{ justfile_directory() }}/scripts/tools/architecture-check/target" --bin vauchi-quality-complexity
 
 # Diff-scoped mutation testing — on-demand signal on changed code only.
 # Runs cargo-mutants against just the lines changed vs origin/main
