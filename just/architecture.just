@@ -16,6 +16,8 @@ architecture-check:
     cargo clippy --manifest-path scripts/tools/architecture-check/Cargo.toml --locked --offline -j 8 --all-targets -- -D warnings
     just architecture-test
     bash scripts/tools/architecture-check/tests/gate.test.sh
+    just quality-complexity-build
+    python3 scripts/tools/architecture-check/tests/quality-scan-integration.py
 
 # Parse a fresh generated locale module alongside production source.
 [group('tools')]
