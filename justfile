@@ -1310,7 +1310,17 @@ coverage *args:
 quality-scan *args:
     #!/usr/bin/env bash
     set -euo pipefail
+    for arg in "$@"; do
+        if [[ "$arg" == "--complexity" ]]; then
+            just quality-complexity-build
+            break
+        fi
+    done
     exec python3 "{{ justfile_directory() }}/scripts/scripts/quality-scan.py" --workspace "{{ justfile_directory() }}" "$@"
+
+[group('tools')]
+quality-complexity-build:
+    cargo build --locked --manifest-path scripts/tools/architecture-check/Cargo.toml --bin vauchi-quality-complexity
 
 # Diff-scoped mutation testing — on-demand signal on changed code only.
 # Runs cargo-mutants against just the lines changed vs origin/main
@@ -1850,7 +1860,7 @@ help:
       just consumers <pattern> Find downstream usage of core API
       just lint-file-size [repo]  Check file sizes against thresholds
       just churn [repo]       File churn + size correlation (risk)
-      just quality-scan [repos] [--json]  Advisory source-quality candidates
+      just quality-scan [repos] [--json] [--complexity]  Quality review signals
       just check-refs         Verify Cargo.toml branch refs → main
       just check-annotations [repo]  Check @scenario coverage
       just check-lifecycle    Validate feature lifecycle tags
