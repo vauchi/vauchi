@@ -143,6 +143,9 @@ check *args:
     # <non-core-repo>` fast. Plan Task 1.4 Step 3.
     if [ -z "${_QR_REPO:-}" ] || [ "${_QR_REPO:-}" = "core" ]; then
         just reachability
+        # Core CI's check:ignored-results ratchet, run here so a new
+        # let_underscore_must_use allow fails before the push (private#1161).
+        sh core/scripts/check-ignored-results.sh core
     fi
     # Write TDD stamps for repos that passed all checks
     source scripts/scripts/resolve-repo.sh
