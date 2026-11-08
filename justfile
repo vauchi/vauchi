@@ -147,10 +147,21 @@ check *args:
         # let_underscore_must_use allow fails before the push (private#1161).
         sh core/scripts/check-ignored-results.sh core
     fi
-    # Write TDD stamps for repos that passed all checks
     source scripts/scripts/resolve-repo.sh
     source scripts/scripts/stamp.sh
     repos=$(resolve_repo "${_QR_REPO:-}" "test")
+    # CI's quality:zero-assertions, over the directories that job scans, so
+    # a test whose assertions sit only in a helper fails before the push
+    # (private#1177).
+    for r in $repos; do
+        grep -q 'test-quality.yml' "$r/.gitlab-ci.yml" 2>/dev/null || continue
+        dirs=$(cd "$r" && for d in src tests */src */tests; do [ -d "$d" ] && printf '%s/%s ' "$r" "$d"; done; true)
+        [ -n "$dirs" ] || continue
+        # shellcheck disable=SC2086
+        bash scripts/scripts/check-zero-assertions.sh $dirs >/dev/null \
+            || { bash scripts/scripts/check-zero-assertions.sh $dirs | grep -E ' — |FAIL'; exit 1; }
+    done
+    # Write TDD stamps for repos that passed all checks
     for r in $repos; do
         stamp_write "$r" 2>/dev/null || true
     done
