@@ -62,6 +62,10 @@ assert parts[:2] == ["projects", "vauchi%2Fcore"], parts
 if parts[2] == "merge_requests" and len(parts) == 3:
     save_and_print([{k: v for k, v in m.items() if k != "head_pipeline"}
                     for m in state["mrs"].values() if m["state"] == "opened"])
+if parts[2] == "merge_requests" and len(parts) == 5 and parts[4] == "pipelines":
+    # GitLab creates an MR's pipeline a few seconds after the MR: it shows
+    # here before the MR's head_pipeline is set.
+    save_and_print(state["mrs"][parts[3]].get("pipelines", []))
 if parts[2] == "merge_requests" and len(parts) == 4:
     save_and_print(state["mrs"][parts[3]])
 if parts[2] == "merge_requests" and parts[4] == "notes" and method == "POST":
@@ -102,7 +106,7 @@ class MrReadyQueueTests(unittest.TestCase):
         self.state = base / "state.json"
         self.env = dict(
             os.environ, JUST_UNSTABLE="1", FAKE_GLAB_STATE=str(self.state),
-            PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+            PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", READY_QUEUE_POLL_INTERVAL="0",
         )
 
     def tearDown(self) -> None:
@@ -158,6 +162,16 @@ class MrReadyQueueTests(unittest.TestCase):
         self.assertIn("waiting behind !19", state["notes"]["20"][0])
         self.assertIn("!20 waits for this MR", state["notes"]["19"][0])
         self.assertIn("waiting behind !19", result.stdout)
+
+    # 2026-11-09, core!2287: opened behind !2286 before GitLab had created
+    # its pipeline, so nothing was cancelled and the pipeline ran anyway.
+    def test_a_waiting_mrs_pipeline_created_after_the_mr_is_cancelled(self) -> None:
+        ahead = mr(19, False, {"id": 4, "status": "running"})
+        fresh = dict(mr(20, True, None), pipelines=[{"id": 8, "status": "created"}])
+        _, state = self.ready([ahead, fresh], 20)
+
+        self.assertTrue(state["mrs"]["20"]["draft"])
+        self.assertEqual(state["cancelled"], [8])
 
     def test_a_finished_pipeline_of_a_waiting_mr_is_not_cancelled(self) -> None:
         ahead = mr(19, False, {"id": 4, "status": "success"})

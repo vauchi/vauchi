@@ -105,6 +105,19 @@ class ReadyQueueWaitingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("!20", result.stdout)
 
+    # 2026-11-09, core!2287 queued behind !2286, whose pipeline then failed:
+    # a red or Draft MR holds nothing, so the queued MR's turn has come.
+    def test_a_draft_behind_an_mr_that_went_red_or_draft_is_listed(self) -> None:
+        red = dict(mr(7, "vauchi/core", 19), head_pipeline={"status": "failed"})
+        back_to_draft = mr(7, "vauchi/core", 21, draft=True)
+        result = self.waiting([
+            red, mr(7, "vauchi/core", 20, draft=True, notes=[WAIT.format(19)]),
+            back_to_draft, mr(7, "vauchi/core", 22, draft=True, notes=[WAIT.format(21)]),
+        ])
+
+        self.assertIn("core !20: !19 failed", result.stdout)
+        self.assertIn("core !22: !21 draft", result.stdout)
+
     def test_only_the_latest_queue_comment_counts(self) -> None:
         result = self.waiting([
             mr(7, "vauchi/core", 18, state="merged"),
