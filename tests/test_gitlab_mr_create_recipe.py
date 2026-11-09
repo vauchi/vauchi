@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RESOLVER = """resolve_gitlab_repo() { echo "$1"; }
 resolve_gitlab_project() { echo "vauchi/$1"; }
 gitlab_repo_dir() { echo "$1"; }
+_dir_to_gitlab_name() { echo "$1"; }
 """
 GLAB = r"""#!/usr/bin/env python3
 import json, os, sys
@@ -26,7 +27,8 @@ route = sys.argv[2] if sys.argv[1] == "api" else ""
 if "source_branch=" in route:
     print(json.dumps([{"iid": 1}]))
 elif "merge_requests/1" in route:
-    print(json.dumps({"iid": 1, "draft": True, "diverged_commits_count": 0, "head_pipeline": None}))
+    print(json.dumps({"iid": 1, "draft": True, "diverged_commits_count": 0, "head_pipeline": None,
+                      "description": os.environ.get("MR_EXISTING_DESC", "")}))
 elif "state=opened" in route:
     print(json.dumps([{"iid": 1, "draft": True}]))
 else:
@@ -63,7 +65,8 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.git(self.repo, "remote", "add", "origin", str(self.remote))
         self.git(self.repo, "push", "origin", "main")
         self.git(self.repo, "switch", "-c", "feature/mr-test")
-        self.git(self.repo, "commit", "--allow-empty", "-m", "fix: recipe contract")
+        self.git(self.repo, "commit", "--allow-empty", "-m", "fix: recipe contract",
+                 "-m", 'Tools used: "Codex (OpenAI)"')
         hook = hooks / "pre-push"
         hook.write_text(HOOK)
         hook.chmod(0o755)
@@ -108,7 +111,7 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertEqual(requests[0][:2], ["mr", "create"])
         self.assertIn("--draft", requests[0])
         self.assertEqual(requests[0][requests[0].index("--description") + 1],
-                         "- fix: recipe contract")
+                         '- fix: recipe contract\n\nTools used: "Codex (OpenAI)"')
 
     def test_an_mr_created_ready_goes_through_the_ready_queue(self) -> None:
         self.env.pop("MR_DRAFT")
@@ -136,7 +139,8 @@ class MrCreateRecipeTests(unittest.TestCase):
         result = self.create(str(description))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         request = self.requests()[0]
-        self.assertEqual(request[request.index("--description") + 1], body)
+        self.assertEqual(request[request.index("--description") + 1],
+                         body + '\n\nTools used: "Codex (OpenAI)"')
         self.assertEqual(self.hook_log.read_text().splitlines(), ["unset"])
         self.assertFalse((self.ws / "should-not-exist").exists())
 
@@ -154,6 +158,125 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.requests(), [["mr", "view", "18", "-R", "vauchi/core", "--comments"]])
         self.assertFalse(self.hook_log.exists())
+
+    def test_creation_collects_all_tools_from_legacy_and_current_credits(self) -> None:
+        self.git(self.repo, "commit", "--allow-empty", "-m", "docs: another contribution",
+                 "-m", 'Tools used: "Kimi (Moonshot AI)", "Codex (OpenAI)"',
+                 "-m", "Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>")
+        result = self.create()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        body = self.requests()[0]
+        body = body[body.index("--description") + 1]
+        self.assertEqual(body.count("Tools used:"), 1)
+        self.assertNotIn("Co-Authored-By:", body)
+        self.assertTrue(body.endswith(
+            'Tools used: "Codex (OpenAI)", "Kimi (Moonshot AI)", "Claude (Anthropic)"'))
+
+    def test_creation_replaces_the_generated_with_footer(self) -> None:
+        description = self.ws / "description.md"
+        description.write_text("## Result\nUseful change.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)")
+        result = self.create(str(description))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = self.requests()[0]
+        self.assertEqual(request[request.index("--description") + 1],
+                         '## Result\nUseful change.\n\nTools used: "Codex (OpenAI)", "Claude (Anthropic)"')
+
+    def test_invalid_tools_stop_before_push_or_creation(self) -> None:
+        for value in ['"Codex (Anthropic)"', '"Codex (OpenAI)", "Unknown (Provider)"', '',
+                      '"Codex (OpenAI)" trailing text']:
+            with self.subTest(value=value):
+                description = self.ws / "description.md"
+                description.write_text("## Result\nUseful change.\n\nTools used: " + value)
+                result = self.create(str(description))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Tools used", result.stdout + result.stderr)
+                self.assertFalse(self.hook_log.exists())
+                self.assertEqual(self.requests(), [])
+
+    def test_editing_collects_tools_and_replaces_generated_credit(self) -> None:
+        description = self.ws / "description.md"
+        description.write_text("## Result\nUpdated explanation.\n\n🤖 Generated with Kimi Code")
+        result = subprocess.run(
+            ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
+            cwd=self.ws, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        updates = [call for call in self.requests() if call[:2] == ["mr", "update"]]
+        self.assertEqual(len(updates), 1)
+        request = updates[0]
+        self.assertEqual(request[request.index("--description") + 1],
+                         '## Result\nUpdated explanation.\n\nTools used: "Codex (OpenAI)", "Kimi (Moonshot AI)"')
+        self.assertFalse(self.hook_log.exists())
+
+    def test_invalid_edit_does_not_publish(self) -> None:
+        description = self.ws / "description.md"
+        description.write_text('Tools used: "Claude (OpenAI)"')
+        result = subprocess.run(
+            ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
+            cwd=self.ws, env=self.env, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Tools used", result.stdout + result.stderr)
+        self.assertFalse(any(call[:2] == ["mr", "update"] for call in self.requests()))
+
+    def test_missing_provenance_stops_before_publication(self) -> None:
+        self.git(self.repo, "commit", "--amend", "--allow-empty", "-m", "fix: recipe contract")
+        result = self.create()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Tools used: missing", result.stdout + result.stderr)
+        self.assertFalse(self.hook_log.exists())
+        self.assertEqual(self.requests(), [])
+
+    def test_unreadable_history_stops_before_publication(self) -> None:
+        self.git(self.repo, "update-ref", "-d", "refs/remotes/origin/main")
+        result = self.create()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Tools used", result.stdout + result.stderr)
+        self.assertFalse(self.hook_log.exists())
+        self.assertEqual(self.requests(), [])
+
+    def test_credit_examples_in_code_blocks_remain_literal(self) -> None:
+        body = 'Example:\n```text\nTools used: "Codex (Anthropic)"\n```'
+        description = self.ws / "description.md"
+        description.write_text(body)
+        result = self.create(str(description))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = self.requests()[0]
+        self.assertEqual(request[request.index("--description") + 1],
+                         body + '\n\nTools used: "Codex (OpenAI)"')
+
+    def test_autolink_edits_normalize_existing_credits(self) -> None:
+        self.env.pop("MR_NO_AUTOLINK")
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.env["MR_EXISTING_DESC"] = "Prior result.\n\n🤖 Generated with Claude Code"
+        result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        updates = [call for call in self.requests() if call[:3] == ["api", "-X", "PUT"]]
+        self.assertEqual(len(updates), 2)
+        for update in updates:
+            body = next(arg.removeprefix("description=") for arg in update if arg.startswith("description="))
+            self.assertNotIn("Generated with", body)
+            self.assertTrue(body.endswith('Tools used: "Codex (OpenAI)", "Claude (Anthropic)"'))
+
+    def test_invalid_autolink_description_is_not_published(self) -> None:
+        self.env.pop("MR_NO_AUTOLINK")
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.env["MR_EXISTING_DESC"] = 'Tools used: "Codex (Anthropic)"'
+        result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
+                                env=self.env, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Tools used", result.stdout + result.stderr)
+        self.assertFalse(any(call[:3] == ["api", "-X", "PUT"] for call in self.requests()))
+
+    def test_an_unclosed_commit_example_does_not_hide_later_contributors(self) -> None:
+        self.git(self.repo, "commit", "--allow-empty", "-m", "docs: unfinished example",
+                 "-m", "```text\nExample content")
+        self.git(self.repo, "commit", "--allow-empty", "-m", "docs: another contribution",
+                 "-m", 'Tools used: "Kimi (Moonshot AI)"')
+        result = self.create()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        request = self.requests()[0]
+        self.assertTrue(request[request.index("--description") + 1].endswith(
+            'Tools used: "Codex (OpenAI)", "Kimi (Moonshot AI)"'))
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ mr-view id repo='' comments='false':
     glab mr view "{{id}}" -R "$p" "${view_args[@]}"
 
 # Re-sync an existing MR's title + description to the current commits.
-# Usage: just gitlab mr-update [repo] [title]
+# Usage: just gitlab mr-update [repo] [title] [description_file]
 #   just gitlab mr-update core                     # rebuild title+body from commits
 #   just gitlab mr-update core "feat: my feature"  # custom title, rebuild body
 #
@@ -111,7 +111,7 @@ mr-view id repo='' comments='false':
 # title to override (the usual reason to run this).
 [no-cd]
 [script]
-mr-update repo='' title='':
+mr-update repo='' title='' description_file='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
@@ -124,6 +124,9 @@ mr-update repo='' title='':
         echo "ERROR: cannot update an MR from the main branch"
         exit 1
     fi
+    mr_description_file={{ quote(description_file) }}
+    mr_body=$(python3 "$workspace_root/just/mr-provenance.py" "$dir" -- "$mr_description_file" \
+        | "$workspace_root/scripts/scripts/escape-mr-mentions.py")
     # Find the open MR for this branch.
     iid=$(glab api "projects/vauchi%2F${r}/merge_requests?state=opened&source_branch=${branch}&per_page=1" 2>/dev/null \
       | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')" 2>/dev/null || true)
@@ -141,16 +144,6 @@ mr-update repo='' title='':
     mr_title="${mr_title#title=}"
     if [[ -z "$mr_title" ]]; then
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
-    fi
-    # Body: rebuild from commit bodies, strip Co-Authored-By, escape @mentions,
-    # collapse blanks — identical pipeline to mr-create so the two stay in sync.
-    mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
-        | grep -v '^Co-Authored-By:' \
-        | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
-        | awk 'length($0) > 0 { blank=0; print; next } blank == 0 { print; blank=1 }')
-    if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
-        mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
     fi
     # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
     # on merge, before issue-status-sync can derive its status (#70).
@@ -205,12 +198,9 @@ mr-create repo='' title='' description_file='':
         echo "ERROR: missing or empty description file: $mr_description_file" >&2
         exit 1
     fi
-    # A rejected hook must stop publication; only the caller can classify a
-    # rebase rejection and decide whether a lease-protected retry is valid.
-    git -C "$dir" push -u origin "$branch"
     # Build title and description explicitly to sanitize @ mentions.
     # --fill passes commit body verbatim, which may contain @tags that
-    # ping people on GitLab (e.g., Co-Authored-By: ... <noreply@anthropic.com>).
+    # ping people on GitLab (e.g., an unescaped Gherkin tag).
     # See mr-update: quote() is required, raw interpolation breaks on
     # any title containing a double quote.
     mr_title={{ quote(title) }}
@@ -220,25 +210,8 @@ mr-create repo='' title='' description_file='':
     if [[ -z "$mr_title" ]]; then
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
-    # Build description from commit bodies:
-    # 1. Strip Co-Authored-By trailers (added once at the bottom instead)
-    # 2. Escape `@word` to prevent GitLab mentions — markdown-aware so
-    #    references already inside code spans (e.g. `@Published var x`)
-    #    are NOT double-wrapped (which produces broken nesting that
-    #    GitLab parses as a bare mention — see vauchi/ios!370).
-    # 3. Collapse repeated blank lines
-    mr_body=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s%n%n%b" \
-        | grep -v '^Co-Authored-By:' \
-        | "$workspace_root/scripts/scripts/escape-mr-mentions.py" \
-        | awk 'length($0) > 0 { blank=0; print; next } blank == 0 { print; blank=1 }')
-    # Append single co-author credit if any commit had one
-    if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-        coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
-        mr_body=$(printf '%s\n\n%s' "$mr_body" "$coauthor")
-    fi
-    if [[ -n "$mr_description_file" ]]; then
-        mr_body=$("$workspace_root/scripts/scripts/escape-mr-mentions.py" < "$mr_description_file")
-    fi
+    mr_body=$(python3 "$workspace_root/just/mr-provenance.py" "$dir" -- "$mr_description_file" \
+        | "$workspace_root/scripts/scripts/escape-mr-mentions.py")
     # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
     # on merge, before issue-status-sync can derive its status (#70).
     source "{{ justfile_directory() }}/just/issue-lib.sh"
@@ -258,6 +231,9 @@ mr-create repo='' title='' description_file='':
         echo '       (See script output above for the offending tags.)'
         exit 1
     fi
+    # Validate the complete description before publishing the branch; a
+    # rejected push must still prevent MR creation (private#1186).
+    git -C "$dir" push -u origin "$branch"
     (
         cd "$dir"
         ARGS=(--yes --target-branch main -R "$p")
@@ -368,6 +344,10 @@ _autolink repo='':
             others="${others}- vauchi/${ogl}!${oiid}"$'\n'
         done
         new_desc="${cleaned}"$'\n\n''<!-- mr-auto-link-start -->'$'\n''## Related MRs (auto-linked)'$'\n\n'"${others}"$'\n''<!-- mr-auto-link-end -->'
+        credit_dir=$(gitlab_repo_dir "$egl")
+        new_desc=$(printf '%s' "$new_desc" \
+            | python3 "$workspace_root/just/mr-provenance.py" "$credit_dir" --stdin \
+            | "$workspace_root/scripts/scripts/escape-mr-mentions.py")
         if glab api -X PUT "projects/vauchi%2F${egl}/merge_requests/${eiid}" -f "description=${new_desc}" >/dev/null 2>&1; then
             printf "  ✓ %s !%s — linked %d sibling(s)\n" "$egl" "$eiid" "$(( ${#mr_registry[@]} - 1 ))"
         else
@@ -549,15 +529,11 @@ mr-create-all title='':
                 mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
             fi
             PUSH_OPTS+=(-o "merge_request.title=$mr_title")
-            # Build description with @ escaped to prevent GitLab mentions
             local mr_desc
-            mr_desc=$(git -C "$dir" log origin/main..HEAD --reverse --format="- %s" \
-                | sed 's/@\([a-zA-Z][a-zA-Z0-9_-]*\)/`@\1`/g')
-            # Append single co-author credit if any commit had one
-            if git -C "$dir" log origin/main..HEAD --format="%b" | grep -q '^Co-Authored-By:'; then
-                local coauthor
-                coauthor=$(git -C "$dir" log origin/main..HEAD --format="%b" | grep '^Co-Authored-By:' | sed -n 1p)
-                mr_desc=$(printf '%s\n\n%s' "$mr_desc" "$coauthor")
+            if ! mr_desc=$(python3 "$WORKSPACE_ROOT/just/mr-provenance.py" "$dir" \
+                | "$WORKSPACE_ROOT/scripts/scripts/escape-mr-mentions.py"); then
+                failed+=("$label")
+                return 0
             fi
             # ADR-073 / #70: no closing keyword may reach GitLab.
             source "{{ justfile_directory() }}/just/issue-lib.sh"
@@ -619,14 +595,12 @@ mr-create-all title='':
                 other_mrs="${other_mrs}- vauchi/${ogl}!${oiid}\n"
             done
 
-            # Append single co-author credit if any commit had one
-            coauthor_line=""
-            if git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep -q '^Co-Authored-By:'; then
-                local ca
-                ca=$(git -C "$elabel" log origin/main..HEAD --format="%b" 2>/dev/null | grep '^Co-Authored-By:' | sed -n 1p)
-                coauthor_line="\n${ca}"
+            if ! desc=$(printf '## Summary\n\n%s\n\n## Related MRs\n\n%b\n---\n_%s_\n' "$commits" "$other_mrs" "$files" \
+                | python3 "$WORKSPACE_ROOT/just/mr-provenance.py" "$elabel" --stdin \
+                | "$WORKSPACE_ROOT/scripts/scripts/escape-mr-mentions.py"); then
+                failed+=("$elabel")
+                continue
             fi
-            desc="## Summary\n\n${commits}\n\n## Related MRs\n\n${other_mrs}\n---\n_${files}_${coauthor_line}"
 
             # Mark downstream repos as Draft if upstream has an MR
             is_downstream=false
