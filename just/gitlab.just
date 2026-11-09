@@ -1184,7 +1184,10 @@ resource-group-reset repo key:
     # List upcoming (stuck) jobs
     # printf, not echo: sh's echo turns the JSON's escaped \n into raw
     # newlines inside strings, which jq rejects (#483).
-    JOBS=$(glab api "projects/${encoded}/resource_groups/{{key}}/upcoming_jobs" 2>/dev/null || echo "[]")
+    if ! JOBS=$(glab api "projects/${encoded}/resource_groups/{{key}}/upcoming_jobs"); then
+        echo "ERROR: GitLab refused the resource group '{{key}}' in vauchi/$r: ${JOBS}" >&2
+        exit 1
+    fi
     COUNT=$(printf '%s\n' "$JOBS" | jq 'length')
     echo "Queued/stuck jobs: $COUNT"
 
