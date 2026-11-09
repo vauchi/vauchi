@@ -926,7 +926,9 @@ issue-close id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue close "{{id}}" -R "$p"
 
-# Mark a Draft MR ready: its issue moves from implementing to review on the board (ADR-073)
+# Mark a Draft MR ready: its issue moves from implementing to review on the board (ADR-073).
+# One live ready MR per repository, rebased on main (private#1179): behind
+# another, it stays Draft, cancels its pipeline and both MRs get a comment.
 [no-cd]
 [script]
 mr-ready id repo='':
@@ -934,7 +936,7 @@ mr-ready id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     p=$(resolve_gitlab_project "{{repo}}")
-    glab mr update "{{id}}" --ready -R "$p"
+    python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "{{id}}" "{{repo}}"
 
 # Kanban board in the terminal: one section per derived status (ADR-073). Pass "all" to list backlog/deferred items
 [no-cd]

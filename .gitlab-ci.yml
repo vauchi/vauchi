@@ -98,6 +98,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_git_main_wip_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_git_branch_health_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_gitlab_pipeline_status_recipe.py
+    - JUST_UNSTABLE=1 python3 -m unittest tests/test_gitlab_mr_ready_queue.py
     - python3 -m unittest tests/test_test_build_version.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_test_build_recipe.py
   rules:
