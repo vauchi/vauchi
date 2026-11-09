@@ -21,8 +21,9 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RESOLVE_REPO = """resolve_gitlab_repo() { echo "$1"; }
-resolve_gitlab_project() { echo "vauchi/$1"; }
+# "." stands for the repository the shell is in, as in vauchi/scripts.
+RESOLVE_REPO = """resolve_gitlab_repo() { if [ "$1" = . ]; then echo core; else echo "$1"; fi; }
+resolve_gitlab_project() { echo "vauchi/$(resolve_gitlab_repo "$1")"; }
 gitlab_repo_dir() { echo "$1"; }
 """
 # A stand-in for glab backed by a JSON file: the MR list, single MRs,
@@ -107,10 +108,10 @@ class MrReadyQueueTests(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def ready(self, mrs, iid):
+    def ready(self, mrs, iid, repo="core"):
         self.state.write_text(json.dumps({"mrs": {str(m["iid"]): m for m in mrs}}))
         result = subprocess.run(
-            ["just", "gitlab", "mr-ready", str(iid), "core"],
+            ["just", "gitlab", "mr-ready", str(iid), repo],
             cwd=self.ws, env=self.env, capture_output=True, text=True,
         )
         return result, json.loads(self.state.read_text())
@@ -121,6 +122,15 @@ class MrReadyQueueTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(state["mrs"]["20"]["draft"])
         self.assertNotIn("notes", state)
+
+    # 2026-11-09: `mr-create .` printed "first in the . ready queue".
+    def test_messages_name_the_repository_not_the_argument(self) -> None:
+        ahead = mr(19, False, {"id": 4, "status": "running"})
+        result, state = self.ready([ahead, mr(20, True, {"id": 5, "status": "running"})], 20, ".")
+
+        self.assertIn("just gitlab mr-ready 20 core", state["notes"]["20"][0])
+        self.assertIn("mr-ready 20 core", result.stdout)
+        self.assertNotIn(" . ", result.stdout + state["notes"]["20"][0])
 
     def test_an_mr_behind_main_stays_draft_and_is_told_to_rebase(self) -> None:
         result, state = self.ready([mr(20, True, {"id": 5, "status": "success"}, behind=2)], 20)
