@@ -9,6 +9,11 @@ Exchange contact info with people you meet in person. Update your details
 anytime — everyone who has your card sees the changes. No accounts, no server
 that can read your data, no tracking.
 
+GitLab is canonical: [gitlab.com/vauchi](https://gitlab.com/vauchi) holds
+every repository, issue and merge request. Most public repositories have a
+read-only mirror on [github.com/vauchi](https://github.com/vauchi); this
+workspace repository does not.
+
 ## Why Vauchi?
 
 Traditional contact sharing has problems:
@@ -97,13 +102,13 @@ numbers, or any content.
 
 ### Prerequisites
 
-- Rust 1.75+
+- Rust 1.93+
 - [just](https://github.com/casey/just) command runner
 
 ### Build
 
 ```bash
-git clone https://github.com/vauchi/vauchi.git
+git clone https://gitlab.com/vauchi/vauchi.git
 cd vauchi
 just setup    # Clone all repos, set up workspace
 just build    # Build Rust workspace
