@@ -671,14 +671,17 @@ ci-classify repo job_id:
     glab api "projects/${enc}/jobs/{{job_id}}/trace" \
         | scripts/scripts/classify-ci-failure.sh --failure-reason "$failure_reason"
 
-# Show pipeline status for current branch: the open MR's head pipeline,
-# else the branch's latest. Not `glab ci status --branch`: MR pipelines run
-# on refs/merge-requests/<iid>/merge, and on an issue/<N> branch reused
-# across several MRs glab refuses to pick one (private#408).
+# The current branch's pipeline as "<id> <source> <status> <url> <tested>":
+# <tested> is the branch commit it ran on. A merged-results pipeline runs on
+# a merge commit whose second parent is that commit.
+# the open MR's head pipeline, else the branch's latest. Not `glab ci
+# status --branch`: MR pipelines run on refs/merge-requests/<iid>/merge, and
+# on an issue/<N> branch reused across several MRs glab refuses to pick one
+# (private#408). Fails when there is none.
+[private]
 [no-cd]
 [script]
-pipeline-status repo='':
-    just gitlab _check-auth
+_branch-pipeline repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     p=$(resolve_gitlab_project "{{repo}}")
@@ -693,16 +696,33 @@ pipeline-status repo='':
     if [[ -n "$mr" ]]; then
         pipeline=$(glab api "projects/${enc}/merge_requests/${mr}" \
             | jq -r '.head_pipeline // empty
-                     | "\(.id) !'"$mr"' \(.status) \(.web_url)"')
+                     | "\(.id) !'"$mr"' \(.status) \(.web_url) \(.sha) \(.ref)"')
     fi
     if [[ -z "$pipeline" ]]; then
         pipeline=$(glab api "projects/${enc}/pipelines?ref=${branch_enc}&per_page=1" \
-            | jq -r 'first // empty | "\(.id) branch \(.status) \(.web_url)"')
+            | jq -r 'first // empty | "\(.id) branch \(.status) \(.web_url) \(.sha) \(.ref)"')
     fi
     if [[ -z "$pipeline" ]]; then
         echo "no pipeline for ${branch} in ${p}" >&2
         exit 1
     fi
+    set -- $pipeline
+    tested=$5
+    if [[ "$6" =~ ^refs/merge-requests/[0-9]+/merge$ ]]; then
+        tested=$(glab api "projects/${enc}/repository/commits/$5" | jq -r '.parent_ids[-1]')
+    fi
+    echo "$1 $2 $3 $4 $tested"
+
+# Show pipeline status for current branch, with its jobs.
+[no-cd]
+[script]
+pipeline-status repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    pipeline=$(just gitlab _branch-pipeline "{{repo}}")
     set -- $pipeline
     id=$1
     echo "pipeline ${id} (${2}): ${3} ${4}"
@@ -1017,67 +1037,59 @@ mr-status repo='':
     echo "$summary"
     # Show pipeline status
     echo "Pipeline:"
-    glab ci status --branch "$branch" -R "$p" 2>/dev/null || echo "  No pipeline found"
+    just gitlab pipeline-status "{{repo}}" 2>/dev/null || echo "  No pipeline found"
 
-# Wait for pipeline to complete on current branch
+# Wait for the pipeline of the current commit to finish.
 # Usage: just gitlab pipeline-wait [repo]
-#   Polls every 30s until pipeline finishes (passed/failed/canceled)
+#   Polls every PIPELINE_WAIT_INTERVAL seconds (30). Only a pipeline on the
+#   local HEAD counts: right after a push the MR still shows the previous
+#   commit's. Gives up when none appears in PIPELINE_WAIT_APPEAR_POLLS polls (20).
 [no-cd]
 [script]
 pipeline-wait repo='':
     just gitlab _check-auth
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     dir=$(gitlab_repo_dir "{{repo}}")
-    branch=$(cd "$dir" && git branch --show-current)
-    echo "Waiting for pipeline on $branch in $p..."
-    echo "(polling every 30s, Ctrl+C to stop)"
-    echo ""
+    branch=$(git -C "$dir" branch --show-current)
+    head=$(git -C "$dir" rev-parse HEAD)
+    interval="${PIPELINE_WAIT_INTERVAL:-30}"
+    appear_polls="${PIPELINE_WAIT_APPEAR_POLLS:-20}"
+    echo "Waiting for the pipeline of ${head:0:8} on $branch in $p (every ${interval}s)"
+    missing=0
     while true; do
-        # Get pipeline status via glab ci status
-        output=$(glab ci status --branch "$branch" -R "$p" 2>&1 || true)
-        pipeline_state=$(printf '%s\n' "$output" \
-            | sed -n 's/^Pipeline state: //p' \
-            | tail -1 \
-            | tr '[:upper:]' '[:lower:]')
-        case "$pipeline_state" in
-            success|passed)
-                echo "$output"
+        pipeline=$(just gitlab _branch-pipeline "{{repo}}" 2>/dev/null || true)
+        set -- $pipeline
+        if [[ $# -lt 5 || "$5" != "$head" ]]; then
+            missing=$((missing + 1))
+            if [[ "$missing" -ge "$appear_polls" ]]; then
+                echo "no pipeline for $branch at ${head:0:8} in $p after $missing polls" >&2
+                exit 1
+            fi
+            echo "  [$(date +%H:%M:%S)] no pipeline for ${head:0:8} yet"
+            sleep "$interval"
+            continue
+        fi
+        case "$3" in
+            success)
+                just gitlab pipeline-status "{{repo}}"
                 echo ""
                 echo "Pipeline PASSED"
                 exit 0
                 ;;
-            failed)
-                echo "$output"
+            failed|canceled|skipped)
+                just gitlab pipeline-status "{{repo}}"
                 echo ""
-                echo "Pipeline FAILED"
+                echo "Pipeline $(printf '%s' "$3" | tr '[:lower:]' '[:upper:]')"
                 exit 1
-                ;;
-            canceled|cancelled)
-                echo "$output"
-                echo ""
-                echo "Pipeline CANCELED"
-                exit 1
-                ;;
-            "")
-                if echo "$output" | grep -qiE "no pipeline"; then
-                    echo "  No pipeline found yet..."
-                else
-                    echo "$output"
-                    echo "ERROR: could not determine aggregate pipeline state" >&2
-                    exit 1
-                fi
                 ;;
             *)
-                timestamp=$(date +%H:%M:%S)
-                echo "  [$timestamp] Pipeline state: $pipeline_state"
+                echo "  [$(date +%H:%M:%S)] pipeline $1 ($2): $3"
                 ;;
         esac
-        sleep 30
+        sleep "$interval"
     done
-
 # ── Metrics Operations ────────────────────────────────────────────
 
 # Trigger all metrics pipelines to refresh Grafana dashboard data

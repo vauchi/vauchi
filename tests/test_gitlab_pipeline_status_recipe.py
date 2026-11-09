@@ -23,6 +23,8 @@ RESOLVE_REPO = """resolve_gitlab_repo() { echo "$1"; }
 resolve_gitlab_project() { echo "vauchi/$1"; }
 gitlab_repo_dir() { echo "$1"; }
 """
+# A merged-results pipeline (ref refs/merge-requests/<iid>/merge) runs on a
+# merge commit whose second parent is the branch head, as on gitlab.com.
 # GitLab as seen for three branches: issue/7 has a merged and an open MR,
 # issue/8 has only a branch pipeline, issue/9 has nothing. As on gitlab.com,
 # only the single-MR endpoint carries head_pipeline, not the MR list.
@@ -39,12 +41,17 @@ case "$2" in
     echo '{"iid":12,"head_pipeline":{"id":901,"status":"running","web_url":"https://gl/p/901"}}' ;;
   *merge_requests*source_branch=issue%2F10*) echo '[{"iid":13}]' ;;
   *merge_requests/13)
-    echo '{"iid":13,"head_pipeline":{"id":903,"status":"failed","web_url":"https://gl/p/903"}}' ;;
+    echo '{"iid":13,"head_pipeline":{"id":903,"status":"failed","sha":"merge13","ref":"refs/merge-requests/13/merge","web_url":"https://gl/p/903"}}' ;;
   *merge_requests*source_branch=issue%2F11*) echo '[{"iid":14}]' ;;
   *merge_requests/14)
     echo poll >> "$FAKE_POLLS"
     if [ "$(wc -l < "$FAKE_POLLS")" -lt 3 ]; then s=running; else s=success; fi
-    echo '{"iid":14,"head_pipeline":{"id":904,"status":"'"$s"'","web_url":"https://gl/p/904"}}' ;;
+    echo '{"iid":14,"head_pipeline":{"id":904,"status":"'"$s"'","sha":"merge14","ref":"refs/merge-requests/14/merge","web_url":"https://gl/p/904"}}' ;;
+  *merge_requests*source_branch=issue%2F15*) echo '[{"iid":15}]' ;;
+  *merge_requests/15)
+    echo '{"iid":15,"head_pipeline":{"id":905,"status":"success","sha":"merge15","ref":"refs/merge-requests/15/merge","web_url":"https://gl/p/905"}}' ;;
+  *repository/commits/merge15) echo '{"parent_ids":["main0","0000000000000000000000000000000000000000"]}' ;;
+  *repository/commits/merge*) echo '{"parent_ids":["main0","'"$FAKE_SHA"'"]}' ;;
   *merge_requests*) echo '[]' ;;
   *pipelines/901/jobs*)
     echo '[{"name":"test","status":"success"},{"name":"lint","status":"running"}]' ;;
@@ -85,6 +92,7 @@ class GitlabPipelineStatusTests(unittest.TestCase):
         self.env = dict(
             os.environ, JUST_UNSTABLE="1", PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
             FAKE_POLLS=str(base / "polls"), PIPELINE_WAIT_INTERVAL="0",
+            PIPELINE_WAIT_APPEAR_POLLS="2", FAKE_SHA="",
         )
 
     def tearDown(self) -> None:
@@ -118,6 +126,9 @@ class GitlabPipelineStatusTests(unittest.TestCase):
 
     def pipeline_wait(self, branch: str) -> subprocess.CompletedProcess:
         git(self.repo, "switch", "-q", "-c", branch)
+        git(self.repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "c")
+        self.env["FAKE_SHA"] = subprocess.run(["git", "-C", str(self.repo), "rev-parse", "HEAD"],
+                                              capture_output=True, text=True, check=True).stdout.strip()
         return subprocess.run(
             ["just", "gitlab", "pipeline-wait", "core"],
             cwd=self.ws, env=self.env, capture_output=True, text=True, timeout=60,
@@ -131,7 +142,8 @@ class GitlabPipelineStatusTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Pipeline PASSED", result.stdout)
-        self.assertEqual(Path(self.env["FAKE_POLLS"]).read_text().count("poll"), 3)
+        self.assertIn("pipeline 904 (!14): running", result.stdout)
+        self.assertLess(result.stdout.index("running"), result.stdout.index("Pipeline PASSED"))
 
     def test_wait_ends_failed_when_the_pipeline_fails(self) -> None:
         result = self.pipeline_wait("issue/10")
@@ -140,11 +152,20 @@ class GitlabPipelineStatusTests(unittest.TestCase):
         self.assertIn("Pipeline FAILED", result.stdout)
         self.assertIn("failed\ttest", result.stdout)
 
+    # Right after a push the MR's head pipeline is still the previous
+    # commit's; a green one there says nothing about HEAD.
+    def test_wait_does_not_pass_on_an_earlier_commits_pipeline(self) -> None:
+        result = self.pipeline_wait("issue/15")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn("Pipeline PASSED", result.stdout)
+        self.assertIn("no pipeline for issue/15 at", result.stdout + result.stderr)
+
     def test_wait_fails_when_the_branch_has_no_pipeline(self) -> None:
         result = self.pipeline_wait("issue/9")
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("no pipeline for issue/9", result.stdout + result.stderr)
+        self.assertIn("no pipeline for issue/9 at", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
