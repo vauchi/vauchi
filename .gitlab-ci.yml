@@ -101,6 +101,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_gitlab_mr_ready_queue.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_gitlab_resource_group_reset.py
     - python3 -m unittest tests/test_glab_cli_contract.py
+    - JUST_UNSTABLE=1 python3 -m unittest tests/test_gitlab_wrapper_recipes.py
     - python3 -m unittest tests/test_test_build_version.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_test_build_recipe.py
   rules:
