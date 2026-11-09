@@ -139,6 +139,15 @@ class MrReadyQueueTests(unittest.TestCase):
         self.assertTrue(state["mrs"]["20"]["draft"])
         self.assertIn("2 commits behind main", result.stdout + result.stderr)
 
+    def test_a_bump_mr_behind_main_is_told_to_let_gitlab_rebase_it(self) -> None:
+        bump = dict(mr(20, True, {"id": 5, "status": "success"}, behind=1),
+                    source_branch="chore/bump-core-0.103.0")
+        result, _ = self.ready([bump], 20)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("just gitlab mr-rebase 20 core", result.stdout)
+        self.assertNotIn("push", result.stdout)
+
     def test_an_mr_behind_a_live_ready_mr_waits_as_draft_and_stops_its_pipeline(self) -> None:
         ahead = mr(19, False, {"id": 4, "status": "running"})
         result, state = self.ready([ahead, mr(20, True, {"id": 5, "status": "running"})], 20)
