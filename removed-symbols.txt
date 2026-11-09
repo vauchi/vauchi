@@ -12,3 +12,12 @@
 tor_settings
 TorSettings
 Tor Settings
+
+# ── Removed 2026-11: signed pin-config rotation (never enabled; vauchi/private#1195) ──
+resolve_pins
+refresh_pin_cache
+fetch_pin_config
+verify_signed_pin_config
+PinCacheStore
+pin_ttl_secs
+pin_config_verify_key
