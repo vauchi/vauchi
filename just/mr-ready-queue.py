@@ -14,9 +14,11 @@ Usage: mr-ready-queue.py <group/project> <iid> <repo>
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
+import time
 
 STOPPABLE = {"created", "waiting_for_resource", "preparing", "pending", "running", "scheduled"}
 # A ready MR whose pipeline failed cannot be merged as it is, so it does not hold the queue.
@@ -62,16 +64,35 @@ def main(project, iid, repo):
     return 0
 
 
+def mr_pipelines(api, own):
+    """The MR's pipelines; for a just-opened MR, waits for GitLab to create the first.
+
+    GitLab creates an MR's pipeline seconds after the MR (core!2287 was
+    queued before it existed, so nothing was cancelled).
+    """
+    if own.get("head_pipeline"):
+        return [own["head_pipeline"]]
+    interval = float(os.environ.get("READY_QUEUE_POLL_INTERVAL", "3"))
+    for _ in range(int(os.environ.get("READY_QUEUE_POLLS", "10"))):
+        found = glab("api", f"{api}/merge_requests/{own['iid']}/pipelines")
+        if found:
+            return found
+        time.sleep(interval)
+    return []
+
+
 def wait_behind(api, own, ahead_iid, repo):
     iid = own["iid"]
     project = api.removeprefix("projects/").replace("%2F", "/")
     if not own["draft"]:
         glab("mr", "update", str(iid), "--draft", "-R", project)
-    pipeline = own.get("head_pipeline") or {}
+    ids = [p["id"] for p in mr_pipelines(api, own) if p.get("status") in STOPPABLE]
+    for pipeline_id in ids:
+        glab("api", "-X", "POST", f"{api}/pipelines/{pipeline_id}/cancel")
     stopped = ""
-    if pipeline.get("status") in STOPPABLE:
-        glab("api", "-X", "POST", f"{api}/pipelines/{pipeline['id']}/cancel")
-        stopped = f" Its pipeline {pipeline['id']} is cancelled: it would test a tree that is not the one that lands."
+    if ids:
+        stopped = (f" Its pipeline {', '.join(map(str, ids))} is cancelled: "
+                   "it would test a tree that is not the one that lands.")
     glab("api", "-X", "POST", f"{api}/merge_requests/{iid}/notes", "-f",
          f"body=ready-queue: waiting behind !{ahead_iid}, which is ready, so this MR stays Draft.{stopped} "
          f"After !{ahead_iid} merges: rebase onto main, push, and run `just gitlab mr-ready {iid} {repo}`.")
@@ -92,7 +113,14 @@ def waiting():
         if latest is None:
             continue
         ahead = glab("api", f"{api}/merge_requests/{latest.group(1)}")
-        if ahead["state"] == "opened":
+        # The MR ahead holds the queue only while it is open, ready and not red.
+        if ahead["state"] != "opened":
+            why = ahead["state"]
+        elif ahead["draft"]:
+            why = "draft"
+        elif (ahead.get("head_pipeline") or {}).get("status") in NOT_HOLDING:
+            why = ahead["head_pipeline"]["status"]
+        else:
             continue
         repo = draft["references"]["full"].split("!")[0].rsplit("/", 1)[-1]
         # A bot's bump branch is rebased by GitLab; agents never push it.
@@ -100,7 +128,7 @@ def waiting():
             step = f"just gitlab mr-rebase {draft['iid']} {repo}, then"
         else:
             step = "rebase onto main, push, then"
-        print(f"  {repo} !{draft['iid']}: !{latest.group(1)} {ahead['state']} — {step}: "
+        print(f"  {repo} !{draft['iid']}: !{latest.group(1)} {why} — {step}: "
               f"just gitlab mr-ready {draft['iid']} {repo}")
     return 0
 
