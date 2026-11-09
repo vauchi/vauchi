@@ -37,10 +37,19 @@ case "$2" in
   *merge_requests*source_branch=issue%2F7*) echo '[{"iid":12}]' ;;
   *merge_requests/12)
     echo '{"iid":12,"head_pipeline":{"id":901,"status":"running","web_url":"https://gl/p/901"}}' ;;
+  *merge_requests*source_branch=issue%2F10*) echo '[{"iid":13}]' ;;
+  *merge_requests/13)
+    echo '{"iid":13,"head_pipeline":{"id":903,"status":"failed","web_url":"https://gl/p/903"}}' ;;
+  *merge_requests*source_branch=issue%2F11*) echo '[{"iid":14}]' ;;
+  *merge_requests/14)
+    echo poll >> "$FAKE_POLLS"
+    if [ "$(wc -l < "$FAKE_POLLS")" -lt 3 ]; then s=running; else s=success; fi
+    echo '{"iid":14,"head_pipeline":{"id":904,"status":"'"$s"'","web_url":"https://gl/p/904"}}' ;;
   *merge_requests*) echo '[]' ;;
   *pipelines/901/jobs*)
     echo '[{"name":"test","status":"success"},{"name":"lint","status":"running"}]' ;;
-  *pipelines/902/jobs*) echo '[{"name":"test","status":"failed"}]' ;;
+  *pipelines/902/jobs*|*pipelines/903/jobs*) echo '[{"name":"test","status":"failed"}]' ;;
+  *pipelines/904/jobs*) echo '[{"name":"test","status":"success"}]' ;;
   *pipelines*ref=issue%2F8*)
     echo '[{"id":902,"status":"failed","web_url":"https://gl/p/902"}]' ;;
   *pipelines*) echo '[]' ;;
@@ -74,7 +83,8 @@ class GitlabPipelineStatusTests(unittest.TestCase):
         glab.write_text(FAKE_GLAB)
         glab.chmod(0o755)
         self.env = dict(
-            os.environ, JUST_UNSTABLE="1", PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
+            os.environ, JUST_UNSTABLE="1", PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+            FAKE_POLLS=str(base / "polls"), PIPELINE_WAIT_INTERVAL="0",
         )
 
     def tearDown(self) -> None:
@@ -102,6 +112,36 @@ class GitlabPipelineStatusTests(unittest.TestCase):
 
     def test_a_branch_with_no_pipeline_says_so_and_fails(self) -> None:
         result = self.pipeline_status("issue/9")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no pipeline for issue/9", result.stdout + result.stderr)
+
+    def pipeline_wait(self, branch: str) -> subprocess.CompletedProcess:
+        git(self.repo, "switch", "-q", "-c", branch)
+        return subprocess.run(
+            ["just", "gitlab", "pipeline-wait", "core"],
+            cwd=self.ws, env=self.env, capture_output=True, text=True, timeout=60,
+        )
+
+    # 2026-11-09: on _private issue/1179, whose open MR had a pipeline,
+    # pipeline-wait printed "No pipeline found yet" until killed; the fake
+    # refuses `glab ci status` the same way for a reused branch.
+    def test_wait_ends_passed_when_the_pipeline_succeeds(self) -> None:
+        result = self.pipeline_wait("issue/11")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Pipeline PASSED", result.stdout)
+        self.assertEqual(Path(self.env["FAKE_POLLS"]).read_text().count("poll"), 3)
+
+    def test_wait_ends_failed_when_the_pipeline_fails(self) -> None:
+        result = self.pipeline_wait("issue/10")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Pipeline FAILED", result.stdout)
+        self.assertIn("failed\ttest", result.stdout)
+
+    def test_wait_fails_when_the_branch_has_no_pipeline(self) -> None:
+        result = self.pipeline_wait("issue/9")
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("no pipeline for issue/9", result.stdout + result.stderr)
