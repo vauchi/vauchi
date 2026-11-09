@@ -316,6 +316,14 @@ session-init:
     else
         echo "  (none)"
     fi
+    if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
+        QUEUE_TURN=$(python3 just/mr-ready-queue.py --waiting 2>&1 || echo "  (ready queue unreadable)")
+        if [[ -n "$QUEUE_TURN" ]]; then
+            echo ""
+            echo "READY QUEUE — their turn came (private#1179):"
+            printf '%s\n' "$QUEUE_TURN"
+        fi
+    fi
 
     # Local branches, uncommitted changes, stashes — scan all repos in parallel
     _scan_repo_status() {

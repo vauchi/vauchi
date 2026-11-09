@@ -10,9 +10,11 @@ decision 4), so agents queue: one live ready MR per repository, rebased on
 main. A later MR stays Draft, stops its pipeline, and both MRs say so.
 
 Usage: mr-ready-queue.py <group/project> <iid> <repo>
+       mr-ready-queue.py --waiting   (queued Drafts whose MR ahead is no longer open)
 """
 
 import json
+import re
 import subprocess
 import sys
 
@@ -77,5 +79,26 @@ def wait_behind(api, own, ahead_iid, repo):
           f"After !{ahead_iid} merges, rebase and run `just gitlab mr-ready {iid} {repo}` again.")
 
 
+WAITING_NOTE = re.compile(r"^ready-queue: waiting behind !(\d+)")
+
+
+def waiting():
+    for draft in glab("api", "groups/vauchi/merge_requests?state=opened&wip=yes&scope=all&per_page=100") or []:
+        api = f"projects/{draft['project_id']}"
+        notes = glab("api", f"{api}/merge_requests/{draft['iid']}/notes?sort=desc&order_by=created_at&per_page=100")
+        latest = next((m for m in (WAITING_NOTE.match(n["body"]) for n in notes) if m), None)
+        if latest is None:
+            continue
+        ahead = glab("api", f"{api}/merge_requests/{latest.group(1)}")
+        if ahead["state"] == "opened":
+            continue
+        repo = draft["references"]["full"].split("!")[0].rsplit("/", 1)[-1]
+        print(f"  {repo} !{draft['iid']}: !{latest.group(1)} {ahead['state']} — rebase onto main, push, "
+              f"then: just gitlab mr-ready {draft['iid']} {repo}")
+    return 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--waiting"]:
+        sys.exit(waiting())
     sys.exit(main(*sys.argv[1:4]))

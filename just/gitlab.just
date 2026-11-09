@@ -965,6 +965,15 @@ mr-ready id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "{{id}}" "$(resolve_gitlab_repo "{{repo}}")"
 
+# Queued Draft MRs whose MR ahead is no longer open, with the next step
+# (private#1179). session-init prints this.
+[no-cd]
+[script]
+ready-queue-waiting:
+    just gitlab _check-auth
+    set -euo pipefail
+    python3 "{{justfile_directory()}}/just/mr-ready-queue.py" --waiting
+
 # Kanban board in the terminal: one section per derived status (ADR-073). Pass "all" to list backlog/deferred items
 [no-cd]
 [script]
