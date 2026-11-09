@@ -22,7 +22,15 @@ if sys.argv[1:3] == ["auth", "status"]:
     sys.exit(0)
 with open(os.environ["GLAB_CALL_LOG"], "a") as stream:
     stream.write(json.dumps(sys.argv[1:]) + "\n")
-print("https://gitlab.test/vauchi/core/-/merge_requests/1")
+route = sys.argv[2] if sys.argv[1] == "api" else ""
+if "source_branch=" in route:
+    print(json.dumps([{"iid": 1}]))
+elif "merge_requests/1" in route:
+    print(json.dumps({"iid": 1, "draft": True, "diverged_commits_count": 0, "head_pipeline": None}))
+elif "state=opened" in route:
+    print(json.dumps([{"iid": 1, "draft": True}]))
+else:
+    print("https://gitlab.test/vauchi/core/-/merge_requests/1")
 """
 HOOK = """#!/bin/sh
 printf '%s\n' "${SKIP_TESTS:-unset}" >> "$HOOK_LOG"
@@ -101,6 +109,16 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.assertIn("--draft", requests[0])
         self.assertEqual(requests[0][requests[0].index("--description") + 1],
                          "- fix: recipe contract")
+
+    def test_an_mr_created_ready_goes_through_the_ready_queue(self) -> None:
+        self.env.pop("MR_DRAFT")
+        result = self.create()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        requests = self.requests()
+        self.assertEqual(requests[0][:2], ["mr", "create"])
+        self.assertIn("--draft", requests[0])
+        self.assertEqual(requests[-1], ["mr", "update", "1", "--ready", "-R", "vauchi/core"])
+        self.assertIn("first in the core ready queue", result.stdout)
 
     def test_a_rejected_push_does_not_create_an_mr_or_retry_forcefully(self) -> None:
         self.refuse.touch()
