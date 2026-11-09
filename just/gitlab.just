@@ -411,6 +411,18 @@ mr-merge-when-green id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab mr merge "{{id}}" --auto-merge --yes -R "$p"
 
+# Rebase an MR's branch on its target, server-side: GitLab pushes, not the
+# agent, so it is the step for a bot's bump branch (private#1179). Starts a
+# new pipeline.
+[no-cd]
+[script]
+mr-rebase id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab mr rebase "{{id}}" -R "$p"
+
 # Close a merge request
 [no-cd]
 [script]

@@ -50,8 +50,10 @@ def main(project, iid, repo):
 
     behind = own.get("diverged_commits_count") or 0
     if behind:
-        print(f"NOT READY: !{iid} is {behind} commits behind main; rebase onto origin/main, "
-              f"push, then run `just gitlab mr-ready {iid} {repo}` again.")
+        rebase = (f"run `just gitlab mr-rebase {iid} {repo}`" if own["source_branch"].startswith("chore/bump-")
+                  else "rebase onto origin/main and push")
+        print(f"NOT READY: !{iid} is {behind} commits behind main; {rebase}, "
+              f"then run `just gitlab mr-ready {iid} {repo}` again.")
         return 1
 
     if own["draft"]:
@@ -93,8 +95,13 @@ def waiting():
         if ahead["state"] == "opened":
             continue
         repo = draft["references"]["full"].split("!")[0].rsplit("/", 1)[-1]
-        print(f"  {repo} !{draft['iid']}: !{latest.group(1)} {ahead['state']} — rebase onto main, push, "
-              f"then: just gitlab mr-ready {draft['iid']} {repo}")
+        # A bot's bump branch is rebased by GitLab; agents never push it.
+        if draft["source_branch"].startswith("chore/bump-"):
+            step = f"just gitlab mr-rebase {draft['iid']} {repo}, then"
+        else:
+            step = "rebase onto main, push, then"
+        print(f"  {repo} !{draft['iid']}: !{latest.group(1)} {ahead['state']} — {step}: "
+              f"just gitlab mr-ready {draft['iid']} {repo}")
     return 0
 
 
