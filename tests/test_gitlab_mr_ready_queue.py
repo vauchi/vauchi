@@ -43,7 +43,9 @@ if args[:2] == ["auth", "status"]:
 if args[:2] == ["mr", "update"]:
     mr = state["mrs"][args[2]]
     mr["draft"] = "--draft" in args
-    save_and_print({})
+    json.dump(state, open(path, "w"))
+    print("- Updating merge request !%s" % args[2])
+    sys.exit(0)
 assert args[0] == "api", args
 method, fields, rest, i = "GET", {}, [], 1
 while i < len(args):

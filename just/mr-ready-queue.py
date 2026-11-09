@@ -25,7 +25,7 @@ def glab(*args):
     out = subprocess.run(["glab", *args], capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(f"ERROR: glab {' '.join(args[:2])} failed: {out.stderr.strip() or out.stdout.strip()}")
-    return json.loads(out.stdout or "null")
+    return json.loads(out.stdout or "null") if args[0] == "api" else None
 
 
 def main(project, iid, repo):

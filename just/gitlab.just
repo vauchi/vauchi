@@ -267,8 +267,9 @@ mr-create repo='' title='' description_file='':
         # which is off so that ADR-073 issue/<N> branches survive web merges.
         [[ "$branch" =~ ^issue/[0-9]+$ ]] || ARGS+=(--remove-source-branch)
         # A Draft puts the issue in the board's implementing column and a
-        # ready MR in review (ADR-073 Decision 4); `just gitlab mr-ready` flips it.
-        [[ "${MR_DRAFT:-}" == "1" ]] && ARGS+=(--draft)
+        # ready MR in review (ADR-073 Decision 4). Every MR opens as a Draft;
+        # without MR_DRAFT=1 the ready queue below decides (private#1179).
+        ARGS+=(--draft)
         glab mr create "${ARGS[@]}"
     )
 
@@ -279,6 +280,12 @@ mr-create repo='' title='' description_file='':
 
     # ── Auto-link Related MRs (E13/E14/E15 fix) ────────────────────
     just gitlab _autolink "{{repo}}"
+
+    if [[ "${MR_DRAFT:-}" != "1" ]]; then
+        iid=$(glab api "projects/${p//\//%2F}/merge_requests?state=opened&source_branch=${branch//\//%2F}&per_page=1" \
+          | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')")
+        python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "$iid" "{{repo}}"
+    fi
 
 # Cross-link every open MR that shares this branch across sibling repos.
 # Idempotent: re-running rewrites the auto-generated section instead of
