@@ -330,8 +330,11 @@ _autolink repo='':
     echo "── Auto-linking ${#mr_registry[@]} MRs on branch '${branch}' ──"
     for entry in "${mr_registry[@]}"; do
         IFS=: read -r el egl eiid <<< "$entry"
-        cur_desc=$(glab api "projects/vauchi%2F${egl}/merge_requests/${eiid}" 2>/dev/null \
-          | python3 -c "import sys,json; print(json.load(sys.stdin).get('description') or '')" 2>/dev/null || true)
+        if ! cur_desc=$(glab api "projects/vauchi%2F${egl}/merge_requests/${eiid}" \
+          | python3 -c "import sys,json; print(json.load(sys.stdin).get('description') or '')"); then
+            echo "ERROR: cannot read $egl !$eiid description; leaving it unchanged" >&2
+            exit 1
+        fi
         # Strip prior auto-generated section so re-runs are idempotent.
         # Uses HTML-comment markers so the regex cannot accidentally match
         # prose mentioning "Related MRs" inside commit bodies.

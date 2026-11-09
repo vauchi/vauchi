@@ -27,6 +27,8 @@ route = sys.argv[2] if sys.argv[1] == "api" else ""
 if "source_branch=" in route:
     print(json.dumps([{"iid": 1}]))
 elif "merge_requests/1" in route:
+    if os.environ.get("MR_FAIL_DESCRIPTION") == "1":
+        sys.exit(1)
     print(json.dumps({"iid": 1, "draft": True, "diverged_commits_count": 0, "head_pipeline": None,
                       "description": os.environ.get("MR_EXISTING_DESC", "")}))
 elif "state=opened" in route:
@@ -277,6 +279,15 @@ class MrCreateRecipeTests(unittest.TestCase):
         request = self.requests()[0]
         self.assertTrue(request[request.index("--description") + 1].endswith(
             'Tools used: "Codex (OpenAI)", "Kimi (Moonshot AI)"'))
+
+    def test_autolink_read_failure_does_not_replace_the_description(self) -> None:
+        self.env.pop("MR_NO_AUTOLINK")
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.env["MR_FAIL_DESCRIPTION"] = "1"
+        result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
+                                env=self.env, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any(call[:3] == ["api", "-X", "PUT"] for call in self.requests()))
 
 
 if __name__ == "__main__":
