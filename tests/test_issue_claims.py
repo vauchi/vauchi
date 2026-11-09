@@ -93,7 +93,11 @@ if parts[2] == "repository" and parts[3] == "branches":
         branch = state["branches"].get(parts[4].replace("%2F", "/"))
         out(branch) if branch else fail("404 Branch Not Found")
     prefix = query.partition("search=")[2].split("&")[0].lstrip("^")
-    out([b for n, b in state["branches"].items() if n.startswith(prefix)])
+    # Like GitLab: sorted by name, one page unless --paginate.
+    found = [state["branches"][n] for n in sorted(state["branches"]) if n.startswith(prefix)]
+    if "--paginate" not in args:
+        found = found[:int(query.partition("per_page=")[2].split("&")[0] or 20)]
+    out(found)
 if parts[2] == "repository" and parts[3] == "compare":
     to = query.partition("to=")[2].split("&")[0].replace("%2F", "/")
     if to not in state["branches"]:
@@ -259,6 +263,36 @@ class IssueClaimTest(unittest.TestCase):
                 self.assertEqual(result.stderr, "")
                 self.assertEqual(result.stdout.split()[0], expected)
                 self.assertNotIn("notification-identity", result.stdout)
+
+    def test_claims_are_listed_by_issue_number_with_their_holder(self) -> None:
+        for number, session in (("12", "codex-a"), ("7", "kimi-b"), ("9", "codex-a")):
+            self.state.write_text(json.dumps({**self.load(), "issues": {
+                **self.load()["issues"], number: {"iid": int(number), "state": "opened",
+                                                  "title": "T", "labels": [], "web_url": "u"}}}))
+            self.run_lib(f"issue_claim {number}", session, check=True)
+
+        result = self.run_lib("issue_claims", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertEqual([line.split()[0] for line in lines], ["#7", "#9", "#12"])
+        self.assertIn("/kimi", lines[0])
+        self.assertIn("/codex", lines[2])
+
+    # 72 issue/<N> branches on 2026-11-09; past GitLab's 100-per-page the
+    # rest of the claims would vanish from every listing.
+    def test_claims_past_the_first_page_of_branches_are_listed(self) -> None:
+        state = self.load()
+        for number in range(1000, 1101):
+            state["branches"][f"issue/{number}"] = {"name": f"issue/{number}", "ahead": 0,
+                "commit": {"committed_date": "2026-11-09T05:00:00+00:00"}}
+        self.save(state)
+
+        result = self.run_lib("issue_claims", "codex-a")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(result.stdout.splitlines()), 101)
+        self.assertEqual(result.stdout.splitlines()[-1].split()[0], "#1100")
 
     def test_release_deletes_an_empty_claim_branch_and_notes_it(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
