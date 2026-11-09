@@ -284,7 +284,7 @@ mr-create repo='' title='' description_file='':
     if [[ "${MR_DRAFT:-}" != "1" ]]; then
         iid=$(glab api "projects/${p//\//%2F}/merge_requests?state=opened&source_branch=${branch//\//%2F}&per_page=1" \
           | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['iid'] if d else '')")
-        python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "$iid" "{{repo}}"
+        python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "$iid" "$(resolve_gitlab_repo "{{repo}}")"
     fi
 
 # Cross-link every open MR that shares this branch across sibling repos.
@@ -963,7 +963,7 @@ mr-ready id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     p=$(resolve_gitlab_project "{{repo}}")
-    python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "{{id}}" "{{repo}}"
+    python3 "{{justfile_directory()}}/just/mr-ready-queue.py" "$p" "{{id}}" "$(resolve_gitlab_repo "{{repo}}")"
 
 # Kanban board in the terminal: one section per derived status (ADR-073). Pass "all" to list backlog/deferred items
 [no-cd]
