@@ -1511,7 +1511,7 @@ install-hooks:
 
 # Usage: just socratic-review [repo] [codex|kimi|both]
 #   just socratic-review core           # both reviewers
-#   just socratic-review _private kimi  # one reviewer
+#   just socratic-review private kimi   # one reviewer (the repo name, not its path)
 #
 # Codex and Kimi interrogate `origin/main...HEAD` and return questions
 # only — no patches, no verdict. Provider diversity is the point: a
