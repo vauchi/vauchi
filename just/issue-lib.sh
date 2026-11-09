@@ -31,7 +31,7 @@ _issue_age_hours() {
 _issue_holder_note() {
     # Every page: label and MR-link system notes bury the claim on a busy issue.
     glab api "projects/$ISSUE_REPO/issues/$1/notes?sort=desc&order_by=created_at&per_page=100" --paginate 2>/dev/null \
-        | jq -sc '[.[][] | select(.body | test("^(claim|takeover): "))][0] // empty'
+        | jq -sc '[.[] | arrays | .[] | select(.body | test("^(claim|takeover): "))][0] // empty'
 }
 
 _issue_state() {
@@ -266,8 +266,35 @@ _issue_open_issues() {
 # issue/<N>-<slug> work branch is not, and looking its name up as an issue
 # fails (#830).
 _issue_claim_numbers() {
-    glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" \
-        | jq -r '.[].name | select(test("^issue/[0-9]+$")) | sub("^issue/"; "")'
+    _issue_claim_branches | cut -d' ' -f1
+}
+
+# "<number> <commit date>" for every issue/<N> branch, by number. Paged:
+# 72 such branches on 2026-11-09, and a single page holds 100.
+_issue_claim_branches() {
+    glab api "projects/$ISSUE_REPO/repository/branches?search=^issue/&per_page=100" --paginate \
+        | jq -s -r 'add // [] | .[] | select(.name | test("^issue/[0-9]+$"))
+            | "\(.name | sub("^issue/"; "")) \(.commit.committed_date)"' \
+        | sort -n
+}
+
+# "<number> <commit date> <holder note>" per claim, in issue order. One
+# notes request per claim, eight at a time: run one by one, 72 claims took
+# over two minutes (vauchi/private#1179).
+_issue_claim_holders() {
+    local dir number branch_date running=0
+    dir=$(mktemp -d)
+    _issue_claim_branches > "$dir/branches"
+    while read -r number branch_date; do
+        (_issue_holder_note "$number" | jq -r '.body // ""' | head -n 1 > "$dir/$number") &
+        running=$((running + 1))
+        if [[ "$running" -ge 8 ]]; then wait; running=0; fi
+    done < "$dir/branches"
+    wait
+    while read -r number branch_date; do
+        printf '%s %s %s\n' "$number" "$branch_date" "$(cat "$dir/$number" 2>/dev/null)"
+    done < "$dir/branches"
+    rm -rf "$dir"
 }
 
 issue_queue() {
@@ -306,28 +333,23 @@ issue_board() {
            else $items[] | "  #\(.iid)\t\(.priority)\t\(.title)" end)'
 }
 
-# Current issue claims with their holder: one note query per claimed issue,
-# bounded by the handful of live claims.
+# Current issue claims with their holder, in issue order.
 issue_claims() {
-    local number body branch_date
-    for number in $(_issue_claim_numbers); do
-        body=$(_issue_holder_note "$number" | jq -r '.body // ""')
-        branch_date=$(glab api "projects/$ISSUE_REPO/repository/branches/issue%2F$number" \
-            | jq -r '.commit.committed_date')
+    local number branch_date body
+    while read -r number branch_date body; do
         printf '  #%-6s %-32s branch %sh old\n' "$number" "$(slot_claim_owner "$body")" \
             "$(_issue_age_hours "$branch_date")"
-    done
+    done < <(_issue_claim_holders)
 }
 
 # Issue numbers of the live claims (issue/<N> branches) whose holder note
 # names the current session — what session-end must release or hand off (#415).
 issue_session_claims() {
-    local number me
+    local number branch_date body me
     me=$(slot_session_id)
-    for number in $(_issue_claim_numbers); do
-        [[ "$(slot_claim_owner "$(_issue_holder_note "$number" | jq -r '.body // ""')")" == "$me"* ]] \
-            && echo "$number"
-    done
+    while read -r number branch_date body; do
+        [[ "$(slot_claim_owner "$body")" == "$me"* ]] && echo "$number"
+    done < <(_issue_claim_holders)
     return 0
 }
 

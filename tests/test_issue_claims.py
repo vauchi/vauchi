@@ -36,7 +36,11 @@ query = rest[0].partition("?")[2]
 parts = path.split("/")
 
 def out(value):
-    print(json.dumps(value)); json.dump(state, open(state_path, "w")); sys.exit(0)
+    # Reads run concurrently (issue_claims fetches holders in parallel) and must not rewrite the file.
+    print(json.dumps(value))
+    if method != "GET":
+        json.dump(state, open(state_path, "w"))
+    sys.exit(0)
 
 def fail(message):
     print(json.dumps({"message": message})); sys.stderr.write(message + "\n"); sys.exit(1)
