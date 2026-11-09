@@ -55,7 +55,8 @@ case "$2" in
   *merge_requests*) echo '[]' ;;
   *pipelines/901/jobs*)
     echo '[{"name":"test","status":"success"},{"name":"lint","status":"running"}]' ;;
-  *pipelines/902/jobs*|*pipelines/903/jobs*) echo '[{"name":"test","status":"failed"}]' ;;
+  *pipelines/902/jobs*) echo '[{"name":"test","status":"failed"}]' ;;
+  *pipelines/903/jobs*) echo '[{"name":"lint","status":"success"},{"name":"test","status":"failed"}]' ;;
   *pipelines/904/jobs*) echo '[{"name":"test","status":"success"}]' ;;
   *pipelines*ref=issue%2F8*)
     echo '[{"id":902,"status":"failed","web_url":"https://gl/p/902"}]' ;;
@@ -149,7 +150,10 @@ class GitlabPipelineStatusTests(unittest.TestCase):
         result = self.pipeline_wait("issue/10")
 
         self.assertEqual(result.returncode, 1)
+        # A green job inside a failed pipeline is no pass (test_release_gates).
+        self.assertIn("success\tlint", result.stdout)
         self.assertIn("Pipeline FAILED", result.stdout)
+        self.assertNotIn("PASSED", result.stdout)
         self.assertIn("failed\ttest", result.stdout)
 
     # Right after a push the MR's head pipeline is still the previous

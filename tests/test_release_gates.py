@@ -3290,7 +3290,11 @@ android store submission: passed
         recipe = gitlab_recipes.split("pipeline-wait repo='':", 1)[1]
         recipe = recipe.split("# Retry failed jobs", 1)[0]
 
-        self.assertIn("Pipeline state:", recipe)
+        # The pipeline's own status decides, never a job line in the output
+        # (one green job read as a passed pipeline). Behaviour is covered by
+        # test_gitlab_pipeline_status_recipe.py (private#1179).
+        self.assertIn('pipeline=$(just gitlab _branch-pipeline', recipe)
+        self.assertIn('case "$3" in', recipe)
         self.assertNotIn('grep -qiE "passed|success"', recipe)
 
     def test_ci_classifier_passes_gitlab_failure_reason(self) -> None:
