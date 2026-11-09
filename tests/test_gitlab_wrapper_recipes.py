@@ -48,6 +48,7 @@ WRAPPERS = [
     (["mr-merge-when-green", "5", "core"], ["mr", "merge", "5", "--auto-merge", "--yes", *CORE]),
     (["mr-close", "5", "core"], ["mr", "close", "5", *CORE]),
     (["mr-approve", "5", "core"], ["mr", "approve", "5", *CORE]),
+    (["mr-rebase", "5", "core"], ["mr", "rebase", "5", *CORE]),
     (["mr-list", "core"], ["mr", "list", *CORE]),
     (["mr-view", "5", "core"], ["mr", "view", "5", *CORE]),
     (["mr-view", "5", "core", "true"], ["mr", "view", "5", *CORE, "--comments"]),

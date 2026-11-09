@@ -39,8 +39,9 @@ else:
 """
 
 
-def mr(project_id, path, iid, state="opened", draft=False, notes=()):
+def mr(project_id, path, iid, state="opened", draft=False, notes=(), branch=None):
     return {"project_id": project_id, "iid": iid, "state": state, "draft": draft,
+            "source_branch": branch or f"issue/{iid}",
             "references": {"full": f"{path}!{iid}"},
             "notes": [{"body": body} for body in notes]}
 
@@ -82,6 +83,18 @@ class ReadyQueueWaitingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("core !20: !19 merged", result.stdout)
         self.assertIn("just gitlab mr-ready 20 core", result.stdout)
+
+    # A bot's bump branch is never pushed by an agent: GitLab rebases it
+    # server-side (maintainer, 2026-11-09).
+    def test_a_bump_mr_is_told_to_rebase_on_gitlab(self) -> None:
+        result = self.waiting([
+            mr(9, "vauchi/ios", 19, state="merged"),
+            mr(9, "vauchi/ios", 20, draft=True, notes=[WAIT.format(19)], branch="chore/bump-core-0.103.0"),
+        ])
+
+        self.assertIn("ios !20: !19 merged", result.stdout)
+        self.assertIn("just gitlab mr-rebase 20 ios, then: just gitlab mr-ready 20 ios", result.stdout)
+        self.assertNotIn("push", result.stdout)
 
     def test_a_draft_still_behind_an_open_mr_is_not_listed(self) -> None:
         result = self.waiting([
