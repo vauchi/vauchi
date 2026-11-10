@@ -2740,10 +2740,26 @@ check-annotations repo='core':
 [group('tools')]
 [no-cd]
 check-implemented-scenarios *args:
+    #!/usr/bin/env bash
+    # The registry's `scenario_root = true` entries say which repositories'
+    # tests carry annotations, as features CI reads them (private#1013); a
+    # hand-kept list here went stale when linux-app, linux-hw and contract
+    # arrived (private#1196). A root not cloned here is named, not skipped
+    # in silence: its scenarios then read as untested.
+    set -euo pipefail
+    roots=""
+    for root in $(python3 -I scripts/scripts/lib/repo-registry.py scenario-roots); do
+        if [ -d "$root" ]; then
+            roots="$roots $root"
+        else
+            echo "WARN: scenario root '$root' is not cloned in this workspace; its annotations are not seen" >&2
+        fi
+    done
+    # shellcheck disable=SC2086
     python3 scripts/scripts/check-implemented-scenarios.py --features features \
         --baseline features/implemented-untested.baseline \
         --dangling-baseline features/dangling-annotations.baseline {{ args }} \
-        core cli tui e2e relay ohttp-relay linux-gtk linux-qt windows web-demo ios macos android
+        $roots
 
 # Validate feature lifecycle tags (@implemented/@planned/@wip)
 # Every Scenario and Scenario Outline must have exactly one lifecycle tag
