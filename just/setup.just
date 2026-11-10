@@ -940,6 +940,11 @@ session-end:
         scripts/scripts/workflow-accuracy-metrics.sh --days 30 || \
             echo "  WARN: workflow-accuracy metrics failed (see above)"
     fi
+    # ── the cost beside the four numbers (vauchi/private#1198) ──
+    if [[ -f scripts/scripts/token-report.py ]]; then
+        python3 scripts/scripts/token-report.py brief 2>/dev/null || \
+            echo "  cost per commit (k-units): n/a (token-report failed)"
+    fi
 
     echo ""
     if [[ "$ERRORS" -gt 0 ]]; then
@@ -1571,3 +1576,12 @@ shell-lint *files:
 [group('setup')]
 workflow-metrics *args:
     scripts/scripts/workflow-accuracy-metrics.sh {{ args }}
+
+# When each skill and just recipe was last used in this workspace, from the
+# hook event log; never-used names first (vauchi/private#1198).
+#   just last-used
+#   just last-used --log ../vauchi-1/.claude/.session-errors   # another slot too
+[group('setup')]
+[positional-arguments]
+last-used *args:
+    @python3 scripts/scripts/last-used.py "$@"
