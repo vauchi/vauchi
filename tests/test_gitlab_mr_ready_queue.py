@@ -59,6 +59,9 @@ while i < len(args):
 route, _, query = rest[0].partition("?")
 parts = route.split("/")
 assert parts[:2] == ["projects", "vauchi%2Fcore"], parts
+if len(parts) == 2:
+    # The queue asks the project whether a merge train runs (private#1204).
+    save_and_print({"merge_trains_enabled": state.get("merge_trains_enabled", False)})
 if parts[2] == "merge_requests" and len(parts) == 3:
     save_and_print([{k: v for k, v in m.items() if k != "head_pipeline"}
                     for m in state["mrs"].values() if m["state"] == "opened"])
