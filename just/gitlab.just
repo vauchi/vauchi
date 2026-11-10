@@ -145,6 +145,14 @@ mr-update repo='' title='' description_file='':
     if [[ -z "$mr_title" ]]; then
         mr_title=$(git -C "$dir" log origin/main..HEAD --reverse --format=%s | sed -n 1p)
     fi
+    # GitLab reads the Draft mark from the title: a refreshed title without
+    # the prefix marked a queued Draft ready and it jumped its queue
+    # (private!4024, 2026-11-10, vauchi/private#1208). Keep what the MR has.
+    is_draft=$(glab api "projects/vauchi%2F${r}/merge_requests/${iid}" \
+        | python3 -c "import sys, json; print(json.load(sys.stdin).get('draft', False))")
+    if [[ "$is_draft" == "True" && "$mr_title" != Draft:* ]]; then
+        mr_title="Draft: $mr_title"
+    fi
     # ADR-073: a closing keyword ("close #14") makes GitLab close the issue
     # on merge, before issue-status-sync can derive its status (#70).
     source "{{ justfile_directory() }}/just/issue-lib.sh"
