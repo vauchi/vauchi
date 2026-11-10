@@ -250,7 +250,9 @@ load cost many times over. Attribution and history:
 - **Stale-pathspec `git add` after `git mv`.** Stage ONLY the new
   paths — a dead old path aborts the whole `git add`. Never silence
   `git add` stderr; verify `git show --stat` shows nonzero insertions
-  before pushing a commit that should carry content.
+  before pushing a commit that should carry content. 6 recurrences,
+  4 with this line in context; now blocked as **VGT14**
+  (`_private/docs/lint-errors/vgt14-stale-add-pathspec.md`).
 
 When a `log_reasoning_errors.md` entry hits N≥3, OR a session reveals
 a clear recurrence with worked example, promote a one-liner here.
