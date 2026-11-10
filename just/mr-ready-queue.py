@@ -36,6 +36,15 @@ def main(project, iid, repo):
     api = f"projects/{project.replace('/', '%2F')}"
     own = glab("api", f"{api}/merge_requests/{iid}?include_diverged_commits_count=true")
 
+    # A merge train serializes merges and tests each merged result itself,
+    # so there is no queue for agents to keep (vauchi/private#1204 pilot).
+    if (glab("api", api) or {}).get("merge_trains_enabled"):
+        if own["draft"]:
+            glab("mr", "update", str(iid), "--ready", "-R", project)
+        print(f"!{iid} is ready; {project} merges through a merge train, so there is no "
+              "queue to wait in. The maintainer's auto-merge adds it to the train.")
+        return 0
+
     def holds_queue(mr):
         if mr["iid"] == own["iid"] or mr["draft"]:
             return False

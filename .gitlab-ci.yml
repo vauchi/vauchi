@@ -91,6 +91,7 @@ test:release-gates:
     - python3 -m unittest tests/test_backup_recipe_authority.py
     - python3 -m unittest tests/test_repos_registry.py
     - python3 -m unittest tests/test_session_init_sweep.py
+    - python3 -m unittest tests/test_mr_ready_queue_trains.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_create_repo_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_ledger_recipe.py
     - JUST_UNSTABLE=1 python3 -m unittest tests/test_plan_validate_recipe.py
