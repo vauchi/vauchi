@@ -33,6 +33,9 @@ elif "merge_requests/1" in route:
                       "description": os.environ.get("MR_EXISTING_DESC", "")}))
 elif "state=opened" in route:
     print(json.dumps([{"iid": 1, "draft": True}]))
+elif route == "projects/vauchi%2Fcore":
+    # The ready queue asks whether the project runs a merge train.
+    print(json.dumps({"merge_trains_enabled": False}))
 else:
     print("https://gitlab.test/vauchi/core/-/merge_requests/1")
 """
