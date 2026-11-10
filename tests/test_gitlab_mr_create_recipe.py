@@ -209,6 +209,20 @@ class MrCreateRecipeTests(unittest.TestCase):
                          '## Result\nUpdated explanation.\n\nTools used: "Codex (OpenAI)", "Kimi (Moonshot AI)"')
         self.assertFalse(self.hook_log.exists())
 
+    def test_editing_a_draft_keeps_its_draft_mark(self) -> None:
+        # A title without the prefix marks the MR ready, and a queued Draft
+        # then jumps its queue or train (private!4024, 2026-11-10; #1208).
+        description = self.ws / "description.md"
+        description.write_text('## Result\nRefreshed.\n\nTools used: "Codex (OpenAI)"')
+        result = subprocess.run(
+            ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
+            cwd=self.ws, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        updates = [call for call in self.requests() if call[:2] == ["mr", "update"]]
+        self.assertEqual(len(updates), 1)
+        request = updates[0]
+        self.assertEqual(request[request.index("--title") + 1], "Draft: fix: recipe contract")
+
     def test_invalid_edit_does_not_publish(self) -> None:
         description = self.ws / "description.md"
         description.write_text('Tools used: "Claude (OpenAI)"')
