@@ -112,6 +112,9 @@ session-init:
     echo ""
     echo "── hooks ──"
     bash scripts/install-hooks.sh 2>&1 | tail -1
+    # Every harness routes through the same adapter; drift here means one
+    # agent runs without a guardrail the others have (vauchi/private#1202).
+    bash scripts/scripts/check-hook-parity.sh 2>&1 | sed 's/^/  /'
 
     # Claude config layout (.claude symlink → _private/.claude)
     echo ""
