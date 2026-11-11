@@ -2733,6 +2733,25 @@ check-annotations repo='core':
         [[ ${#missing[@]} -gt 30 ]] && echo "  ... and $((${#missing[@]} - 30)) more"
     fi
 
+# Public-claims audit (framework 14, quarterly; vauchi/private#1237): packs the
+# public text with the feature map, has Kimi and Codex flag passages from an
+# empty directory, and collects them into passages.json. Then each kind-A row
+# is verified against the code by an agent of another model family, using
+# _private/docs/reference/2026-11-11-public-claims-audit-verify-brief.md, and every confirmed
+# overclaim opens a record. Only public repositories are packed.
+# Usage: just public-claims-audit [out-dir]
+[group('tools')]
+[no-cd]
+public-claims-audit out="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="{{ out }}"
+    [ -n "$out" ] || out="${TMPDIR:-/tmp}/public-claims-audit-$(date +%Y-%m-%d)"
+    python3 -I _private/scripts/public-claims-audit.py pack --out "$out"
+    python3 -I _private/scripts/public-claims-audit.py read --out "$out"
+    python3 -I _private/scripts/public-claims-audit.py collect --out "$out"
+    echo "Packs, answers and passages.json are in $out; verify the kind-A rows next."
+
 # Every @implemented scenario needs a test annotated with its name
 # (vauchi/private#268). Reads the local checkouts, which may be on branches;
 # features' lint:implemented-scenarios checks every repo's main.
