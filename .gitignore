@@ -12,7 +12,9 @@
 /tui/
 /desktop/
 /e2e/
+/gtk-display/
 /linux-gtk/
+/qt-display/
 /linux-qt/
 /macos/
 /windows/

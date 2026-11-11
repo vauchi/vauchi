@@ -3,21 +3,21 @@
 
 # Desktop GUI testing recipes (AT-SPI, screenshots, accessibility audit)
 
-# Run AT-SPI accessibility tests for linux-gtk (under Xvfb if no display)
+# Run AT-SPI accessibility tests for gtk-display (under Xvfb if no display)
 [group('desktop-test')]
 [script]
 test-atspi-gtk *args='':
-    echo "▸ Running AT-SPI tests for linux-gtk..."
-    chmod +x linux-gtk/tests/atspi/run-tests.sh
-    linux-gtk/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }}
+    echo "▸ Running AT-SPI tests for gtk-display..."
+    chmod +x gtk-display/tests/atspi/run-tests.sh
+    gtk-display/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }}
 
-# Run AT-SPI accessibility tests for linux-qt (under Xvfb if no display)
+# Run AT-SPI accessibility tests for qt-display (under Xvfb if no display)
 [group('desktop-test')]
 [script]
 test-atspi-qt *args='':
-    echo "▸ Running AT-SPI tests for linux-qt..."
-    chmod +x linux-qt/tests/atspi/run-tests.sh
-    linux-qt/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }}
+    echo "▸ Running AT-SPI tests for qt-display..."
+    chmod +x qt-display/tests/atspi/run-tests.sh
+    qt-display/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }}
 
 # Run all desktop AT-SPI tests (gtk + qt)
 [group('desktop-test')]
@@ -25,29 +25,29 @@ test-atspi-qt *args='':
 test-desktop-all *args='':
     echo "▸ Running all desktop AT-SPI tests..."
     echo ""
-    echo "=== linux-gtk ==="
-    chmod +x linux-gtk/tests/atspi/run-tests.sh
-    linux-gtk/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }} || true
+    echo "=== gtk-display ==="
+    chmod +x gtk-display/tests/atspi/run-tests.sh
+    gtk-display/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }} || true
     echo ""
-    echo "=== linux-qt ==="
-    chmod +x linux-qt/tests/atspi/run-tests.sh
-    linux-qt/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }} || true
+    echo "=== qt-display ==="
+    chmod +x qt-display/tests/atspi/run-tests.sh
+    qt-display/tests/atspi/run-tests.sh -v --tb=short -k "not test_snapshots" {{ args }} || true
 
 # Dump the AT-SPI accessibility tree for a running app (for debugging)
-# Usage: just a11y-audit linux-gtk   or   just a11y-audit linux-qt
+# Usage: just a11y-audit gtk-display   or   just a11y-audit qt-display
 [group('desktop-test')]
 a11y-audit repo:
     #!/usr/bin/env bash
     set -euo pipefail
     case "{{ repo }}" in
-        linux-gtk|gtk)
+        gtk-display|gtk)
             APP_NAME="gvauchi"
             ;;
-        linux-qt|qt)
+        qt-display|qt)
             APP_NAME="vauchi"
             ;;
         *)
-            echo "Usage: just a11y-audit <linux-gtk|linux-qt>"
+            echo "Usage: just a11y-audit <gtk-display|qt-display>"
             exit 1
             ;;
     esac
@@ -91,11 +91,11 @@ a11y-audit repo:
 [script]
 screenshot-gtk:
     echo "▸ Capturing GTK screenshots..."
-    echo "  Build first: just build linux-gtk"
+    echo "  Build first: just build gtk-display"
     echo "  Run under Xvfb with screenshot tests:"
-    echo "    UPDATE_SNAPSHOTS=1 linux-gtk/tests/atspi/run-tests.sh -k test_snapshots -v"
+    echo "    UPDATE_SNAPSHOTS=1 gtk-display/tests/atspi/run-tests.sh -k test_snapshots -v"
     echo ""
-    echo "  Baselines will be saved to linux-gtk/tests/atspi/snapshots/baseline/"
+    echo "  Baselines will be saved to gtk-display/tests/atspi/snapshots/baseline/"
     echo "  Copy to design/screens/ for design documentation."
 
 # Capture screenshots of all screens for Qt app
@@ -103,9 +103,9 @@ screenshot-gtk:
 [script]
 screenshot-qt:
     echo "▸ Capturing Qt screenshots..."
-    echo "  Build first: just build linux-qt"
+    echo "  Build first: just build qt-display"
     echo "  Run under Xvfb with screenshot tests:"
-    echo "    UPDATE_SNAPSHOTS=1 linux-qt/tests/atspi/run-tests.sh -k test_snapshots -v"
+    echo "    UPDATE_SNAPSHOTS=1 qt-display/tests/atspi/run-tests.sh -k test_snapshots -v"
     echo ""
-    echo "  Baselines will be saved to linux-qt/tests/atspi/snapshots/baseline/"
+    echo "  Baselines will be saved to qt-display/tests/atspi/snapshots/baseline/"
     echo "  Copy to design/screens/ for design documentation."

@@ -73,8 +73,8 @@ numbers, or any content.
 | [tui/](tui/) | Terminal user interface |
 | [macos/](macos/) | Native macOS app (SwiftUI) |
 | [windows/](windows/) | Native Windows app (WinUI 3 / C#) |
-| [linux-gtk/](linux-gtk/) | Native Linux app (GTK4 + libadwaita) |
-| [linux-qt/](linux-qt/) | Native Linux app (Qt variant) |
+| [gtk-display/](gtk-display/) | Native Linux app (GTK4 + libadwaita) |
+| [qt-display/](qt-display/) | Native Linux app (Qt variant) |
 | [android/](android/) | Android app (Kotlin/Compose) |
 | [ios/](ios/) | iOS app (SwiftUI) |
 | [linux-hw/](linux-hw/) | Hardware shell for Linux (BlueZ, PC/SC, PipeWire, mDNS) |

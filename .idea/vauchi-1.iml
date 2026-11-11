@@ -19,8 +19,8 @@
       <sourceFolder url="file://$MODULE_DIR$/core/vendor/rqrr/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/e2e/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/e2e/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/linux-gtk/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/linux-gtk/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/gtk-display/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/gtk-display/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/ohttp-relay/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ohttp-relay/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/relay/benches" isTestSource="true" />
@@ -34,15 +34,15 @@
       <excludeFolder url="file://$MODULE_DIR$/core/vauchi-core/fuzz/target" />
       <excludeFolder url="file://$MODULE_DIR$/core/vendor/rqrr/target" />
       <excludeFolder url="file://$MODULE_DIR$/e2e/target" />
-      <excludeFolder url="file://$MODULE_DIR$/linux-gtk/target" />
+      <excludeFolder url="file://$MODULE_DIR$/gtk-display/target" />
       <excludeFolder url="file://$MODULE_DIR$/ohttp-relay/fuzz/target" />
       <excludeFolder url="file://$MODULE_DIR$/ohttp-relay/target" />
       <excludeFolder url="file://$MODULE_DIR$/relay/fuzz/target" />
       <excludeFolder url="file://$MODULE_DIR$/relay/target" />
       <excludeFolder url="file://$MODULE_DIR$/tui/target" />
       <excludeFolder url="file://$MODULE_DIR$/web-demo/wasm/target" />
-      <excludeFolder url="file://$MODULE_DIR$/linux-qt/target" />
-      <excludeFolder url="file://$MODULE_DIR$/linux-qt/build" />
+      <excludeFolder url="file://$MODULE_DIR$/qt-display/target" />
+      <excludeFolder url="file://$MODULE_DIR$/qt-display/build" />
       <excludeFolder url="file://$MODULE_DIR$/android/build" />
       <excludeFolder url="file://$MODULE_DIR$/android/.gradle" />
       <excludeFolder url="file://$MODULE_DIR$/drift-detector/node_modules" />

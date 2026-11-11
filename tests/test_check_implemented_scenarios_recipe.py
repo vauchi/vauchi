@@ -16,7 +16,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REPOS = ("core cli tui e2e relay ohttp-relay linux-gtk linux-qt windows "
+REPOS = ("core cli tui e2e relay ohttp-relay gtk-display qt-display windows "
          "web-demo ios macos android").split()
 
 FEATURE = """Feature: Navigation

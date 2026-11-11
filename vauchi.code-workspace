@@ -94,7 +94,7 @@
       "cli/Cargo.toml",
       "tui/Cargo.toml",
       "e2e/Cargo.toml",
-      "linux-gtk/Cargo.toml"
+      "gtk-display/Cargo.toml"
     ],
     "rust-analyzer.rustfmt.enableRangeFormatting": true,
     "rust-analyzer.check.command": "clippy",

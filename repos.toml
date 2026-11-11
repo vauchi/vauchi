@@ -237,8 +237,8 @@ profile = true
 description = "Native Windows app (WinUI 3 / C#)"
 
 [[repo]]
-name = "linux-gtk"
-path = "linux-gtk"
+name = "gtk-display"
+path = "gtk-display"
 ecosystem = "rust"
 public = true
 mobile = false
@@ -248,8 +248,8 @@ profile = true
 description = "Native Linux app (GTK4 + libadwaita)"
 
 [[repo]]
-name = "linux-qt"
-path = "linux-qt"
+name = "qt-display"
+path = "qt-display"
 ecosystem = "cmake"
 public = true
 mobile = false

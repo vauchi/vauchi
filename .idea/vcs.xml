@@ -13,8 +13,8 @@
     <mapping directory="$PROJECT_DIR$/features" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/gitlab-profile" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/ios" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/linux-gtk" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/linux-qt" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/gtk-display" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/qt-display" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/locales" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/macos" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/markdown-plan" vcs="Git" />

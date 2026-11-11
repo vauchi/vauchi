@@ -4,7 +4,7 @@
 
 # Application running recipes
 
-# Run an application: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay]
+# Run an application: just run [cli|tui|gtk-display|qt-display|android|ios|relay]
 [group('apps')]
 [script]
 run platform *args:
@@ -16,10 +16,10 @@ run platform *args:
         tui)
             cd tui && cargo run -- {{args}}
             ;;
-        linux-gtk)
-            cd linux-gtk && cargo run -- {{args}}
+        gtk-display)
+            cd gtk-display && cargo run -- {{args}}
             ;;
-        linux-qt)
+        qt-display)
             # Build vauchi-cabi if needed
             CABI_LIB="core/target/release/libvauchi_cabi.so"
             if [ ! -f "$CABI_LIB" ]; then
@@ -27,8 +27,8 @@ run platform *args:
                 cd core && cargo build --release -p vauchi-cabi && cd ..
             fi
             # Build Qt app
-            mkdir -p linux-qt/build
-            cd linux-qt/build
+            mkdir -p qt-display/build
+            cd qt-display/build
             cmake .. -DVAUCHI_CABI_DIR="$(pwd)/../../core/target/release"
             cmake --build . --parallel
             # Run
@@ -86,13 +86,13 @@ run platform *args:
             ./Vauchi/bin/x64/Release/net8.0-windows10.0.22621.0/win-x64/Vauchi.exe {{args}}
             ;;
         *)
-            echo "Usage: just run [cli|tui|linux-gtk|linux-qt|android|ios|relay|windows]"
+            echo "Usage: just run [cli|tui|gtk-display|qt-display|android|ios|relay|windows]"
             echo ""
             echo "Platforms:"
             echo "  cli         Run CLI (pass args after platform)"
             echo "  tui         Run TUI terminal interface"
-            echo "  linux-gtk   Run Linux GTK4 app"
-            echo "  linux-qt    Run Linux Qt6 app (builds vauchi-cabi if needed)"
+            echo "  gtk-display   Run Linux GTK4 app"
+            echo "  qt-display    Run Linux Qt6 app (builds vauchi-cabi if needed)"
             echo "  windows     Run Windows WinUI 3 app (builds vauchi-cabi if needed)"
             echo "  android     Build and install on Android emulator"
             echo "  ios         Build and install on iOS simulator"
@@ -101,8 +101,8 @@ run platform *args:
             echo "Examples:"
             echo "  just run cli init Alice"
             echo "  just run tui"
-            echo "  just run linux-gtk"
-            echo "  just run linux-qt"
+            echo "  just run gtk-display"
+            echo "  just run qt-display"
             echo "  just run windows"
             echo "  just run relay --port 8080"
             exit 1

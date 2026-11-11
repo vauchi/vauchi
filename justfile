@@ -310,7 +310,7 @@ refresh-core-lock repo:
     }
     case "$repo" in
         web-demo) manifest="$dir/wasm/Cargo.toml" ;;
-        cli|tui|linux-gtk|e2e) manifest="$dir/Cargo.toml" ;;
+        cli|tui|gtk-display|e2e) manifest="$dir/Cargo.toml" ;;
         *) echo "Unsupported Core consumer: $repo" >&2; exit 1 ;;
     esac
     manifest_dir=$(dirname "$manifest")
@@ -584,7 +584,7 @@ lint *args:
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
         scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
         # Humble-UI domain-mutation ratchet for the Rust/C++/C# frontends
-        # (tui, cli, linux-gtk, linux-qt, windows) — the analogue of
+        # (tui, cli, gtk-display, qt-display, windows) — the analogue of
         # audit-frontend-vocab.sh's mobile (Swift/Kotlin) coverage. Closes
         # the ungated-scope gap from 2026-06-02-humble-ui-enforcement-mobile-only:
         # counts domain-mutating verb calls (save_/configure_/setup_/validate_)
@@ -599,7 +599,7 @@ lint *args:
         scripts/scripts/audit-ui-literals.sh --check scripts/scripts/audit-ui-literals.baseline.json
         # Hardcoded-English ratchet over the remaining frontends that do not
         # have a dedicated i18n string lint (Android Kotlin, Windows XAML,
-        # linux-qt C++, linux-gtk Rust, TUI Rust, CLI Rust). Core and the
+        # qt-display C++, gtk-display Rust, TUI Rust, CLI Rust). Core and the
         # SwiftUI frontends are covered by audit-ui-literals.sh and
         # check-text-literal-count.sh respectively. The baseline may DROP as
         # strings are routed through locales; it may never RISE.
@@ -1412,7 +1412,7 @@ test-diff *args:
                 # no changed-files mode, so this runs the repo's WHOLE suite —
                 # scoped to repos you touched, not to changed lines.
                 echo "$changed" | grep -qE '\.rs$' || continue
-                if [ "$r" = "linux-gtk" ] && [ "$OS" != "Linux" ]; then
+                if [ "$r" = "gtk-display" ] && [ "$OS" != "Linux" ]; then
                     echo "═══ test-diff: $r — Linux-only deps; tests run in CI ═══"; continue
                 fi
                 ran=1
@@ -1589,7 +1589,7 @@ lint-no-direct-clipboard-writes:
     scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)"
 
 # Verify every hand-rolled frontend ScreenModel parser
-# (linux-gtk, linux-qt, windows, android) covers every Component
+# (gtk-display, qt-display, windows, android) covers every Component
 # variant declared in core/vauchi-app/src/ui/component.rs. iOS / macOS
 # come from UniFFI and are sync-by-construction.
 # `_private/docs/problems/2026-05-01-screenmodel-parser-symmetry-gate/`.
@@ -1773,7 +1773,7 @@ help:
       Examples: just test core, just lint cli, just check ios
       Valid repos: core cli relay tui e2e android ios docs
                    locales themes features website scripts
-                   macos windows linux-gtk linux-qt web-demo
+                   macos windows gtk-display qt-display web-demo
                    linux-hw apple-hw android-hw windows-hw contract
 
     GitLab:
@@ -2668,11 +2668,11 @@ concept name:
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
     echo "── Tests ──"
-    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli/ tui/ relay/ linux-gtk/tests/ \
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli/ tui/ relay/ gtk-display/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "── Source ──"
-    rg -i "$pattern" core/vauchi-core/src/ relay/src/ linux-gtk/src/ \
+    rg -i "$pattern" core/vauchi-core/src/ relay/src/ gtk-display/src/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "── Docs ──"
@@ -2868,10 +2868,10 @@ check-just-docs action='check':
 #
 # Covers all in-tree consumers: the binding crates inside core/ (vauchi-app,
 # vauchi-cabi, vauchi-platform), every Rust frontend, every native frontend
-# (macos/ios/android Swift+Kotlin, windows C#, linux-gtk Rust, linux-qt C++),
+# (macos/ios/android Swift+Kotlin, windows C#, gtk-display Rust, qt-display C++),
 # and web-demo/drift-detector (TypeScript). The list is broad on purpose —
 # missing a consumer is what made the 2026-05-08 deep-modules audit drop
-# linux-qt entirely. See .claude/docs/audit-scope.md.
+# qt-display entirely. See .claude/docs/audit-scope.md.
 [group('tools')]
 [no-cd]
 [script]
@@ -2882,7 +2882,7 @@ consumers pattern:
     CONSUMER_DIRS=(
         core/vauchi-app core/vauchi-cabi core/vauchi-platform
         cli tui e2e relay
-        linux-gtk linux-qt windows macos ios android
+        gtk-display qt-display windows macos ios android
         web-demo utils/drift-detector
     )
     for dir in "${CONSUMER_DIRS[@]}"; do
@@ -2946,7 +2946,7 @@ cmake-check *args:
     source scripts/scripts/quiet-runner.sh
     source scripts/scripts/resolve-repo.sh
     _qr_parse_args {{args}}
-    repo=${_QR_REPO:-linux-qt}
+    repo=${_QR_REPO:-qt-display}
     [[ "$(repo_toolchain "$repo")" == cmake ]] || { echo "Not a CMake repository: $repo" >&2; exit 1; }
     run_step "$repo" bash scripts/scripts/cmake-check.sh "$(repo_dir "$repo")"
     print_summary "CMake/CTest" || exit 1

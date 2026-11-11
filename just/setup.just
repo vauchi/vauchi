@@ -108,6 +108,10 @@ session-init:
         WARN=1
     fi
 
+    # Before hooks and fetch, which walk the registry's directories.
+    source just/renamed-repos-lib.sh
+    migrate_renamed_repo_dirs . || WARN=1
+
     # Reinstall hooks
     echo ""
     echo "── hooks ──"
@@ -162,7 +166,7 @@ session-init:
     # Verify that local cargo invocations actually resolve vauchi-core /
     # vauchi-app / vauchi-protocol / vauchi-relay to sibling repos and
     # not to the git rev pinned in Cargo.lock. A silent miss here means
-    # every "verified locally in TUI/CLI/linux-gtk" claim is false.
+    # every "verified locally in TUI/CLI/gtk-display" claim is false.
     # See `2026-05-03-cargo-path-override-broken`.
     echo ""
     echo "── path overrides ──"
@@ -536,7 +540,7 @@ session-end:
     # VFL01: flaky-quarantine SLA (warn at session-end; scheduled CI enforces).
     # Page: _private/docs/lint-errors/vfl01-flaky-sla.md
     if [[ -x scripts/scripts/check-flaky-sla.sh ]]; then
-        for _repo in core cli tui e2e relay linux-gtk; do
+        for _repo in core cli tui e2e relay gtk-display; do
             if [[ -d "$_repo" ]]; then
                 scripts/scripts/check-flaky-sla.sh "$_repo" || \
                     echo "  WARN: flaky-SLA issues in $_repo (see above)"
@@ -1356,7 +1360,7 @@ clean-path-overrides:
 # Verify that `cargo metadata` resolves `vauchi-core` / `vauchi-app` /
 # `vauchi-protocol` / `vauchi-relay` to local paths, not git URLs.
 # Failing means `setup-path-overrides` either didn't run or was
-# stripped — the local TUI/CLI/linux-gtk/relay/e2e are running against
+# stripped — the local TUI/CLI/gtk-display/relay/e2e are running against
 # whatever git rev `Cargo.lock` is pinned to, not your local edits.
 [group('setup')]
 [script]
@@ -1377,6 +1381,10 @@ create-repo name *args:
 [script]
 clone-repos:
     set -e
+    # A slot from before a rename holds the old directory; cloning the new
+    # name beside it would leave two checkouts.
+    source just/renamed-repos-lib.sh
+    migrate_renamed_repo_dirs .
     echo "Cloning public repositories..."
     for repo in {{public_repos}}; do
         if [[ -d "$repo" ]]; then
