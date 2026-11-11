@@ -687,8 +687,8 @@ release-gates:
         "ios",
         "macos",
         "windows",
-        "linux-gtk",
-        "linux-qt",
+        "linux-app/gtk-display",
+        "linux-app/qt-display",
         "cli",
         "tui",
     )
@@ -697,8 +697,8 @@ release-gates:
         "ios",
         "macos",
         "windows",
-        "linux-gtk",
-        "linux-qt",
+        "linux-app/gtk-display",
+        "linux-app/qt-display",
     )
     FRONTEND_REPOS = (
         Path("android"),
