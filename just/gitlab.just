@@ -925,18 +925,46 @@ issue-create title repo='' *args='':
     # newlines into this script.
     shift
     [ $# -gt 0 ] && shift
+    # Private issues end with a "Public updates once done and tested" section:
+    # public text changes only after the work is done and tested (owner
+    # decision 2026-11-11, vauchi/private#1229).
+    add_section() {
+        if [ "$p" = "vauchi/private" ]; then
+            bash "{{ justfile_directory() }}/scripts/scripts/issue-public-updates.sh" "$1"
+        else
+            printf '%s' "$1"
+        fi
+    }
     has_description=false
-    for arg in "$@"; do
-        case "$arg" in --description|--description=*|-d) has_description=true ;; esac
+    args=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --description|-d)
+                has_description=true
+                args+=("$1" "$(add_section "${2:-}")")
+                shift
+                [ $# -gt 0 ] && shift
+                ;;
+            --description=*)
+                has_description=true
+                args+=("--description=$(add_section "${1#--description=}")")
+                shift
+                ;;
+            *)
+                args+=("$1")
+                shift
+                ;;
+        esac
     done
     if [ "$has_description" = true ]; then
-        glab issue create --title "$issue_title" --no-editor --yes -R "$p" "$@"
+        glab issue create --title "$issue_title" --no-editor --yes -R "$p" ${args[@]+"${args[@]}"}
     else
         # glab prompts for a description when none is given, which fails in a
         # non-interactive session; default one that names the opening session.
         source "{{ justfile_directory() }}/just/slot-lib.sh"
         glab issue create --title "$issue_title" --no-editor --yes -R "$p" \
-            --description "Opened by $(slot_claim_tag "{{ justfile_directory() }}") via just gitlab issue-create." "$@"
+            --description "$(add_section "Opened by $(slot_claim_tag "{{ justfile_directory() }}") via just gitlab issue-create.")" \
+            ${args[@]+"${args[@]}"}
     fi
 
 # Close an issue
