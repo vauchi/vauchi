@@ -33,6 +33,10 @@ else:
         schedule["ref"] = "other"
     if mode == "existing-wrong-task":
         schedule["variables"][0]["value"] = "other"
+    if mode == "existing-file-task":
+        schedule["variables"][0]["variable_type"] = "file"
+    if mode == "existing-missing-task-variable-failure":
+        schedule["variables"] = []
     if mode == "existing-unreadable-variables":
         del schedule["variables"]
     state = {"schedule":schedule if mode.startswith("existing") or mode == "paginated" else None}
@@ -41,7 +45,7 @@ fields = dict(args[i + 1].split("=", 1) for i, arg in enumerate(args) if arg == 
 def persist():
     state_file.write_text(json.dumps(state))
 def fail_once(operation):
-    if mode == operation + "-failure" and not state.get("failed"):
+    if mode.endswith(operation + "-failure") and not state.get("failed"):
         state["failed"] = True
         persist()
         sys.exit(1)
@@ -152,11 +156,22 @@ class PublicPlanRefsScheduleTest(unittest.TestCase):
                 self.assertEqual(len(creates), 1)
 
     def test_mismatched_or_unreadable_existing_schedule_is_never_modified(self):
-        for mode in ("existing-wrong-ref", "existing-wrong-task", "existing-unreadable-variables"):
+        for mode in ("existing-wrong-ref", "existing-wrong-task", "existing-file-task",
+                     "existing-unreadable-variables"):
             with self.subTest(mode=mode):
                 result, calls = self.run_recipe(mode)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual([call for call in calls if "-X" in call], [])
+
+    def test_failed_repair_of_active_schedule_leaves_it_inactive(self):
+        result, calls = self.run_recipe("existing-missing-task-variable-failure")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.backend["schedule"]["active"])
+        self.assertEqual(self.backend["schedule"]["variables"], [])
+        writes = [call for call in calls if "-X" in call]
+        self.assertIn("active=false", writes[0])
+        self.assertEqual(writes[1][1], ENDPOINT + "/42/variables")
+        self.assertFalse(any("active=true" in call for call in calls))
 
     def test_duplicate_schedules_are_not_modified(self):
         result, calls = self.run_recipe("duplicates")

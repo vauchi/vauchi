@@ -32,7 +32,7 @@ _check-auth:
 test-public-plan-refs-schedule:
     python3 -m unittest tests/test_public_plan_refs_schedule.py
 
-# Create the weekly private roadmap/feature issue check, or verify it exists.
+# Create, resume partial setup, or verify the weekly private issue check.
 [no-cd]
 [script]
 public-plan-refs-schedule:
@@ -53,18 +53,38 @@ public-plan-refs-schedule:
             -f description=public-plan-refs -f ref=main \
             -f 'cron=17 5 * * 1' -f cron_timezone=UTC -f active=false)
         id=$(printf '%s\n' "$created" | jq -er '.id | numbers')
+    else
+        id=$(printf '%s\n' "$matches" | jq -er '.[0].id | numbers')
+    fi
+    schedule=$(glab api "$endpoint/$id")
+    if ! printf '%s\n' "$schedule" | jq -e '
+        (.ref == "main" or .ref == "refs/heads/main")
+        and .cron == "17 5 * * 1" and .cron_timezone == "UTC"
+        and (.active | type == "boolean")
+        and (.variables | type == "array")
+        and all(.variables[]; .key != "SCHEDULE_TASK"
+            or (.value == "public-plan-refs" and .variable_type == "env_var"))
+    ' >/dev/null; then
+        echo "ERROR: schedule $id has conflicting or unreadable settings; no changes made" >&2
+        exit 1
+    fi
+    if ! printf '%s\n' "$schedule" | jq -e 'any(.variables[]; .key == "SCHEDULE_TASK")' >/dev/null; then
+        if printf '%s\n' "$schedule" | jq -e '.active' >/dev/null; then
+            glab api "$endpoint/$id" -X PUT -f active=false
+        fi
         glab api "$endpoint/$id/variables" -X POST \
             -f key=SCHEDULE_TASK -f value=public-plan-refs -f variable_type=env_var
         glab api "$endpoint/$id" -X PUT -f active=true
-    else
-        id=$(printf '%s\n' "$matches" | jq -er '.[0].id | numbers')
+    elif printf '%s\n' "$schedule" | jq -e '.active == false' >/dev/null; then
+        glab api "$endpoint/$id" -X PUT -f active=true
     fi
     schedule=$(glab api "$endpoint/$id")
     if ! printf '%s\n' "$schedule" | jq -e '
         .active == true
         and (.ref == "main" or .ref == "refs/heads/main")
         and .cron == "17 5 * * 1" and .cron_timezone == "UTC"
-        and any(.variables[]?; .key == "SCHEDULE_TASK" and .value == "public-plan-refs")
+        and any(.variables[]?; .key == "SCHEDULE_TASK" and .value == "public-plan-refs"
+            and .variable_type == "env_var")
     ' >/dev/null; then
         echo "ERROR: schedule $id is not the configured weekly public-plan-refs check" >&2
         exit 1
