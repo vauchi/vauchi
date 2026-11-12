@@ -27,6 +27,11 @@ _check-auth:
 
 # ── Pipeline Notifications ─────────────────────────────────────────
 
+[group('tests')]
+[no-cd]
+test-public-plan-refs-schedule:
+    python3 -m unittest tests/test_public_plan_refs_schedule.py
+
 # Enable broken-pipeline email for a project's default branch.
 # Usage: just gitlab pipeline-email-enable <repo> <recipient>
 [no-cd]
