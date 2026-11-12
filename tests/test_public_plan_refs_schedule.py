@@ -20,18 +20,23 @@ with Path(os.environ["CALLS"]).open("a") as log:
     log.write(json.dumps(args) + "\\n")
 if args == ["auth", "status"]:
     sys.exit(0)
-endpoint = args[1]
+endpoint = next(arg for arg in args[1:] if arg.startswith("projects/"))
 mode = os.environ["MODE"]
 if "?" in endpoint:
     if mode == "list-failure":
         sys.exit(1)
-    print(json.dumps([{"id": 42, "description": "public-plan-refs"}] if mode == "existing" else []))
+    records = [{"id": 42, "description": "public-plan-refs"}] if mode.startswith("existing") or mode == "paginated" else []
+    if mode == "duplicates":
+        records = [{"id": 41, "description": "public-plan-refs"}, {"id": 42, "description": "public-plan-refs"}]
+    if mode == "paginated":
+        print("[]")
+    print(json.dumps(records))
 elif endpoint.endswith("/variables"):
     if mode == "variable-failure":
         sys.exit(1)
     print('{"key":"SCHEDULE_TASK","value":"public-plan-refs"}')
 elif endpoint.endswith("/42"):
-    print(json.dumps({"id":42, "ref":"refs/heads/main", "active":True,
+    print(json.dumps({"id":42, "ref":"refs/heads/main", "active":mode != "existing-inactive",
         "cron":"17 5 * * 1", "cron_timezone":"UTC",
         "variables":[{"key":"SCHEDULE_TASK", "value":"public-plan-refs"}]}))
 elif endpoint.endswith("/pipeline_schedules") and "POST" in args:
@@ -90,6 +95,21 @@ class PublicPlanRefsScheduleTest(unittest.TestCase):
     def test_failed_list_never_creates_a_schedule(self):
         result, calls = self.run_recipe("list-failure")
         self.assertNotEqual(result.returncode, 0)
+        self.assertEqual([call for call in calls if "-X" in call], [])
+
+    def test_inactive_existing_schedule_does_not_report_success(self):
+        result, calls = self.run_recipe("existing-inactive")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual([call for call in calls if "-X" in call], [])
+
+    def test_duplicate_schedules_are_not_modified(self):
+        result, calls = self.run_recipe("duplicates")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual([call for call in calls if "-X" in call], [])
+
+    def test_schedule_on_a_later_page_is_found_without_a_duplicate(self):
+        result, calls = self.run_recipe("paginated")
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual([call for call in calls if "-X" in call], [])
 
 

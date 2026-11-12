@@ -80,6 +80,7 @@ test:release-gates:
     - JUST_UNSTABLE=1 just test-mr-create-recipe
     - JUST_UNSTABLE=1 just test-audit-recipe
     - JUST_UNSTABLE=1 just test-lint-ci-needs-recipe
+    - JUST_UNSTABLE=1 just gitlab test-public-plan-refs-schedule
     - JUST_UNSTABLE=1 just test-deploy-check
     - JUST_UNSTABLE=1 just test-deploy-latest
     - JUST_UNSTABLE=1 just test-runners-health

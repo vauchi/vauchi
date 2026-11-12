@@ -32,6 +32,46 @@ _check-auth:
 test-public-plan-refs-schedule:
     python3 -m unittest tests/test_public_plan_refs_schedule.py
 
+# Create the weekly private roadmap/feature issue check, or verify it exists.
+[no-cd]
+[script]
+public-plan-refs-schedule:
+    just gitlab _check-auth
+    set -euo pipefail
+    endpoint="projects/vauchi%2Fprivate/pipeline_schedules"
+    schedules=$(glab api --paginate "$endpoint?per_page=100")
+    matches=$(printf '%s\n' "$schedules" | jq -sc '[.[][] | select(.description == "public-plan-refs")]')
+    count=$(printf '%s\n' "$matches" | jq length)
+    if [[ "$count" -gt 1 ]]; then
+        echo "ERROR: multiple public-plan-refs schedules; reconcile them first" >&2
+        exit 1
+    fi
+    if [[ "$count" = 0 ]]; then
+        # Leave it inactive if setting SCHEDULE_TASK fails: a plain schedule
+        # would run unrelated jobs with the private pipeline's credentials.
+        created=$(glab api "$endpoint" -X POST \
+            -f description=public-plan-refs -f ref=main \
+            -f 'cron=17 5 * * 1' -f cron_timezone=UTC -f active=false)
+        id=$(printf '%s\n' "$created" | jq -er '.id | numbers')
+        glab api "$endpoint/$id/variables" -X POST \
+            -f key=SCHEDULE_TASK -f value=public-plan-refs -f variable_type=env_var
+        glab api "$endpoint/$id" -X PUT -f active=true
+    else
+        id=$(printf '%s\n' "$matches" | jq -er '.[0].id | numbers')
+    fi
+    schedule=$(glab api "$endpoint/$id")
+    if ! printf '%s\n' "$schedule" | jq -e '
+        .active == true
+        and (.ref == "main" or .ref == "refs/heads/main")
+        and .cron == "17 5 * * 1" and .cron_timezone == "UTC"
+        and any(.variables[]?; .key == "SCHEDULE_TASK" and .value == "public-plan-refs")
+    ' >/dev/null; then
+        echo "ERROR: schedule $id is not the configured weekly public-plan-refs check" >&2
+        exit 1
+    fi
+    echo "Verified weekly public-plan-refs check (Monday 05:17 UTC):"
+    echo "https://gitlab.com/vauchi/private/-/pipeline_schedules/$id/edit"
+
 # Enable broken-pipeline email for a project's default branch.
 # Usage: just gitlab pipeline-email-enable <repo> <recipient>
 [no-cd]
