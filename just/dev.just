@@ -142,3 +142,16 @@ core-freshness:
         echo ""
         echo "For local dev: just bindings-local"
     fi
+
+# Fetch the canonical build-discovery.py from vauchi/scripts into docs
+# and spec (private#1267). Local-dev counterpart of the CI fetch step;
+# defaults to main, pass a SHA to pin, e.g. just sync-discovery abc123.
+[group('dev')]
+sync-discovery ref='main':
+    #!/bin/bash
+    set -euo pipefail
+    for repo in docs spec; do
+        curl -fsSL "https://gitlab.com/api/v4/projects/77957857/repository/files/scripts%2Fbuild-discovery.py/raw?ref={{ref}}" \
+            -o "$repo/scripts/build-discovery.py"
+        echo "  synced $repo/scripts/build-discovery.py ({{ref}})"
+    done
