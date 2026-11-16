@@ -621,3 +621,20 @@ samply-clean:
     if [[ $cleared -eq 0 ]]; then
         echo "(nothing to clean)"
     fi
+
+# Lines of code and complexity per language with scc (private#1262).
+# Read-only metrics for hotspot analysis and the file-size rule, not a
+# gate; `just metrics` is the engineering-metrics dashboard. scc is a Go
+# tool: https://github.com/boyter/scc/releases
+# (or: go install github.com/boyter/scc/v3@latest)
+[group('perf')]
+@code-metrics path='.':
+    #!/bin/bash
+    if ! command -v scc &>/dev/null; then
+        echo "scc not installed. Get it from https://github.com/boyter/scc/releases"
+        echo "(or: go install github.com/boyter/scc/v3@latest)"
+        exit 1
+    fi
+    scc --no-cocomo --no-size \
+        --exclude-dir target,node_modules,build,dist,generated,.git,ios.logarchive,mutants.out,mutants.out.old,LICENSES,pictograms \
+        "{{path}}"
