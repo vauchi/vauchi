@@ -161,3 +161,15 @@ sync-discovery ref='main':
 [group('dev')]
 check-conformance:
     python3 scripts/scripts/check-conformance-sync.py --root .
+
+# Sync the canonical conformance suites to their vendored copies
+# (private#1265 phase 2). Edit canonical files only, then re-run this and
+# just check-conformance.
+[group('dev')]
+sync-conformance:
+    #!/bin/bash
+    set -euo pipefail
+    cp core/vauchi-core/tests/shared/qr_scanner_pipeline.rs linux-hw/tests/shared/qr_scanner_pipeline.rs
+    cp core/vauchi-core/tests/shared/qr_decode_camera_corpus.rs linux-hw/tests/shared/qr_decode_camera_corpus.rs
+    cp contract/tests/shared/executor_conformance.rs core/vauchi-core/tests/shared/executor_conformance.rs
+    echo "  synced 3 suite(s) to their vendored copies"
