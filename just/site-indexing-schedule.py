@@ -8,11 +8,7 @@ import subprocess
 
 PROJECT = "projects/vauchi%2Fprivate"
 ENDPOINT = PROJECT + "/pipeline_schedules"
-SELECTORS = {
-    "SITE_INDEXING_ONLY": "1",
-    "INDEXING_MODE": "live",
-    "SCHEDULE_TASK": "site-indexing-live",
-}
+INPUTS = [{"name": "site_indexing", "value": "live"}]
 SETTINGS = {
     "description": "site-indexing-live",
     "ref": "main",
@@ -24,13 +20,14 @@ SETTINGS = {
 def api(endpoint, method="GET", **fields):
     command = ["glab", "api", endpoint]
     if method != "GET":
-        command.extend(["-X", method])
-    for key, value in fields.items():
-        command.extend(
-            ["-F", f"{key}={str(value).lower() if isinstance(value, bool) else value}"]
-        )
+        command.extend(["-X", method, "--input", "-"])
     result = subprocess.run(
-        command, check=True, text=True, capture_output=True, timeout=30
+        command,
+        input=json.dumps(fields) if method != "GET" else None,
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=30,
     )
     return result.stdout if "/raw?" in endpoint else json.loads(result.stdout)
 
@@ -64,41 +61,23 @@ def ensure_schedule(backend=api):
     if matches:
         schedule = backend(f"{ENDPOINT}/{matches[0]['id']}")
     else:
-        schedule = backend(ENDPOINT, "POST", **SETTINGS, active=False)
+        schedule = backend(ENDPOINT, "POST", **SETTINGS, active=False, inputs=INPUTS)
     for key in ("description", "cron", "cron_timezone"):
         if schedule.get(key) != SETTINGS[key]:
             raise ValueError(f"Conflicting schedule {key}; no settings overwritten")
-    if schedule.get("ref") not in ("main", "refs/heads/main") or not isinstance(
-        schedule.get("variables"), list
-    ):
-        raise ValueError("Conflicting ref or unreadable schedule variables")
-    current = {item["key"]: item for item in schedule["variables"]}
-    if any(
-        key not in SELECTORS
-        or value.get("value") != SELECTORS[key]
-        or value.get("variable_type") != "env_var"
-        for key, value in current.items()
-    ):
-        raise ValueError("Conflicting schedule variables; no settings overwritten")
+    if schedule.get("ref") not in ("main", "refs/heads/main"):
+        raise ValueError("Conflicting schedule ref")
+    if schedule.get("inputs") != INPUTS or schedule.get("variables") != []:
+        raise ValueError("Conflicting inputs or unexpected schedule variables")
     endpoint = f"{ENDPOINT}/{schedule['id']}"
-    missing = SELECTORS.keys() - current.keys()
-    if missing and schedule["active"]:
-        backend(endpoint, "PUT", active=False)
-    for key, value in SELECTORS.items():
-        if key in missing:
-            backend(
-                endpoint + "/variables",
-                "POST",
-                key=key,
-                value=value,
-                variable_type="env_var",
-            )
-    schedule = backend(endpoint)
     if not schedule["active"]:
         backend(endpoint, "PUT", active=True)
     verified = backend(endpoint)
-    actual = {item["key"]: item["value"] for item in verified["variables"]}
-    if verified["active"] is not True or actual != SELECTORS:
+    if (
+        verified["active"] is not True
+        or verified.get("inputs") != INPUTS
+        or verified.get("variables") != []
+    ):
         raise RuntimeError("Schedule verification failed")
     return verified["id"]
 
