@@ -155,3 +155,9 @@ sync-discovery ref='main':
             -o "$repo/scripts/build-discovery.py"
         echo "  synced $repo/scripts/build-discovery.py ({{ref}})"
     done
+
+# Check the conformance suites for drift across core, linux-hw and
+# contract (private#1265). Only adapter lines may differ between copies.
+[group('dev')]
+check-conformance:
+    python3 scripts/scripts/check-conformance-sync.py --root .
