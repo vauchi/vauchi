@@ -25,6 +25,23 @@ _check-auth:
         exit 1
     fi
 
+# Pass structured API arguments through the authenticated GitLab entry point.
+[no-cd]
+[script]
+[positional-arguments]
+api +args:
+    just gitlab _check-auth
+    glab api "$@"
+
+[no-cd]
+site-indexing-schedule:
+    just gitlab _check-auth
+    python3 just/site-indexing-schedule.py
+
+[no-cd]
+test-site-indexing-schedule:
+    python3 -m unittest tests/test_site_indexing_schedule.py
+
 # ── Pipeline Notifications ─────────────────────────────────────────
 
 [group('tests')]
