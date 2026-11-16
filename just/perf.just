@@ -635,6 +635,9 @@ samply-clean:
         echo "(or: go install github.com/boyter/scc/v3@latest)"
         exit 1
     fi
-    scc --no-cocomo --no-size \
+    # --no-gitignore: the workspace root's .gitignore lists the sub-repo
+    # checkouts, so honouring it would skip every repo; the exclude-dir
+    # list above covers build output instead.
+    scc --no-cocomo --no-size --no-gitignore \
         --exclude-dir target,node_modules,build,dist,generated,.git,ios.logarchive,mutants.out,mutants.out.old,LICENSES,pictograms \
         "{{path}}"
