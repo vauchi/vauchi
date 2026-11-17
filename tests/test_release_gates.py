@@ -740,47 +740,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -790,6 +793,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -845,6 +852,7 @@ recovery: passed
 # Long-lived contact continuity evidence
 
 long-lived contact continuity: passed
+channel-independent updates: passed
 composite longitudinal scenario: passed
 clock-driven scenario: passed
 exchange remains useful: passed
@@ -1066,6 +1074,111 @@ accessories:
         self.assertEqual(1, result.returncode)
         self.assertIn("E2E ignored-test evidence failure", result.stdout)
         self.assertIn("6 ignored Rust E2E test(s), expected no more than 5", result.stdout)
+
+    def test_rg1_rejects_block_only_evidence_for_the_ignore_journey(self) -> None:
+        consumers = (
+            "android", "ios", "macos", "windows", "linux-app/gtk-display",
+            "linux-app/qt-display", "cli", "tui",
+        )
+        journeys = ("create card", "edit card", "exchange contact", "receive update")
+        evidence = "\n".join(
+            [f"{consumer} {journey}: passed" for consumer in consumers for journey in journeys]
+            + [f"{consumer} block or ignore: passed" for consumer in consumers]
+        )
+        result = self.run_release_gates(
+            plan_with_gates(
+                completed_gate=1,
+                status_line="14 release gates are open.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            frontend_journey_evidence=evidence,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-1 frontend journey evidence failure", result.stdout)
+        for consumer in consumers:
+            self.assertIn(f"{consumer} ignore: passed evidence is missing", result.stdout)
+
+    def test_rg2_rejects_direct_relay_instead_of_a_local_only_run(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                completed_gate=2,
+                status_line="14 release gates are open.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            local_two_user_evidence="""
+local two-user: passed
+non-ohttp local run: passed
+transport: direct application relay
+representative two-device run: passed
+mutual exchange: passed
+update propagation: passed
+exact-value assertions: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-2 local two-user evidence failure", result.stdout)
+        self.assertIn("in-person local-only no-relay evidence is missing", result.stdout)
+        self.assertIn("offline mode relay blocking evidence is missing", result.stdout)
+        self.assertIn("real-device in-person BLE evidence is missing", result.stdout)
+
+    def test_rg3_rejects_missing_reverse_channel_change(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                completed_gate=3,
+                status_line="14 release gates are open.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            ohttp_relay_two_user_evidence="""
+split-ohttp two-user: passed
+in-person to ohttp+relay channel change: passed
+both privacy hops: passed
+ohttp relay: passed
+application relay: passed
+exchange propagation: passed
+update propagation: passed
+exact-value assertions: passed
+blocking e2e pipeline: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-3 OHTTP relay evidence failure", result.stdout)
+        self.assertIn("OHTTP+relay to in-person channel change evidence is missing", result.stdout)
+        self.assertIn("alternating channel update evidence is missing", result.stdout)
+        self.assertIn("default OHTTP+relay sync evidence is missing", result.stdout)
+
+    def test_rg15_rejects_missing_channel_independent_continuity(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                completed_gate=15,
+                status_line="14 release gates are open.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            long_lived_contact_evidence="""
+long-lived contact continuity: passed
+composite longitudinal scenario: passed
+clock-driven scenario: passed
+exchange remains useful: passed
+permitted detail changes: passed
+offline catch-up: passed
+device add/revoke/replace: passed
+archive/unarchive: passed
+block behavior: passed
+ignore semantics: accepted
+ignored relationship behavior: passed
+no re-exchange required: passed
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-15 long-lived contact evidence failure", result.stdout)
+        self.assertIn("channel-independent update continuity evidence is missing", result.stdout)
 
     def test_completed_rg10_requires_binding_tag_named_by_its_evidence(self) -> None:
         result = self.run_release_gates(
@@ -1535,42 +1648,42 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
         )
 
@@ -1666,47 +1779,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -1806,47 +1922,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -1856,6 +1975,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -1958,47 +2081,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -2008,6 +2134,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -2280,47 +2410,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -2330,6 +2463,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -2468,47 +2605,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -2518,6 +2658,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -2663,47 +2807,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -2713,6 +2860,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -2768,6 +2919,7 @@ recovery: passed
 # Long-lived contact continuity evidence
 
 long-lived contact continuity: passed
+channel-independent updates: passed
 composite longitudinal scenario: passed
 clock-driven scenario: passed
 exchange remains useful: passed
@@ -2944,47 +3096,50 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 ios create card: passed
 ios edit card: passed
 ios exchange contact: passed
 ios receive update: passed
-ios block or ignore: passed
+ios ignore: passed
 macos create card: passed
 macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
-macos block or ignore: passed
+macos ignore: passed
 windows create card: passed
 windows edit card: passed
 windows exchange contact: passed
 windows receive update: passed
-windows block or ignore: passed
+windows ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
 linux-app/gtk-display receive update: passed
-linux-app/gtk-display block or ignore: passed
+linux-app/gtk-display ignore: passed
 linux-app/qt-display create card: passed
 linux-app/qt-display edit card: passed
 linux-app/qt-display exchange contact: passed
 linux-app/qt-display receive update: passed
-linux-app/qt-display block or ignore: passed
+linux-app/qt-display ignore: passed
 cli create card: passed
 cli edit card: passed
 cli exchange contact: passed
 cli receive update: passed
-cli block or ignore: passed
+cli ignore: passed
 tui create card: passed
 tui edit card: passed
 tui exchange contact: passed
 tui receive update: passed
-tui block or ignore: passed
+tui ignore: passed
 """,
             local_two_user_evidence="""
 # Local two-user propagation evidence
 
 local two-user: passed
+in-person local-only no-relay run: passed
+offline mode blocks ohttp+relay: passed
+real-device in-person ble exchange: passed
 representative two-device run: passed
 mutual exchange: passed
 update propagation: passed
@@ -2994,6 +3149,10 @@ exact-value assertions: passed
 # OHTTP relay two-user propagation evidence
 
 split-ohttp two-user: passed
+default online sync via ohttp+relay: passed
+in-person to ohttp+relay channel change: passed
+ohttp+relay to in-person channel change: passed
+alternating channel updates: passed
 both privacy hops: passed
 ohttp relay: passed
 application relay: passed
@@ -3049,6 +3208,7 @@ recovery: passed
 # Long-lived contact continuity evidence
 
 long-lived contact continuity: passed
+channel-independent updates: passed
 composite longitudinal scenario: passed
 clock-driven scenario: passed
 exchange remains useful: passed
@@ -3144,14 +3304,14 @@ android create card: passed
 android edit card: passed
 android exchange contact: passed
 android receive update: passed
-android block or ignore: passed
+android ignore: passed
 """,
         )
 
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-1 frontend journey evidence failure", result.stdout)
         self.assertIn("ios create card: passed evidence is missing", result.stdout)
-        self.assertIn("tui block or ignore: passed evidence is missing", result.stdout)
+        self.assertIn("tui ignore: passed evidence is missing", result.stdout)
         self.assertNotIn("android create card: passed evidence is missing", result.stdout)
 
     def test_completed_rg12_requires_per_frontend_accessibility_pass(self) -> None:
