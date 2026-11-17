@@ -1069,7 +1069,7 @@ release-gates:
             "edit card",
             "exchange contact",
             "receive update",
-            "block or ignore",
+            "ignore",
         )
         for consumer in PRODUCTION_CONSUMERS:
             for journey in journeys:
@@ -1087,6 +1087,9 @@ release-gates:
         failures = []
         required_phrases = {
             "local two-user: passed": "local two-user evidence",
+            "in-person local-only no-relay run: passed": "in-person local-only no-relay evidence",
+            "offline mode blocks ohttp+relay: passed": "offline mode relay blocking evidence",
+            "real-device in-person ble exchange: passed": "real-device in-person BLE evidence",
             "representative two-device run: passed": (
                 "representative two-device run evidence"
             ),
@@ -1108,6 +1111,16 @@ release-gates:
         failures = []
         required_phrases = {
             "split-ohttp two-user: passed": "split-OHTTP two-user evidence",
+            "default online sync via ohttp+relay: passed": "default OHTTP+relay sync evidence",
+            "in-person to ohttp+relay channel change: passed": (
+                "in-person to OHTTP+relay channel change evidence"
+            ),
+            "ohttp+relay to in-person channel change: passed": (
+                "OHTTP+relay to in-person channel change evidence"
+            ),
+            "alternating channel updates: passed": (
+                "alternating channel update evidence"
+            ),
             "both privacy hops: passed": "both privacy hops evidence",
             "ohttp relay: passed": "OHTTP relay evidence",
             "application relay: passed": "application relay evidence",
@@ -1235,6 +1248,9 @@ release-gates:
         required_phrases = {
             "long-lived contact continuity: passed": (
                 "long-lived contact continuity evidence"
+            ),
+            "channel-independent updates: passed": (
+                "channel-independent update continuity evidence"
             ),
             "composite longitudinal scenario: passed": (
                 "composite longitudinal scenario evidence"
