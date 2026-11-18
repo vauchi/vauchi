@@ -240,6 +240,13 @@ load cost many times over. Attribution and history:
   all, print the flagged element) over testing candidates one at a time:
   same single CI run, and it cannot be wrong about which one it was.
   4 occurrences in one session, 2026-09-11 (macOS `test:ui`).
+- **Weak attacker read as "no leak".** A privacy model that finds no
+  leak may only have an attacker that dilutes or misaligns the signal
+  (sums a year for a one-day event, compares an update's first tick
+  instead of all its ticks). Before calling anything a defence, ask
+  what the attacker sums or aligns over and build the strongest one in
+  reach. 3 occurrences on 2026-11-18 (#1281);
+  `.claude/docs/log_reasoning_errors.md`.
 - **Xcode on the CI host.** Run `hostname` before any `xcodebuild`: on
   `nell` (the macOS/iOS runner) never boot an iOS simulator — push the
   red test alone and let the MR pipeline show it — and give local macOS
