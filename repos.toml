@@ -374,6 +374,7 @@ clone_url = "git@gitlab.com:vauchi/utils/markdown-plan.git"
 ops = []
 scenario_root = false
 profile = false
+fork = true
 description = "Tooling"
 
 [[repo]]
@@ -384,6 +385,7 @@ clone_url = "git@gitlab.com:vauchi/utils/rqrr.git"
 ops = []
 scenario_root = false
 profile = false
+fork = true
 description = "Fork of WanzenBug/rqrr, the QR decoder Core uses"
 
 [[repo]]
@@ -394,4 +396,5 @@ clone_url = "git@gitlab.com:vauchi/utils/spake2.git"
 ops = []
 scenario_root = false
 profile = false
+fork = true
 description = "Fork of RustCrypto spake2 0.4.0 with zeroize, the PAKE Core's link exchange uses"
