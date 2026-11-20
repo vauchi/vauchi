@@ -247,6 +247,13 @@ load cost many times over. Attribution and history:
   what the attacker sums or aligns over and build the strongest one in
   reach. 3 occurrences on 2026-11-18 (#1281);
   `.claude/docs/log_reasoning_errors.md`.
+- **Claim wider than the run.** A simulation result written up with a
+  wider scope than the script ran: a harness that re-reads what a real
+  client reads once, a capacity from 84 days stated as steady, "a year
+  with every absence" when the year and the absences ran apart. Write
+  the scope from the script's parameters (days, seeds, which edges are
+  combined), never from what the run was meant to show. 3 occurrences,
+  2026-11-19 to 2026-11-20 (#1281).
 - **Xcode on the CI host.** Run `hostname` before any `xcodebuild`: on
   `nell` (the macOS/iOS runner) never boot an iOS simulator — push the
   red test alone and let the MR pipeline show it — and give local macOS
