@@ -24,7 +24,9 @@ include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
     ref: 9adf5b8e9cd596075e3e5a34dc25971674c13628
-    file: '/ci-templates/reuse.yml'
+    file:
+      - '/ci-templates/reuse.yml'
+      - '/ci-templates/github-mirror.yml'
 
 variables:
   VAUCHI_SCRIPTS_REF: "9adf5b8e9cd596075e3e5a34dc25971674c13628"
@@ -32,11 +34,12 @@ variables:
 # Superseded pipelines auto-cancel so stale runs don't hog shared runners
 # (the dominant queue-time cause). Jobs are interruptible by default and
 # retry only on infrastructure failures — never a real test/lint failure
-# (CC-18). Root runs MR/schedule pipelines only, so no push-dedup rule is
-# needed. The deploy-stage cleanup job overrides interruptible: false.
+# (CC-18). Root's only push pipeline is github-mirror on main, so no
+# push-dedup rule is needed. The deploy-stage cleanup job overrides
+# interruptible: false.
 workflow:
-  # vci05-ok: root has no push pipelines on main (jobs run on MR and
-  # schedule only), so a merge never starts a pipeline that could cancel one.
+  # vci05-ok: root's only main push job is github-mirror; a merge that
+  # cancels it starts the next mirror push, and no other repo waits on it.
   auto_cancel:
     on_new_commit: interruptible
 
@@ -356,3 +359,8 @@ cleanup:prerelease:
     - /tmp/cleanup.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CLEANUP_PRERELEASE == "true"
+
+github-mirror:
+  extends: .github-mirror
+  # GitLab creates no pipeline whose only jobs are in .post.
+  stage: deploy
