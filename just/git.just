@@ -363,6 +363,7 @@ push-all mode='full':
     pushed=()
     wip_blocked=()
     push_failed=()
+    gone_skipped=()
     skipped=0
     push_repo() {
         local label="$1" dir="$2"
@@ -380,6 +381,12 @@ push-all mode='full':
         # origin/main and set the upstream on the way out.
         if git -C "$dir" rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
             ahead=$(git -C "$dir" rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        elif git -C "$dir" config --get "branch.$branch.merge" >/dev/null 2>&1; then
+            # An upstream that is configured but unresolvable was pushed once
+            # and deleted by housekeeping; it stays deleted (private#826, #1318).
+            status_fail "$label" "SKIPPED — remote branch gone ($branch); see just git branch-health"
+            gone_skipped+=("$label")
+            return
         else
             first_push=1
             ahead=$(git -C "$dir" rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
@@ -413,8 +420,12 @@ push-all mode='full':
     source scripts/scripts/for-each-repo.sh
     for_each_repo push_repo
     elapsed=$(timer_elapsed)
-    if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 && ${#push_failed[@]} -eq 0 ]]; then
+    if [[ ${#pushed[@]} -eq 0 && ${#wip_blocked[@]} -eq 0 && ${#push_failed[@]} -eq 0 && ${#gone_skipped[@]} -eq 0 ]]; then
         status_ok "all repos" "nothing to push"
+    fi
+    if [[ ${#gone_skipped[@]} -gt 0 ]]; then
+        printf "\n%sRemote branch gone (%d): %s%s\n" "$YELLOW" "${#gone_skipped[@]}" "${gone_skipped[*]}" "$NC"
+        printf "%sNever push one back; just git branch-health says whether to delete or ask.%s\n" "$DIM" "$NC"
     fi
     if [[ ${#wip_blocked[@]} -gt 0 ]]; then
         printf "\n%sWIP-blocked (%d): %s%s\n" "$YELLOW" "${#wip_blocked[@]}" "${wip_blocked[*]}" "$NC"
