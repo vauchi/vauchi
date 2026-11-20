@@ -42,6 +42,11 @@ site-indexing-schedule:
 test-site-indexing-schedule:
     python3 -m unittest tests/test_site_indexing_schedule.py
 
+# Every public project has a current GitHub mirror (the scripts nightly runs it too).
+[no-cd]
+mirror-check:
+    python3 scripts/scripts/check-github-mirrors.py
+
 # ── Pipeline Notifications ─────────────────────────────────────────
 
 [group('tests')]
