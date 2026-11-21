@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def recipe(name, arguments):
     match = re.search(rf"^{name} \*args:\n(.*?)(?=^\S)",
-                      (ROOT / "justfile").read_text(), re.M | re.S)
+                      (ROOT / "justfile").read_text(encoding="utf-8"), re.M | re.S)
     if match is None:
         raise AssertionError(f"Missing recipe {name}")
     script = match.group(1).replace("{{args}}", shlex.join(arguments))
