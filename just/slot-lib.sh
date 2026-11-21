@@ -27,7 +27,7 @@ _slot_sha256() {
 
 # Same key as `just gitlab claim`, so a slot and a claim name one session.
 slot_session_id() {
-    printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" \
+    printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s 2>/dev/null || hostname):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" \
         | _slot_sha256 | cut -c1-12
 }
 
@@ -47,7 +47,7 @@ slot_name() {
     local root agent
     root=$(cd "$1" && pwd -P)
     agent=${2:-}
-    printf '%s/%s%s\n' "$(hostname -s)" "$(basename "$root")" "${agent:+/$agent}"
+    printf '%s/%s%s\n' "$(hostname -s 2>/dev/null || hostname)" "$(basename "$root")" "${agent:+/$agent}"
 }
 
 slot_siblings() {

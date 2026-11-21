@@ -441,7 +441,7 @@ session-init:
     # ── Active claims (atomic locks on work items) ──
     if command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then
         # Same id and expiry rules as `just gitlab claim` / `claims`.
-        MY_SESSION=$(printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" | shasum -a 256 | cut -c1-12)
+        MY_SESSION=$(printf '%s' "${VAUCHI_SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-$(hostname -s 2>/dev/null || hostname):${CLAUDE_PROJECT_DIR:-$(pwd)}}}" | shasum -a 256 | cut -c1-12)
         CLAIM_EXPIRY_H=4
         NOW=$(date +%s)
         CLAIMS=$(glab api "projects/vauchi%2Fprivate/repository/branches?search=claim/" 2>/dev/null \
