@@ -190,7 +190,11 @@ slot_claim_owner() {
 slot_linked_worktrees() {
     local root="$1" repository main_path line path="" branch="" state
     while IFS= read -r repository; do
-        main_path=$(cd "$repository" && pwd -P)
+        # `git rev-parse --show-toplevel` returns the same path shape as
+        # `git worktree list --porcelain` on every platform. `pwd -P` on
+        # Git-Bash returned `/c/...` while worktree list returned `C:/...`,
+        # so every normal clone was reported as a stray worktree (private#1334).
+        main_path=$(git -C "$repository" rev-parse --show-toplevel 2>/dev/null)
         while IFS= read -r line; do
             case "$line" in
                 "worktree "*) path=${line#worktree } ;;
