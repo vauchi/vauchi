@@ -57,7 +57,7 @@ def make_repo(path: Path, origin: Path) -> None:
     git(path, "config", "user.email", "test@example.invalid")
     git(path, "config", "user.name", "Test")
     git(path, "config", "commit.gpgsign", "false")
-    (path / "README").write_text("seed\n")
+    (path / "README").write_text("seed\n", encoding="utf-8")
     git(path, "add", "README")
     git(path, "commit", "-q", "-m", "seed")
     git(path, "remote", "add", "origin", str(origin))
@@ -74,12 +74,12 @@ class GitMainWipTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS)
-        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO)
-        (helpers / "git-helpers.sh").write_text(GIT_HELPERS)
+        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS, encoding="utf-8")
+        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO, encoding="utf-8")
+        (helpers / "git-helpers.sh").write_text(GIT_HELPERS, encoding="utf-8")
         # The copied recipes are tracked in the root's history, as in the
         # real workspace; only the screenshot below is new.
-        (self.ws / ".gitignore").write_text("scripts/\ncore/\n")
+        (self.ws / ".gitignore").write_text("scripts/\ncore/\n", encoding="utf-8")
         git(self.ws, "add", "justfile", "just", ".gitignore")
         git(self.ws, "commit", "-q", "-m", "recipes")
         git(self.ws, "push", "-q")
@@ -87,7 +87,7 @@ class GitMainWipTests(unittest.TestCase):
         self.sub = self.ws / "core"
         make_repo(self.sub, base / "core.git")
         git(self.sub, "switch", "-q", "-c", "feature/work")
-        (self.sub / "README").write_text("edited on a feature branch\n")
+        (self.sub / "README").write_text("edited on a feature branch\n", encoding="utf-8")
 
     def tearDown(self) -> None:
         self._tmp.cleanup()

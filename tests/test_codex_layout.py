@@ -133,7 +133,7 @@ class CheckCodexLayoutTest(unittest.TestCase):
         """
         canonical = root / "_private/.codex"
         canonical.mkdir(parents=True)
-        (canonical / "config.toml").write_text('sandbox_mode = "workspace-write"\n')
+        (canonical / "config.toml").write_text('sandbox_mode = "workspace-write"\n', encoding="utf-8")
         (canonical / "hooks").mkdir()
         (root / ".codex").symlink_to("_private/.codex")
         return root
@@ -177,7 +177,7 @@ class CheckCodexLayoutTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = self.make_workspace(Path(tmp))
             self.run_check(root)
-            (root / ".codex/leftover.toml").write_text("orphan\n")
+            (root / ".codex/leftover.toml").write_text("orphan\n", encoding="utf-8")
 
             result = self.run_check(root)
 

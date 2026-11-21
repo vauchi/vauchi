@@ -24,7 +24,7 @@ FLAG = re.compile(r"(?<![\w-])(--[a-z][a-z-]*)")
 def used_commands() -> dict[tuple[str, str], set[str]]:
     used: dict[tuple[str, str], set[str]] = {}
     for path in sorted((ROOT / "just").glob("*.just")) + sorted((ROOT / "just").glob("*.sh")):
-        text = re.sub(r"\\\n\s*", " ", path.read_text())
+        text = re.sub(r"\\\n\s*", " ", path.read_text(encoding="utf-8"))
         for line in text.splitlines():
             code = line.split("#", 1)[0] if line.lstrip().startswith("#") else line
             for match in COMMAND.finditer(code):

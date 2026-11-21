@@ -31,7 +31,7 @@ class CheckRecipeFailureTests(unittest.TestCase):
             (workspace / "scripts").symlink_to(ROOT / "scripts", target_is_directory=True)
             (workspace / "bin").mkdir()
             child = workspace / "bin" / "just"
-            child.write_text('#!/bin/sh\n[ "$1" != "$FAILING_PHASE" ]\n')
+            child.write_text('#!/bin/sh\n[ "$1" != "$FAILING_PHASE" ]\n', encoding="utf-8")
             child.chmod(0o755)
             environment = os.environ.copy()
             environment.update(PATH=f"{workspace / 'bin'}:{environment['PATH']}",

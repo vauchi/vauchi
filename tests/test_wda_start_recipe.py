@@ -57,7 +57,7 @@ class WdaStartRecipeTests(unittest.TestCase):
         self.bin.mkdir()
         for name, body in STUBS.items():
             stub = self.bin / name
-            stub.write_text("#!/bin/sh\n" + body)
+            stub.write_text("#!/bin/sh\n" + body, encoding="utf-8")
             stub.chmod(0o755)
 
     def tearDown(self) -> None:
@@ -78,7 +78,7 @@ class WdaStartRecipeTests(unittest.TestCase):
         )
 
     def calls_made(self) -> list[str]:
-        return self.calls.read_text().splitlines()
+        return self.calls.read_text(encoding="utf-8").splitlines()
 
     def test_the_build_keychain_is_unlocked_before_xcodebuild_signs(self) -> None:
         self.run_recipe()

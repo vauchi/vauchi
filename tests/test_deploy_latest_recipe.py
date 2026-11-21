@@ -52,7 +52,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         "",
                     ]
                 )
-            )
+            , encoding="utf-8")
             fake_git.chmod(0o755)
 
             fake_glab = fake_bin / "glab"
@@ -137,7 +137,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                         "",
                     ]
                 )
-            )
+            , encoding="utf-8")
             fake_glab.chmod(0o755)
 
             environment = os.environ.copy()
@@ -179,7 +179,7 @@ class DeployLatestRecipeTests(unittest.TestCase):
                 text=True,
                 check=False,
             )
-            return result, glab_log.read_text() if glab_log.exists() else ""
+            return result, glab_log.read_text(encoding="utf-8") if glab_log.exists() else ""
 
     @staticmethod
     def repository_for(service: str) -> str:

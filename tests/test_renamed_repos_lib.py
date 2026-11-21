@@ -47,13 +47,13 @@ class RenamedRepoDirs(unittest.TestCase):
     def test_an_old_checkout_moves_to_the_new_name_with_its_work(self):
         tmp_path = self.workspace
         checkout(tmp_path / "linux-gtk", "git@gitlab.com:vauchi/linux-gtk.git")
-        (tmp_path / "linux-gtk" / "uncommitted.txt").write_text("local work\n")
+        (tmp_path / "linux-gtk" / "uncommitted.txt").write_text("local work\n", encoding="utf-8")
 
         done = migrate(tmp_path)
 
         assert done.returncode == 0, done.stderr
         assert not (tmp_path / "linux-gtk").exists()
-        assert (tmp_path / "gtk-display" / "uncommitted.txt").read_text() == "local work\n"
+        assert (tmp_path / "gtk-display" / "uncommitted.txt").read_text(encoding="utf-8") == "local work\n"
         assert git(tmp_path / "gtk-display", "config", "--get", "remote.origin.url") == (
             "git@gitlab.com:vauchi/gtk-display.git"
         )
@@ -83,12 +83,12 @@ class RenamedRepoDirs(unittest.TestCase):
         tmp_path = self.workspace
         checkout(tmp_path / "linux-gtk", "git@gitlab.com:vauchi/linux-gtk.git")
         checkout(tmp_path / "gtk-display", "git@gitlab.com:vauchi/gtk-display.git")
-        (tmp_path / "linux-gtk" / "kept.txt").write_text("still here\n")
+        (tmp_path / "linux-gtk" / "kept.txt").write_text("still here\n", encoding="utf-8")
 
         done = migrate(tmp_path)
 
         assert done.returncode == 1
-        assert (tmp_path / "linux-gtk" / "kept.txt").read_text() == "still here\n"
+        assert (tmp_path / "linux-gtk" / "kept.txt").read_text(encoding="utf-8") == "still here\n"
         assert "both linux-gtk and gtk-display exist" in done.stderr
 
     def test_a_workspace_that_already_followed_is_untouched_and_silent(self):
@@ -104,7 +104,7 @@ class RenamedRepoDirs(unittest.TestCase):
     def test_a_plain_directory_with_the_old_name_is_not_moved(self):
         tmp_path = self.workspace
         (tmp_path / "linux-gtk").mkdir()
-        (tmp_path / "linux-gtk" / "notes.txt").write_text("not a checkout\n")
+        (tmp_path / "linux-gtk" / "notes.txt").write_text("not a checkout\n", encoding="utf-8")
 
         done = migrate(tmp_path)
 

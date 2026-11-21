@@ -81,7 +81,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         )
 
     def test_ios_build_keeps_xcode_argument_array_nonempty_without_key(self) -> None:
-        source = DEVICE_TEST_JUSTFILE.read_text()
+        source = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
 
         self.assertIn("DT_XCODEBUILD_ARGS=(", source)
         self.assertIn(
@@ -90,7 +90,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         self.assertIn('xcodebuild "${DT_XCODEBUILD_ARGS[@]}"', source)
 
     def test_physical_device_libraries_enable_dev_logging(self) -> None:
-        source = DEVICE_TEST_JUSTFILE.read_text()
+        source = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
 
         expected_builds = [
             "cargo build -p vauchi-platform --target aarch64-apple-ios "
@@ -103,7 +103,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
             self.assertIn(command, source)
 
     def test_native_bindgen_build_clears_ios_deployment_target(self) -> None:
-        source = DEVICE_TEST_JUSTFILE.read_text()
+        source = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
         combined_build = source.split(
             "_dt-build-mobile-libs core_dir:", maxsplit=1
         )[1].split("# Generate Swift bindings", maxsplit=1)[0]
@@ -114,7 +114,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         self.assertIn("unset IPHONEOS_DEPLOYMENT_TARGET", native_build)
 
     def test_physical_device_builds_use_the_workspace_locale_catalog(self) -> None:
-        source = DEVICE_TEST_JUSTFILE.read_text()
+        source = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
 
         self.assertGreaterEqual(
             source.count(
@@ -124,7 +124,7 @@ class DeviceTestRecipeTest(unittest.TestCase):
         )
 
     def test_ios_build_clears_the_workspace_package_resolution(self) -> None:
-        source = DEVICE_TEST_JUSTFILE.read_text()
+        source = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
         ios_build = source.split("_dt-build-ios:", maxsplit=1)[1].split(
             "# Build Android APK", maxsplit=1
         )[0]
@@ -135,8 +135,8 @@ class DeviceTestRecipeTest(unittest.TestCase):
         )
 
     def test_ios_build_uses_a_mirror_of_the_fresh_local_artifact(self) -> None:
-        recipe = DEVICE_TEST_JUSTFILE.read_text()
-        library = DEVICE_TEST_LIBRARY.read_text()
+        recipe = DEVICE_TEST_JUSTFILE.read_text(encoding="utf-8")
+        library = DEVICE_TEST_LIBRARY.read_text(encoding="utf-8")
         ios_build = recipe.split("_dt-build-ios:", maxsplit=1)[1].split(
             "# Build Android APK", maxsplit=1
         )[0]

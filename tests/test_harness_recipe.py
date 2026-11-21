@@ -21,10 +21,10 @@ class HarnessRecipeTest(unittest.TestCase):
         bin_dir = directory / "bin"
         bin_dir.mkdir(exist_ok=True)
         stand_in = bin_dir / harness
-        stand_in.write_text('#!/bin/sh\nprintf "%s\\n" "$VAUCHI_SESSION_ID" "$@"\n')
+        stand_in.write_text('#!/bin/sh\nprintf "%s\\n" "$VAUCHI_SESSION_ID" "$@"\n', encoding="utf-8")
         stand_in.chmod(0o755)
         shutil.copyfile(HARNESS_JUSTFILE, directory / "harness.just")
-        (directory / "justfile").write_text("mod harness 'harness.just'\n")
+        (directory / "justfile").write_text("mod harness 'harness.just'\n", encoding="utf-8")
 
         environment = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
         environment.pop("VAUCHI_SESSION_ID", None)

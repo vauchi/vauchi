@@ -32,7 +32,7 @@ def initialize(repo, filename):
     git(repo, "config", "user.email", "release@example.test")
     path = repo / filename
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("fixture\n")
+    path.write_text("fixture\n", encoding="utf-8")
     git(repo, "add", ".")
     git(repo, "commit", "-qm", "Initial fixture")
     origin = repo.with_name(repo.name + "-origin.git")
@@ -58,7 +58,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
             lane["sha"] = self.e2e_revision
         self.evidence = self.root / "target/release-evidence/certification.json"
         self.evidence.parent.mkdir(parents=True)
-        self.evidence.write_text(json.dumps(report))
+        self.evidence.write_text(json.dumps(report), encoding="utf-8")
         self.output = self.evidence.with_name("release-inputs.json")
 
     def invoke(self, mode="record"):
@@ -77,7 +77,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
     def test_records_exact_checklist_commit_and_certification_inputs(self):
         result = self.invoke()
         self.assertEqual(0, result.returncode, result.stderr)
-        report = json.loads(self.output.read_text())
+        report = json.loads(self.output.read_text(encoding="utf-8"))
         self.assertEqual({"repository": "core", "tag": "v1.2.3",
                           "revision": self.release_revision}, report["release"])
         self.assertEqual({
@@ -94,20 +94,20 @@ class ReleaseProvenanceTest(unittest.TestCase):
         self.assertIn("unchanged", verified.stdout)
 
     def test_rejects_uncommitted_checklist_edits(self):
-        (self.private / CHECKLIST).write_text("unchecked change\n")
+        (self.private / CHECKLIST).write_text("unchecked change\n", encoding="utf-8")
         self.assert_blocked("private checkout is dirty")
 
     def test_rejects_staged_checklist_edits(self):
-        (self.private / CHECKLIST).write_text("staged change\n")
+        (self.private / CHECKLIST).write_text("staged change\n", encoding="utf-8")
         git(self.private, "add", CHECKLIST)
         self.assert_blocked("private checkout is dirty")
 
     def test_rejects_untracked_private_files(self):
-        (self.private / "unexpected.py").write_text("unexpected\n")
+        (self.private / "unexpected.py").write_text("unexpected\n", encoding="utf-8")
         self.assert_blocked("private checkout is dirty")
 
     def test_rejects_unmerged_checklist_commits(self):
-        (self.private / CHECKLIST).write_text("unmerged\n")
+        (self.private / CHECKLIST).write_text("unmerged\n", encoding="utf-8")
         git(self.private, "commit", "-qam", "Unmerged checklist")
         self.assert_blocked("private HEAD does not match origin/main")
 
@@ -117,7 +117,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
         git(writer, "config", "user.name", "Other writer")
         git(writer, "config", "user.email", "writer@example.test")
         git(writer, "remote", "set-url", "origin", str(self.root / "_private-origin.git"))
-        (writer / CHECKLIST).write_text("new main\n")
+        (writer / CHECKLIST).write_text("new main\n", encoding="utf-8")
         git(writer, "commit", "-qam", "Update main")
         git(writer, "push", "-q", "origin", "main")
         self.assertEqual(self.checklist_revision, git(self.private, "rev-parse", "origin/main"))
@@ -134,7 +134,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
     def test_verification_rejects_changed_certification_bytes(self):
         prepared = self.invoke()
         self.assertEqual(0, prepared.returncode, prepared.stderr)
-        self.evidence.write_text(self.evidence.read_text() + "\n")
+        self.evidence.write_text(self.evidence.read_text(encoding="utf-8") + "\n", encoding="utf-8")
         result = self.invoke("verify")
         self.assertEqual(1, result.returncode)
         self.assertIn("release inputs changed", result.stderr)
@@ -142,7 +142,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
     def test_verification_rejects_a_new_release_commit(self):
         prepared = self.invoke()
         self.assertEqual(0, prepared.returncode, prepared.stderr)
-        (self.root / "core/Cargo.toml").write_text("changed\n")
+        (self.root / "core/Cargo.toml").write_text("changed\n", encoding="utf-8")
         git(self.root / "core", "commit", "-qam", "New release source")
         result = self.invoke("verify")
         self.assertEqual(1, result.returncode)
@@ -150,19 +150,19 @@ class ReleaseProvenanceTest(unittest.TestCase):
 
     def release_prod(self, gate_mutation=False):
         core = self.root / "core"
-        (core / "Cargo.toml").write_text('[workspace.package]\nversion = "1.2.3"\n')
+        (core / "Cargo.toml").write_text('[workspace.package]\nversion = "1.2.3"\n', encoding="utf-8")
         git(core, "commit", "-qam", "Release version")
         (self.root / "gate.py").write_text(
             "from pathlib import Path\nPath('gate-ran').touch()\n"
             + (f"Path('_private/{CHECKLIST}').write_text('changed during approval')\n"
                if gate_mutation else "")
-        )
+        , encoding="utf-8")
         (self.root / "justfile").write_text(
             'release-provenance repo tag mode="record":\n'
             '    python3 -m tools.release_provenance {{repo}} {{tag}} '
             'target/release-evidence/release-inputs.json --mode {{mode}}\n'
             'release-gates:\n    python3 gate.py\n'
-        )
+        , encoding="utf-8")
         return subprocess.run(
             ["just", "--justfile", str(WORKSPACE / "justfile"),
              "--working-directory", str(self.root), "release-prod", "core"],
@@ -171,7 +171,7 @@ class ReleaseProvenanceTest(unittest.TestCase):
         )
 
     def test_release_prod_rejects_dirty_checklist_before_gates_or_tagging(self):
-        (self.private / CHECKLIST).write_text("dirty\n")
+        (self.private / CHECKLIST).write_text("dirty\n", encoding="utf-8")
         result = self.release_prod()
         self.assertEqual(1, result.returncode, result.stdout + result.stderr)
         self.assertIn("private checkout is dirty", result.stderr)

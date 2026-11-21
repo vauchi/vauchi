@@ -35,7 +35,7 @@ def make_app(path: Path, origin: Path, rel: str, content: str) -> None:
                        ("commit.gpgsign", "false")):
         git(path, "config", key, value)
     (path / rel).parent.mkdir(parents=True, exist_ok=True)
-    (path / rel).write_text(content)
+    (path / rel).write_text(content, encoding="utf-8")
     git(path, "add", "-A")
     git(path, "commit", "-q", "-m", "seed")
     git(path, "remote", "add", "origin", str(origin))
@@ -58,7 +58,7 @@ class TestBuildRecipeTests(unittest.TestCase):
         self.bin = base / "bin"
         self.bin.mkdir()
         xcodegen = self.bin / "xcodegen"
-        xcodegen.write_text("#!/bin/sh\necho generated > Vauchi.pbxproj\n")
+        xcodegen.write_text("#!/bin/sh\necho generated > Vauchi.pbxproj\n", encoding="utf-8")
         xcodegen.chmod(0o755)
 
     def tearDown(self) -> None:
@@ -75,11 +75,11 @@ class TestBuildRecipeTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(git(self.android, "branch", "--show-current"), "chore/test-build-0.1.5")
-        self.assertIn('versionName = "0.1.5"', (self.android / "app/build.gradle.kts").read_text())
-        self.assertIn("versionCode = 6", (self.android / "app/build.gradle.kts").read_text())
+        self.assertIn('versionName = "0.1.5"', (self.android / "app/build.gradle.kts").read_text(encoding="utf-8"))
+        self.assertIn("versionCode = 6", (self.android / "app/build.gradle.kts").read_text(encoding="utf-8"))
         self.assertEqual(git(self.ios, "branch", "--show-current"), "chore/test-build-0.1.14")
-        self.assertIn('MARKETING_VERSION: "0.1.14"', (self.ios / "project.yml").read_text())
-        self.assertIn('CURRENT_PROJECT_VERSION: "15"', (self.ios / "project.yml").read_text())
+        self.assertIn('MARKETING_VERSION: "0.1.14"', (self.ios / "project.yml").read_text(encoding="utf-8"))
+        self.assertIn('CURRENT_PROJECT_VERSION: "15"', (self.ios / "project.yml").read_text(encoding="utf-8"))
         self.assertEqual(git(self.ios, "show", "--name-only", "--format=", "HEAD").split(),
                          ["Vauchi.pbxproj", "project.yml"], "iOS commits the regenerated project")
         for repo in (self.android, self.ios):
@@ -88,7 +88,7 @@ class TestBuildRecipeTests(unittest.TestCase):
                              "a dry run pushes nothing")
 
     def test_a_dirty_app_repo_stops_the_run_before_anything_changes(self) -> None:
-        (self.ios / "scratch.txt").write_text("uncommitted\n")
+        (self.ios / "scratch.txt").write_text("uncommitted\n", encoding="utf-8")
 
         result = self.run_recipe("both", "--dry-run")
 

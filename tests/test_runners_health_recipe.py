@@ -44,7 +44,7 @@ OFFLINE = '{"contacted_at":"2026-10-09T17:00:00.000Z","status":"offline","active
 class RunnersHealthRecipeTests(unittest.TestCase):
     @staticmethod
     def write_executable(path: Path, lines: list[str]) -> None:
-        path.write_text("\n".join([*lines, ""]))
+        path.write_text("\n".join([*lines, ""]), encoding="utf-8")
         path.chmod(0o755)
 
     def run_recipe(
@@ -62,7 +62,7 @@ class RunnersHealthRecipeTests(unittest.TestCase):
                         "",
                     ]
                 )
-            )
+            , encoding="utf-8")
 
             fake_bin = workspace / "bin"
             fake_bin.mkdir()
@@ -151,7 +151,7 @@ class RunnersHealthRecipeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
 
     def test_recipe_holds_no_runner_ids(self) -> None:
-        recipe = RUNNERS_JUST.read_text()
+        recipe = RUNNERS_JUST.read_text(encoding="utf-8")
 
         self.assertIsNone(re.search(r"\b5\d{7}:", recipe), "runner IDs are hardcoded again")
 

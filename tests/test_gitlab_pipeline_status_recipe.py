@@ -80,7 +80,7 @@ class GitlabPipelineStatusTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO)
+        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO, encoding="utf-8")
 
         self.repo = self.ws / "core"
         git(self.ws, "init", "-q", "-b", "main", str(self.repo))
@@ -88,7 +88,7 @@ class GitlabPipelineStatusTests(unittest.TestCase):
         bin_dir = base / "bin"
         bin_dir.mkdir()
         glab = bin_dir / "glab"
-        glab.write_text(FAKE_GLAB)
+        glab.write_text(FAKE_GLAB, encoding="utf-8")
         glab.chmod(0o755)
         self.env = dict(
             os.environ, JUST_UNSTABLE="1", PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",

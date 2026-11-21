@@ -6,8 +6,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOY_RECIPES = (ROOT / "just" / "deploy.just").read_text()
-CI_CONFIG = (ROOT / ".gitlab-ci.yml").read_text()
+DEPLOY_RECIPES = (ROOT / "just" / "deploy.just").read_text(encoding="utf-8")
+CI_CONFIG = (ROOT / ".gitlab-ci.yml").read_text(encoding="utf-8")
 
 
 class ProductionRecipeAuthorityTests(unittest.TestCase):

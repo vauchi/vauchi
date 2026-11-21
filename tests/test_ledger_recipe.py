@@ -53,14 +53,14 @@ class LedgerRecipeTests(unittest.TestCase):
                 target.write_bytes(source.read_bytes())
         ledger = self.workspace / LEDGER_REL
         ledger.parent.mkdir(parents=True, exist_ok=True)
-        ledger.write_text("# Intervention ledger\n\n## Entries\n")
+        ledger.write_text("# Intervention ledger\n\n## Entries\n", encoding="utf-8")
         self.ledger = ledger
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
     def _entries(self) -> list[str]:
-        return [l for l in self.ledger.read_text().splitlines() if l.startswith("- 20")]
+        return [l for l in self.ledger.read_text(encoding="utf-8").splitlines() if l.startswith("- 20")]
 
     def test_appends_a_well_formed_entry_with_its_defect_class(self) -> None:
         result = run_ledger(self.workspace, VALID + ["gate", "hid", "clippy"])

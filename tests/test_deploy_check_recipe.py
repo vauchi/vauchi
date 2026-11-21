@@ -25,7 +25,7 @@ CONFIG_SERVICES = ("monitoring", "vrt", "mail", "vaultwarden", "infisical")
 class DeployCheckRecipeTests(unittest.TestCase):
     @staticmethod
     def write_executable(path: Path, lines: list[str]) -> None:
-        path.write_text("\n".join([*lines, ""]))
+        path.write_text("\n".join([*lines, ""]), encoding="utf-8")
         path.chmod(0o755)
 
     def run_recipe(
@@ -50,13 +50,13 @@ class DeployCheckRecipeTests(unittest.TestCase):
                         "",
                     ]
                 )
-            )
+            , encoding="utf-8")
 
             helper_directory = workspace / "scripts/scripts"
             helper_directory.mkdir(parents=True)
             (helper_directory / "output-helpers.sh").write_text(
                 'GREEN=""\nRED=""\nYELLOW=""\nDIM=""\nNC=""\n'
-            )
+            , encoding="utf-8")
 
             fake_bin = workspace / "bin"
             fake_bin.mkdir()

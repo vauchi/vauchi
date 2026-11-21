@@ -35,7 +35,7 @@ class CheckPrerequisitesTest(unittest.TestCase):
                 'echo "error: no default toolchain configured" >&2\n'
                 "exit 1\n"
             )
-        path.write_text(body)
+        path.write_text(body, encoding="utf-8")
         path.chmod(0o755)
 
     def run_check(self, broken: tuple[str, ...] = ()) -> subprocess.CompletedProcess:

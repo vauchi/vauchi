@@ -49,17 +49,17 @@ class RigReadbackTest(unittest.TestCase):
         (self.workspace / "just").mkdir(parents=True)
         for library in ("rig.just", "rig-lib.sh", "slot-lib.sh"):
             shutil.copyfile(WORKSPACE_ROOT / "just" / library, self.workspace / "just" / library)
-        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n")
-        (self.tmp / "rig-devices").write_text(TABLE)
+        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n", encoding="utf-8")
+        (self.tmp / "rig-devices").write_text(TABLE, encoding="utf-8")
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
         self.state = self.tmp / "phone"
         self.set_phone(version="0.69.0", camera="true", notifications="false")
         adb = self.bin / "adb"
         adb.write_text(f'#!/bin/sh\n[ -f "{self.state}/offline" ] && exit 1\n'
-                       f'[ -f "{self.state}/absent" ] && exit 0\ncat "{self.state}/dumpsys"\n')
+                       f'[ -f "{self.state}/absent" ] && exit 0\ncat "{self.state}/dumpsys"\n', encoding="utf-8")
         ios = self.bin / "ios"
-        ios.write_text(f'#!/bin/sh\ncat "{self.state}/apps"\n')
+        ios.write_text(f'#!/bin/sh\ncat "{self.state}/apps"\n', encoding="utf-8")
         adb.chmod(0o755)
         ios.chmod(0o755)
         self.holder = subprocess.Popen(["sleep", "600"])
@@ -69,8 +69,8 @@ class RigReadbackTest(unittest.TestCase):
     def set_phone(self, *, version: str, camera: str, notifications: str) -> None:
         self.state.mkdir(exist_ok=True)
         (self.state / "dumpsys").write_text(DUMPSYS.format(version=version, camera=camera,
-                                                             notifications=notifications))
-        (self.state / "apps").write_text(IOS_APPS.format(version=version))
+                                                             notifications=notifications), encoding="utf-8")
+        (self.state / "apps").write_text(IOS_APPS.format(version=version), encoding="utf-8")
 
     def rig(self, *args: str, session: str = "me", readback: str = "1") -> subprocess.CompletedProcess[str]:
         env = {**{k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_SESSION_ID"},
@@ -108,12 +108,12 @@ class RigReadbackTest(unittest.TestCase):
         self.assertIn("iphone now: app 0.69.0", claim.stdout)
 
     def test_an_absent_app_and_an_unreachable_phone_never_block_a_claim(self) -> None:
-        (self.state / "absent").write_text("")
+        (self.state / "absent").write_text("", encoding="utf-8")
         claim = self.rig("claim", "pixel", "checks")
         self.assertEqual(claim.returncode, 0)
         self.assertIn("pixel now: app not installed", claim.stdout)
         self.rig("release", "")
-        (self.state / "offline").write_text("")
+        (self.state / "offline").write_text("", encoding="utf-8")
         claim = self.rig("claim", "pixel", "checks")
         self.assertEqual(claim.returncode, 0, claim.stdout + claim.stderr)
         self.assertIn("pixel now: not readable", claim.stdout)

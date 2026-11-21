@@ -98,7 +98,7 @@ class CertificationEvidenceTest(unittest.TestCase):
                         path.write_bytes(payload)
                     with self.assertRaisesRegex(EvidenceError, "certification evidence"):
                         read_report(path, REVISION, now=NOW)
-            path.write_text(json.dumps(sample_report()))
+            path.write_text(json.dumps(sample_report()), encoding="utf-8")
             self.assertEqual({"lanes": 7, "cases": 26}, read_report(path, REVISION, now=NOW))
 
     def test_collect_preserves_pipeline_and_tested_sources_without_test_output(self):
@@ -168,7 +168,7 @@ class CertificationEvidenceTest(unittest.TestCase):
                 for job in replies[prefix + "/jobs?per_page=100&page=1"]:
                     job["finished_at"] = fresh["lanes"][0]["finished_at"]
                 response_file = folder / "responses.json"
-                response_file.write_text(json.dumps(replies))
+                response_file.write_text(json.dumps(replies), encoding="utf-8")
                 executable = folder / "glab"
                 executable.write_text("""#!/usr/bin/env python3
 import json, os, sys
@@ -183,7 +183,7 @@ elif mode == 'oversized':
 else:
     value = json.load(open(os.environ['CERTIFICATION_TEST_RESPONSES']))[sys.argv[-1]]
     sys.stdout.write(value if isinstance(value, str) else json.dumps(value))
-""")
+""", encoding="utf-8")
                 executable.chmod(0o755)
                 env = dict(os.environ, PATH=str(folder) + os.pathsep + os.environ.get("PATH", ""),
                            CERTIFICATION_TEST_RESPONSES=str(response_file), CERTIFICATION_TEST_MODE=mode)

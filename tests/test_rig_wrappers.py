@@ -37,16 +37,16 @@ class RigWrapperTest(unittest.TestCase):
         for library in ("rig.just", "rig-lib.sh", "slot-lib.sh"):
             shutil.copyfile(WORKSPACE_ROOT / "just" / library, self.workspace / "just" / library)
         shutil.copytree(WORKSPACE_ROOT / "just" / "rig-bin", self.workspace / "just" / "rig-bin")
-        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n")
+        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n", encoding="utf-8")
         self.table = self.tmp / "rig-devices"
-        self.table.write_text(TABLE)
+        self.table.write_text(TABLE, encoding="utf-8")
         self.rig_dir = self.tmp / "rig"
         self.real = self.tmp / "real"
         self.real.mkdir()
         self.calls = self.tmp / "calls"
         for tool in ("adb", "ios", "maestro"):
             fake = self.real / tool
-            fake.write_text(f'#!/bin/sh\necho "{tool} $*" >> "{self.calls}"\n')
+            fake.write_text(f'#!/bin/sh\necho "{tool} $*" >> "{self.calls}"\n', encoding="utf-8")
             fake.chmod(0o755)
         self.holders: list[subprocess.Popen[bytes]] = []
         self.addCleanup(self.stop_holders)
@@ -79,11 +79,11 @@ class RigWrapperTest(unittest.TestCase):
         self.assertEqual(claim.returncode, 0, claim.stdout + claim.stderr)
 
     def run_tool(self, *argv: str, **extra: str) -> tuple[int, str, list[str]]:
-        self.calls.write_text("")
+        self.calls.write_text("", encoding="utf-8")
         env = {**self.env, "VAUCHI_SESSION_ID": "me", **extra,
                "PATH": f"{self.bin}:{self.real}:{os.environ['PATH']}"}
         result = subprocess.run(list(argv), env=env, capture_output=True, text=True)
-        return result.returncode, result.stderr, self.calls.read_text().splitlines()
+        return result.returncode, result.stderr, self.calls.read_text(encoding="utf-8").splitlines()
 
     def test_install_links_each_tool(self) -> None:
         for tool in ("adb", "ios", "maestro"):

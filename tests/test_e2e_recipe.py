@@ -27,7 +27,7 @@ class E2eRecipeTest(unittest.TestCase):
                 flow_dir.mkdir(parents=True)
                 (flow_dir / "create_identity.yaml").write_text(
                     "appId: app.vauchi\n---\n- launchApp\n"
-                )
+                , encoding="utf-8")
 
                 bin_dir = workspace / "bin"
                 bin_dir.mkdir()
@@ -35,7 +35,7 @@ class E2eRecipeTest(unittest.TestCase):
                 maestro = bin_dir / "maestro"
                 maestro.write_text(
                     "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$MAESTRO_ARGS_FILE\"\n"
-                )
+                , encoding="utf-8")
                 maestro.chmod(maestro.stat().st_mode | stat.S_IXUSR)
 
                 env = os.environ.copy()
@@ -59,7 +59,7 @@ class E2eRecipeTest(unittest.TestCase):
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
-                args = args_file.read_text().splitlines()
+                args = args_file.read_text(encoding="utf-8").splitlines()
                 self.assertEqual(
                     args[:4],
                     [
@@ -78,7 +78,7 @@ class E2eRecipeTest(unittest.TestCase):
             flow_dir.mkdir(parents=True)
             (flow_dir / "create_identity.yaml").write_text(
                 "appId: app.vauchi\n---\n- launchApp\n"
-            )
+            , encoding="utf-8")
 
             bin_dir = workspace / "bin"
             bin_dir.mkdir()
@@ -86,7 +86,7 @@ class E2eRecipeTest(unittest.TestCase):
             maestro = bin_dir / "maestro"
             maestro.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$MAESTRO_ARGS_FILE\"\n"
-            )
+            , encoding="utf-8")
             maestro.chmod(maestro.stat().st_mode | stat.S_IXUSR)
 
             env = os.environ.copy()
@@ -111,7 +111,7 @@ class E2eRecipeTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
-                args_file.read_text().splitlines()[:4],
+                args_file.read_text(encoding="utf-8").splitlines()[:4],
                 [
                     "--device",
                     "emulator-5554",

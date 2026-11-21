@@ -60,7 +60,7 @@ class ReadyQueueWaitingTests(unittest.TestCase):
         bin_dir = base / "bin"
         bin_dir.mkdir()
         glab = bin_dir / "glab"
-        glab.write_text(FAKE_GLAB)
+        glab.write_text(FAKE_GLAB, encoding="utf-8")
         glab.chmod(0o755)
         self.state = base / "state.json"
         self.env = dict(os.environ, JUST_UNSTABLE="1", FAKE_GLAB_STATE=str(self.state),
@@ -70,7 +70,7 @@ class ReadyQueueWaitingTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def waiting(self, mrs) -> subprocess.CompletedProcess:
-        self.state.write_text(json.dumps({"mrs": mrs}))
+        self.state.write_text(json.dumps({"mrs": mrs}), encoding="utf-8")
         return subprocess.run(["just", "gitlab", "ready-queue-waiting"], cwd=self.ws,
                               env=self.env, capture_output=True, text=True)
 

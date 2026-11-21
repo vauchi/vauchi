@@ -55,7 +55,7 @@ class MrCreateRecipeTests(unittest.TestCase):
         shutil.copytree(ROOT / "just", self.ws / "just")
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "resolve-repo.sh").write_text(RESOLVER)
+        (helpers / "resolve-repo.sh").write_text(RESOLVER, encoding="utf-8")
         shutil.copy2(ROOT / "scripts/scripts/escape-mr-mentions.py", helpers)
         self.repo = self.ws / "core"
         self.remote = base / "remote.git"
@@ -73,12 +73,12 @@ class MrCreateRecipeTests(unittest.TestCase):
         self.git(self.repo, "commit", "--allow-empty", "-m", "fix: recipe contract",
                  "-m", 'Tools used: "Codex (OpenAI)"')
         hook = hooks / "pre-push"
-        hook.write_text(HOOK)
+        hook.write_text(HOOK, encoding="utf-8")
         hook.chmod(0o755)
         commands = base / "bin"
         commands.mkdir()
         glab = commands / "glab"
-        glab.write_text(GLAB)
+        glab.write_text(GLAB, encoding="utf-8")
         glab.chmod(0o755)
         self.calls = base / "glab.jsonl"
         self.hook_log = base / "hook.log"
@@ -105,12 +105,12 @@ class MrCreateRecipeTests(unittest.TestCase):
     def requests(self) -> list[list[str]]:
         if not self.calls.exists():
             return []
-        return [json.loads(line) for line in self.calls.read_text().splitlines()]
+        return [json.loads(line) for line in self.calls.read_text(encoding="utf-8").splitlines()]
 
     def test_publication_runs_the_normal_push_hook(self) -> None:
         result = self.create()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.hook_log.read_text().splitlines(), ["unset"])
+        self.assertEqual(self.hook_log.read_text(encoding="utf-8").splitlines(), ["unset"])
         requests = self.requests()
         self.assertEqual(len(requests), 1)
         self.assertEqual(requests[0][:2], ["mr", "create"])
@@ -133,20 +133,20 @@ class MrCreateRecipeTests(unittest.TestCase):
         result = self.create()
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(self.hook_log.exists(), result.stdout + result.stderr)
-        self.assertEqual(self.hook_log.read_text().splitlines(), ["unset"])
+        self.assertEqual(self.hook_log.read_text(encoding="utf-8").splitlines(), ["unset"])
         self.assertEqual(self.requests(), [])
 
 
     def test_a_description_file_preserves_newlines_quotes_and_literal_shell_text(self) -> None:
         body = "## Summary\nKeep Bob's \"quoted\" value and $(touch should-not-exist).\n\n## Test Plan\n- [x] Observed RED then GREEN."
         description = self.ws / "reviewer's description.md"
-        description.write_text(body)
+        description.write_text(body, encoding="utf-8")
         result = self.create(str(description))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         request = self.requests()[0]
         self.assertEqual(request[request.index("--description") + 1],
                          body + '\n\nTools used: "Codex (OpenAI)"')
-        self.assertEqual(self.hook_log.read_text().splitlines(), ["unset"])
+        self.assertEqual(self.hook_log.read_text(encoding="utf-8").splitlines(), ["unset"])
         self.assertFalse((self.ws / "should-not-exist").exists())
 
     def test_a_missing_description_file_stops_before_publication(self) -> None:
@@ -179,7 +179,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_creation_replaces_the_generated_with_footer(self) -> None:
         description = self.ws / "description.md"
-        description.write_text("## Result\nUseful change.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)")
+        description.write_text("## Result\nUseful change.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)", encoding="utf-8")
         result = self.create(str(description))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         request = self.requests()[0]
@@ -191,7 +191,7 @@ class MrCreateRecipeTests(unittest.TestCase):
                       '"Codex (OpenAI)" trailing text']:
             with self.subTest(value=value):
                 description = self.ws / "description.md"
-                description.write_text("## Result\nUseful change.\n\nTools used: " + value)
+                description.write_text("## Result\nUseful change.\n\nTools used: " + value, encoding="utf-8")
                 result = self.create(str(description))
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Tools used", result.stdout + result.stderr)
@@ -200,7 +200,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_editing_collects_tools_and_replaces_generated_credit(self) -> None:
         description = self.ws / "description.md"
-        description.write_text("## Result\nUpdated explanation.\n\n🤖 Generated with Kimi Code")
+        description.write_text("## Result\nUpdated explanation.\n\n🤖 Generated with Kimi Code", encoding="utf-8")
         result = subprocess.run(
             ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
             cwd=self.ws, env=self.env, capture_output=True, text=True)
@@ -216,7 +216,7 @@ class MrCreateRecipeTests(unittest.TestCase):
         # A title without the prefix marks the MR ready, and a queued Draft
         # then jumps its queue or train (private!4024, 2026-11-10; #1208).
         description = self.ws / "description.md"
-        description.write_text('## Result\nRefreshed.\n\nTools used: "Codex (OpenAI)"')
+        description.write_text('## Result\nRefreshed.\n\nTools used: "Codex (OpenAI)"', encoding="utf-8")
         result = subprocess.run(
             ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
             cwd=self.ws, env=self.env, capture_output=True, text=True)
@@ -228,7 +228,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_invalid_edit_does_not_publish(self) -> None:
         description = self.ws / "description.md"
-        description.write_text('Tools used: "Claude (OpenAI)"')
+        description.write_text('Tools used: "Claude (OpenAI)"', encoding="utf-8")
         result = subprocess.run(
             ["just", "gitlab", "mr-update", "core", "fix: recipe contract", str(description)],
             cwd=self.ws, env=self.env, capture_output=True, text=True)
@@ -255,7 +255,7 @@ class MrCreateRecipeTests(unittest.TestCase):
     def test_credit_examples_in_code_blocks_remain_literal(self) -> None:
         body = 'Example:\n```text\nTools used: "Codex (Anthropic)"\n```'
         description = self.ws / "description.md"
-        description.write_text(body)
+        description.write_text(body, encoding="utf-8")
         result = self.create(str(description))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         request = self.requests()[0]

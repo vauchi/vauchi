@@ -55,11 +55,11 @@ class ResourceGroupResetTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO)
+        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO, encoding="utf-8")
         bin_dir = base / "bin"
         bin_dir.mkdir()
         glab = bin_dir / "glab"
-        glab.write_text(FAKE_GLAB)
+        glab.write_text(FAKE_GLAB, encoding="utf-8")
         glab.chmod(0o755)
         self.calls = base / "calls.jsonl"
         self.env = dict(os.environ, JUST_UNSTABLE="1", GLAB_CALLS=str(self.calls),
@@ -75,7 +75,7 @@ class ResourceGroupResetTests(unittest.TestCase):
     def cancelled(self) -> list[str]:
         if not self.calls.exists():
             return []
-        return [c[-1] for c in map(json.loads, self.calls.read_text().splitlines())
+        return [c[-1] for c in map(json.loads, self.calls.read_text(encoding="utf-8").splitlines())
                 if c[-1].endswith("/cancel")]
 
     def test_queued_jobs_are_cancelled(self) -> None:

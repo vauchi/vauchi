@@ -44,7 +44,7 @@ class BlogPublishTests(unittest.TestCase):
         )
 
     def write_draft(self, text: str = DRAFT, name: str = "2026-07-16-a-card-for-your-people.md") -> None:
-        (self.drafts / name).write_text(text)
+        (self.drafts / name).write_text(text, encoding="utf-8")
 
     def test_publishing_dates_the_post_and_clears_the_draft_flag_in_front_matter_only(self):
         self.write_draft()
@@ -53,7 +53,7 @@ class BlogPublishTests(unittest.TestCase):
         published = self.content / "a-card-for-your-people.md"
         self.assertEqual(result.stdout.strip(), str(published))
         self.assertEqual(
-            published.read_text(),
+            published.read_text(encoding="utf-8"),
             DRAFT.replace("date = 2026-01-01\nslug", "date = 2026-10-26\nslug").replace(
                 "draft = true\n+++", "+++"
             ),
@@ -68,7 +68,7 @@ class BlogPublishTests(unittest.TestCase):
         # REUSE-IgnoreEnd
         result = self.publish()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.content / "a-card-for-your-people.md").read_text().startswith("+++\n"))
+        self.assertTrue((self.content / "a-card-for-your-people.md").read_text(encoding="utf-8").startswith("+++\n"))
 
     def test_internal_references_never_reach_the_public_repo(self):
         for leak in ("see _private/docs/x.md", "per ADR-057", "landed in website!99", "the .claude config"):
@@ -96,11 +96,11 @@ class BlogPublishTests(unittest.TestCase):
     def test_an_existing_post_is_never_overwritten(self):
         self.write_draft()
         existing = self.content / "a-card-for-your-people.md"
-        existing.write_text("published already\n")
+        existing.write_text("published already\n", encoding="utf-8")
         result = self.publish()
         self.assertEqual(result.returncode, 1)
         self.assertIn("already published", result.stderr)
-        self.assertEqual(existing.read_text(), "published already\n")
+        self.assertEqual(existing.read_text(encoding="utf-8"), "published already\n")
 
 
 if __name__ == "__main__":

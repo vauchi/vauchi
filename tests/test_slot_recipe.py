@@ -25,21 +25,21 @@ class SlotRecipeTest(unittest.TestCase):
         for name in ("vauchi", "vauchi-1", "vauchi-2"):
             self.make_slot(name)
         (self.parent / "vauchi-old").mkdir()
-        (self.parent / "vauchi-old/justfile").write_text("")
+        (self.parent / "vauchi-old/justfile").write_text("", encoding="utf-8")
 
     def make_slot(self, name: str) -> Path:
         slot = self.parent / name
         (slot / "just").mkdir(parents=True)
         for library in ("slot.just", "slot-lib.sh"):
             shutil.copyfile(WORKSPACE_ROOT / "just" / library, slot / "just" / library)
-        (slot / "justfile").write_text("mod slot 'just/slot.just'\n")
-        (slot / "CLAUDE.md").write_text("")
+        (slot / "justfile").write_text("mod slot 'just/slot.just'\n", encoding="utf-8")
+        (slot / "CLAUDE.md").write_text("", encoding="utf-8")
         for repository in (slot, slot / "core"):
             subprocess.run(
                 ["git", "init", "--quiet", "--initial-branch=main", str(repository)],
                 check=True,
             )
-        (slot / ".gitignore").write_text("/core/\n/.slot.lock\n")
+        (slot / ".gitignore").write_text("/core/\n/.slot.lock\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(slot), "add", "."], check=True)
         subprocess.run(
             ["git", "-C", str(slot), "-c", "user.name=t", "-c", "user.email=t@e",
@@ -109,7 +109,7 @@ class SlotRecipeTest(unittest.TestCase):
         self.just("vauchi-1", "acquire", session="codex-a")
         lock = self.parent / "vauchi-1/.slot.lock"
         old = int(time.time()) - 13 * 3600
-        lock.write_text(lock.read_text().replace(lock.read_text().split("seen=")[1].split()[0], str(old)))
+        lock.write_text(lock.read_text(encoding="utf-8").replace(lock.read_text(encoding="utf-8").split("seen=")[1].split()[0], str(old)), encoding="utf-8")
 
         result = self.just("vauchi-1", "acquire", session="kimi-b")
 
@@ -118,9 +118,9 @@ class SlotRecipeTest(unittest.TestCase):
 
     def backdate(self, slot: str, hours: int) -> str:
         lock = self.parent / slot / ".slot.lock"
-        seen = lock.read_text().split("seen=")[1].split()[0]
+        seen = lock.read_text(encoding="utf-8").split("seen=")[1].split()[0]
         old = str(int(time.time()) - hours * 3600)
-        lock.write_text(lock.read_text().replace(seen, old))
+        lock.write_text(lock.read_text(encoding="utf-8").replace(seen, old), encoding="utf-8")
         return old
 
     # vauchi/private#414: seen= was written only at acquire, so a live
@@ -142,7 +142,7 @@ class SlotRecipeTest(unittest.TestCase):
 
         self.just("vauchi-1", "touch", session="kimi-b")
 
-        lock = (self.parent / "vauchi-1/.slot.lock").read_text()
+        lock = (self.parent / "vauchi-1/.slot.lock").read_text(encoding="utf-8")
         self.assertIn(f"seen={old}", lock)
         self.assertIn("stale", self.just("vauchi-1", "acquire", session="kimi-b").stdout)
 
@@ -163,7 +163,7 @@ class SlotRecipeTest(unittest.TestCase):
     def test_status_counts_repositories_off_main_and_dirty(self) -> None:
         core = self.parent / "vauchi-2/core"
         subprocess.run(["git", "-C", str(core), "switch", "--quiet", "-c", "fix/x"], check=True)
-        (core / "scratch.txt").write_text("unsaved\n")
+        (core / "scratch.txt").write_text("unsaved\n", encoding="utf-8")
 
         row = self.status_rows("codex-a")["vauchi-2"]
 
@@ -192,7 +192,7 @@ class SlotRecipeTest(unittest.TestCase):
 
     def test_linked_worktrees_are_reported_with_their_dirty_count(self) -> None:
         core = self.parent / "vauchi-1/core"
-        (core / "tracked.txt").write_text("base\n")
+        (core / "tracked.txt").write_text("base\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(core), "add", "."], check=True)
         subprocess.run(
             ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e",
@@ -204,7 +204,7 @@ class SlotRecipeTest(unittest.TestCase):
             ["git", "-C", str(core), "worktree", "add", "--quiet", "-b", "side", str(linked)],
             check=True,
         )
-        (linked / "tracked.txt").write_text("unsaved\n")
+        (linked / "tracked.txt").write_text("unsaved\n", encoding="utf-8")
         library = WORKSPACE_ROOT / "just/slot-lib.sh"
 
         lines = subprocess.run(
@@ -216,7 +216,7 @@ class SlotRecipeTest(unittest.TestCase):
 
     def test_a_linked_worktree_whose_directory_is_gone_is_reported_missing(self) -> None:
         core = self.parent / "vauchi-1/core"
-        (core / "tracked.txt").write_text("base\n")
+        (core / "tracked.txt").write_text("base\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(core), "add", "."], check=True)
         subprocess.run(
             ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e",
@@ -255,7 +255,7 @@ class SlotRecipeTest(unittest.TestCase):
         # alpine:3.21 (CI) ships sha256sum but no shasum.
         no_shasum = self.parent / "no-shasum"
         no_shasum.mkdir()
-        (no_shasum / "shasum").write_text("#!/bin/sh\nexit 127\n")
+        (no_shasum / "shasum").write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
         (no_shasum / "shasum").chmod(0o755)
         library = WORKSPACE_ROOT / "just/slot-lib.sh"
         environment = {

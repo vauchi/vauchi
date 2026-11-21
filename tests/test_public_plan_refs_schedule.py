@@ -86,10 +86,10 @@ class PublicPlanRefsScheduleTest(unittest.TestCase):
             root = Path(directory)
             (root / "bin").mkdir()
             stub = root / "bin/glab"
-            stub.write_text(STUB)
+            stub.write_text(STUB, encoding="utf-8")
             stub.chmod(0o755)
             shutil.copyfile(WORKSPACE / "just/gitlab.just", root / "gitlab.just")
-            (root / "justfile").write_text("mod gitlab 'gitlab.just'\n")
+            (root / "justfile").write_text("mod gitlab 'gitlab.just'\n", encoding="utf-8")
             calls = root / "calls"
             state = root / "state.json"
             results = []
@@ -101,8 +101,8 @@ class PublicPlanRefsScheduleTest(unittest.TestCase):
                          "MODE": mode, "CALLS": str(calls), "STATE": str(state)},
                     capture_output=True, text=True,
                 ))
-            self.backend = json.loads(state.read_text()) if state.exists() else {}
-            recorded = [json.loads(line) for line in calls.read_text().splitlines()] if calls.exists() else []
+            self.backend = json.loads(state.read_text(encoding="utf-8")) if state.exists() else {}
+            recorded = [json.loads(line) for line in calls.read_text(encoding="utf-8").splitlines()] if calls.exists() else []
             return (results[0] if attempts == 1 else results), recorded
 
     def test_creates_inactive_then_sets_task_then_activates_and_verifies(self):

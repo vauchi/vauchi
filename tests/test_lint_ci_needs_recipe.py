@@ -53,14 +53,14 @@ class LintCiNeedsRecipeTest(unittest.TestCase):
         self.bin = base / "bin"
         self.bin.mkdir()
         glab = self.bin / "glab"
-        glab.write_text(GLAB_STUB)
+        glab.write_text(GLAB_STUB, encoding="utf-8")
         glab.chmod(0o755)
         self.checker = base / "checker.py"
-        self.checker.write_text(CHECKER_STUB)
+        self.checker.write_text(CHECKER_STUB, encoding="utf-8")
         self.fixtures = base / "fixtures"
         self.fixtures.mkdir()
-        (self.fixtures / "good").write_text("job: {script: [ok]}\n")
-        (self.fixtures / "bad").write_text("BAD: {script: [ok]}\n")
+        (self.fixtures / "good").write_text("job: {script: [ok]}\n", encoding="utf-8")
+        (self.fixtures / "bad").write_text("BAD: {script: [ok]}\n", encoding="utf-8")
 
     def tearDown(self) -> None:
         self._tmp.cleanup()

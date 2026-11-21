@@ -58,7 +58,7 @@ class StaleIncrementalTests(unittest.TestCase):
         self.hot = self._session("core/target/debug/incremental/vauchi_core-ccc", days_old=0)
         self.deps = self.workspace / "core/target/debug/deps/libvauchi_core.rlib"
         self.deps.parent.mkdir(parents=True)
-        self.deps.write_text("artifact")
+        self.deps.write_text("artifact", encoding="utf-8")
         old = time.time() - 30 * DAY
         os.utime(self.deps, (old, old))
         # A tier-1 path in the fake HOME: this mode must leave it alone.
@@ -71,7 +71,7 @@ class StaleIncrementalTests(unittest.TestCase):
     def _session(self, relative: str, days_old: int) -> Path:
         path = self.workspace / relative
         path.mkdir(parents=True)
-        (path / "dep-graph.bin").write_text("x" * 64)
+        (path / "dep-graph.bin").write_text("x" * 64, encoding="utf-8")
         stamp = time.time() - days_old * DAY
         os.utime(path / "dep-graph.bin", (stamp, stamp))
         os.utime(path, (stamp, stamp))
@@ -91,7 +91,7 @@ class StaleIncrementalTests(unittest.TestCase):
         self.assertFalse(self.stale.exists())
         self.assertFalse(self.stale_triple.exists())
         self.assertTrue(self.hot.is_dir(), "a session built today must stay warm")
-        self.assertEqual(self.deps.read_text(), "artifact", "compiled dependencies must survive")
+        self.assertEqual(self.deps.read_text(encoding="utf-8"), "artifact", "compiled dependencies must survive")
         self.assertTrue(self.swiftpm.is_dir(), "tier-1 caches are not this mode's business")
 
     def test_it_does_not_combine_with_a_tier(self) -> None:
@@ -130,7 +130,7 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
         # One tier-1 path, so the run reaches the cleanup steps.
         cache = self.home / "Library/Caches/org.swift.swiftpm/artifacts"
         cache.mkdir(parents=True)
-        (cache / "blob").write_text("x")
+        (cache / "blob").write_text("x", encoding="utf-8")
         # A PATH with the tools the recipe needs and no brew in it.
         self.bin = base / "bin"
         self.bin.mkdir()
@@ -166,7 +166,7 @@ class BrewOnlyWhereItExistsTests(unittest.TestCase):
             "#!/bin/sh\n"
             f'[ "$1" = --prefix ] && {{ echo "{self.home}/not-a-prefix"; exit 0; }}\n'
             "echo 'brew cleanup ran'\n"
-        )
+        , encoding="utf-8")
         brew.chmod(0o755)
         env = dict(os.environ, HOME=str(self.home), JUST_UNSTABLE="1",
                    PATH=str(self.bin))
@@ -200,7 +200,7 @@ class TierApplyTests(unittest.TestCase):
         bin_dir = base / "bin"
         bin_dir.mkdir()
         brew = bin_dir / "brew"
-        brew.write_text("#!/bin/sh\nexit 0\n")
+        brew.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         brew.chmod(0o755)
         # An rm that refuses b/target stands in for a tree being rebuilt; a
         # read-only directory would not stop root, which CI runs as.
@@ -209,7 +209,7 @@ class TierApplyTests(unittest.TestCase):
             "#!/bin/sh\n"
             'for a in "$@"; do [ "$a" = b/target ] && { echo "rm: $a: Directory not empty" >&2; exit 1; }; done\n'
             f'exec {shutil.which("rm")} "$@"\n'
-        )
+        , encoding="utf-8")
         rm.chmod(0o755)
         self.path = f"{bin_dir}:{os.environ['PATH']}"
 
@@ -218,7 +218,7 @@ class TierApplyTests(unittest.TestCase):
         self.last = self.workspace / "c/target"
         for target in (self.first, self.busy, self.last):
             (target / "debug").mkdir(parents=True)
-            (target / "debug/artifact").write_text("x")
+            (target / "debug/artifact").write_text("x", encoding="utf-8")
         self.sccache = self.home / "Library/Caches/Mozilla.sccache"
         self.sccache.mkdir(parents=True)
 

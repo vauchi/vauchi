@@ -100,11 +100,11 @@ class MrReadyQueueTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO)
+        (helpers / "resolve-repo.sh").write_text(RESOLVE_REPO, encoding="utf-8")
         bin_dir = base / "bin"
         bin_dir.mkdir()
         glab = bin_dir / "glab"
-        glab.write_text(FAKE_GLAB)
+        glab.write_text(FAKE_GLAB, encoding="utf-8")
         glab.chmod(0o755)
         self.state = base / "state.json"
         self.env = dict(
@@ -116,12 +116,12 @@ class MrReadyQueueTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def ready(self, mrs, iid, repo="core"):
-        self.state.write_text(json.dumps({"mrs": {str(m["iid"]): m for m in mrs}}))
+        self.state.write_text(json.dumps({"mrs": {str(m["iid"]): m for m in mrs}}), encoding="utf-8")
         result = subprocess.run(
             ["just", "gitlab", "mr-ready", str(iid), repo],
             cwd=self.ws, env=self.env, capture_output=True, text=True,
         )
-        return result, json.loads(self.state.read_text())
+        return result, json.loads(self.state.read_text(encoding="utf-8"))
 
     def test_an_mr_alone_and_rebased_goes_ready(self) -> None:
         result, state = self.ready([mr(20, True, {"id": 5, "status": "running"})], 20)

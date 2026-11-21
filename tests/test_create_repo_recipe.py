@@ -29,7 +29,7 @@ class CreateRepoRecipeTests(unittest.TestCase):
         )
 
     def test_forwards_description_as_data_without_shell_execution(self):
-        self.helper.write_text("import json,sys\nprint(json.dumps(sys.argv[1:]))\n")
+        self.helper.write_text("import json,sys\nprint(json.dumps(sys.argv[1:]))\n", encoding="utf-8")
         description = 'A "quote" $(touch injected) `touch injected2`'
         result = self.run_recipe("apple-display", "--description", description)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -38,7 +38,7 @@ class CreateRepoRecipeTests(unittest.TestCase):
         self.assertFalse((self.workspace / "injected2").exists())
 
     def test_propagates_helper_failure(self):
-        self.helper.write_text("import sys\nprint('policy mismatch', file=sys.stderr)\nsys.exit(7)\n")
+        self.helper.write_text("import sys\nprint('policy mismatch', file=sys.stderr)\nsys.exit(7)\n", encoding="utf-8")
         result = self.run_recipe("apple-display")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("policy mismatch", result.stderr)

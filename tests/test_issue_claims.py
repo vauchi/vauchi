@@ -133,10 +133,10 @@ class IssueClaimTest(unittest.TestCase):
         for library in ("issue-lib.sh", "slot-lib.sh"):
             shutil.copyfile(WORKSPACE_ROOT / "just" / library, self.slot / "just" / library)
         (self.slot / "_private/docs").mkdir(parents=True)
-        (self.slot / "_private/docs/2026-09-25-claim-collisions.md").write_text("## Entries\n")
+        (self.slot / "_private/docs/2026-09-25-claim-collisions.md").write_text("## Entries\n", encoding="utf-8")
         bin_dir = self.directory / "bin"
         bin_dir.mkdir()
-        (bin_dir / "glab").write_text(FAKE_GLAB)
+        (bin_dir / "glab").write_text(FAKE_GLAB, encoding="utf-8")
         (bin_dir / "glab").chmod(0o755)
         self.path = f"{bin_dir}:{os.environ['PATH']}"
         self.state = self.directory / "state.json"
@@ -153,10 +153,10 @@ class IssueClaimTest(unittest.TestCase):
         })
 
     def save(self, state: dict) -> None:
-        self.state.write_text(json.dumps(state))
+        self.state.write_text(json.dumps(state), encoding="utf-8")
 
     def load(self) -> dict:
-        return json.loads(self.state.read_text())
+        return json.loads(self.state.read_text(encoding="utf-8"))
 
     def run_lib(self, command: str, session: str, check: bool = False,
                 extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -185,7 +185,7 @@ class IssueClaimTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("BLOCKED", result.stdout)
         self.assertIn("(active 0h ago)", result.stdout)
-        self.assertIn("#7 | held-by-other", (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text())
+        self.assertIn("#7 | held-by-other", (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text(encoding="utf-8"))
 
     def test_reclaiming_your_own_issue_succeeds(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
@@ -225,7 +225,7 @@ class IssueClaimTest(unittest.TestCase):
         self.assertRegex(note, r"^takeover: session:[0-9a-f]{12} slot:")
         self.assertIn("idle 0h, authorized by the maintainer: holder slot is free)", note)
         self.assertIn("#7 | authorized-takeover",
-                      (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text())
+                      (self.slot / "_private/docs/2026-09-25-claim-collisions.md").read_text(encoding="utf-8"))
 
     def test_a_blank_reason_does_not_authorize_a_takeover(self) -> None:
         self.run_lib("issue_claim 7", "codex-a", check=True)
@@ -272,7 +272,7 @@ class IssueClaimTest(unittest.TestCase):
         for number, session in (("12", "codex-a"), ("7", "kimi-b"), ("9", "codex-a")):
             self.state.write_text(json.dumps({**self.load(), "issues": {
                 **self.load()["issues"], number: {"iid": int(number), "state": "opened",
-                                                  "title": "T", "labels": [], "web_url": "u"}}}))
+                                                  "title": "T", "labels": [], "web_url": "u"}}}), encoding="utf-8")
             self.run_lib(f"issue_claim {number}", session, check=True)
 
         result = self.run_lib("issue_claims", "codex-a")
@@ -421,7 +421,7 @@ class IssueClaimTest(unittest.TestCase):
         subprocess.run([*git, "push", "--quiet", "origin", "HEAD:main"], check=True)
         subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
         if unmerged:
-            (core / "work.txt").write_text("work\n")
+            (core / "work.txt").write_text("work\n", encoding="utf-8")
             subprocess.run([*git, "add", "work.txt"], check=True)
             subprocess.run([*git, "commit", "--quiet", "-m", "work"], check=True)
         subprocess.run([*git, "push", "--quiet", "origin", f"issue/{number}"], check=True)
@@ -465,7 +465,7 @@ class IssueClaimTest(unittest.TestCase):
         subprocess.run(["git", "clone", "--quiet", "--branch", "issue/7", str(remote), str(pusher)],
                        check=True, capture_output=True)
         git = ["git", "-C", str(pusher), "-c", "user.name=t", "-c", "user.email=t@e"]
-        (pusher / "late.txt").write_text("late\n")
+        (pusher / "late.txt").write_text("late\n", encoding="utf-8")
         subprocess.run([*git, "add", "late.txt"], check=True)
         subprocess.run([*git, "commit", "--quiet", "-m", "late work"], check=True)
         late = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True,
@@ -519,7 +519,7 @@ class IssueClaimTest(unittest.TestCase):
         subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
         subprocess.run([*git, "switch", "--quiet", "-c", f"issue/{number}"], check=True)
         for content in commits:
-            (private / "work.txt").write_text(content)
+            (private / "work.txt").write_text(content, encoding="utf-8")
             subprocess.run([*git, "add", "work.txt"], check=True)
             subprocess.run([*git, "commit", "--quiet", "-m", f"work: {content.strip()}"], check=True)
         subprocess.run([*git, "push", "--quiet", "origin", f"issue/{number}"], check=True)
@@ -528,7 +528,7 @@ class IssueClaimTest(unittest.TestCase):
 
     def land_on_main(self, private: Path, content: str) -> None:
         git = ["git", "-C", str(private), "-c", "user.name=t", "-c", "user.email=t@e"]
-        (private / "work.txt").write_text(content)
+        (private / "work.txt").write_text(content, encoding="utf-8")
         subprocess.run([*git, "add", "work.txt"], check=True)
         subprocess.run([*git, "commit", "--quiet", "-m", "one commit in place of the branch"], check=True)
         subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)
@@ -551,7 +551,7 @@ class IssueClaimTest(unittest.TestCase):
     def test_release_treats_a_branch_that_merged_main_after_its_rebase_merge_as_merged(self) -> None:
         private = self.private_with_issue_branch(7, ["a\n", "a\nb\n"])
         git = ["git", "-C", str(private), "-c", "user.name=t", "-c", "user.email=t@e"]
-        (private / "other.txt").write_text("other work\n")
+        (private / "other.txt").write_text("other work\n", encoding="utf-8")
         subprocess.run([*git, "add", "other.txt"], check=True)
         subprocess.run([*git, "commit", "--quiet", "-m", "other work on main"], check=True)
         subprocess.run([*git, "cherry-pick", "main..issue/7"], check=True, capture_output=True)
@@ -585,8 +585,8 @@ class IssueClaimTest(unittest.TestCase):
         core = self.slot / "core"
         git = ["git", "-C", str(core), "-c", "user.name=t", "-c", "user.email=t@e"]
         subprocess.run([*git, "switch", "--quiet", "main"], check=True)
-        (core / "work.txt").write_text("work\n")
-        (core / "notes.txt").write_text("from main\n")
+        (core / "work.txt").write_text("work\n", encoding="utf-8")
+        (core / "notes.txt").write_text("from main\n", encoding="utf-8")
         subprocess.run([*git, "add", "work.txt", "notes.txt"], check=True)
         subprocess.run([*git, "commit", "--quiet", "-m", "squashed with other work"], check=True)
         subprocess.run([*git, "push", "--quiet", "origin", "main"], check=True)

@@ -40,7 +40,7 @@ class LintDocsRecipeTest(unittest.TestCase):
     def write(self, root: Path, relative_path: str, content: str = "# Test\n") -> None:
         path = root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")
 
     def create_fixture(self, root: Path) -> tuple[Path, Path]:
         self.initialise_repository(root)
@@ -85,7 +85,7 @@ class LintDocsRecipeTest(unittest.TestCase):
             "#!/bin/sh\n"
             "shift\n"
             "printf '%s\\n' \"$@\" > \"$DOC_NAMING_LOG\"\n"
-        )
+        , encoding="utf-8")
         naming_checker.chmod(0o755)
 
         lychee_log = root / "lychee-files.log"
@@ -94,7 +94,7 @@ class LintDocsRecipeTest(unittest.TestCase):
         lychee.write_text(
             "#!/bin/sh\n"
             "printf '%s\\n' \"$@\" > \"$LYCHEE_LOG\"\n"
-        )
+        , encoding="utf-8")
         lychee.chmod(0o755)
         return naming_log, lychee_log
 
@@ -119,7 +119,7 @@ class LintDocsRecipeTest(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            naming_files = naming_log.read_text().splitlines()
+            naming_files = naming_log.read_text(encoding="utf-8").splitlines()
             self.assertIn("README.md", naming_files)
             self.assertIn(
                 "_private/docs/investigations/2026-07-18-new-topic.md",
@@ -143,7 +143,7 @@ class LintDocsRecipeTest(unittest.TestCase):
                 any(path.startswith(("docs/", "core/")) for path in naming_files)
             )
 
-            lychee_arguments = lychee_log.read_text().splitlines()
+            lychee_arguments = lychee_log.read_text(encoding="utf-8").splitlines()
             self.assertIn("assets/README.md", lychee_arguments)
             self.assertFalse(
                 any(path.startswith(("docs/", "core/")) for path in lychee_arguments)

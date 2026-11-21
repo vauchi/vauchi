@@ -56,13 +56,13 @@ class TestNameRecipeTest(unittest.TestCase):
         shutil.copytree(ROOT / "just", self.ws / "just")
         resolver = self.ws / "scripts" / "scripts"
         resolver.mkdir(parents=True)
-        (resolver / "resolve-repo.sh").write_text(RESOLVE_REPO_STUB)
+        (resolver / "resolve-repo.sh").write_text(RESOLVE_REPO_STUB, encoding="utf-8")
         (self.ws / "core").mkdir()
-        (self.ws / "core" / "Cargo.toml").write_text("[workspace]\n")
+        (self.ws / "core" / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
         self.bin = base / "bin"
         self.bin.mkdir()
         cargo = self.bin / "cargo"
-        cargo.write_text(CARGO_STUB)
+        cargo.write_text(CARGO_STUB, encoding="utf-8")
         cargo.chmod(0o755)
         self.calls = base / "cargo-calls.log"
 
@@ -97,14 +97,14 @@ class TestNameRecipeTest(unittest.TestCase):
 
     def test_cargo_runs_every_test_target(self) -> None:
         self.run_recipe(cargo_exit=0)
-        calls = self.calls.read_text()
+        calls = self.calls.read_text(encoding="utf-8")
         self.assertIn("--no-fail-fast", calls)
         self.assertIn("some_pattern", calls)
 
     def test_rust_scope_selects_one_package_and_test_target(self) -> None:
         result = self.run_recipe(0, "vauchi-core", "it")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        calls = self.calls.read_text()
+        calls = self.calls.read_text(encoding="utf-8")
         self.assertIn("-p vauchi-core", calls)
         self.assertIn("--test it", calls)
         self.assertIn("--no-fail-fast", calls)
@@ -113,7 +113,7 @@ class TestNameRecipeTest(unittest.TestCase):
     def test_library_scope_selects_the_library_target(self) -> None:
         result = self.run_recipe(0, "vauchi-core", "lib")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        calls = self.calls.read_text()
+        calls = self.calls.read_text(encoding="utf-8")
         self.assertIn("-p vauchi-core", calls)
         self.assertIn("--lib", calls)
         self.assertNotIn("--test lib", calls)

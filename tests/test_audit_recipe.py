@@ -41,11 +41,11 @@ class AuditRecipeTest(unittest.TestCase):
             (scripts / "resolve-repo.sh").write_text(
                 "repos_by_toolchain() { echo example; }\n"
                 'repo_dir() { printf "%s\\n" "$1"; }\n'
-            )
+            , encoding="utf-8")
             binary = workspace / "bin"
             binary.mkdir()
             cargo = binary / "cargo"
-            cargo.write_text(CARGO)
+            cargo.write_text(CARGO, encoding="utf-8")
             cargo.chmod(0o755)
             environment = {
                 **os.environ,

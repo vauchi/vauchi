@@ -42,7 +42,7 @@ class RigRecipeTest(unittest.TestCase):
         (self.workspace / "just").mkdir(parents=True)
         for library in ("rig.just", "rig-lib.sh", "slot-lib.sh"):
             shutil.copyfile(WORKSPACE_ROOT / "just" / library, self.workspace / "just" / library)
-        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n")
+        (self.workspace / "justfile").write_text("mod rig 'just/rig.just'\n", encoding="utf-8")
         self.holders: list[subprocess.Popen[bytes]] = []
         self.addCleanup(self.stop_holders)
 
@@ -126,7 +126,7 @@ class RigRecipeTest(unittest.TestCase):
         (self.rig_dir / "iphone.lock").write_text(
             f"session=session-a\nharness=claude\nslot=vauchi\npid={b.pid}\n"
             f"started=Thu Jan  1 00:00:00 1970\nsince={int(time.time())}\nnote=\n"
-        )
+        , encoding="utf-8")
         taken = self.rig("claim", "iphone", session="session-b", pid=b.pid)
         self.assertEqual(taken.returncode, 0, taken.stdout + taken.stderr)
         self.assertIn("stale", taken.stdout)
@@ -162,7 +162,7 @@ class RigRecipeTest(unittest.TestCase):
         self.rig("claim", session="session-a", pid=a.pid)
         forced = self.rig("claim", "--force", "iphone", "owner needs the phone", session="owner", pid=b.pid)
         self.assertEqual(forced.returncode, 0, forced.stdout + forced.stderr)
-        log = (self.rig_dir / "log").read_text()
+        log = (self.rig_dir / "log").read_text(encoding="utf-8")
         self.assertIn("force", log)
         self.assertIn(session_id("session-a"), log)
         self.assertIn("owner needs the phone", log)

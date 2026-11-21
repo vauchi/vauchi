@@ -47,7 +47,7 @@ _do_step && echo "STEP_REPORTED_SUCCESS" || echo "STEP_REPORTED_FAILURE"
 
 def lint_recipe_arm(toolchain: str) -> str:
     """Extract one `case` arm from the justfile's `lint` recipe verbatim."""
-    text = JUSTFILE.read_text()
+    text = JUSTFILE.read_text(encoding="utf-8")
     recipe = re.search(r"^lint \*args:\n(.*?)(?=^\S)", text, re.M | re.S)
     if recipe is None:
         raise AssertionError("could not locate the `lint` recipe in the justfile")
@@ -70,7 +70,7 @@ class LintRecipeReportsFailureTest(unittest.TestCase):
             stub_dir.mkdir()
             for tool in failing_tools:
                 stub = stub_dir / tool
-                stub.write_text("#!/bin/sh\necho 'stub: check failed' >&2\nexit 1\n")
+                stub.write_text("#!/bin/sh\necho 'stub: check failed' >&2\nexit 1\n", encoding="utf-8")
                 stub.chmod(0o755)
 
             # The arms also invoke repo guard scripts by relative path; stub
@@ -78,7 +78,7 @@ class LintRecipeReportsFailureTest(unittest.TestCase):
             guards = root / "scripts" / "scripts"
             guards.mkdir(parents=True)
             for guard in Path(JUSTFILE.parent, "scripts", "scripts").glob("*.sh"):
-                (guards / guard.name).write_text("#!/bin/sh\nexit 0\n")
+                (guards / guard.name).write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 (guards / guard.name).chmod(0o755)
 
             environment = os.environ.copy()

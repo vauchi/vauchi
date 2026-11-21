@@ -36,14 +36,14 @@ def run_check(workspace: Path) -> subprocess.CompletedProcess[str]:
 def make_workspace(tmp: str) -> Path:
     workspace = Path(tmp)
     (workspace / "_private/.claude").mkdir(parents=True)
-    (workspace / "_private/.claude/settings.json").write_text("{}\n")
+    (workspace / "_private/.claude/settings.json").write_text("{}\n", encoding="utf-8")
     (workspace / ".claude").symlink_to("_private/.claude")
     return workspace
 
 
 def write(path: Path, text: str = "x\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
 
 
 class ClaudeLayoutTest(unittest.TestCase):

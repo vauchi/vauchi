@@ -49,7 +49,7 @@ def make_repo(path: Path, origin: Path) -> None:
     git(path, "config", "user.email", "test@example.invalid")
     git(path, "config", "user.name", "Test")
     git(path, "config", "commit.gpgsign", "false")
-    (path / "README").write_text("seed\n")
+    (path / "README").write_text("seed\n", encoding="utf-8")
     git(path, "add", "README")
     git(path, "commit", "-q", "-m", "seed")
     git(path, "remote", "add", "origin", str(origin))
@@ -58,7 +58,7 @@ def make_repo(path: Path, origin: Path) -> None:
 
 def push_then_delete_remote(repo: Path, branch: str, content: str) -> str:
     git(repo, "switch", "-q", "-c", branch, "main")
-    (repo / f"{branch}.txt").write_text(content)
+    (repo / f"{branch}.txt").write_text(content, encoding="utf-8")
     git(repo, "add", f"{branch}.txt")
     git(repo, "commit", "-q", "-m", branch)
     git(repo, "push", "-q", "-u", "origin", branch)
@@ -77,16 +77,16 @@ class GitBranchHealthGoneTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS)
-        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO)
-        (helpers / "git-helpers.sh").write_text(GIT_HELPERS)
+        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS, encoding="utf-8")
+        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO, encoding="utf-8")
+        (helpers / "git-helpers.sh").write_text(GIT_HELPERS, encoding="utf-8")
 
         self.sub = self.ws / "core"
         make_repo(self.sub, base / "core.git")
         # Squash-merged: main holds the change under a different commit.
         merged_tip = push_then_delete_remote(self.sub, "squashed", "merged work\n")
-        (self.sub / "squashed.txt").write_text("merged work\n")
-        (self.sub / "README").write_text("main moved on\n")
+        (self.sub / "squashed.txt").write_text("merged work\n", encoding="utf-8")
+        (self.sub / "README").write_text("main moved on\n", encoding="utf-8")
         git(self.sub, "add", "squashed.txt", "README")
         git(self.sub, "commit", "-q", "-m", "squash of squashed")
         git(self.sub, "push", "-q")
@@ -102,7 +102,7 @@ class GitBranchHealthGoneTests(unittest.TestCase):
             f'  *source_branch=squashed*) echo \'[{{"state":"merged","sha":"{merged_tip}"}}]\' ;;\n'
             "  *) echo '[]' ;;\n"
             "esac\n"
-        )
+        , encoding="utf-8")
         glab.chmod(0o755)
         self.env = dict(
             os.environ, JUST_UNSTABLE="1", PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}"

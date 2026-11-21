@@ -47,7 +47,7 @@ def make_repo(path: Path, origin: Path) -> None:
     git(path, "config", "user.email", "test@example.invalid")
     git(path, "config", "user.name", "Test")
     git(path, "config", "commit.gpgsign", "false")
-    (path / "README").write_text("seed\n")
+    (path / "README").write_text("seed\n", encoding="utf-8")
     git(path, "add", "README")
     git(path, "commit", "-q", "-m", "seed")
     git(path, "remote", "add", "origin", str(origin))
@@ -56,7 +56,7 @@ def make_repo(path: Path, origin: Path) -> None:
 
 def commit_on_branch(repo: Path, branch: str) -> None:
     git(repo, "switch", "-q", "-c", branch)
-    (repo / "README").write_text(f"work on {branch}\n")
+    (repo / "README").write_text(f"work on {branch}\n", encoding="utf-8")
     git(repo, "commit", "-q", "-am", f"feat: {branch}")
 
 
@@ -74,8 +74,8 @@ class GitPushAllTests(unittest.TestCase):
             subprocess.run(["cp", "-R", str(ROOT / entry), str(self.ws / entry)], check=True)
         helpers = self.ws / "scripts" / "scripts"
         helpers.mkdir(parents=True)
-        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS)
-        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO)
+        (helpers / "output-helpers.sh").write_text(OUTPUT_HELPERS, encoding="utf-8")
+        (helpers / "for-each-repo.sh").write_text(FOR_EACH_REPO, encoding="utf-8")
 
         self.gone = self.ws / "gone"
         make_repo(self.gone, base / "gone.git")
@@ -83,7 +83,7 @@ class GitPushAllTests(unittest.TestCase):
         git(self.gone, "push", "-q", "-u", "origin", "issue/1")
         git(self.gone, "push", "-q", "origin", "--delete", "issue/1")
         git(self.gone, "fetch", "-q", "--prune", "origin")
-        (self.gone / "README").write_text("more work after the remote went\n")
+        (self.gone / "README").write_text("more work after the remote went\n", encoding="utf-8")
         git(self.gone, "commit", "-q", "-am", "feat: more")
 
         self.new = self.ws / "new"

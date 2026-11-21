@@ -161,7 +161,7 @@ class ReleaseGatesTest(unittest.TestCase):
             env = os.environ.copy()
             plan_path = workspace / "_private/docs/planning/master-plan.plan.md"
             plan_path.parent.mkdir(parents=True)
-            plan_path.write_text(plan)
+            plan_path.write_text(plan, encoding="utf-8")
             if checklist_counts is not None:
                 sc_open, sc_done, d_open, d_done = checklist_counts
                 counter = workspace / "_private/scripts/ship-checklist.py"
@@ -174,11 +174,11 @@ class ReleaseGatesTest(unittest.TestCase):
                     f"print('SC open {sc_open}, closed {sc_done}; "
                     f"decisions open {d_open}, recorded {d_done}')\n"
                     f"sys.exit({int(bool(sc_open or d_open))})\n"
-                )
+                , encoding="utf-8")
             if certification_evidence is not None:
                 report_path = workspace / "target/release-evidence/certification.json"
                 report_path.parent.mkdir(parents=True)
-                report_path.write_text(json.dumps(certification_evidence))
+                report_path.write_text(json.dumps(certification_evidence), encoding="utf-8")
             if adr_065 is not None:
                 adr_path = (
                     workspace
@@ -186,7 +186,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "adr-065-first-release-protocol-version-contract.md"
                 )
                 adr_path.parent.mkdir(parents=True)
-                adr_path.write_text(adr_065)
+                adr_path.write_text(adr_065, encoding="utf-8")
             if ignored_test_count is not None:
                 e2e_tests = workspace / "e2e/tests/it/ignored_tests.rs"
                 e2e_tests.parent.mkdir(parents=True)
@@ -198,12 +198,12 @@ class ReleaseGatesTest(unittest.TestCase):
                             for index in range(ignored_test_count)
                         ]
                     )
-                )
+                , encoding="utf-8")
             if core_tags is not None:
                 core_path = workspace / "core"
                 core_path.mkdir()
                 tag_list = workspace / "core-tags.txt"
-                tag_list.write_text("\n".join(core_tags))
+                tag_list.write_text("\n".join(core_tags), encoding="utf-8")
                 fake_bin = workspace / "bin"
                 fake_bin.mkdir()
                 fake_git = fake_bin / "git"
@@ -229,7 +229,7 @@ class ReleaseGatesTest(unittest.TestCase):
                             "",
                         ]
                     )
-                )
+                , encoding="utf-8")
                 fake_git.chmod(0o755)
                 env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
                 env["RELEASE_GATE_TEST_CORE_TAGS"] = str(tag_list)
@@ -244,7 +244,7 @@ class ReleaseGatesTest(unittest.TestCase):
                         ]
                     )
                     or "// native UI migration complete\n"
-                )
+                , encoding="utf-8")
             if web_demo_todo_count is not None:
                 web_demo_source = workspace / "web-demo/src/humble.ts"
                 web_demo_source.parent.mkdir(parents=True)
@@ -256,7 +256,7 @@ class ReleaseGatesTest(unittest.TestCase):
                         ]
                     )
                     or "// web demo migration complete\n"
-                )
+                , encoding="utf-8")
             humble_checker = workspace / "scripts/scripts/humble_check.py"
             humble_checker.parent.mkdir(parents=True)
             humble_checker.write_text(
@@ -275,9 +275,9 @@ class ReleaseGatesTest(unittest.TestCase):
                         "",
                     ]
                 )
-            )
-            (workspace / "scripts/scripts/humble_check_rules.json").write_text("{}\n")
-            (workspace / "scripts/scripts/humble_check.baseline.json").write_text("{}\n")
+            , encoding="utf-8")
+            (workspace / "scripts/scripts/humble_check_rules.json").write_text("{}\n", encoding="utf-8")
+            (workspace / "scripts/scripts/humble_check.baseline.json").write_text("{}\n", encoding="utf-8")
             if usability_evidence is not None:
                 usability_path = (
                     workspace
@@ -285,7 +285,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "first-release-unassisted-sessions.md"
                 )
                 usability_path.parent.mkdir(parents=True)
-                usability_path.write_text(usability_evidence)
+                usability_path.write_text(usability_evidence, encoding="utf-8")
             if accessibility_evidence is not None:
                 accessibility_path = (
                     workspace
@@ -293,7 +293,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "native-frontend-acceptance.md"
                 )
                 accessibility_path.parent.mkdir(parents=True)
-                accessibility_path.write_text(accessibility_evidence)
+                accessibility_path.write_text(accessibility_evidence, encoding="utf-8")
             if privacy_evidence is not None:
                 privacy_path = (
                     workspace
@@ -301,7 +301,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "service-boundary-no-decryptability.md"
                 )
                 privacy_path.parent.mkdir(parents=True)
-                privacy_path.write_text(privacy_evidence)
+                privacy_path.write_text(privacy_evidence, encoding="utf-8")
             if ohttp_fail_closed_evidence is not None:
                 ohttp_path = (
                     workspace
@@ -309,7 +309,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "ohttp-fail-closed.md"
                 )
                 ohttp_path.parent.mkdir(parents=True, exist_ok=True)
-                ohttp_path.write_text(ohttp_fail_closed_evidence)
+                ohttp_path.write_text(ohttp_fail_closed_evidence, encoding="utf-8")
             if frontend_journey_evidence is not None:
                 journey_path = (
                     workspace
@@ -317,7 +317,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "core-user-journey.md"
                 )
                 journey_path.parent.mkdir(parents=True)
-                journey_path.write_text(frontend_journey_evidence)
+                journey_path.write_text(frontend_journey_evidence, encoding="utf-8")
             if local_two_user_evidence is not None:
                 local_two_user_path = (
                     workspace
@@ -325,7 +325,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "local-two-user-propagation.md"
                 )
                 local_two_user_path.parent.mkdir(parents=True)
-                local_two_user_path.write_text(local_two_user_evidence)
+                local_two_user_path.write_text(local_two_user_evidence, encoding="utf-8")
             if ohttp_relay_two_user_evidence is not None:
                 ohttp_relay_two_user_path = (
                     workspace
@@ -333,7 +333,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "ohttp-relay-two-user-propagation.md"
                 )
                 ohttp_relay_two_user_path.parent.mkdir(parents=True, exist_ok=True)
-                ohttp_relay_two_user_path.write_text(ohttp_relay_two_user_evidence)
+                ohttp_relay_two_user_path.write_text(ohttp_relay_two_user_evidence, encoding="utf-8")
             if six_device_convergence_evidence is not None:
                 six_device_path = (
                     workspace
@@ -341,7 +341,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "six-device-convergence.md"
                 )
                 six_device_path.parent.mkdir(parents=True, exist_ok=True)
-                six_device_path.write_text(six_device_convergence_evidence)
+                six_device_path.write_text(six_device_convergence_evidence, encoding="utf-8")
             if every_linked_device_evidence is not None:
                 every_device_path = (
                     workspace
@@ -349,7 +349,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "every-linked-device-exchange.md"
                 )
                 every_device_path.parent.mkdir(parents=True, exist_ok=True)
-                every_device_path.write_text(every_linked_device_evidence)
+                every_device_path.write_text(every_linked_device_evidence, encoding="utf-8")
             if selectable_exchange_evidence is not None:
                 selectable_exchange_path = (
                     workspace
@@ -357,7 +357,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "selectable-exchange-mode-acceptance.md"
                 )
                 selectable_exchange_path.parent.mkdir(parents=True, exist_ok=True)
-                selectable_exchange_path.write_text(selectable_exchange_evidence)
+                selectable_exchange_path.write_text(selectable_exchange_evidence, encoding="utf-8")
             if long_lived_contact_evidence is not None:
                 long_lived_contact_path = (
                     workspace
@@ -365,7 +365,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "long-lived-contact-continuity.md"
                 )
                 long_lived_contact_path.parent.mkdir(parents=True, exist_ok=True)
-                long_lived_contact_path.write_text(long_lived_contact_evidence)
+                long_lived_contact_path.write_text(long_lived_contact_evidence, encoding="utf-8")
             if production_distribution_evidence is not None:
                 production_distribution_path = (
                     workspace
@@ -373,7 +373,7 @@ class ReleaseGatesTest(unittest.TestCase):
                     "production-distribution.md"
                 )
                 production_distribution_path.parent.mkdir(parents=True, exist_ok=True)
-                production_distribution_path.write_text(production_distribution_evidence)
+                production_distribution_path.write_text(production_distribution_evidence, encoding="utf-8")
             if user_data_convergence_evidence is not None:
                 user_data_convergence_path = (
                     workspace
@@ -381,17 +381,17 @@ class ReleaseGatesTest(unittest.TestCase):
                     "user-data-convergence.md"
                 )
                 user_data_convergence_path.parent.mkdir(parents=True, exist_ok=True)
-                user_data_convergence_path.write_text(user_data_convergence_evidence)
+                user_data_convergence_path.write_text(user_data_convergence_evidence, encoding="utf-8")
             if deploy_config is not None:
                 deploy_path = workspace / "_private/infra/config/deploy.combined.yml"
                 deploy_path.parent.mkdir(parents=True)
-                deploy_path.write_text(deploy_config)
+                deploy_path.write_text(deploy_config, encoding="utf-8")
                 configs = dict(DISTINCT_PRODUCTION_HOSTS)
                 configs.update(service_configs_from(deploy_config))
                 configs.update(production_configs or {})
                 for name, text in configs.items():
                     if text is not None:
-                        (deploy_path.parent / name).write_text(text)
+                        (deploy_path.parent / name).write_text(text, encoding="utf-8")
             return subprocess.run(
                 [
                     "just",
@@ -3428,7 +3428,7 @@ android store submission: passed
         )
 
     def test_release_prod_runs_release_gates_before_prompting(self) -> None:
-        justfile_text = JUSTFILE.read_text()
+        justfile_text = JUSTFILE.read_text(encoding="utf-8")
         recipe = justfile_text.split('release-prod repo="core":', 1)[1]
         recipe = recipe.split("# Show version promotion history", 1)[0]
 
@@ -3436,7 +3436,7 @@ android store submission: passed
         self.assertLess(recipe.index("just release-gates"), recipe.index("read -p"))
 
     def test_release_gate_runner_installs_deploy_check_dependencies(self) -> None:
-        ci_config = (JUSTFILE.parent / ".gitlab-ci.yml").read_text()
+        ci_config = (JUSTFILE.parent / ".gitlab-ci.yml").read_text(encoding="utf-8")
         release_gate_job = ci_config.split("test:release-gates:", 1)[1]
         release_gate_job = release_gate_job.split("\nlint:dx-gates:", 1)[0]
 
@@ -3446,7 +3446,7 @@ android store submission: passed
         )
 
     def test_pipeline_wait_uses_aggregate_pipeline_state(self) -> None:
-        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text(encoding="utf-8")
         recipe = gitlab_recipes.split("pipeline-wait repo='':", 1)[1]
         recipe = recipe.split("# Retry failed jobs", 1)[0]
 
@@ -3458,7 +3458,7 @@ android store submission: passed
         self.assertNotIn('grep -qiE "passed|success"', recipe)
 
     def test_ci_classifier_passes_gitlab_failure_reason(self) -> None:
-        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text(encoding="utf-8")
         recipe = gitlab_recipes.split("ci-classify repo job_id:", 1)[1]
         recipe = recipe.split("# Show pipeline status", 1)[0]
 
@@ -3466,7 +3466,7 @@ android store submission: passed
         self.assertIn('--failure-reason "$failure_reason"', recipe)
 
     def test_pipeline_email_recipe_is_failure_only_and_verified(self) -> None:
-        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text()
+        gitlab_recipes = (JUSTFILE.parent / "just/gitlab.just").read_text(encoding="utf-8")
         recipe = gitlab_recipes.split(
             "pipeline-email-enable repo recipient:",
             1,

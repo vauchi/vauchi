@@ -30,7 +30,7 @@ class LintMarkdownRecipeTest(unittest.TestCase):
         directory = Path(tempfile.mkdtemp(prefix=".lint-markdown-test-", dir=WORKSPACE_ROOT))
         self.addCleanup(shutil.rmtree, directory)
         page = directory / "page.md"
-        page.write_text(f"# Page\n\n{body}\n")
+        page.write_text(f"# Page\n\n{body}\n", encoding="utf-8")
         return subprocess.run(
             ["just", "--justfile", str(WORKSPACE_ROOT / "justfile"), "lint-markdown", str(page)],
             cwd=WORKSPACE_ROOT, capture_output=True, text=True,

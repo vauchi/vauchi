@@ -38,9 +38,9 @@ class CheckImplementedScenariosRecipeTests(unittest.TestCase):
         shutil.copyfile(ROOT / "scripts/scripts/check-implemented-scenarios.py", checker)
         features = self.workspace / "features"
         features.mkdir()
-        (features / "navigation.feature").write_text(FEATURE)
-        (features / "implemented-untested.baseline").write_text("")
-        (features / "dangling-annotations.baseline").write_text("")
+        (features / "navigation.feature").write_text(FEATURE, encoding="utf-8")
+        (features / "implemented-untested.baseline").write_text("", encoding="utf-8")
+        (features / "dangling-annotations.baseline").write_text("", encoding="utf-8")
         for repo in REPOS:
             (self.workspace / repo).mkdir()
 
@@ -50,7 +50,7 @@ class CheckImplementedScenariosRecipeTests(unittest.TestCase):
     def annotate(self, *scenarios: str) -> None:
         (self.workspace / "core/lib.rs").write_text("".join(
             f"// @scenario: {scenario}\n#[test]\nfn test_{n}() {{}}\n"
-            for n, scenario in enumerate(scenarios)))
+            for n, scenario in enumerate(scenarios)), encoding="utf-8")
 
     def run_check(self) -> subprocess.CompletedProcess:
         return subprocess.run(["just", "check-implemented-scenarios"], cwd=self.workspace,

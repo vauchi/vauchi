@@ -41,13 +41,13 @@ IOS = """targets:
 def bump(app: str, text: str) -> tuple[subprocess.CompletedProcess, str]:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "file"
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
         result = subprocess.run(
             [sys.executable, str(HELPER), app, str(path)],
             capture_output=True,
             text=True,
         )
-        return result, path.read_text()
+        return result, path.read_text(encoding="utf-8")
 
 
 class TestBuildVersionTests(unittest.TestCase):

@@ -37,7 +37,7 @@ class PlanValidateRecipeTests(unittest.TestCase):
         shutil.copytree(ROOT / "just", self.workspace / "just")
         self.plans = self.workspace / "plans"
         self.plans.mkdir()
-        (self.plans / "good.plan.md").write_text(PLAN)
+        (self.plans / "good.plan.md").write_text(PLAN, encoding="utf-8")
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
