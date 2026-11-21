@@ -34,7 +34,7 @@ def main(argv: list[str]) -> int:
         return 2
     version_pattern, build_pattern = FIELDS[argv[1]]
     path = Path(argv[2])
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
 
     versions = version_pattern.findall(text)
     builds = build_pattern.findall(text)
@@ -51,7 +51,7 @@ def main(argv: list[str]) -> int:
     build = int(builds[0][1]) + 1
     text = version_pattern.sub(lambda m: f"{m.group(1)}{version}{m.group(5)}", text)
     text = build_pattern.sub(lambda m: f"{m.group(1)}{build}{m.group(3)}", text)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     print(version, build)
     return 0
 

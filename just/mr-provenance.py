@@ -86,7 +86,7 @@ def main():
     parser.add_argument("--stdin", action="store_true")
     args = parser.parse_args()
     supplied = sys.stdin.read() if args.stdin else (
-        Path(args.description_file).read_text() if args.description_file else None
+        Path(args.description_file).read_text(encoding="utf-8") if args.description_file else None
     )
     print(description(args.repo, supplied))
 
