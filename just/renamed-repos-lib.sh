@@ -18,8 +18,8 @@ RENAMED_REPO_DIRS=(
 
 # migrate_renamed_repo_dirs <workspace root>
 # Moves each old checkout to its new name and points an origin that named
-# the old project at the new one. Exit 1 when both directories exist: which
-# one holds the work is not this function's call.
+# the old project at the new one. Exit 1 when both directories exist (which
+# one holds the work is not this function's call) or the OS refuses the move.
 migrate_renamed_repo_dirs() {
     local root="$1" pair old new url refused=0
     for pair in "${RENAMED_REPO_DIRS[@]}"; do
@@ -31,7 +31,12 @@ migrate_renamed_repo_dirs() {
             refused=1
             continue
         fi
-        mv "$root/$old" "$root/$new"
+        if ! mv "$root/$old" "$root/$new"; then
+            # Windows refuses to rename a folder a process has open.
+            echo "  ERROR: could not move $old to $new in $root; close what holds $old open, then run session-init again" >&2
+            refused=1
+            continue
+        fi
         url=$(git -C "$root/$new" config --get remote.origin.url || true)
         case "$url" in
             *"vauchi/$old.git" | *"vauchi/$old")
