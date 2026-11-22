@@ -223,6 +223,20 @@ rig_claim() {
         _rig_last_handover "$device"
         _rig_report_claimed "$device"
     done
+    for device in $taken; do
+        _rig_caution "$device"
+    done
+}
+
+# What a holder has to know before driving a phone and does not find on
+# its path otherwise. Printed last, under the hand-over notes.
+_rig_caution() {
+    case "$1" in
+        iphone)
+            echo "  ⚠ iphone: UI automation (WebDriverAgent) puts an \"Automation Running\" overlay on its screen. While the runner lives the other phone reads the iPhone's code badly or not at all (0 frames at 14 cm, 2026-11-22): end the runner before any camera exchange and check it is gone, or have a person tap the iPhone. Details: _private/docs/testing/device-automation/test-run-context.md"
+            ;;
+    esac
+    return 0
 }
 
 # rig_release [devices] [state note...] — devices default to all this session holds.
