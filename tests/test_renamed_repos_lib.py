@@ -73,6 +73,23 @@ class RenamedRepoDirs(unittest.TestCase):
         )
         assert "windows -> windows-app" in done.stdout
 
+    def test_a_move_the_os_refuses_is_reported_and_leaves_the_checkout_where_it_was(self):
+        # Seen on Windows, 2026-11-22: mv answered "Device or resource busy"
+        # and the move was still reported as done.
+        tmp_path = self.workspace
+        checkout(tmp_path / "windows", "git@gitlab.com:vauchi/windows.git")
+
+        done = subprocess.run(
+            ["bash", "-c", f'source "{LIB}" && mv() {{ return 1; }} && migrate_renamed_repo_dirs "$1"', "_", str(tmp_path)],
+            capture_output=True,
+            text=True,
+        )
+
+        assert done.returncode == 1, done.stdout
+        assert "could not move windows to windows-app" in done.stderr
+        assert "windows -> windows-app" not in done.stdout
+        assert git(tmp_path / "windows", "config", "--get", "remote.origin.url") == "git@gitlab.com:vauchi/windows.git"
+
     def test_an_https_remote_keeps_its_scheme(self):
         tmp_path = self.workspace
         checkout(tmp_path / "linux-qt", "https://gitlab.com/vauchi/linux-qt.git")
