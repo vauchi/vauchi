@@ -704,7 +704,7 @@ release-gates:
         Path("android"),
         Path("ios"),
         Path("macos"),
-        Path("windows"),
+        Path("windows-app"),
         Path("gtk-display"),
         Path("qt-display"),
         Path("cli"),

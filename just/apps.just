@@ -50,13 +50,13 @@ run platform *args:
         relay)
             cd relay && cargo run -- {{args}}
             ;;
-        windows)
+        windows-app|windows)
             # Build vauchi-cabi if the DLL is missing
-            CABI_DLL="windows/cabi/vauchi_cabi.dll"
+            CABI_DLL="windows-app/cabi/vauchi_cabi.dll"
             if [ ! -f "$CABI_DLL" ]; then
                 echo "Building vauchi-cabi..."
                 cd core && cargo build --release -p vauchi-cabi && cd ..
-                mkdir -p windows/cabi
+                mkdir -p windows-app/cabi
                 cp core/target/release/vauchi_cabi.dll "$CABI_DLL"
             fi
             # WinUI 3 needs Visual Studio's MSBuild — the dotnet CLI's
@@ -81,19 +81,19 @@ run platform *args:
                 exit 1
             fi
             # Build and run
-            cd windows
+            cd windows-app
             "$MSBUILD" Vauchi.sln -p:Configuration=Release -p:Platform=x64 -restore -v:quiet -nologo
             ./Vauchi/bin/x64/Release/net8.0-windows10.0.22621.0/win-x64/Vauchi.exe {{args}}
             ;;
         *)
-            echo "Usage: just run [cli|tui|gtk-display|qt-display|android|ios|relay|windows]"
+            echo "Usage: just run [cli|tui|gtk-display|qt-display|android|ios|relay|windows-app]"
             echo ""
             echo "Platforms:"
             echo "  cli         Run CLI (pass args after platform)"
             echo "  tui         Run TUI terminal interface"
             echo "  gtk-display   Run Linux GTK4 app"
             echo "  qt-display    Run Linux Qt6 app (builds vauchi-cabi if needed)"
-            echo "  windows     Run Windows WinUI 3 app (builds vauchi-cabi if needed)"
+            echo "  windows-app Run Windows WinUI 3 app (builds vauchi-cabi if needed)"
             echo "  android     Build and install on Android emulator"
             echo "  ios         Build and install on iOS simulator"
             echo "  relay       Start relay server"
@@ -103,7 +103,7 @@ run platform *args:
             echo "  just run tui"
             echo "  just run gtk-display"
             echo "  just run qt-display"
-            echo "  just run windows"
+            echo "  just run windows-app"
             echo "  just run relay --port 8080"
             exit 1
             ;;

@@ -25,7 +25,7 @@ repos = [
   { name = "gtk-display", path = "gtk-display/" },
   { name = "qt-display", path = "qt-display/" },
   { name = "macos", path = "macos/" },
-  { name = "windows", path = "windows/" },
+  { name = "windows-app", path = "windows-app/" },
   { name = "web-demo", path = "web-demo/" },
   { name = "vauchi-platform-swift", path = "vauchi-platform-swift/" },
 ]

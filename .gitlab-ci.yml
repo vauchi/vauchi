@@ -230,7 +230,7 @@ gates:workspace-ratchets:
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends bash ripgrep git ca-certificates curl
     - |
-      for repo in scripts core ios android macos gtk-display qt-display windows tui cli web-demo; do
+      for repo in scripts core ios android macos gtk-display qt-display windows-app tui cli web-demo; do
         git clone --depth=1 --branch main \
           "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/${repo}.git" \
           "${CI_PROJECT_DIR}/${repo}"
@@ -329,7 +329,7 @@ gates:allow-failure-budget:
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends git ca-certificates
     - |
-      for repo in scripts core cli tui e2e relay ohttp-relay gtk-display qt-display windows web-demo ios macos android docs features website locales themes; do
+      for repo in scripts core cli tui e2e relay ohttp-relay gtk-display qt-display windows-app web-demo ios macos android docs features website locales themes; do
         git clone --depth=1 --branch main \
           "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/${repo}.git" \
           "${CI_PROJECT_DIR}/${repo}"

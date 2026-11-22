@@ -9,10 +9,11 @@
 # old checkout would leave two copies, the old one holding the branches
 # and local work.
 
-# old:new, one pair per renamed repository (ADR-078, private#1029).
+# old:new, one pair per renamed repository (ADR-078, private#1029, private#1234).
 RENAMED_REPO_DIRS=(
     "linux-gtk:gtk-display"
     "linux-qt:qt-display"
+    "windows:windows-app"
 )
 
 # migrate_renamed_repo_dirs <workspace root>

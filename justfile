@@ -584,7 +584,7 @@ lint *args:
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
         scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
         # Humble-UI domain-mutation ratchet for the Rust/C++/C# frontends
-        # (tui, cli, gtk-display, qt-display, windows) — the analogue of
+        # (tui, cli, gtk-display, qt-display, windows-app) — the analogue of
         # audit-frontend-vocab.sh's mobile (Swift/Kotlin) coverage. Closes
         # the ungated-scope gap from 2026-06-02-humble-ui-enforcement-mobile-only:
         # counts domain-mutating verb calls (save_/configure_/setup_/validate_)
@@ -795,21 +795,21 @@ build-cabi-windows:
     echo "Building vauchi-cabi for Windows..."
     cd core && cargo build -p vauchi-cabi --release --features audio
     cd ..
-    mkdir -p windows/cabi
-    cp core/target/release/vauchi_cabi.dll windows/cabi/vauchi_cabi.dll
-    cp core/vauchi-cabi/include/vauchi.h windows/cabi/vauchi.h
-    echo "✓ DLL copied to windows/cabi/"
+    mkdir -p windows-app/cabi
+    cp core/target/release/vauchi_cabi.dll windows-app/cabi/vauchi_cabi.dll
+    cp core/vauchi-cabi/include/vauchi.h windows-app/cabi/vauchi.h
+    echo "✓ DLL copied to windows-app/cabi/"
 
 # Download pre-built vauchi-cabi DLL from GitLab registry
 [group('extended')]
 [script]
 download-cabi:
     set -euo pipefail
-    if [ ! -f windows/cabi-version.json ]; then
-      echo "ERROR: windows/cabi-version.json not found"; exit 1
+    if [ ! -f windows-app/cabi-version.json ]; then
+      echo "ERROR: windows-app/cabi-version.json not found"; exit 1
     fi
-    VERSION=$(python3 -c "import json; print(json.load(open('windows/cabi-version.json'))['version'])")
-    SHA256=$(python3 -c "import json; print(json.load(open('windows/cabi-version.json'))['sha256'])")
+    VERSION=$(python3 -c "import json; print(json.load(open('windows-app/cabi-version.json'))['version'])")
+    SHA256=$(python3 -c "import json; print(json.load(open('windows-app/cabi-version.json'))['sha256'])")
     if [ "$VERSION" = "0.0.0" ]; then
       echo "CABI version is placeholder — run 'just build-cabi-windows' instead"; exit 1
     fi
@@ -829,29 +829,29 @@ download-cabi:
       echo "ERROR: Could not resolve core project ID"; exit 1
     fi
     BASE_URL="https://gitlab.com/api/v4/projects/$PROJECT_ID/packages/generic/vauchi-cabi-windows/$VERSION"
-    mkdir -p windows/cabi
+    mkdir -p windows-app/cabi
     echo "Downloading vauchi_cabi.dll v$VERSION..."
-    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll" -o windows/cabi/vauchi_cabi.dll
+    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll" -o windows-app/cabi/vauchi_cabi.dll
     if command -v sha256sum >/dev/null 2>&1; then
-      ACTUAL=$(sha256sum windows/cabi/vauchi_cabi.dll | cut -d' ' -f1)
+      ACTUAL=$(sha256sum windows-app/cabi/vauchi_cabi.dll | cut -d' ' -f1)
     else
-      ACTUAL=$(shasum -a 256 windows/cabi/vauchi_cabi.dll | cut -d' ' -f1)
+      ACTUAL=$(shasum -a 256 windows-app/cabi/vauchi_cabi.dll | cut -d' ' -f1)
     fi
     if [ "$ACTUAL" != "$SHA256" ]; then
       echo "ERROR: SHA-256 mismatch — expected $SHA256, got $ACTUAL"
-      rm windows/cabi/vauchi_cabi.dll; exit 1
+      rm windows-app/cabi/vauchi_cabi.dll; exit 1
     fi
     echo "✓ SHA-256 verified"
     if command -v cosign >/dev/null 2>&1; then
-      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256" -o windows/cabi/vauchi_cabi.dll.sha256
-      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256.bundle" -o windows/cabi/vauchi_cabi.dll.sha256.bundle
-      cosign verify-blob --key windows/cosign.pub --bundle windows/cabi/vauchi_cabi.dll.sha256.bundle windows/cabi/vauchi_cabi.dll.sha256 \
+      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256" -o windows-app/cabi/vauchi_cabi.dll.sha256
+      curl -sSfL -H "$HEADER" "$BASE_URL/vauchi_cabi.dll.sha256.bundle" -o windows-app/cabi/vauchi_cabi.dll.sha256.bundle
+      cosign verify-blob --key windows-app/cosign.pub --bundle windows-app/cabi/vauchi_cabi.dll.sha256.bundle windows-app/cabi/vauchi_cabi.dll.sha256 \
         && echo "✓ Cosign verified" || echo "⚠ Cosign verification failed (non-fatal for local dev)"
     else
       echo "⚠ cosign not installed — skipping signature verification"
     fi
-    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi.h" -o windows/cabi/vauchi.h 2>/dev/null || true
-    echo "✓ DLL ready at windows/cabi/"
+    curl -sSfL -H "$HEADER" "$BASE_URL/vauchi.h" -o windows-app/cabi/vauchi.h 2>/dev/null || true
+    echo "✓ DLL ready at windows-app/cabi/"
 
 # Bump core workspace version and regenerate Cargo.lock.
 # Usage: just bump-core <version>   e.g. just bump-core 0.19.9
@@ -1598,7 +1598,7 @@ lint-no-direct-clipboard-writes:
     scripts/scripts/check-no-direct-clipboard-writes.sh "$(pwd)"
 
 # Verify every hand-rolled frontend ScreenModel parser
-# (gtk-display, qt-display, windows, android) covers every Component
+# (gtk-display, qt-display, windows-app, android) covers every Component
 # variant declared in core/vauchi-app/src/ui/component.rs. iOS / macOS
 # come from UniFFI and are sync-by-construction.
 # `_private/docs/problems/2026-05-01-screenmodel-parser-symmetry-gate/`.
@@ -1782,7 +1782,7 @@ help:
       Examples: just test core, just lint cli, just check ios
       Valid repos: core cli relay tui e2e android ios docs
                    locales themes features website scripts
-                   macos windows gtk-display qt-display web-demo
+                   macos windows-app gtk-display qt-display web-demo
                    linux-hw apple-hw android-hw windows-hw contract
 
     GitLab:
@@ -2896,7 +2896,7 @@ check-just-docs action='check':
 #
 # Covers all in-tree consumers: the binding crates inside core/ (vauchi-app,
 # vauchi-cabi, vauchi-platform), every Rust frontend, every native frontend
-# (macos/ios/android Swift+Kotlin, windows C#, gtk-display Rust, qt-display C++),
+# (macos/ios/android Swift+Kotlin, windows-app C#, gtk-display Rust, qt-display C++),
 # and web-demo/drift-detector (TypeScript). The list is broad on purpose —
 # missing a consumer is what made the 2026-05-08 deep-modules audit drop
 # qt-display entirely. See .claude/docs/audit-scope.md.
@@ -2910,7 +2910,7 @@ consumers pattern:
     CONSUMER_DIRS=(
         core/vauchi-app core/vauchi-cabi core/vauchi-platform
         cli tui e2e relay
-        gtk-display qt-display windows macos ios android
+        gtk-display qt-display windows-app macos ios android
         web-demo utils/drift-detector
     )
     for dir in "${CONSUMER_DIRS[@]}"; do

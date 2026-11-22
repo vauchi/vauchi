@@ -11,8 +11,8 @@ set script-interpreter := ["bash", "-eu"]
 # Metrics repo groups (non-overlapping — each repo in exactly one group)
 metrics_coverage_repos := "core cli tui relay ohttp-relay"
 metrics_binary_drift_repos := "gtk-display"
-metrics_drift_only_repos := "qt-display macos windows web-demo"
-metrics_all_repos := "core cli tui relay ohttp-relay gtk-display qt-display macos windows web-demo"
+metrics_drift_only_repos := "qt-display macos windows-app web-demo"
+metrics_all_repos := "core cli tui relay ohttp-relay gtk-display qt-display macos windows-app web-demo"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
@@ -1274,7 +1274,7 @@ metrics-status:
             relay)    cov="yes" bs="yes"  dd="-"   ;;
             ohttp-relay) cov="yes" bs="-"  dd="-"   ;;
             gtk-display) cov="-" bs="yes"  dd="yes"  ;;
-            qt-display|macos|windows|web-demo) cov="-" bs="-" dd="yes" ;;
+            qt-display|macos|windows-app|web-demo) cov="-" bs="-" dd="yes" ;;
             *) cov="-" bs="-" dd="-" ;;
         esac
         printf "%-12s %-12s %-12s %-12s %-12s\n" "$repo" "$cov" "$bs" "$dd" "$pipeline_status"

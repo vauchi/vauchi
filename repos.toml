@@ -226,8 +226,8 @@ profile = true
 description = "Native macOS app (SwiftUI)"
 
 [[repo]]
-name = "windows"
-path = "windows"
+name = "windows-app"
+path = "windows-app"
 ecosystem = "dotnet"
 public = true
 mobile = false

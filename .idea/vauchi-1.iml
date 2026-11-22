@@ -54,8 +54,8 @@
       <excludeFolder url="file://$MODULE_DIR$/ios/Pods" />
       <excludeFolder url="file://$MODULE_DIR$/ios/build" />
       <excludeFolder url="file://$MODULE_DIR$/macos/.build" />
-      <excludeFolder url="file://$MODULE_DIR$/windows/bin" />
-      <excludeFolder url="file://$MODULE_DIR$/windows/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/windows-app/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/windows-app/obj" />
       <excludeFolder url="file://$MODULE_DIR$/.worktrees" />
       <excludeFolder url="file://$MODULE_DIR$/out" />
       <excludeFolder url="file://$MODULE_DIR$/builds" />
