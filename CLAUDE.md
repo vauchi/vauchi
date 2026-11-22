@@ -245,7 +245,8 @@ load cost many times over. Attribution and history:
   (sums a year for a one-day event, compares an update's first tick
   instead of all its ticks). Before calling anything a defence, ask
   what the attacker sums or aligns over and build the strongest one in
-  reach. 3 occurrences on 2026-11-18 (#1281);
+  reach. 3 occurrences on 2026-11-18 (#1281); a fourth on 2026-11-22,
+  a model thief limited to refresh numbers the receiver later issues;
   `.claude/docs/log_reasoning_errors.md`.
 - **Claim wider than the run.** A simulation result written up with a
   wider scope than the script ran: a harness that re-reads what a real
