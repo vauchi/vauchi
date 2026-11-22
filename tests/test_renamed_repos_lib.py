@@ -59,6 +59,20 @@ class RenamedRepoDirs(unittest.TestCase):
         )
         assert "linux-gtk -> gtk-display" in done.stdout
 
+    def test_the_windows_checkout_follows_its_rename_to_windows_app(self):
+        # private#1234, ADR-078 step 4: renamed in GitLab on 2026-11-22.
+        tmp_path = self.workspace
+        checkout(tmp_path / "windows", "git@gitlab.com:vauchi/windows.git")
+
+        done = migrate(tmp_path)
+
+        assert done.returncode == 0, done.stderr
+        assert not (tmp_path / "windows").exists()
+        assert git(tmp_path / "windows-app", "config", "--get", "remote.origin.url") == (
+            "git@gitlab.com:vauchi/windows-app.git"
+        )
+        assert "windows -> windows-app" in done.stdout
+
     def test_an_https_remote_keeps_its_scheme(self):
         tmp_path = self.workspace
         checkout(tmp_path / "linux-qt", "https://gitlab.com/vauchi/linux-qt.git")
