@@ -255,6 +255,13 @@ load cost many times over. Attribution and history:
   the scope from the script's parameters (days, seeds, which edges are
   combined), never from what the run was meant to show. 3 occurrences,
   2026-11-19 to 2026-11-20 (#1281).
+- **A fix broken in what it adds.** Each hardening pass on a protocol
+  added state (a counter, a cap, a timer, an order of arrival) and the
+  next review broke exactly that. Before a pass goes out, ask of every
+  new piece of state: who advances it, who can stall it, and what the
+  other side does when it is gone. After two such rounds, stop writing
+  prose and make the rules executable. 3 occurrences, 2026-11-20 to
+  2026-11-22 (#1281); `.claude/docs/log_reasoning_errors.md`.
 - **Xcode on the CI host.** Run `hostname` before any `xcodebuild`: on
   `nell` (the macOS/iOS runner) never boot an iOS simulator — push the
   red test alone and let the MR pipeline show it — and give local macOS
