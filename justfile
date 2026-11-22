@@ -875,16 +875,25 @@ bump-core version:
     #      vauchi-core = { path = "vauchi-core", version = "0.X.Y", ... }
     #    Cargo refuses to resolve a path-member at a stale published
     #    version if the constraint excludes the new workspace version,
-    #    so these stay in lockstep.
-    for crate in vauchi-core vauchi-app vauchi-protocol; do
+    #    so these stay in lockstep. Every such line moves, read from the
+    #    manifest: a kept list missed vauchi-core-testkit in two
+    #    releases (vauchi/private#1304, tests/test_bump_core_recipe.py).
+    path_crates=$(sed -n 's/^\(vauchi-[a-z-]*\) = { path = "\1", version = ".*/\1/p' Cargo.toml)
+    for crate in $path_crates; do
         sed -i.bak "s|^\\($crate = { path = \"$crate\", version = \"\\)[^\"]*\\(\".*\\)|\\1{{ version }}\\2|" Cargo.toml && rm Cargo.toml.bak
     done
-    # 3. Minimal lockfile update restricted to the 5 workspace crates.
+    # 3. Minimal lockfile update restricted to the workspace crates: the
+    #    path members above plus the two that no constraint names.
     #    `cargo generate-lockfile` (the old recipe's call) regenerates
     #    from scratch and pulls newest compatible versions of every
     #    transitive dep — 44-line Cargo.lock churn vs the convention's
     #    10 lines. `cargo update -p` touches only the named packages.
-    cargo update -p vauchi-core -p vauchi-app -p vauchi-cabi -p vauchi-platform -p vauchi-protocol 2>&1 | tail -10
+    update_args=""
+    for crate in $path_crates vauchi-cabi vauchi-platform; do
+        update_args="$update_args -p $crate"
+    done
+    # shellcheck disable=SC2086 # one word per -p argument
+    cargo update $update_args 2>&1 | tail -10
     echo "Regenerating cargo-vet exemptions..."
     cargo vet regenerate exemptions 2>&1
     cargo vet fmt 2>&1
