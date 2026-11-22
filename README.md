@@ -72,7 +72,7 @@ numbers, or any content.
 | [cli/](cli/) | Command-line interface |
 | [tui/](tui/) | Terminal user interface |
 | [macos/](macos/) | Native macOS app (SwiftUI) |
-| [windows/](windows/) | Native Windows app (WinUI 3 / C#) |
+| [windows-app/](windows-app/) | Native Windows app (WinUI 3 / C#) |
 | [gtk-display/](gtk-display/) | Native Linux app (GTK4 + libadwaita) |
 | [qt-display/](qt-display/) | Native Linux app (Qt variant) |
 | [android/](android/) | Android app (Kotlin/Compose) |
