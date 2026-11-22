@@ -97,6 +97,23 @@ class RigRecipeTest(unittest.TestCase):
         self.assertIn(session_id("session-b"), self.status_line("s7"))
         self.assertIn(session_id("session-a"), self.status_line("pixel"))
 
+    def test_claiming_the_iphone_warns_that_automation_covers_its_code(self) -> None:
+        """WebDriverAgent's "Automation Running" overlay sits on the iPhone's
+        screen while its runner lives. On 2026-11-22 a session kept the
+        runner through a Hover run at 14 cm and the Pixel decoded no frame
+        of the iPhone's code; the notes that say so were not on its path
+        (owner, #1342). The claim is."""
+        a, b = self.holder(), self.holder()
+        pair = self.rig("claim", "Hover runs", session="session-a", pid=a.pid)
+        warning = [line for line in pair.stdout.splitlines() if "Automation Running" in line]
+        self.assertEqual(len(warning), 1, pair.stdout)
+        self.assertIn("iphone", warning[0])
+        self.assertIn("end the runner", warning[0])
+
+        s7 = self.rig("claim", "s7", "notification checks", session="session-b", pid=b.pid)
+        self.assertEqual(s7.returncode, 0, s7.stdout + s7.stderr)
+        self.assertNotIn("Automation Running", s7.stdout, "a phone without that overlay gets no such line")
+
     def test_a_claim_is_all_or_nothing(self) -> None:
         a, b = self.holder(), self.holder()
         self.rig("claim", "iphone", "WDA checks", session="session-a", pid=a.pid)
