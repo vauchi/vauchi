@@ -5,7 +5,7 @@
     <mapping directory="$PROJECT_DIR$/_private" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/android" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/assets" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cli" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cli-display" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/core" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/docs" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/drift-detector" vcs="Git" />
@@ -22,7 +22,7 @@
     <mapping directory="$PROJECT_DIR$/relay" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/scripts" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/themes" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/tui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tui-display" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/vauchi-platform-swift" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/web-demo" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/website" vcs="Git" />

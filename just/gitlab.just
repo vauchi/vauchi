@@ -9,10 +9,10 @@ set shell := ["bash", "-cu"]
 set script-interpreter := ["bash", "-eu"]
 
 # Metrics repo groups (non-overlapping — each repo in exactly one group)
-metrics_coverage_repos := "core cli tui relay ohttp-relay"
+metrics_coverage_repos := "core cli-display tui-display relay ohttp-relay"
 metrics_binary_drift_repos := "gtk-display"
 metrics_drift_only_repos := "qt-display macos windows-app web-demo"
-metrics_all_repos := "core cli tui relay ohttp-relay gtk-display qt-display macos windows-app web-demo"
+metrics_all_repos := "core cli-display tui-display relay ohttp-relay gtk-display qt-display macos windows-app web-demo"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
@@ -533,7 +533,7 @@ mr-create-all title='':
     # everything downstream is Draft. Derived from Cargo.toml git deps.
     UPSTREAM_REPOS="core"
     # Repos that depend on core via git (tier 1+)
-    DOWNSTREAM_OF_CORE="cli tui relay ohttp-relay gtk-display e2e"
+    DOWNSTREAM_OF_CORE="cli-display tui-display relay ohttp-relay gtk-display e2e"
 
     created=()
     updated=()
@@ -1270,7 +1270,7 @@ metrics-status:
           | python3 -c "import sys,json;d=json.load(sys.stdin);print(d[0]['status'] if d else 'none')" 2>/dev/null || echo "?")
         case "$repo" in
             core)     cov="yes" bs="yes"  dd="-"   ;;
-            cli|tui)  cov="yes" bs="yes"  dd="yes"  ;;
+            cli-display|tui-display)  cov="yes" bs="yes"  dd="yes"  ;;
             relay)    cov="yes" bs="yes"  dd="-"   ;;
             ohttp-relay) cov="yes" bs="-"  dd="-"   ;;
             gtk-display) cov="-" bs="yes"  dd="yes"  ;;

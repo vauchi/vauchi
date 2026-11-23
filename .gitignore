@@ -9,7 +9,9 @@
 /core/
 /relay/
 /cli/
+/cli-display/
 /tui/
+/tui-display/
 /desktop/
 /e2e/
 /gtk-display/
@@ -141,6 +143,7 @@ yarn.lock
 # macOS
 .DS_Store
 cli/.cargo/config.toml
+cli-display/.cargo/config.toml
 relay/.cargo/config.toml
 
 # Local semantic search index (just semindex / semsearch)

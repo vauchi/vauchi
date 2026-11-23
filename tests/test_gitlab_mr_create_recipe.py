@@ -264,7 +264,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_autolink_edits_normalize_existing_credits(self) -> None:
         self.env.pop("MR_NO_AUTOLINK")
-        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli-display"))
         self.env["MR_EXISTING_DESC"] = "Prior result.\n\n🤖 Generated with Claude Code"
         result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
                                 env=self.env, capture_output=True, text=True)
@@ -278,7 +278,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_invalid_autolink_description_is_not_published(self) -> None:
         self.env.pop("MR_NO_AUTOLINK")
-        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli-display"))
         self.env["MR_EXISTING_DESC"] = 'Tools used: "Codex (Anthropic)"'
         result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
                                 env=self.env, capture_output=True, text=True)
@@ -299,7 +299,7 @@ class MrCreateRecipeTests(unittest.TestCase):
 
     def test_autolink_read_failure_does_not_replace_the_description(self) -> None:
         self.env.pop("MR_NO_AUTOLINK")
-        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli"))
+        self.git(self.ws, "clone", str(self.repo), str(self.ws / "cli-display"))
         self.env["MR_FAIL_DESCRIPTION"] = "1"
         result = subprocess.run(["just", "gitlab", "_autolink", "core"], cwd=self.ws,
                                 env=self.env, capture_output=True, text=True)

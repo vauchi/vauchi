@@ -54,7 +54,7 @@ class CheckRecipeFailureTests(unittest.TestCase):
     def test_quiet_check_propagates_every_child_exit_without_a_summary(self):
         for phase in ("fmt-check", "lint", "test"):
             with self.subTest(phase=phase):
-                result = self.run_recipe("check", ["cli", "--quiet"], phase)
+                result = self.run_recipe("check", ["cli-display", "--quiet"], phase)
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
 

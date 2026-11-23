@@ -818,7 +818,7 @@ branch-status:
 
 # Create a branch with the same name across repos
 # If repos have uncommitted changes, prompts to save them first
-# Usage: just git branch feature/my-feature core cli gtk-display
+# Usage: just git branch feature/my-feature core cli-display gtk-display
 #        just git branch feature/my-feature           (all repos)
 [no-cd]
 [script]

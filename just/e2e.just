@@ -68,7 +68,7 @@ e2e-integration: e2e-build
 # which doesn't persist keys between CLI process invocations.
 [private]
 build-cli:
-    cd cli && cargo build --no-default-features --release --target-dir ../target
+    cd cli-display && cargo build --no-default-features --release --target-dir ../target
 
 # Build relay binary (into shared target dir for e2e tests)
 [private]

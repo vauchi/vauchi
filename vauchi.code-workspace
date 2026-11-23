@@ -9,12 +9,12 @@
       "name": "core"
     },
     {
-      "path": "cli",
-      "name": "cli"
+      "path": "cli-display",
+      "name": "cli-display"
     },
     {
-      "path": "tui",
-      "name": "tui"
+      "path": "tui-display",
+      "name": "tui-display"
     },
     {
       "path": "relay",
@@ -91,8 +91,8 @@
     "rust-analyzer.linkedProjects": [
       "core/Cargo.toml",
       "relay/Cargo.toml",
-      "cli/Cargo.toml",
-      "tui/Cargo.toml",
+      "cli-display/Cargo.toml",
+      "tui-display/Cargo.toml",
       "e2e/Cargo.toml",
       "gtk-display/Cargo.toml"
     ],

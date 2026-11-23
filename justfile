@@ -310,7 +310,7 @@ refresh-core-lock repo:
     }
     case "$repo" in
         web-demo) manifest="$dir/wasm/Cargo.toml" ;;
-        cli|tui|gtk-display|e2e) manifest="$dir/Cargo.toml" ;;
+        cli-display|tui-display|gtk-display|e2e) manifest="$dir/Cargo.toml" ;;
         *) echo "Unsupported Core consumer: $repo" >&2; exit 1 ;;
     esac
     manifest_dir=$(dirname "$manifest")
@@ -584,7 +584,7 @@ lint *args:
         scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
         scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
         # Humble-UI domain-mutation ratchet for the Rust/C++/C# frontends
-        # (tui, cli, gtk-display, qt-display, windows-app) — the analogue of
+        # (tui-display, cli-display, gtk-display, qt-display, windows-app) — the analogue of
         # audit-frontend-vocab.sh's mobile (Swift/Kotlin) coverage. Closes
         # the ungated-scope gap from 2026-06-02-humble-ui-enforcement-mobile-only:
         # counts domain-mutating verb calls (save_/configure_/setup_/validate_)
@@ -1181,15 +1181,15 @@ audit repo='':
     exit "$failed"
 
 # Regenerate cargo-vet exemptions to match each repo's CI strategy.
-# Repos with custom CI scripts (cli, tui, relay): regenerate lockfile without path overrides.
+# Repos with custom CI scripts (cli-display, tui-display, relay): regenerate lockfile without path overrides.
 # Repos using the shared template (core, ohttp-relay): vet against committed lockfile (--locked).
-# Usage: just vet-fix [repo]   e.g. just vet-fix cli
+# Usage: just vet-fix [repo]   e.g. just vet-fix cli-display
 [group('extended')]
 [script]
 vet-fix repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
-    VET_REPOS="cli tui relay ohttp-relay core"
+    VET_REPOS="cli-display tui-display relay ohttp-relay core"
     # Repos whose CI uses `cargo vet --locked` (shared template, no lockfile regeneration)
     LOCKED_REPOS="core ohttp-relay"
     if [[ -n "{{repo}}" ]]; then
@@ -1567,7 +1567,7 @@ lint-file-size repo='':
 [script]
 check-no-allow-direct:
     set -euo pipefail
-    scripts/scripts/check-no-allow-direct.sh core cli tui e2e
+    scripts/scripts/check-no-allow-direct.sh core cli-display tui-display e2e
 
 # Forbid view-layer reads of MobileContact.is_imported / .isImported.
 # Core's ContactDetailEngine + vauchi-platform 0.24.0's
@@ -1779,8 +1779,8 @@ help:
       just commit-repo <r> <msg>  Non-interactive commit (for automation)
 
       Repo argument: omit = auto-detect from pwd (or all from workspace root)
-      Examples: just test core, just lint cli, just check ios
-      Valid repos: core cli relay tui e2e android ios docs
+      Examples: just test core, just lint cli-display, just check ios
+      Valid repos: core cli-display relay tui-display e2e android ios docs
                    locales themes features website scripts
                    macos windows-app gtk-display qt-display web-demo
                    linux-hw apple-hw android-hw windows-hw contract
@@ -2032,7 +2032,7 @@ housekeeping:
         count=$(echo "$snaps" | wc -l | tr -d ' ')
         echo "  $count unreviewed snapshot(s):"
         echo "$snaps" | sed 's/^/    /'
-        echo "  -> Run: (cd tui && cargo insta review)"
+        echo "  -> Run: (cd tui-display && cargo insta review)"
         ISSUES=$((ISSUES + count))
     else
         echo "  None"
@@ -2677,7 +2677,7 @@ concept name:
     rg -i "$pattern" features/ --glob '*.feature' -n --color=never 2>/dev/null | grep -iE "Scenario|Feature:" | head -30 || echo "  (none)"
     echo ""
     echo "── Tests ──"
-    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli/ tui/ relay/ gtk-display/tests/ \
+    rg -i "$pattern" core/vauchi-core/tests/ core/vauchi-platform/tests/ e2e/ cli-display/ tui-display/ relay/ gtk-display/tests/ \
         --glob '*.rs' -l --color=never 2>/dev/null | head -20 || echo "  (none)"
     echo ""
     echo "── Source ──"
@@ -2699,9 +2699,9 @@ check-annotations repo='core':
         core) dirs="core/vauchi-core/tests core/vauchi-platform/tests" ;;
         e2e)  dirs="e2e/tests" ;;
         relay) dirs="relay/tests" ;;
-        cli)  dirs="cli/tests" ;;
-        tui)  dirs="tui/tests" ;;
-        all)  dirs="core/vauchi-core/tests core/vauchi-platform/tests e2e/tests relay/tests cli/tests tui/tests" ;;
+        cli-display)  dirs="cli-display/tests" ;;
+        tui-display)  dirs="tui-display/tests" ;;
+        all)  dirs="core/vauchi-core/tests core/vauchi-platform/tests e2e/tests relay/tests cli-display/tests tui-display/tests" ;;
         *)    echo "Unknown repo: {{ repo }}"; exit 1 ;;
     esac
     total=0
@@ -2909,7 +2909,7 @@ consumers pattern:
     echo ""
     CONSUMER_DIRS=(
         core/vauchi-app core/vauchi-cabi core/vauchi-platform
-        cli tui e2e relay
+        cli-display tui-display e2e relay
         gtk-display qt-display windows-app macos ios android
         web-demo utils/drift-detector
     )

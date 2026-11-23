@@ -707,8 +707,8 @@ release-gates:
         Path("windows-app"),
         Path("gtk-display"),
         Path("qt-display"),
-        Path("cli"),
-        Path("tui"),
+        Path("cli-display"),
+        Path("tui-display"),
         Path("web-demo"),
     )
     HUMBLE_CHECKER = Path("scripts/scripts/humble_check.py")

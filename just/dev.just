@@ -98,7 +98,7 @@ core-freshness:
 
     # Rust consumers (path-overridden locally)
     echo "── Rust Consumers (path-overridden locally) ──"
-    for repo in cli tui; do
+    for repo in cli-display tui-display; do
         DIR="$ROOT/$repo"
         [ -d "$DIR" ] || continue
         CARGO_CONFIG="$DIR/.cargo/config.toml"

@@ -10,11 +10,11 @@
 run platform *args:
     set -e
     case "{{platform}}" in
-        cli)
-            cd cli && cargo run -- {{args}}
+        cli|cli-display)
+            cd cli-display && cargo run -- {{args}}
             ;;
-        tui)
-            cd tui && cargo run -- {{args}}
+        tui|tui-display)
+            cd tui-display && cargo run -- {{args}}
             ;;
         gtk-display)
             cd gtk-display && cargo run -- {{args}}
@@ -117,4 +117,4 @@ relay:
 # Run TUI application
 [group('apps')]
 tui:
-    cd tui && cargo run
+    cd tui-display && cargo run

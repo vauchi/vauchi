@@ -101,7 +101,7 @@ class LintRecipeReportsFailureTest(unittest.TestCase):
 
     def test_rust_arm_reports_a_failing_clippy_for_a_non_core_repo(self) -> None:
         """`core` was protected only because its trailing `if` was true."""
-        stdout = self.run_arm("rust", repo="tui", failing_tools=["cargo"])
+        stdout = self.run_arm("rust", repo="tui-display", failing_tools=["cargo"])
 
         self.assertIn(
             "STEP_REPORTED_FAILURE",

@@ -10,8 +10,8 @@ repos = [
   { name = "root", path = "." },
   { name = "core", path = "core/" },
   { name = "relay", path = "relay/" },
-  { name = "cli", path = "cli/" },
-  { name = "tui", path = "tui/" },
+  { name = "cli-display", path = "cli-display/" },
+  { name = "tui-display", path = "tui-display/" },
   { name = "android", path = "android/" },
   { name = "ios", path = "ios/" },
   { name = "e2e", path = "e2e/" },
@@ -332,8 +332,8 @@ ignore = [
 "/prekey/" = "prekey"
 "/prekey.rs" = "prekey"
 # Repo-level tags
-"/cli/" = "cli"
-"/tui/" = "tui"
+"/cli-display/" = "cli"
+"/tui-display/" = "tui"
 
 [tags.path.typescript]
 "/components/" = "ui"

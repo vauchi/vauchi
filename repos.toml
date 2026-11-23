@@ -83,8 +83,8 @@ profile = true
 description = "OHTTP forwarding proxy for metadata privacy"
 
 [[repo]]
-name = "cli"
-path = "cli"
+name = "cli-display"
+path = "cli-display"
 ecosystem = "rust"
 public = true
 mobile = false
@@ -94,8 +94,8 @@ profile = true
 description = "Command-line interface"
 
 [[repo]]
-name = "tui"
-path = "tui"
+name = "tui-display"
+path = "tui-display"
 ecosystem = "rust"
 public = true
 mobile = false

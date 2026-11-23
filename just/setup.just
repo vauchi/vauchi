@@ -181,7 +181,7 @@ session-init:
         # Freshness check: surface drift between local override sources
         # (core/, relay/) and origin/main. Stale shipped APIs are how
         # "local-passes / CI-fails" silent breaks survive — the same
-        # pathology that hid Wire Humble Tier 0 until cli/tui auto-vet
+        # pathology that hid Wire Humble Tier 0 until cli-display/tui-display auto-vet
         # surfaced it on CI. Advisory only; show output verbatim so
         # WARN lines + recovery hints reach the developer.
         bash scripts/scripts/path-overrides.sh freshness 2>/dev/null \
@@ -540,7 +540,7 @@ session-end:
     # VFL01: flaky-quarantine SLA (warn at session-end; scheduled CI enforces).
     # Page: _private/docs/lint-errors/vfl01-flaky-sla.md
     if [[ -x scripts/scripts/check-flaky-sla.sh ]]; then
-        for _repo in core cli tui e2e relay gtk-display; do
+        for _repo in core cli-display tui-display e2e relay gtk-display; do
             if [[ -d "$_repo" ]]; then
                 scripts/scripts/check-flaky-sla.sh "$_repo" || \
                     echo "  WARN: flaky-SLA issues in $_repo (see above)"

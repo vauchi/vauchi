@@ -8,8 +8,8 @@
 # Unlike stash, WIP commits stay on the branch, show in git log, and can't be lost
 # Usage: just git wip                          (all dirty repos, default message)
 #        just git wip "fixing exchange bug"    (all dirty repos, custom message)
-#        just git wip "" core cli              (specific repos, default message)
-#        just git wip "my msg" core cli        (specific repos, custom message)
+#        just git wip "" core cli-display      (specific repos, default message)
+#        just git wip "my msg" core cli-display (specific repos, custom message)
 [no-cd]
 [script]
 wip msg='' *repos='':
@@ -79,7 +79,7 @@ wip msg='' *repos='':
 
 # Undo the last WIP commit (soft reset — keeps changes staged)
 # Usage: just git wip-undo              (all repos with WIP commits)
-#        just git wip-undo core cli     (specific repos)
+#        just git wip-undo core cli-display (specific repos)
 [no-cd]
 [script]
 wip-undo *repos='':
@@ -136,7 +136,7 @@ wip-undo *repos='':
 
 # Switch back to a branch and undo any WIP commits left there
 # Usage: just git resume feature/my-feature              (all repos)
-#        just git resume feature/my-feature core cli     (specific repos)
+#        just git resume feature/my-feature core cli-display (specific repos)
 [no-cd]
 [script]
 resume name *repos='':
