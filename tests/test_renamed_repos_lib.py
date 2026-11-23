@@ -73,6 +73,26 @@ class RenamedRepoDirs(unittest.TestCase):
         )
         assert "windows -> windows-app" in done.stdout
 
+    def test_the_cli_and_tui_checkouts_follow_their_renames_to_cli_display_and_tui_display(self):
+        # private#1233, ADR-078 step 3: renamed in GitLab on 2026-11-23.
+        tmp_path = self.workspace
+        checkout(tmp_path / "cli", "git@gitlab.com:vauchi/cli.git")
+        checkout(tmp_path / "tui", "https://gitlab.com/vauchi/tui.git")
+
+        done = migrate(tmp_path)
+
+        assert done.returncode == 0, done.stderr
+        assert not (tmp_path / "cli").exists()
+        assert not (tmp_path / "tui").exists()
+        assert git(tmp_path / "cli-display", "config", "--get", "remote.origin.url") == (
+            "git@gitlab.com:vauchi/cli-display.git"
+        )
+        assert git(tmp_path / "tui-display", "config", "--get", "remote.origin.url") == (
+            "https://gitlab.com/vauchi/tui-display.git"
+        )
+        assert "cli -> cli-display" in done.stdout
+        assert "tui -> tui-display" in done.stdout
+
     def test_a_move_the_os_refuses_is_reported_and_leaves_the_checkout_where_it_was(self):
         # Seen on Windows, 2026-11-22: mv answered "Device or resource busy"
         # and the move was still reported as done.
