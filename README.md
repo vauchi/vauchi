@@ -69,8 +69,8 @@ numbers, or any content.
 |------------|-------------|
 | [core/](core/) | Core library (`vauchi-core`) + platform bindings (`vauchi-platform`) + C ABI (`vauchi-cabi`) |
 | [relay/](relay/) | WebSocket relay server for message routing |
-| [cli/](cli/) | Command-line interface |
-| [tui/](tui/) | Terminal user interface |
+| [cli-display/](cli-display/) | Command-line interface |
+| [tui-display/](tui-display/) | Terminal user interface |
 | [macos/](macos/) | Native macOS app (SwiftUI) |
 | [windows-app/](windows-app/) | Native Windows app (WinUI 3 / C#) |
 | [gtk-display/](gtk-display/) | Native Linux app (GTK4 + libadwaita) |
