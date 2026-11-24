@@ -13,8 +13,9 @@ run platform *args:
         cli|cli-display)
             cd cli-display && cargo run -- {{args}}
             ;;
+        # tui-display is a library; linux-app builds the binary (private#1233).
         tui|tui-display)
-            cd tui-display && cargo run -- {{args}}
+            cd linux-app && cargo run --no-default-features --features tui --bin vauchi-tui -- {{args}}
             ;;
         gtk-display)
             cd gtk-display && cargo run -- {{args}}
@@ -114,7 +115,7 @@ run platform *args:
 relay:
     cd relay && cargo run
 
-# Run TUI application
+# Run TUI application (linux-app builds vauchi-tui; tui-display is its library)
 [group('apps')]
 tui:
-    cd tui-display && cargo run
+    cd linux-app && cargo run --no-default-features --features tui --bin vauchi-tui
