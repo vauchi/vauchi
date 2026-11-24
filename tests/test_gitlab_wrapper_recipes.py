@@ -39,7 +39,14 @@ if args[0] == "api" and args[1].endswith("/retry"):
 elif args[0] == "api" and args[1].endswith("/pipeline"):
     print(json.dumps({"id": 10, "ref": "main", "status": "created", "web_url": "https://gl/p/10"}))
 elif args[0] == "api" and "/jobs" in args[1]:
-    print(json.dumps([{"id": 31, "name": "test:unit", "status": "failed", "allow_failure": False}]))
+    print(json.dumps([
+        {"id": 31, "name": "test:unit", "status": "failed", "allow_failure": False, "retried": True},
+        {"id": 32, "name": "test:unit", "status": "success", "allow_failure": False, "retried": False},
+    ]))
+elif args[0] == "api" and args[1].endswith("/bridges"):
+    print(json.dumps([{"id": 33, "name": "check:site-indexing", "status": "failed",
+                       "allow_failure": False,
+                       "downstream_pipeline": {"id": 77, "project_id": 4}}]))
 """
 
 CORE = ["-R", "vauchi/core"]
@@ -56,7 +63,12 @@ WRAPPERS = [
     (["pipeline-retry", "9", "core"], ["api", "projects/vauchi%2Fcore/pipelines/9/retry", "-X", "POST"]),
     (["pipeline-run", "main", "core"], ["api", "projects/vauchi%2Fcore/pipeline", "-X", "POST", "-f", "ref=main"]),
     (["pipeline-list", "core"], ["ci", "list", *CORE]),
-    (["pipeline-jobs", "9", "core"], ["api", "projects/vauchi%2Fcore/pipelines/9/jobs", "--paginate"]),
+    # Retried attempts and bridges too: without them a pipeline can read
+    # failed while every listed job passed (private#1281).
+    (["pipeline-jobs", "9", "core"], [
+        ["api", "projects/vauchi%2Fcore/pipelines/9/jobs?include_retried=true", "--paginate"],
+        ["api", "projects/vauchi%2Fcore/pipelines/9/bridges", "--paginate"],
+    ]),
     (["pipeline-log", "31", "core"], ["ci", "trace", "31", *CORE]),
     (["issue-list", "_private"], ["issue", "list", "-R", "vauchi/private"]),
     (["issue-view", "1179", "_private"], ["issue", "view", "1179", "-R", "vauchi/private"]),
@@ -104,7 +116,17 @@ class GitlabWrapperRecipeTests(unittest.TestCase):
                 result, calls = self.run_recipe(args)
 
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(calls, [expected])
+                wanted = expected if isinstance(expected[0], list) else [expected]
+                self.assertEqual(calls, wanted)
+
+    def test_pipeline_jobs_shows_retried_attempts_and_bridges(self) -> None:
+        result, _ = self.run_recipe(["pipeline-jobs", "9", "core"])
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertTrue(any(l.split()[0] == "31" and l.endswith("retried") for l in lines), lines)
+        self.assertTrue(any(l.split()[0] == "32" and not l.endswith("retried") for l in lines), lines)
+        self.assertTrue(any(l.split()[0] == "33" and "bridge downstream=77 4" in l for l in lines), lines)
 
     def test_retry_and_run_report_the_new_pipeline(self) -> None:
         retried, _ = self.run_recipe(["pipeline-retry", "9", "core"])
