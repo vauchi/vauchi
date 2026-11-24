@@ -1368,7 +1368,7 @@ release-gates:
         print("ERROR: no RG release gates found in master plan", file=sys.stderr)
         sys.exit(2)
 
-    expected_ids = {f"RG-{number}" for number in range(1, 16)}
+    expected_ids = {f"RG-{number}" for number in range(1, 17)}
     found_ids = {match.group(2).upper() for match in gate_matches}
     if found_ids != expected_ids or len(gate_matches) != len(expected_ids):
         missing = sorted(expected_ids - found_ids, key=lambda gid: int(gid[3:]))
@@ -1381,7 +1381,7 @@ release-gates:
         if len(gate_matches) != len(found_ids):
             details.append("duplicate RG task IDs")
         print(
-            "ERROR: expected RG-1 through RG-15 exactly once"
+            "ERROR: expected RG-1 through RG-16 exactly once"
             + (f" ({'; '.join(details)})" if details else ""),
             file=sys.stderr,
         )
@@ -1596,12 +1596,12 @@ release-gates:
     )
     status_failures = []
     if done_hard and re.search(
-        r"\bAll\s+15\s+release\s+gates\s+are\s+open\b",
+        r"\bAll\s+16\s+release\s+gates\s+are\s+open\b",
         text,
         re.IGNORECASE,
     ):
         status_failures.append(
-            "master plan says all 15 gates are open but "
+            "master plan says all 16 gates are open but "
             f"{len(done_hard)} RG gate(s) are checked complete"
         )
 

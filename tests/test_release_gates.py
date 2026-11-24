@@ -426,7 +426,7 @@ class ReleaseGatesTest(unittest.TestCase):
 
         self.assertEqual(1, result.returncode)
         self.assertIn("HARD GATES (1/16 done)", result.stdout)
-        self.assertIn("14 HARD GATE(s) block release", result.stdout)
+        self.assertIn("15 HARD GATE(s) block release", result.stdout)
 
     def test_checked_rg_task_contradicts_all_open_status(self) -> None:
         result = self.run_release_gates(plan_with_gates(completed_gate=1))
