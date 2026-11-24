@@ -21,7 +21,7 @@ CANONICAL_SHIP_CRITERIA = """
 
 | Criterion | Required state | Classification |
 |-----------|----------------|----------------|
-| Release gates RG-1 through RG-15 | complete | hard |
+| Release gates RG-1 through RG-16 | complete | hard |
 | Protocol v2 | finalized | hard |
 | E2E ignored tests | no more than 5 | hard |
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
@@ -84,7 +84,7 @@ CHECKED_SHIP_CRITERIA = """
 
 | Criterion | Required state | Classification |
 |-----------|----------------|----------------|
-| Release gates RG-1 through RG-15 | complete | hard |
+| Release gates RG-1 through RG-16 | complete | hard |
 | [x] Protocol v2 | finalized | hard |
 | [x] E2E ignored tests | no more than 5 | hard |
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
@@ -95,12 +95,12 @@ def plan_with_gates(
     completed_gate: int | None = None,
     excluded_gate: int | None = None,
     all_completed: bool = False,
-    status_line: str = "All 15 release gates are open.",
+    status_line: str = "All 16 release gates are open.",
     ship_criteria: str | None = CANONICAL_SHIP_CRITERIA,
     extra_body: str = "",
 ) -> str:
     gates = []
-    for gate_number in range(1, 16):
+    for gate_number in range(1, 17):
         if gate_number == excluded_gate:
             continue
         marker = "[x] " if all_completed or gate_number == completed_gate else ""
@@ -413,8 +413,8 @@ class ReleaseGatesTest(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("Production Release Readiness", result.stdout)
         self.assertNotIn("v0.2.0", result.stdout)
-        self.assertIn("HARD GATES (0/15 done)", result.stdout)
-        self.assertIn("15 HARD GATE(s) block release", result.stdout)
+        self.assertIn("HARD GATES (0/16 done)", result.stdout)
+        self.assertIn("16 HARD GATE(s) block release", result.stdout)
 
     def test_checked_rg_task_counts_as_done(self) -> None:
         result = self.run_release_gates(
@@ -425,7 +425,7 @@ class ReleaseGatesTest(unittest.TestCase):
         )
 
         self.assertEqual(1, result.returncode)
-        self.assertIn("HARD GATES (1/15 done)", result.stdout)
+        self.assertIn("HARD GATES (1/16 done)", result.stdout)
         self.assertIn("14 HARD GATE(s) block release", result.stdout)
 
     def test_checked_rg_task_contradicts_all_open_status(self) -> None:
@@ -433,7 +433,7 @@ class ReleaseGatesTest(unittest.TestCase):
 
         self.assertEqual(1, result.returncode)
         self.assertIn("master-plan status contradiction", result.stdout)
-        self.assertIn("says all 15 gates are open", result.stdout)
+        self.assertIn("says all 16 gates are open", result.stdout)
 
     def test_empty_gate_parse_fails_loudly(self) -> None:
         result = self.run_release_gates("# Master Plan without release gates\n")
@@ -445,7 +445,7 @@ class ReleaseGatesTest(unittest.TestCase):
         result = self.run_release_gates(plan_with_gates(excluded_gate=9))
 
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("ERROR: expected RG-1 through RG-15", result.stderr)
+        self.assertIn("ERROR: expected RG-1 through RG-16", result.stderr)
 
     def test_missing_ship_criteria_table_fails_loudly(self) -> None:
         result = self.run_release_gates(plan_with_gates(ship_criteria=None))
@@ -461,7 +461,7 @@ class ReleaseGatesTest(unittest.TestCase):
 
 | Criterion | Required state | Classification |
 |-----------|----------------|----------------|
-| Release gates RG-1 through RG-15 | complete | hard |
+| Release gates RG-1 through RG-16 | complete | hard |
 | Protocol v2 | finalized | hard |
 """,
             )
@@ -984,7 +984,7 @@ ADR-020 deterministic convergence: passed
 
 | Criterion | Required state | Classification |
 |-----------|----------------|----------------|
-| Release gates RG-1 through RG-15 | complete | hard |
+| Release gates RG-1 through RG-16 | complete | hard |
 | Protocol v2 | finalized | hard |
 | E2E ignored tests | no more than 5 | hard |
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
@@ -3012,7 +3012,7 @@ accessories:
 
 | Criterion | Required state | Classification |
 |-----------|----------------|----------------|
-| Release gates RG-1 through RG-15 | complete | hard |
+| Release gates RG-1 through RG-16 | complete | hard |
 | [x] Protocol v2 | finalized | hard |
 | [x] E2E ignored tests | no more than 5 | hard |
 | Accessibility acceptance (RG-12) | every frontend passes | hard |
