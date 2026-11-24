@@ -686,7 +686,7 @@ release-gates:
         "android",
         "ios",
         "macos",
-        "windows",
+        "windows-app/windows-display",
         "linux-app/gtk-display",
         "linux-app/qt-display",
         "cli",
@@ -696,7 +696,7 @@ release-gates:
         "android",
         "ios",
         "macos",
-        "windows",
+        "windows-app/windows-display",
         "linux-app/gtk-display",
         "linux-app/qt-display",
     )
