@@ -138,6 +138,7 @@ class ReleaseGatesTest(unittest.TestCase):
         core_tags: list[str] | None = None,
         humble_todo_count: int | None = None,
         web_demo_todo_count: int | None = None,
+        windows_display_todo_count: int | None = None,
         humble_release_zero_exit: int = 0,
         humble_release_zero_output: str = "humble_check: release-zero gate passed",
         usability_evidence: str | None = None,
@@ -257,7 +258,20 @@ class ReleaseGatesTest(unittest.TestCase):
                     )
                     or "// web demo migration complete\n"
                 , encoding="utf-8")
-            humble_checker = workspace / "scripts/scripts/humble_check.py"
+            if windows_display_todo_count is not None:
+                windows_display_source = (
+                    workspace / "windows-display/src/Vauchi.Display/Humble.cs"
+                )
+                windows_display_source.parent.mkdir(parents=True)
+                windows_display_source.write_text(
+                    "\n".join(
+                        [
+                            f"// TODO(HUMBLE): remaining migration {index}"
+                            for index in range(windows_display_todo_count)
+                        ]
+                    )
+                , encoding="utf-8")
+            humble_checker =workspace / "scripts/scripts/humble_check.py"
             humble_checker.parent.mkdir(parents=True)
             humble_checker.write_text(
                 "\n".join(
@@ -3404,6 +3418,22 @@ android store submission: passed
         self.assertEqual(1, result.returncode)
         self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
         self.assertIn("2 TODO(HUMBLE) site(s) remain", result.stdout)
+
+    def test_completed_rg11_counts_windows_display_humble_todos(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            humble_todo_count=0,
+            windows_display_todo_count=3,
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("RG-11 Humble UI evidence failure", result.stdout)
+        self.assertIn("3 TODO(HUMBLE) site(s) remain", result.stdout)
 
     def test_completed_rg11_requires_zero_humble_ratchet_debt(self) -> None:
         result = self.run_release_gates(
