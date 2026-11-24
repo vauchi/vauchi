@@ -842,7 +842,10 @@ pipeline-run ref='main' repo='':
 
 # List jobs in a pipeline. `glab ci list` has no `--pipeline` flag
 # (removed upstream) — hit the pipeline jobs API directly instead. Prints the
-# numeric job id first (feed it to pipeline-log).
+# numeric job id first (feed it to pipeline-log). Retried attempts are listed
+# too, marked `retried`, and so are bridge (trigger) jobs, marked `bridge`:
+# without them a pipeline can read failed while every listed job passed
+# (private#1281, spec!123).
 [no-cd]
 [script]
 pipeline-jobs id repo='':
@@ -852,8 +855,10 @@ pipeline-jobs id repo='':
     r=$(resolve_gitlab_repo "{{repo}}")
     p=$(resolve_gitlab_project "{{repo}}")
     enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
-    glab api "projects/${enc}/pipelines/{{id}}/jobs" --paginate \
-      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['id']:>10} {j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}\") for j in jobs]"
+    glab api "projects/${enc}/pipelines/{{id}}/jobs?include_retried=true" --paginate \
+      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['id']:>10} {j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']}{' retried' if j.get('retried') else ''}\") for j in jobs]"
+    glab api "projects/${enc}/pipelines/{{id}}/bridges" --paginate \
+      | python3 -c "import sys,json; jobs=json.load(sys.stdin); [print(f\"{j['id']:>10} {j['name']:40s} {j['status']:10s} allow_failure={j['allow_failure']} bridge downstream={(j.get('downstream_pipeline') or {}).get('id')} {(j.get('downstream_pipeline') or {}).get('project_id')}\") for j in jobs]"
 
 # Failed test cases of a pipeline, with their assertion messages, from the
 # parsed JUnit report. Parallel xcodebuild logs name a failing test but drop
