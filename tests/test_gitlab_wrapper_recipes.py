@@ -75,6 +75,11 @@ WRAPPERS = [
     (["issue-view", "1179", "_private", "--comments"],
      ["issue", "view", "1179", "-R", "vauchi/private", "--comments"]),
     (["issue-close", "1179", "_private"], ["issue", "close", "1179", "-R", "vauchi/private"]),
+    # Retitles an issue and replaces its description from a file
+    # (private#1281: an issue reframed around its goal).
+    (["issue-update", "1281", "A new title", "description.md", "_private"],
+     ["issue", "update", "1281", "-R", "vauchi/private", "--title", "A new title",
+      "--description", "The goal, restated."]),
 ]
 
 
@@ -94,6 +99,7 @@ class GitlabWrapperRecipeTests(unittest.TestCase):
         glab = bin_dir / "glab"
         glab.write_text(FAKE_GLAB, encoding="utf-8")
         glab.chmod(0o755)
+        (self.ws / "description.md").write_text("The goal, restated.\n", encoding="utf-8")
         self.calls = base / "calls.jsonl"
         self.env = dict(os.environ, JUST_UNSTABLE="1", GLAB_CALLS=str(self.calls),
                         PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}")

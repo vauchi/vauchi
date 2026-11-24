@@ -1070,6 +1070,18 @@ issue-close id repo='':
     p=$(resolve_gitlab_project "{{repo}}")
     glab issue close "{{id}}" -R "$p"
 
+# Retitle an issue and replace its description with a file's contents
+# (private#1281: an issue reframed around its goal).
+[no-cd]
+[script]
+issue-update id title description_file repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    r=$(resolve_gitlab_repo "{{repo}}")
+    p=$(resolve_gitlab_project "{{repo}}")
+    glab issue update "{{id}}" -R "$p" --title {{quote(title)}} --description "$(cat {{quote(description_file)}})"
+
 # Mark a Draft MR ready: its issue moves from implementing to review on the board (ADR-073).
 # One live ready MR per repository, rebased on main (private#1179): behind
 # another, it stays Draft, cancels its pipeline and both MRs get a comment.
