@@ -714,11 +714,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -739,7 +739,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -765,11 +765,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -883,7 +883,7 @@ no re-exchange required: passed
 # Production distribution evidence
 
 core binding tag: v0.55.2
-supported platforms: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported platforms: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 android signing: passed
 android packaging: passed
 android installation: passed
@@ -900,10 +900,10 @@ macos packaging: passed
 macos installation: passed
 macos distribution-channel acceptance: passed
 macos notarization: passed
-windows signing: passed
-windows packaging: passed
-windows installation: passed
-windows distribution-channel acceptance: passed
+windows-app/windows-display signing: passed
+windows-app/windows-display packaging: passed
+windows-app/windows-display installation: passed
+windows-app/windows-display distribution-channel acceptance: passed
 linux-app/gtk-display signing: passed
 linux-app/gtk-display packaging: passed
 linux-app/gtk-display installation: passed
@@ -1091,7 +1091,7 @@ accessories:
 
     def test_rg1_rejects_block_only_evidence_for_the_ignore_journey(self) -> None:
         consumers = (
-            "android", "ios", "macos", "windows", "linux-app/gtk-display",
+            "android", "ios", "macos", "windows-app/windows-display", "linux-app/gtk-display",
             "linux-app/qt-display", "cli", "tui",
         )
         journeys = ("create card", "edit card", "exchange contact", "receive update")
@@ -1471,11 +1471,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -1535,11 +1535,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -1560,7 +1560,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -1622,11 +1622,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -1647,7 +1647,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -1673,11 +1673,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -1753,11 +1753,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -1778,7 +1778,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -1804,11 +1804,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -1896,11 +1896,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -1921,7 +1921,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -1947,11 +1947,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -2055,11 +2055,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -2080,7 +2080,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -2106,11 +2106,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -2306,11 +2306,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -2384,11 +2384,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -2409,7 +2409,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -2435,11 +2435,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -2579,11 +2579,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -2604,7 +2604,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -2630,11 +2630,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -2781,11 +2781,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -2806,7 +2806,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -2832,11 +2832,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -3070,11 +3070,11 @@ approved study protocol: yes
             accessibility_evidence="""
 # Native frontend accessibility acceptance
 
-supported native frontends: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display
+supported native frontends: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display
 android accessibility acceptance: passed
 ios accessibility acceptance: passed
 macos accessibility acceptance: passed
-windows accessibility acceptance: passed
+windows-app/windows-display accessibility acceptance: passed
 linux-app/gtk-display accessibility acceptance: passed
 linux-app/qt-display accessibility acceptance: passed
 physical screen-reader walkthroughs: complete
@@ -3095,7 +3095,7 @@ plaintext/key access: none
             ohttp_fail_closed_evidence="""
 # OHTTP fail-closed evidence
 
-supported production consumers: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported production consumers: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 plaintext path: fails closed
 tls-only path: fails closed
 direct path: fails closed
@@ -3121,11 +3121,11 @@ macos edit card: passed
 macos exchange contact: passed
 macos receive update: passed
 macos ignore: passed
-windows create card: passed
-windows edit card: passed
-windows exchange contact: passed
-windows receive update: passed
-windows ignore: passed
+windows-app/windows-display create card: passed
+windows-app/windows-display edit card: passed
+windows-app/windows-display exchange contact: passed
+windows-app/windows-display receive update: passed
+windows-app/windows-display ignore: passed
 linux-app/gtk-display create card: passed
 linux-app/gtk-display edit card: passed
 linux-app/gtk-display exchange contact: passed
@@ -3239,7 +3239,7 @@ no re-exchange required: passed
 # Production distribution evidence
 
 core binding tag: v0.55.2
-supported platforms: android, ios, macos, windows, linux-app/gtk-display, linux-app/qt-display, cli, tui
+supported platforms: android, ios, macos, windows-app/windows-display, linux-app/gtk-display, linux-app/qt-display, cli, tui
 android signing: passed
 android packaging: passed
 android installation: passed
@@ -3256,10 +3256,10 @@ macos packaging: passed
 macos installation: passed
 macos distribution-channel acceptance: passed
 macos notarization: passed
-windows signing: passed
-windows packaging: passed
-windows installation: passed
-windows distribution-channel acceptance: passed
+windows-app/windows-display signing: passed
+windows-app/windows-display packaging: passed
+windows-app/windows-display installation: passed
+windows-app/windows-display distribution-channel acceptance: passed
 linux-app/gtk-display signing: passed
 linux-app/gtk-display packaging: passed
 linux-app/gtk-display installation: passed
@@ -3362,6 +3362,33 @@ blocking accessibility defects: zero
             result.stdout,
         )
 
+    def test_rg12_reads_windows_evidence_under_its_app_display_pair(self) -> None:
+        result = self.run_release_gates(
+            plan_with_gates(
+                all_completed=True,
+                status_line="All hard gates passed.",
+                ship_criteria=CHECKED_SHIP_CRITERIA,
+                extra_body="ADR-065 defines Protocol v2 finalization.",
+            ),
+            accessibility_evidence="""
+# Native frontend accessibility acceptance
+
+windows accessibility acceptance: passed
+physical screen-reader walkthroughs: complete
+blocking accessibility defects: zero
+""",
+        )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn(
+            "windows-app/windows-display accessibility acceptance: passed evidence is missing",
+            result.stdout,
+        )
+        self.assertNotIn(
+            "\n      - windows accessibility acceptance: passed evidence is missing",
+            result.stdout,
+        )
+
     def test_completed_rg14_requires_per_consumer_distribution_results(self) -> None:
         result = self.run_release_gates(
             plan_with_gates(
@@ -3399,7 +3426,7 @@ android store submission: passed
         self.assertNotIn("android signing: passed evidence is missing", result.stdout)
         self.assertNotIn("android store submission: passed", result.stdout)
         self.assertNotIn("macos store submission: passed", result.stdout)
-        self.assertNotIn("windows store submission: passed", result.stdout)
+        self.assertNotIn("windows-app/windows-display store submission: passed", result.stdout)
         self.assertNotIn("android notarization: passed", result.stdout)
         self.assertNotIn("cli notarization: passed", result.stdout)
 
