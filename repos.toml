@@ -336,6 +336,17 @@ profile = true
 description = "Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture)"
 
 [[repo]]
+name = "windows-display"
+path = "windows-display"
+ecosystem = "dotnet"
+public = true
+mobile = false
+ops = []
+scenario_root = false
+profile = true
+description = "WinUI 3 display shell library that renders the contract (ADR-078)"
+
+[[repo]]
 name = "contract"
 path = "contract"
 ecosystem = "rust"

@@ -83,6 +83,7 @@ numbers, or any content.
 | [apple-display/](apple-display/) | Shared SwiftUI rendering library with iOS and macOS adapters |
 | [android-hw/](android-hw/) | Hardware shell for Android (Bluetooth LE, NFC/HCE, CameraX) |
 | [windows-hw/](windows-hw/) | Hardware shell for Windows (WinRT Bluetooth LE, WinSCard, MediaCapture) |
+| [windows-display/](windows-display/) | WinUI 3 display shell library that renders the contract (ADR-078) |
 | [contract/](contract/) | The shell contract: Command/Event schema, fixtures, generated types (ADR-078) |
 | [web-demo/](web-demo/) | WASM-based web demo |
 | [e2e/](e2e/) | End-to-end tests |
