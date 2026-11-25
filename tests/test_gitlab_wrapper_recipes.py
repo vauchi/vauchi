@@ -34,7 +34,12 @@ if os.environ.get("GLAB_REFUSE"):
     print(json.dumps({"message": os.environ["GLAB_REFUSE"]}))
     sys.stderr.write("glab: %s\n" % os.environ["GLAB_REFUSE"])
     sys.exit(1)
-if args[0] == "api" and args[1].endswith("/retry"):
+if args[0] == "api" and args[1] == "projects/vauchi%2Fcore":
+    print(json.dumps({"merge_trains_enabled": os.environ.get("GLAB_TRAINS") == "1"}))
+elif args[0] == "api" and args[1].endswith("/merge_requests/5/pipelines"):
+    print(json.dumps({"id": 11, "ref": "refs/merge-requests/5/merge", "status": "created",
+                      "web_url": "https://gl/p/11"}))
+elif args[0] == "api" and args[1].endswith("/retry"):
     print(json.dumps({"id": 9, "status": "pending", "web_url": "https://gl/p/9"}))
 elif args[0] == "api" and args[1].endswith("/pipeline"):
     print(json.dumps({"id": 10, "ref": "main", "status": "created", "web_url": "https://gl/p/10"}))
@@ -55,7 +60,10 @@ WRAPPERS = [
     (["mr-merge-when-green", "5", "core"], ["mr", "merge", "5", "--auto-merge", "--yes", *CORE]),
     (["mr-close", "5", "core"], ["mr", "close", "5", *CORE]),
     (["mr-approve", "5", "core"], ["mr", "approve", "5", *CORE]),
-    (["mr-rebase", "5", "core"], ["mr", "rebase", "5", *CORE]),
+    (["mr-rebase", "5", "core"], [["api", "projects/vauchi%2Fcore"], ["mr", "rebase", "5", *CORE]]),
+    # A merged-results pipeline takes the target branch as it is now
+    # (private#1399).
+    (["mr-pipeline", "5", "core"], ["api", "projects/vauchi%2Fcore/merge_requests/5/pipelines", "-X", "POST"]),
     (["mr-list", "core"], ["mr", "list", *CORE]),
     (["mr-view", "5", "core"], ["mr", "view", "5", *CORE]),
     (["mr-view", "5", "core", "true"], ["mr", "view", "5", *CORE, "--comments"]),
@@ -124,6 +132,33 @@ class GitlabWrapperRecipeTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 wanted = expected if isinstance(expected[0], list) else [expected]
                 self.assertEqual(calls, wanted)
+
+    def test_rebase_refuses_on_a_merge_train_repository(self) -> None:
+        # A train tests the merged result itself and merges an MR that is
+        # behind main (core !2438), so a rebase there only starts another
+        # pipeline that waits for the build lock (private#1399).
+        result, calls = self.run_recipe(["mr-rebase", "5", "core"], GLAB_TRAINS="1")
+
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(calls, [["api", "projects/vauchi%2Fcore"]])
+        self.assertIn("merge train", result.stdout + result.stderr)
+        self.assertIn("just gitlab mr-pipeline 5 core", result.stdout + result.stderr)
+
+    def test_rebase_fails_when_gitlab_refuses_the_project_lookup(self) -> None:
+        result, calls = self.run_recipe(["mr-rebase", "5", "core"], GLAB_REFUSE="404 Project Not Found")
+
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn(["mr", "rebase", "5", *CORE], calls)
+        self.assertIn("404 Project Not Found", result.stdout + result.stderr)
+
+    def test_mr_pipeline_reports_the_new_pipeline_and_fails_on_refusal(self) -> None:
+        result, _ = self.run_recipe(["mr-pipeline", "5", "core"])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("https://gl/p/11", result.stdout)
+
+        refused, _ = self.run_recipe(["mr-pipeline", "5", "core"], GLAB_REFUSE="403 Forbidden")
+        self.assertNotEqual(refused.returncode, 0, refused.stdout + refused.stderr)
+        self.assertIn("403 Forbidden", refused.stdout + refused.stderr)
 
     def test_pipeline_jobs_shows_retried_attempts_and_bridges(self) -> None:
         result, _ = self.run_recipe(["pipeline-jobs", "9", "core"])
