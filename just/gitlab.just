@@ -491,7 +491,10 @@ mr-merge-when-green id repo='':
 
 # Rebase an MR's branch on its target, server-side: GitLab pushes, not the
 # agent, so it is the step for a bot's bump branch (private#1179). Starts a
-# new pipeline.
+# new pipeline. Refused where merge trains are on: the train tests each
+# merged result itself and merges an MR that is behind main (core !2438), so
+# a rebase there only adds a pipeline that waits for the build lock
+# (private#1399). There, `mr-pipeline` runs the MR against main as it is now.
 [no-cd]
 [script]
 mr-rebase id repo='':
@@ -499,7 +502,35 @@ mr-rebase id repo='':
     set -euo pipefail
     source scripts/scripts/resolve-repo.sh
     p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    if ! project=$(glab api "projects/${enc}" 2>&1); then
+        echo "ERROR: could not read whether $p merges through a merge train: $project" >&2
+        exit 1
+    fi
+    trains=$(printf '%s' "$project" | python3 -c "import sys,json; print(json.load(sys.stdin).get('merge_trains_enabled') is True)")
+    if [ "$trains" = True ]; then
+        echo "REFUSED: $p merges through a merge train. The train tests the merged result and merges an MR that is behind main, so a rebase only adds a pipeline that waits for the build lock (vauchi/private#1399)." >&2
+        echo "  To run the MR against main as it is now: just gitlab mr-pipeline {{id}} {{repo}}" >&2
+        exit 1
+    fi
     glab mr rebase "{{id}}" -R "$p"
+
+# Start a new pipeline for an MR. With merged results on, it runs the MR
+# merged with its target branch as it is now, without touching the branch
+# (private#1399).
+[no-cd]
+[script]
+mr-pipeline id repo='':
+    just gitlab _check-auth
+    set -euo pipefail
+    source scripts/scripts/resolve-repo.sh
+    p=$(resolve_gitlab_project "{{repo}}")
+    enc=$(printf '%s' "$p" | sed 's|/|%2F|g')
+    if ! reply=$(glab api "projects/${enc}/merge_requests/{{id}}/pipelines" -X POST 2>&1); then
+        echo "ERROR: GitLab refused a new pipeline for !{{id}} in $p: $reply" >&2
+        exit 1
+    fi
+    printf '%s' "$reply" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(f\"GitLab refused: {d.get('message', d)}\") if 'id' not in d else print(f\"Started pipeline {d['id']} ({d.get('ref', '')}): {d['status']} — {d['web_url']}\")"
 
 # Close a merge request
 [no-cd]
