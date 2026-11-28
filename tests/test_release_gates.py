@@ -3492,6 +3492,17 @@ android store submission: passed
         self.assertIn("just release-gates", recipe)
         self.assertLess(recipe.index("just release-gates"), recipe.index("read -p"))
 
+    def test_workspace_ratchet_runs_composition_checker_with_python3(self) -> None:
+        ci_config = (JUSTFILE.parent / ".gitlab-ci.yml").read_text(encoding="utf-8")
+        job = ci_config.split("gates:workspace-ratchets:", 1)[1]
+        job = job.split("gates:core-consumer-drift:", 1)[0]
+
+        self.assertIn(
+            "- python3 scripts/scripts/check-composition-architecture.py --root . "
+            "--baseline scripts/composition-architecture-baseline.json",
+            job,
+        )
+
     def test_release_gate_runner_installs_deploy_check_dependencies(self) -> None:
         ci_config = (JUSTFILE.parent / ".gitlab-ci.yml").read_text(encoding="utf-8")
         release_gate_job = ci_config.split("test:release-gates:", 1)[1]

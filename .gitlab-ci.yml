@@ -237,7 +237,7 @@ gates:workspace-ratchets:
       done
   script:
     - echo "=== Workspace ratchets (baseline may DROP, never RISE) ==="
-    - scripts/scripts/check-composition-architecture.py --root . --baseline scripts/composition-architecture-baseline.json
+    - python3 scripts/scripts/check-composition-architecture.py --root . --baseline scripts/composition-architecture-baseline.json
     - scripts/scripts/audit-frontend-vocab.sh --check scripts/scripts/audit-frontend-vocab.baseline.json
     - scripts/scripts/audit-dispatch-purity.sh --check scripts/scripts/audit-dispatch-purity.baseline.json
     - scripts/scripts/audit-app-preferences.sh --check scripts/scripts/audit-app-preferences.baseline.json
